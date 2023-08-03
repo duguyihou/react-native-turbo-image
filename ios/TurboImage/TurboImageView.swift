@@ -1,20 +1,10 @@
-@objc(TurboImageViewManager)
-class TurboImageViewManager: RCTViewManager {
-
-  override func view() -> (TurboImageView) {
-    return TurboImageView()
-  }
-
-  @objc override static func requiresMainQueueSetup() -> Bool {
-    return false
-  }
-}
-
 class TurboImageView : UIView {
-
+  
+  @objc var source: URL?
   @objc var color: String = "" {
     didSet {
       self.backgroundColor = hexStringToUIColor(hexColor: color)
+      print("🐵 ---- source \(source)")
     }
   }
 

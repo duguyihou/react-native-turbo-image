@@ -13,6 +13,7 @@ const LINKING_ERROR =
 
 type TurboImageProps = {
   color: string;
+  source: string;
   style: ViewStyle;
 };
 
