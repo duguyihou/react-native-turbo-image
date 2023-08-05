@@ -1,15 +1,14 @@
-import * as React from 'react';
+import React from 'react';
 
 import { StyleSheet, View } from 'react-native';
-import { TurboImageView } from 'react-native-turbo-image';
+import TurboImage from 'react-native-turbo-image';
 
 export default function App() {
   return (
     <View style={styles.container}>
-      <TurboImageView
-        color="#32a852"
+      <TurboImage
+        source="https://picsum.photos/seed/picsum/200/300"
         style={styles.box}
-        source="https://placebear.com/640/360"
       />
     </View>
   );
@@ -22,8 +21,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   box: {
-    width: 60,
-    height: 60,
+    width: 300,
+    height: 200,
     marginVertical: 20,
   },
 });

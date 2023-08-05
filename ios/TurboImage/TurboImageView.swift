@@ -9,11 +9,7 @@ class TurboImageView : UIView {
     }
   }
   
-  @objc var source: String? {
-    didSet {
-      print("🐵 ---- source \(source)")
-    }
-  }
+  @objc var source: String?
   
   override init(frame: CGRect) {
     super.init(frame: frame)
