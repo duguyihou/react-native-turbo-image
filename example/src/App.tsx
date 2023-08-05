@@ -1,22 +1,27 @@
 import React from 'react';
-
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 
 export default function App() {
+  const image = { source: 'https://picsum.photos/seed/picsum/200/300' };
+  const images = Array(100).fill(image);
   return (
-    <View style={styles.container}>
-      <TurboImage
-        source="https://picsum.photos/seed/picsum/200/300"
-        style={styles.box}
-      />
-    </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {images.map((img, idx) => (
+        <TurboImage key={idx} source={img.source} style={styles.box} />
+      ))}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
