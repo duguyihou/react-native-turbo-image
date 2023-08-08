@@ -20,6 +20,14 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
+export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
+
+const resizeMode = {
+  contain: 'contain',
+  cover: 'cover',
+  stretch: 'stretch',
+  center: 'center',
+} as const;
 export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
   backfaceVisibility?: 'visible' | 'hidden';
   borderBottomLeftRadius?: number;
@@ -56,6 +64,8 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
    * Render children within the image.
    */
   children?: React.ReactNode;
+  width: number;
+  height: number;
 }
 
 const ComponentName = 'TurboImageView';
@@ -70,8 +80,16 @@ const TurboImageView =
 const TurboImageBase = (
   props: TurboImageProps & { forwardedRef: React.Ref<any> }
 ) => {
-  const { source, tintColor, style, children, forwardedRef, ...restProps } =
-    props;
+  const {
+    source,
+    tintColor,
+    style,
+    children,
+    forwardedRef,
+    width,
+    height,
+    ...restProps
+  } = props;
   return (
     <View style={[styles.imageContainer, style]} ref={forwardedRef}>
       <TurboImageView
@@ -79,6 +97,8 @@ const TurboImageBase = (
         tintColor={tintColor}
         style={StyleSheet.absoluteFill}
         source={source}
+        width={width}
+        height={height}
       />
       {children}
     </View>
@@ -99,11 +119,15 @@ const TurboImageComponent: React.ComponentType<TurboImageProps> = forwardRef(
   )
 );
 
-TurboImageComponent.displayName = 'FastImage';
+TurboImageComponent.displayName = 'TurboImage';
 
-export interface TurboImageStaticProperties {}
+export interface TurboImageStaticProperties {
+  resizeMode: typeof resizeMode;
+}
 
 const TurboImage: React.ComponentType<TurboImageProps> &
   TurboImageStaticProperties = TurboImageComponent as any;
+
+// TurboImage.resizeMode = resizeMode;
 
 export default TurboImage;
