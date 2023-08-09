@@ -5,11 +5,26 @@ class TurboImageView : UIView {
   
   var image: UIImage?
   var imageView: UIImageView?
+  private var needsReload: Bool = false
   
-  var width: CGFloat?
-  var height: CGFloat?
+  var width: CGFloat? {
+    didSet {
+      guard let width = width else { return }
+      imageView?.frame.size.width = width
+    }
+  }
+  var height: CGFloat? {
+    didSet {
+      guard let height = height else { return }
+      imageView?.frame.size.height = height
+    }
+  }
   
-  @objc var source: String?
+  @objc var source: String? {
+    didSet {
+      needsReload = true
+    }
+  }
   
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -29,24 +44,9 @@ class TurboImageView : UIView {
   }
   
   override func didSetProps(_ changedProps: [String]!) {
-    
-    guard let width = width,
-          let height = height,
-          let source = source else { return }
-    imageView?.frame.size.width = width
-    imageView?.frame.size.height = height
-    guard let url = URL(string: source) else { return }
-    let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
-    
-    let processor = ResizingImageProcessor(referenceSize: .init(width: 300, height: 300), mode: .aspectFill)
-    let options: KingfisherOptionsInfo = [.processor(DefaultImageProcessor.default)]
-    imageView?.kf.indicatorType = .activity
-    imageView?.kf.setImage(with: resource,
-                           placeholder: nil,
-                           options: options,
-                           progressBlock: nil
-    )
-    
+    if needsReload {
+      loadImage(with: source)
+    }
   }
   
   required init?(coder: NSCoder) {
@@ -55,17 +55,21 @@ class TurboImageView : UIView {
   
 }
 
-extension UIImageView {
+extension TurboImageView {
   
-  func resizeImage(image: UIImage, newWidth: CGFloat) -> UIImage {
+  func loadImage(with source: String?) {
+    guard let source = source,
+          let url = URL(string: source)
+    else { return }
+    let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
     
-    let scale = newWidth / image.size.width
-    let newHeight = image.size.height * scale
-    UIGraphicsBeginImageContext(CGSize(width: newWidth, height: newHeight))
-    image.draw(in: CGRect(x: 0, y: 0, width: newWidth, height: newHeight))
-    let newImage = UIGraphicsGetImageFromCurrentImageContext()
-    UIGraphicsEndImageContext()
-    
-    return newImage!
+//    let processor = BlurImageProcessor(blurRadius: 2)
+//    let options: KingfisherOptionsInfo = [.processor(processor)]
+    imageView?.kf.indicatorType = .activity
+    imageView?.kf.setImage(with: resource,
+                           placeholder: nil,
+                           options: nil,
+                           progressBlock: nil
+    )
   }
 }

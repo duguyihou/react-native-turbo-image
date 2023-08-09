@@ -90,8 +90,15 @@ const TurboImageBase = (
     height,
     ...restProps
   } = props;
+  const containerStyle = {
+    width,
+    height,
+  };
   return (
-    <View style={[styles.imageContainer, style]} ref={forwardedRef}>
+    <View
+      style={[styles.imageContainer, style, containerStyle]}
+      ref={forwardedRef}
+    >
       <TurboImageView
         {...restProps}
         tintColor={tintColor}
