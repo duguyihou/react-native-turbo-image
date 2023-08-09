@@ -26,6 +26,12 @@ class TurboImageView : UIView {
     }
   }
   
+  var scaleMode: String? {
+    didSet {
+      print("🐵 ---- scaleMode \(scaleMode)")
+    }
+  }
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     clipsToBounds = true
@@ -41,6 +47,11 @@ class TurboImageView : UIView {
   @objc
   func setWidth(_ width: CGFloat) {
     self.width = width
+  }
+  
+  @objc
+  func setScaleMode(_ scaleMode: String) {
+    self.scaleMode = scaleMode
   }
   
   override func didSetProps(_ changedProps: [String]!) {
@@ -59,16 +70,18 @@ extension TurboImageView {
   
   func loadImage(with source: String?) {
     guard let source = source,
-          let url = URL(string: source)
+          let url = URL(string: source),
+          let width = width,
+          let height = height
     else { return }
     let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
-    
-//    let processor = BlurImageProcessor(blurRadius: 2)
-//    let options: KingfisherOptionsInfo = [.processor(processor)]
+    let scale = UIScreen.main.scale
+    let processor = ResizingImageProcessor(referenceSize: CGSize(width: width * scale, height: height * scale), mode: .aspectFill)
+    let options: KingfisherOptionsInfo = [.processor(processor)]
     imageView?.kf.indicatorType = .activity
     imageView?.kf.setImage(with: resource,
                            placeholder: nil,
-                           options: nil,
+                           options: options,
                            progressBlock: nil
     )
   }

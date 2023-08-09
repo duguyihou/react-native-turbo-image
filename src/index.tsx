@@ -20,14 +20,19 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
-
-const resizeMode = {
-  contain: 'contain',
-  cover: 'cover',
-  stretch: 'stretch',
-  center: 'center',
+export type ScaleMode = 'fit' | 'fill';
+/**
+ * **aspectFit**
+ * Scales the content to fit the size of the view by maintaining the aspect ratio.
+ *
+ * **aspectFill**
+ * Scales the content to fill the size of the view.
+ */
+const scaleMode = {
+  fit: 'fit',
+  fill: 'fill',
 } as const;
+
 export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
   backfaceVisibility?: 'visible' | 'hidden';
   borderBottomLeftRadius?: number;
@@ -43,6 +48,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   source: string;
+  scaleMode?: ScaleMode;
   /**
    *
    * Style
@@ -129,12 +135,12 @@ const TurboImageComponent: React.ComponentType<TurboImageProps> = forwardRef(
 TurboImageComponent.displayName = 'TurboImage';
 
 export interface TurboImageStaticProperties {
-  resizeMode: typeof resizeMode;
+  scaleMode: typeof scaleMode;
 }
 
 const TurboImage: React.ComponentType<TurboImageProps> &
   TurboImageStaticProperties = TurboImageComponent as any;
 
-// TurboImage.resizeMode = resizeMode;
+TurboImage.scaleMode = scaleMode;
 
 export default TurboImage;
