@@ -6,19 +6,26 @@ import type { ColorValue } from 'react-native';
 import type { AccessibilityProps } from 'react-native';
 import type { ShadowStyleIOS } from 'react-native';
 import type { FlexStyle } from 'react-native';
-import {
-  View,
-  StyleSheet,
-  requireNativeComponent,
-  UIManager,
-  Platform,
-} from 'react-native';
+import { requireNativeComponent, UIManager, Platform } from 'react-native';
 
 const LINKING_ERROR =
   `The package 'react-native-turbo-image' doesn't seem to be linked. Make sure: \n\n` +
   Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
+
+export type ScaleMode = 'fit' | 'fill';
+/**
+ * **aspectFit**
+ * Scales the content to fit the size of the view by maintaining the aspect ratio.
+ *
+ * **aspectFill**
+ * Scales the content to fill the size of the view.
+ */
+const scaleMode = {
+  fit: 'fit',
+  fill: 'fill',
+} as const;
 
 export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
   backfaceVisibility?: 'visible' | 'hidden';
@@ -35,6 +42,8 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   source: string;
+  ref?: React.Ref<any>;
+  scaleMode?: ScaleMode;
   /**
    *
    * Style
@@ -56,6 +65,8 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
    * Render children within the image.
    */
   children?: React.ReactNode;
+  width: number;
+  height: number;
 }
 
 const ComponentName = 'TurboImageView';
@@ -70,26 +81,28 @@ const TurboImageView =
 const TurboImageBase = (
   props: TurboImageProps & { forwardedRef: React.Ref<any> }
 ) => {
-  const { source, tintColor, style, children, forwardedRef, ...restProps } =
-    props;
+  const {
+    source,
+    tintColor,
+    style,
+    forwardedRef,
+    width,
+    height,
+    ...restProps
+  } = props;
+
   return (
-    <View style={[styles.imageContainer, style]} ref={forwardedRef}>
-      <TurboImageView
-        {...restProps}
-        tintColor={tintColor}
-        style={StyleSheet.absoluteFill}
-        source={source}
-      />
-      {children}
-    </View>
+    <TurboImageView
+      {...restProps}
+      tintColor={tintColor}
+      style={style}
+      source={source}
+      width={width}
+      height={height}
+      ref={forwardedRef}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  imageContainer: {
-    overflow: 'hidden',
-  },
-});
 
 const TurboImageMemo = memo(TurboImageBase);
 
@@ -99,11 +112,15 @@ const TurboImageComponent: React.ComponentType<TurboImageProps> = forwardRef(
   )
 );
 
-TurboImageComponent.displayName = 'FastImage';
+TurboImageComponent.displayName = 'TurboImage';
 
-export interface TurboImageStaticProperties {}
+export interface TurboImageStaticProperties {
+  scaleMode: typeof scaleMode;
+}
 
 const TurboImage: React.ComponentType<TurboImageProps> &
   TurboImageStaticProperties = TurboImageComponent as any;
+
+TurboImage.scaleMode = scaleMode;
 
 export default TurboImage;

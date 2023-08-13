@@ -1,22 +1,59 @@
 import Kingfisher
+import React
 
 class TurboImageView : UIView {
   
   var image: UIImage?
-  @objc var color: String = "" {
+  var imageView: UIImageView?
+  private var needsReload: Bool = false
+  
+  var width: CGFloat? {
     didSet {
-      self.backgroundColor = hexStringToUIColor(hexColor: color)
+      guard let width = width else { return }
+      imageView?.frame.size.width = width
+    }
+  }
+  var height: CGFloat? {
+    didSet {
+      guard let height = height else { return }
+      imageView?.frame.size.height = height
     }
   }
   
-  @objc var source: String?
+  @objc var source: String? {
+    didSet {
+      needsReload = true
+    }
+  }
+  
+  var scaleMode: ScaleMode?
   
   override init(frame: CGRect) {
     super.init(frame: frame)
+    clipsToBounds = true
+    imageView = UIImageView()
+    addSubview(imageView!)
+  }
+  
+  @objc
+  func setHeight(_ height: CGFloat) {
+    self.height = height
+  }
+  
+  @objc
+  func setWidth(_ width: CGFloat) {
+    self.width = width
+  }
+  
+  @objc
+  func setScaleMode(_ scaleMode: ScaleMode) {
+    self.scaleMode = scaleMode
   }
   
   override func didSetProps(_ changedProps: [String]!) {
-    reloadImage()
+    if needsReload {
+      loadImage(with: source)
+    }
   }
   
   required init?(coder: NSCoder) {
@@ -24,36 +61,29 @@ class TurboImageView : UIView {
   }
   
 }
+
 extension TurboImageView {
   
-  private func reloadImage() {
-    guard let url = URL(string: source!) else { return }
+  func loadImage(with source: String?) {
+    guard let source = source,
+          let url = URL(string: source),
+          let width = width,
+          let height = height,
+          let scaleMode = scaleMode
+    else { return }
+    
     let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
-    KingfisherManager.shared.retrieveImage(with: resource) { [self] result in
-      switch result {
-      case .success(let response):
-        image = response.image
-        let imageView = UIImageView(image: image)
-        addSubview(imageView)
-      case .failure(let error):
-        print("🐵 ---- error \(error)") // TODO: 🐵 handle error
-      }
-    }
-  }
-  
-  func hexStringToUIColor(hexColor: String) -> UIColor {
-    let stringScanner = Scanner(string: hexColor)
-    
-    if(hexColor.hasPrefix("#")) {
-      stringScanner.scanLocation = 1
-    }
-    var color: UInt32 = 0
-    stringScanner.scanHexInt32(&color)
-    
-    let r = CGFloat(Int(color >> 16) & 0x000000FF)
-    let g = CGFloat(Int(color >> 8) & 0x000000FF)
-    let b = CGFloat(Int(color) & 0x000000FF)
-    
-    return UIColor(red: r / 255.0, green: g / 255.0, blue: b / 255.0, alpha: 1)
+    let scale = UIScreen.main.scale
+    let contentMode = ScaleMode.mapContentMode(by: scaleMode)
+    let referenceSize = CGSize(width: width * scale, height: height * scale)
+    let processor = ResizingImageProcessor(referenceSize: referenceSize,
+                                           mode: contentMode)
+    let options: KingfisherOptionsInfo = [.processor(processor)]
+    imageView?.kf.indicatorType = .activity
+    imageView?.kf.setImage(with: resource,
+                           placeholder: nil,
+                           options: options,
+                           progressBlock: nil
+    )
   }
 }
