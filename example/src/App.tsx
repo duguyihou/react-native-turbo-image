@@ -33,9 +33,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   box: {
-    width: 300,
-    height: 300,
     marginVertical: 20,
-    backgroundColor: 'green',
   },
 });

@@ -6,13 +6,7 @@ import type { ColorValue } from 'react-native';
 import type { AccessibilityProps } from 'react-native';
 import type { ShadowStyleIOS } from 'react-native';
 import type { FlexStyle } from 'react-native';
-import {
-  View,
-  StyleSheet,
-  requireNativeComponent,
-  UIManager,
-  Platform,
-} from 'react-native';
+import { requireNativeComponent, UIManager, Platform } from 'react-native';
 
 const LINKING_ERROR =
   `The package 'react-native-turbo-image' doesn't seem to be linked. Make sure: \n\n` +
@@ -48,6 +42,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   source: string;
+  ref?: React.Ref<any>;
   scaleMode?: ScaleMode;
   /**
    *
@@ -90,39 +85,24 @@ const TurboImageBase = (
     source,
     tintColor,
     style,
-    children,
     forwardedRef,
     width,
     height,
     ...restProps
   } = props;
-  const containerStyle = {
-    width,
-    height,
-  };
+
   return (
-    <View
-      style={[styles.imageContainer, style, containerStyle]}
+    <TurboImageView
+      {...restProps}
+      tintColor={tintColor}
+      style={style}
+      source={source}
+      width={width}
+      height={height}
       ref={forwardedRef}
-    >
-      <TurboImageView
-        {...restProps}
-        tintColor={tintColor}
-        style={StyleSheet.absoluteFill}
-        source={source}
-        width={width}
-        height={height}
-      />
-      {children}
-    </View>
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  imageContainer: {
-    overflow: 'hidden',
-  },
-});
 
 const TurboImageMemo = memo(TurboImageBase);
 

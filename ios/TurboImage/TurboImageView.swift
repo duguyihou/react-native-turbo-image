@@ -26,11 +26,7 @@ class TurboImageView : UIView {
     }
   }
   
-  var scaleMode: String? {
-    didSet {
-      print("🐵 ---- scaleMode \(scaleMode)")
-    }
-  }
+  var scaleMode: ScaleMode?
   
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -50,7 +46,7 @@ class TurboImageView : UIView {
   }
   
   @objc
-  func setScaleMode(_ scaleMode: String) {
+  func setScaleMode(_ scaleMode: ScaleMode) {
     self.scaleMode = scaleMode
   }
   
@@ -72,11 +68,16 @@ extension TurboImageView {
     guard let source = source,
           let url = URL(string: source),
           let width = width,
-          let height = height
+          let height = height,
+          let scaleMode = scaleMode
     else { return }
+    
     let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
     let scale = UIScreen.main.scale
-    let processor = ResizingImageProcessor(referenceSize: CGSize(width: width * scale, height: height * scale), mode: .aspectFill)
+    let contentMode = ScaleMode.mapContentMode(by: scaleMode)
+    let referenceSize = CGSize(width: width * scale, height: height * scale)
+    let processor = ResizingImageProcessor(referenceSize: referenceSize,
+                                           mode: contentMode)
     let options: KingfisherOptionsInfo = [.processor(processor)]
     imageView?.kf.indicatorType = .activity
     imageView?.kf.setImage(with: resource,
