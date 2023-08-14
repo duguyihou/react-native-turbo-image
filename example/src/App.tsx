@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 
 export default function App() {
@@ -14,6 +14,7 @@ export default function App() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
+      <Text>Turbo Image</Text>
       {images.map((img, idx) => (
         <TurboImage
           key={idx}

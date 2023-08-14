@@ -96,6 +96,11 @@ dependencies {
   // For > 0.71, this will be replaced by `com.facebook.react:react-android:$version` by react gradle plugin
   //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-native:+"
+  implementation 'androidx.lifecycle:lifecycle-process:2.6.1'
+  implementation "io.coil-kt:coil:2.4.0"
+  implementation "io.coil-kt:coil-gif:2.4.0"
+  implementation "io.coil-kt:coil-video:2.4.0"
+  implementation "io.coil-kt:coil-svg:2.4.0"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 
