@@ -20,7 +20,7 @@ class TurboImageView : UIView {
     }
   }
   
-  @objc var source: String? {
+  @objc var source: Source? {
     didSet {
       needsReload = true
     }
@@ -64,9 +64,9 @@ class TurboImageView : UIView {
 
 extension TurboImageView {
   
-  func loadImage(with source: String?) {
+  func loadImage(with source: Source?) {
     guard let source = source,
-          let url = URL(string: source),
+          let url = URL(string: source.uri!),
           let width = width,
           let height = height,
           let scaleMode = scaleMode

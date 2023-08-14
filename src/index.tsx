@@ -14,6 +14,9 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
+export type Source = {
+  uri?: string;
+};
 export type ScaleMode = 'fit' | 'fill';
 /**
  * **aspectFit**
@@ -41,7 +44,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
   opacity?: number;
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
-  source: string;
+  source: Source;
   ref?: React.Ref<any>;
   scaleMode?: ScaleMode;
   /**
