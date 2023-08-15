@@ -1,20 +1,14 @@
 package com.turboimage
 
-import android.graphics.Color
-import android.view.View
-import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
-import com.facebook.react.uimanager.annotations.ReactProp
 
-class TurboImageViewManager : SimpleViewManager<View>() {
-  override fun getName() = "TurboImageView"
+class TurboImageViewManager : TurboImageViewManagerBase<TurboImageView>() {
+  override fun getName() = REACT_CLASS
 
-  override fun createViewInstance(reactContext: ThemedReactContext): View {
-    return View(reactContext)
+  override fun getImageView(reactContext: ThemedReactContext): TurboImageView {
+    return TurboImageView(reactContext)
   }
-
-  @ReactProp(name = "color")
-  fun setColor(view: View, color: String) {
-    view.setBackgroundColor(Color.parseColor(color))
+  companion object {
+    private const val REACT_CLASS = "TurboImageView"
   }
 }
