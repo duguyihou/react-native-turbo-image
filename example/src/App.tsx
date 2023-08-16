@@ -22,7 +22,7 @@ export default function App() {
           style={styles.box}
           width={300}
           height={200}
-          scaleMode="fill"
+          // resizeMode="contain"
         />
       ))}
     </ScrollView>

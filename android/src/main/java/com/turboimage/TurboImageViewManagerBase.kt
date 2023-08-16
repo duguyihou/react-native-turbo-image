@@ -1,6 +1,7 @@
 package  com.turboimage
 
 import android.widget.ImageView
+import android.widget.ImageView.ScaleType
 import coil.Coil
 import coil.request.Disposable
 import coil.request.ImageRequest
@@ -40,5 +41,19 @@ abstract class TurboImageViewManagerBase<T>: SimpleViewManager<T>() where T: Ima
     } else {
       requestBuilder.data(null)
     }
+  }
+
+  @ReactProp(name="resizeMode")
+  fun setResizeMode(view: T, resizeMode: String?) {
+    view.scaleType = RESIZE_MODE[resizeMode]
+  }
+
+  companion object {
+    private val RESIZE_MODE = mapOf(
+      "contain" to ScaleType.FIT_CENTER,
+      "cover" to ScaleType.CENTER_CROP,
+      "stretch" to ScaleType.FIT_XY,
+      "center" to ScaleType.CENTER_INSIDE
+    )
   }
 }
