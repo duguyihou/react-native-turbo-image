@@ -8,7 +8,6 @@ import type {
   ShadowStyleIOS,
   FlexStyle,
 } from 'react-native';
-
 import {
   Platform,
   UIManager,
