@@ -3,7 +3,7 @@ import React
 import Kingfisher
 
 @objc
-enum ScaleMode: Int {
+enum ResizeMode: Int {
   
   /// Not scale the content.
   case none
@@ -15,15 +15,15 @@ enum ScaleMode: Int {
   case aspectFill
 }
 
-extension ScaleMode {
+extension ResizeMode {
   
-  static func mapContentMode(by scaleMode: ScaleMode) -> ContentMode {
+  static func mapContentMode(by resizeMode: ResizeMode) -> Kingfisher.ContentMode {
     var contentMode: Kingfisher.ContentMode
-    switch scaleMode.rawValue {
+    switch resizeMode.rawValue {
     case 1:
-      contentMode = .aspectFit
-    case 2:
       contentMode = .aspectFill
+    case 2:
+      contentMode = .aspectFit
     default:
       contentMode = .none
     }
@@ -33,15 +33,15 @@ extension ScaleMode {
 
 
 extension RCTConvert {
-  @objc(ScaleMode:)
-  static func scaleMode(_ value: Any) -> ScaleMode {
-    let ScaleModeMap: [String: ScaleMode] = [
+  @objc(ResizeMode:)
+  static func resizeMode(_ value: Any) -> ResizeMode {
+    let ResizeModeMap: [String: ResizeMode] = [
       "fill": .aspectFill,
       "fit": .aspectFit
     ]
     
     guard let value = value as? String,
-          let mv = ScaleModeMap[value]
+          let mv = ResizeModeMap[value]
     else { return .none }
     return mv
   }

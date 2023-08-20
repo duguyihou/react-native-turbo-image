@@ -17,7 +17,7 @@ const LINKING_ERROR =
 export type Source = {
   uri?: string;
 };
-export type ScaleMode = 'fit' | 'fill';
+export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 /**
  * **aspectFit**
  * Scales the content to fit the size of the view by maintaining the aspect ratio.
@@ -25,9 +25,11 @@ export type ScaleMode = 'fit' | 'fill';
  * **aspectFill**
  * Scales the content to fill the size of the view.
  */
-const scaleMode = {
-  fit: 'fit',
-  fill: 'fill',
+const resizeMode = {
+  contain: 'contain',
+  cover: 'cover',
+  stretch: 'stretch',
+  center: 'center',
 } as const;
 
 export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
@@ -46,7 +48,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   source: Source;
   ref?: React.Ref<any>;
-  scaleMode?: ScaleMode;
+  resizeMode?: ResizeMode;
   /**
    *
    * Style
@@ -91,6 +93,8 @@ const TurboImageBase = (
     forwardedRef,
     width,
     height,
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    resizeMode = 'cover',
     ...restProps
   } = props;
 
@@ -100,6 +104,7 @@ const TurboImageBase = (
       tintColor={tintColor}
       style={style}
       source={source}
+      resizeMode={resizeMode}
       width={width}
       height={height}
       ref={forwardedRef}
@@ -118,12 +123,12 @@ const TurboImageComponent: React.ComponentType<TurboImageProps> = forwardRef(
 TurboImageComponent.displayName = 'TurboImage';
 
 export interface TurboImageStaticProperties {
-  scaleMode: typeof scaleMode;
+  resizeMode: typeof resizeMode;
 }
 
 const TurboImage: React.ComponentType<TurboImageProps> &
   TurboImageStaticProperties = TurboImageComponent as any;
 
-TurboImage.scaleMode = scaleMode;
+TurboImage.resizeMode = resizeMode;
 
 export default TurboImage;
