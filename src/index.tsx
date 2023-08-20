@@ -1,12 +1,20 @@
 import React, { forwardRef, memo } from 'react';
-import type { TransformsStyle } from 'react-native';
-import type { StyleProp } from 'react-native';
-import type { ViewProps } from 'react-native';
-import type { ColorValue } from 'react-native';
-import type { AccessibilityProps } from 'react-native';
-import type { ShadowStyleIOS } from 'react-native';
-import type { FlexStyle } from 'react-native';
-import { requireNativeComponent, UIManager, Platform } from 'react-native';
+import type {
+  TransformsStyle,
+  StyleProp,
+  ViewProps,
+  ColorValue,
+  AccessibilityProps,
+  ShadowStyleIOS,
+  FlexStyle,
+} from 'react-native';
+
+import {
+  Platform,
+  UIManager,
+  requireNativeComponent,
+  NativeModules,
+} from 'react-native';
 
 const LINKING_ERROR =
   `The package 'react-native-turbo-image' doesn't seem to be linked. Make sure: \n\n` +
@@ -124,11 +132,22 @@ TurboImageComponent.displayName = 'TurboImage';
 
 export interface TurboImageStaticProperties {
   resizeMode: typeof resizeMode;
+  clearAllCache: () => Promise<void>;
+  clearMemoryCache: () => Promise<void>;
+  clearDiskCache: () => Promise<void>;
 }
 
+const { TurboImageModule } = NativeModules;
+
 const TurboImage: React.ComponentType<TurboImageProps> &
-  TurboImageStaticProperties = TurboImageComponent as any;
+  TurboImageStaticProperties = Object.assign(
+  TurboImageComponent,
+  TurboImageModule
+);
 
 TurboImage.resizeMode = resizeMode;
+TurboImage.clearAllCache = () => TurboImageModule.clearAllCache();
+TurboImage.clearMemoryCache = () => TurboImageModule.clearMemoryCache();
+TurboImage.clearDiskCache = () => TurboImageModule.clearDiskCache();
 
 export default TurboImage;
