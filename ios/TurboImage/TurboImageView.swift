@@ -26,7 +26,7 @@ class TurboImageView : UIView {
     }
   }
   
-  var scaleMode: ScaleMode?
+  var resizeMode: ResizeMode?
   
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -46,8 +46,8 @@ class TurboImageView : UIView {
   }
   
   @objc
-  func setScaleMode(_ scaleMode: ScaleMode) {
-    self.scaleMode = scaleMode
+  func setResizeMode(_ resizeMode: ResizeMode) {
+    self.resizeMode = resizeMode
   }
   
   override func didSetProps(_ changedProps: [String]!) {
@@ -69,12 +69,12 @@ extension TurboImageView {
           let url = URL(string: source.uri!),
           let width = width,
           let height = height,
-          let scaleMode = scaleMode
+          let resizeMode = resizeMode
     else { return }
     
     let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
     let scale = UIScreen.main.scale
-    let contentMode = ScaleMode.mapContentMode(by: scaleMode)
+    let contentMode = ResizeMode.mapContentMode(by: resizeMode)
     let referenceSize = CGSize(width: width * scale, height: height * scale)
     let processor = ResizingImageProcessor(referenceSize: referenceSize,
                                            mode: contentMode)

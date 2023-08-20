@@ -3,12 +3,68 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 
 export default function App() {
-  const image = {
-    source: {
-      uri: 'https://placedog.net/300/200?id=12',
+  const images = [
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=1',
+      },
     },
-  };
-  const images = Array(10).fill(image);
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=2',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=3',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=4',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=5',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=6',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=7',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=8',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=9',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=10',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=11',
+      },
+    },
+    {
+      source: {
+        uri: 'https://placedog.net/300/200?id=12',
+      },
+    },
+  ];
   return (
     <ScrollView
       style={styles.container}
@@ -22,7 +78,7 @@ export default function App() {
           style={styles.box}
           width={300}
           height={200}
-          // resizeMode="contain"
+          resizeMode="center"
         />
       ))}
     </ScrollView>
