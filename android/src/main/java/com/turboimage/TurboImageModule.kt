@@ -34,6 +34,6 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   }
 
   companion object {
-    private const val REACT_CLASS = "TurboImageModule"
+    private const val REACT_CLASS = "TurboImageViewManager"
   }
 }

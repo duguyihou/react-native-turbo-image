@@ -136,17 +136,17 @@ export interface TurboImageStaticProperties {
   clearDiskCache: () => Promise<void>;
 }
 
-const { TurboImageModule } = NativeModules;
+const { TurboImageViewManager } = NativeModules;
 
 const TurboImage: React.ComponentType<TurboImageProps> &
   TurboImageStaticProperties = Object.assign(
   TurboImageComponent,
-  TurboImageModule
+  TurboImageViewManager
 );
 
 TurboImage.resizeMode = resizeMode;
-TurboImage.clearAllCache = () => TurboImageModule.clearAllCache();
-TurboImage.clearMemoryCache = () => TurboImageModule.clearMemoryCache();
-TurboImage.clearDiskCache = () => TurboImageModule.clearDiskCache();
+TurboImage.clearAllCache = () => TurboImageViewManager.clearAllCache();
+TurboImage.clearMemoryCache = () => TurboImageViewManager.clearMemoryCache();
+TurboImage.clearDiskCache = () => TurboImageViewManager.clearDiskCache();
 
 export default TurboImage;
