@@ -15,7 +15,13 @@ import { TurboImageView } from "react-native-turbo-image";
 
 // ...
 
-<TurboImageView color="tomato" />
+<TurboImage
+  source={{
+    uri: 'https://placedog.net/300/200?id=1',
+  }}
+  width={300}
+  height={200}
+/>
 ```
 
 ## Contributing
