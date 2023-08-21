@@ -8,7 +8,7 @@ import com.facebook.react.uimanager.ViewManager
 
 class TurboImagePackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
-    return emptyList()
+    return listOf(TurboImageModule(reactContext))
   }
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> {

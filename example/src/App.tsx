@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { Button, ScrollView, StyleSheet, Text } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 
 export default function App() {
@@ -65,12 +65,20 @@ export default function App() {
       },
     },
   ];
+
+  const handleClearMemoryCache = () => TurboImage.clearMemoryCache();
+  const handleClearDiskCache = () => TurboImage.clearDiskCache();
+  const handleClearAllCache = () => TurboImage.clearAllCache();
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
       <Text>Turbo Image</Text>
+      <Button title="clear memory cache" onPress={handleClearMemoryCache} />
+      <Button title="clear disk cache" onPress={handleClearDiskCache} />
+      <Button title="clear all cache" onPress={handleClearAllCache} />
       {images.map((img, idx) => (
         <TurboImage
           key={idx}
@@ -78,7 +86,7 @@ export default function App() {
           style={styles.box}
           width={300}
           height={200}
-          resizeMode="center"
+          resizeMode="contain"
         />
       ))}
     </ScrollView>

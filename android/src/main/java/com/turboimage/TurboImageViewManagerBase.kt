@@ -10,7 +10,7 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 
-abstract class TurboImageViewManagerBase<T>: SimpleViewManager<T>() where T: ImageView {
+abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : ImageView {
   private lateinit var requestBuilder: ImageRequest.Builder
   private var disposable: Disposable? = null
 
@@ -34,7 +34,7 @@ abstract class TurboImageViewManagerBase<T>: SimpleViewManager<T>() where T: Ima
     }
   }
 
-  @ReactProp(name ="source")
+  @ReactProp(name = "source")
   fun setSource(view: T, source: ReadableMap?) {
     if (source != null && source.hasKey("uri")) {
       requestBuilder.data(source.getString("uri"))
@@ -43,7 +43,7 @@ abstract class TurboImageViewManagerBase<T>: SimpleViewManager<T>() where T: Ima
     }
   }
 
-  @ReactProp(name="resizeMode")
+  @ReactProp(name = "resizeMode")
   fun setResizeMode(view: T, resizeMode: String?) {
     view.scaleType = RESIZE_MODE[resizeMode]
   }

@@ -8,6 +8,7 @@ class TurboImageViewManager : TurboImageViewManagerBase<TurboImageView>() {
   override fun getImageView(reactContext: ThemedReactContext): TurboImageView {
     return TurboImageView(reactContext)
   }
+
   companion object {
     private const val REACT_CLASS = "TurboImageView"
   }
