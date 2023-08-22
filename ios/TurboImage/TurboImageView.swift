@@ -5,6 +5,7 @@ class TurboImageView : UIView {
   
   var image: UIImage?
   var imageView: UIImageView?
+  var imageColor: UIColor?
   private var needsReload: Bool = false
   
   var width: CGFloat? {
@@ -50,6 +51,11 @@ class TurboImageView : UIView {
     self.resizeMode = resizeMode
   }
   
+  @objc
+  func setImageColor(_ imageColor: UIColor) {
+    self.imageColor = imageColor
+  }
+  
   override func didSetProps(_ changedProps: [String]!) {
     if needsReload {
       loadImage(with: source)
@@ -68,16 +74,24 @@ extension TurboImageView {
     guard let source = source,
           let url = URL(string: source.uri!),
           let width = width,
-          let height = height,
-          let resizeMode = resizeMode
+          let height = height
     else { return }
     
     let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
-    let scale = UIScreen.main.scale
-    let contentMode = ResizeMode.mapContentMode(by: resizeMode)
-    let referenceSize = CGSize(width: width * scale, height: height * scale)
-    let processor = ResizingImageProcessor(referenceSize: referenceSize,
-                                           mode: contentMode)
+    var processor: ImageProcessor = DefaultImageProcessor.default
+    if(resizeMode != nil) {
+      let scale = UIScreen.main.scale
+      let contentMode = ResizeMode.mapContentMode(by: resizeMode!)
+      let referenceSize = CGSize(width: width * scale, height: height * scale)
+      let resizingImageprocessor = ResizingImageProcessor(referenceSize: referenceSize,
+                                                          mode: contentMode)
+      processor = processor.append(another: resizingImageprocessor)
+    }
+    if (imageColor != nil) {
+      let tintProcessor = TintImageProcessor(tint: imageColor!)
+      processor = processor.append(another: tintProcessor)
+    }
+    
     let options: KingfisherOptionsInfo = [.processor(processor)]
     imageView?.kf.indicatorType = .activity
     imageView?.kf.setImage(with: resource,
