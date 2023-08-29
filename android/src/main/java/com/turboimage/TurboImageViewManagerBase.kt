@@ -13,7 +13,7 @@ import com.facebook.react.uimanager.annotations.ReactProp
 abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : ImageView {
   private lateinit var requestBuilder: ImageRequest.Builder
   private var disposable: Disposable? = null
-
+  
   abstract fun getImageView(reactContext: ThemedReactContext): T
 
   override fun createViewInstance(p0: ThemedReactContext): T {
@@ -46,6 +46,10 @@ abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : I
   @ReactProp(name = "resizeMode")
   fun setResizeMode(view: T, resizeMode: String?) {
     view.scaleType = RESIZE_MODE[resizeMode]
+  }
+
+  @ReactProp(name = "tintColor")
+  fun setTintColor(view: T, tintColor: String) {
   }
 
   companion object {

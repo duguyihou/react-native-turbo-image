@@ -87,6 +87,7 @@ export default function App() {
           width={300}
           height={200}
           resizeMode="contain"
+          tintColor="blue"
         />
       ))}
     </ScrollView>
