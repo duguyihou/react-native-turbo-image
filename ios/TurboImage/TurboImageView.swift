@@ -3,101 +3,62 @@ import React
 
 class TurboImageView : UIView {
   
-  var image: UIImage?
-  var imageView: UIImageView?
-  var imageColor: UIColor?
-  private var needsReload: Bool = false
+  lazy var lazyImageView = UIImageView()
+  @objc var onError: RCTDirectEventBlock?
+  @objc var onSuccess: RCTDirectEventBlock?
   
-  var width: CGFloat? {
+  @objc var url: String? = nil {
     didSet {
-      guard let width = width else { return }
-      imageView?.frame.size.width = width
-    }
-  }
-  var height: CGFloat? {
-    didSet {
-      guard let height = height else { return }
-      imageView?.frame.size.height = height
+      guard url != nil else {
+        onError?([
+          "error": "Expected a valid url but got: \(url ?? "nil")",
+        ])
+        return
+      }
     }
   }
   
-  @objc var source: Source? {
+  @objc var resizeMode = "contain" {
     didSet {
-      needsReload = true
+      lazyImageView.contentMode = ResizeMode(rawValue: resizeMode)?.contentMode ?? .scaleAspectFit
     }
   }
-  
-  var resizeMode: ResizeMode?
   
   override init(frame: CGRect) {
     super.init(frame: frame)
-    clipsToBounds = true
-    imageView = UIImageView()
-    addSubview(imageView!)
-  }
-  
-  @objc
-  func setHeight(_ height: CGFloat) {
-    self.height = height
-  }
-  
-  @objc
-  func setWidth(_ width: CGFloat) {
-    self.width = width
-  }
-  
-  @objc
-  func setResizeMode(_ resizeMode: ResizeMode) {
-    self.resizeMode = resizeMode
-  }
-  
-  @objc
-  func setImageColor(_ imageColor: UIColor) {
-    self.imageColor = imageColor
+    addSubview(lazyImageView)
+    lazyImageView.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      lazyImageView.topAnchor.constraint(equalTo: topAnchor),
+      lazyImageView.bottomAnchor.constraint(equalTo: bottomAnchor),
+      lazyImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
+      lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
+    ])
   }
   
   override func didSetProps(_ changedProps: [String]!) {
-    if needsReload {
-      loadImage(with: source)
-    }
+    loadImage()
   }
   
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
 }
 
-extension TurboImageView {
+fileprivate extension TurboImageView {
   
-  func loadImage(with source: Source?) {
-    guard let source = source,
-          let url = URL(string: source.uri!),
-          let width = width,
-          let height = height
+  func loadImage() {
+    guard let url = URL(string: url!)
     else { return }
     
-    let resource: KF.ImageResource = KF.ImageResource(downloadURL: url)
-    var processor: ImageProcessor = DefaultImageProcessor.default
-    if(resizeMode != nil) {
-      let scale = UIScreen.main.scale
-      let contentMode = ResizeMode.mapContentMode(by: resizeMode!)
-      let referenceSize = CGSize(width: width * scale, height: height * scale)
-      let resizingImageprocessor = ResizingImageProcessor(referenceSize: referenceSize,
-                                                          mode: contentMode)
-      processor = processor.append(another: resizingImageprocessor)
-    }
-    if (imageColor != nil) {
-      let tintProcessor = TintImageProcessor(tint: imageColor!)
-      processor = processor.append(another: tintProcessor)
-    }
-    
-    let options: KingfisherOptionsInfo = [.processor(processor)]
-    imageView?.kf.indicatorType = .activity
-    imageView?.kf.setImage(with: resource,
-                           placeholder: nil,
-                           options: options,
-                           progressBlock: nil
-    )
+    KF.url(url)
+      .fade(duration: 1)
+      .onSuccess({ result in
+        self.onSuccess?(["result": result])
+      })
+      .onFailure({ error in
+        self.onError?(["error": error.localizedDescription])
+      })
+      .set(to: lazyImageView)
   }
 }
