@@ -12,7 +12,12 @@ export default function App() {
       >
         <Text>Turbo Image</Text>
         {images.map((img, idx) => (
-          <TurboImage key={idx} url={img.url} style={styles.box} />
+          <TurboImage
+            key={idx}
+            url={img.url}
+            style={styles.box}
+            resizeMode="center"
+          />
         ))}
       </ScrollView>
     </SafeAreaView>

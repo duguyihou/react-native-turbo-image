@@ -18,7 +18,11 @@ class TurboImageView : UIView {
     }
   }
   
-  var resizeMode: ResizeMode?
+  @objc var resizeMode = "contain" {
+    didSet {
+      lazyImageView.contentMode = ResizeMode(rawValue: resizeMode)?.contentMode ?? .scaleAspectFit
+    }
+  }
   
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -32,11 +36,6 @@ class TurboImageView : UIView {
     ])
   }
   
-  @objc
-  func setResizeMode(_ resizeMode: ResizeMode) {
-    self.resizeMode = resizeMode
-  }
-  
   override func didSetProps(_ changedProps: [String]!) {
     loadImage()
   }
@@ -44,24 +43,21 @@ class TurboImageView : UIView {
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
 }
 
-extension TurboImageView {
+fileprivate extension TurboImageView {
   
   func loadImage() {
-    guard let url = URL(string: url!) else { return }
+    guard let url = URL(string: url!)
+    else { return }
+    
     KF.url(url)
       .fade(duration: 1)
       .onSuccess({ result in
-        self.onSuccess?([
-          "result": result
-        ])
+        self.onSuccess?(["result": result])
       })
       .onFailure({ error in
-        self.onError?([
-          "error": error.localizedDescription
-        ])
+        self.onError?(["error": error.localizedDescription])
       })
       .set(to: lazyImageView)
   }

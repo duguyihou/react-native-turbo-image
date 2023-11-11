@@ -6,6 +6,7 @@ import type {
   AccessibilityProps,
   ShadowStyleIOS,
   FlexStyle,
+  ImageResizeMode,
 } from 'react-native';
 import {
   Platform,
@@ -35,6 +36,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   url: string;
+  resizeMode?: ImageResizeMode;
   onError?: (result: { nativeEvent: { error: string } }) => void;
   onSuccess?: (result: {
     nativeEvent: {
@@ -73,7 +75,15 @@ const TurboImageView =
 const TurboImageBase = (
   props: TurboImageProps & { forwardedRef: React.Ref<any> }
 ) => {
-  const { url, onError, onSuccess, style, forwardedRef, ...restProps } = props;
+  const {
+    url,
+    onError,
+    onSuccess,
+    style,
+    forwardedRef,
+    resizeMode,
+    ...restProps
+  } = props;
 
   return (
     <TurboImageView
@@ -82,6 +92,7 @@ const TurboImageBase = (
       onSuccess={onSuccess}
       style={style}
       url={url}
+      resizeMode={resizeMode}
       ref={forwardedRef}
     />
   );
