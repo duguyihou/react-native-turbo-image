@@ -1,6 +1,7 @@
+import type { ResizeMode } from './types';
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   url: string;
-  resizeMode?: ImageResizeMode;
+  resizeMode?: ResizeMode;
   onError?: (result: { nativeEvent: { error: string } }) => void;
   onSuccess?: (result: {
     nativeEvent: {

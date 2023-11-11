@@ -10,7 +10,7 @@ enum ResizeMode: String {
     
     var contentMode: UIView.ContentMode {
         switch self {
-        case .fill:
+        case .fill: // TODO: 🐵 stretch?
             return .scaleToFill
         case .contain:
             return .scaleAspectFit
