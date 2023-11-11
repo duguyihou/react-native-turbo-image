@@ -3,7 +3,6 @@ import React
 
 class TurboImageView : UIView {
   
-  var image: UIImage?
   var imageView: UIImageView?
   var imageColor: UIColor?
   private var needsReload: Bool = false
