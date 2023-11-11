@@ -3,7 +3,6 @@ import type {
   TransformsStyle,
   StyleProp,
   ViewProps,
-  ColorValue,
   AccessibilityProps,
   ShadowStyleIOS,
   FlexStyle,
@@ -21,24 +20,6 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-export type Source = {
-  uri?: string;
-};
-export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
-/**
- * **aspectFit**
- * Scales the content to fit the size of the view by maintaining the aspect ratio.
- *
- * **aspectFill**
- * Scales the content to fill the size of the view.
- */
-const resizeMode = {
-  contain: 'contain',
-  cover: 'cover',
-  stretch: 'stretch',
-  center: 'center',
-} as const;
-
 export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
   backfaceVisibility?: 'visible' | 'hidden';
   borderBottomLeftRadius?: number;
@@ -54,19 +35,20 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   url: string;
+  onError?: (result: { nativeEvent: { error: string } }) => void;
+  onSuccess?: (result: {
+    nativeEvent: {
+      width: number;
+      height: number;
+      source: string;
+    };
+  }) => void;
   ref?: React.Ref<any>;
-  resizeMode?: ResizeMode;
   /**
    *
    * Style
    */
   style?: StyleProp<ImageStyle>;
-
-  /**
-   * TintColor
-   * If supplied, changes the color of all the non-transparent pixels to the given color.
-   */
-  tintColor?: ColorValue;
 
   /**
    * A unique identifier for this element to be used in UI Automation testing scripts.
@@ -77,8 +59,6 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
    * Render children within the image.
    */
   children?: React.ReactNode;
-  width: number;
-  height: number;
 }
 
 const ComponentName = 'TurboImageView';
@@ -93,27 +73,15 @@ const TurboImageView =
 const TurboImageBase = (
   props: TurboImageProps & { forwardedRef: React.Ref<any> }
 ) => {
-  const {
-    url,
-    tintColor,
-    style,
-    forwardedRef,
-    width,
-    height,
-    // eslint-disable-next-line @typescript-eslint/no-shadow
-    resizeMode = 'cover',
-    ...restProps
-  } = props;
+  const { url, onError, onSuccess, style, forwardedRef, ...restProps } = props;
 
   return (
     <TurboImageView
       {...restProps}
-      tintColor={tintColor}
+      onError={onError}
+      onSuccess={onSuccess}
       style={style}
       url={url}
-      resizeMode={resizeMode}
-      width={width}
-      height={height}
       ref={forwardedRef}
     />
   );
@@ -129,18 +97,11 @@ const TurboImageComponent: React.ComponentType<TurboImageProps> = forwardRef(
 
 TurboImageComponent.displayName = 'TurboImage';
 
-export interface TurboImageStaticProperties {
-  resizeMode: typeof resizeMode;
-}
-
 const { TurboImageViewManager } = NativeModules;
 
-const TurboImage: React.ComponentType<TurboImageProps> &
-  TurboImageStaticProperties = Object.assign(
+const TurboImage: React.ComponentType<TurboImageProps> = Object.assign(
   TurboImageComponent,
   TurboImageViewManager
 );
-
-TurboImage.resizeMode = resizeMode;
 
 export default TurboImage;

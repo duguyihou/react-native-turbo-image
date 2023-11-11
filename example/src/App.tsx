@@ -12,14 +12,7 @@ export default function App() {
       >
         <Text>Turbo Image</Text>
         {images.map((img, idx) => (
-          <TurboImage
-            key={idx}
-            url={img.url}
-            style={styles.box}
-            width={300}
-            height={200}
-            resizeMode="contain"
-          />
+          <TurboImage key={idx} url={img.url} style={styles.box} />
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -36,5 +29,8 @@ const styles = StyleSheet.create({
   },
   box: {
     marginVertical: 20,
+    width: 300,
+    height: 200,
+    backgroundColor: 'blue',
   },
 });
