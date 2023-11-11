@@ -21,7 +21,7 @@ class TurboImageView : UIView {
     }
   }
   
-  @objc var source: Source? {
+  @objc var url: String? {
     didSet {
       needsReload = true
     }
@@ -58,7 +58,7 @@ class TurboImageView : UIView {
   
   override func didSetProps(_ changedProps: [String]!) {
     if needsReload {
-      loadImage(with: source)
+      loadImage(with: url)
     }
   }
   
@@ -70,9 +70,8 @@ class TurboImageView : UIView {
 
 extension TurboImageView {
   
-  func loadImage(with source: Source?) {
-    guard let source = source,
-          let url = URL(string: source.uri!),
+  func loadImage(with url: String?) {
+    guard let url = URL(string: url!),
           let width = width,
           let height = height
     else { return }

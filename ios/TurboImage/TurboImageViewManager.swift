@@ -11,22 +11,3 @@ class TurboImageViewManager: RCTViewManager {
     return false
   }
 }
-
-extension TurboImageViewManager {
-  @objc
-  func clearAllCache() {
-    ImageCache.default.clearCache()
-  }
-  
-  @objc
-  func clearMemoryCache() {
-    ImageCache.default.clearMemoryCache()
-  }
-  
-  @objc
-  func clearDiskCache() {
-    ImageCache.default.clearDiskCache()
-  }
-}
-
-

@@ -53,7 +53,7 @@ export interface ImageStyle extends FlexStyle, TransformsStyle, ShadowStyleIOS {
   opacity?: number;
 }
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
-  source: Source;
+  url: string;
   ref?: React.Ref<any>;
   resizeMode?: ResizeMode;
   /**
@@ -94,7 +94,7 @@ const TurboImageBase = (
   props: TurboImageProps & { forwardedRef: React.Ref<any> }
 ) => {
   const {
-    source,
+    url,
     tintColor,
     style,
     forwardedRef,
@@ -110,7 +110,7 @@ const TurboImageBase = (
       {...restProps}
       tintColor={tintColor}
       style={style}
-      source={source}
+      url={url}
       resizeMode={resizeMode}
       width={width}
       height={height}
@@ -131,9 +131,6 @@ TurboImageComponent.displayName = 'TurboImage';
 
 export interface TurboImageStaticProperties {
   resizeMode: typeof resizeMode;
-  clearAllCache: () => Promise<void>;
-  clearMemoryCache: () => Promise<void>;
-  clearDiskCache: () => Promise<void>;
 }
 
 const { TurboImageViewManager } = NativeModules;
@@ -145,8 +142,5 @@ const TurboImage: React.ComponentType<TurboImageProps> &
 );
 
 TurboImage.resizeMode = resizeMode;
-TurboImage.clearAllCache = () => TurboImageViewManager.clearAllCache();
-TurboImage.clearMemoryCache = () => TurboImageViewManager.clearMemoryCache();
-TurboImage.clearDiskCache = () => TurboImageViewManager.clearDiskCache();
 
 export default TurboImage;
