@@ -23,8 +23,8 @@ abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : I
 
   override fun onAfterUpdateTransaction(view: T) {
     super.onAfterUpdateTransaction(view)
-    requestBuilder.size(300,200)
-    disposable = Coil.imageLoader(view.context).enqueue(requestBuilder.build())
+    val request = requestBuilder.build()
+    disposable = Coil.imageLoader(view.context).enqueue(request)
   }
 
   override fun onDropViewInstance(view: T) {
