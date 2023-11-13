@@ -16,7 +16,7 @@ export default function App() {
             key={idx}
             url={img.url}
             style={styles.box}
-            resizeMode="center"
+            resizeMode="contain"
           />
         ))}
       </ScrollView>
