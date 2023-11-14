@@ -17,6 +17,7 @@ export default function App() {
             url={img.url}
             style={styles.box}
             resizeMode="contain"
+            showActivityIndicator
           />
         ))}
       </ScrollView>

@@ -2,6 +2,7 @@ import type { ResizeMode } from './types';
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   url: string;
   resizeMode?: ResizeMode;
+  showActivityIndicator?: boolean;
   onError?: (result: { nativeEvent: { error: string } }) => void;
   onSuccess?: (result: {
     nativeEvent: {

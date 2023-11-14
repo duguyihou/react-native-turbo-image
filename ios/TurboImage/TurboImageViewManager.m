@@ -10,5 +10,7 @@ RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
 
+RCT_EXPORT_VIEW_PROPERTY(showActivityIndicator, BOOL)
+
 @end
 
