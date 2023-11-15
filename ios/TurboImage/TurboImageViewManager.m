@@ -12,5 +12,7 @@ RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(showActivityIndicator, BOOL)
 
+RCT_EXPORT_VIEW_PROPERTY(base64Placeholder, NSString)
+
 @end
 

@@ -24,6 +24,7 @@ abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : I
   override fun onAfterUpdateTransaction(view: T) {
     super.onAfterUpdateTransaction(view)
     val request = requestBuilder.build()
+    requestBuilder.crossfade(5000)
     disposable = Coil.imageLoader(view.context).enqueue(request)
   }
 
@@ -42,6 +43,17 @@ abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : I
   @ReactProp(name = "resizeMode")
   fun setResizeMode(view: T, resizeMode: String?) {
     view.scaleType = RESIZE_MODE[resizeMode]
+  }
+
+  @ReactProp(name = "base64Placeholder")
+  fun setBase64Placeholder(view: T, base64Placeholder: String?) {
+    if (base64Placeholder == null) {
+      requestBuilder.placeholder(null)
+    } else {
+      requestBuilder.placeholder(
+        TurboImageBase64.base64ToDrawable(view.context, base64Placeholder)
+      )
+    }
   }
 
   companion object {
