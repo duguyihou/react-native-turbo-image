@@ -24,6 +24,12 @@ class TurboImageView : UIView {
     }
   }
   
+  @objc var showActivityIndicator = false {
+    didSet {
+      lazyImageView.kf.indicatorType = .activity
+    }
+  }
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -52,7 +58,7 @@ fileprivate extension TurboImageView {
     else { return }
     
     KF.url(url)
-      .fade(duration: 1)
+      .fade(duration: 0.75)
       .onSuccess({ result in
         self.onSuccess?(["result": result])
       })
