@@ -30,6 +30,8 @@ class TurboImageView : UIView {
     }
   }
   
+  @objc var base64Placeholder: String?
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -58,7 +60,8 @@ fileprivate extension TurboImageView {
     else { return }
     
     KF.url(url)
-      .fade(duration: 0.75)
+      .fade(duration: 5)
+      .placeholder(UIImage(base64Placeholder: base64Placeholder))
       .onSuccess({ result in
         self.onSuccess?(["result": result])
       })
