@@ -1,7 +1,7 @@
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
-import { images, base64Placeholder } from './mockData';
+import { base64Placeholder, images } from './mockData';
 
 export default function App() {
   return (
@@ -18,6 +18,7 @@ export default function App() {
             style={styles.box}
             resizeMode="contain"
             showActivityIndicator
+            fadeDuration={10}
             base64Placeholder={base64Placeholder}
           />
         ))}

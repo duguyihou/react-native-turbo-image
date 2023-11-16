@@ -4,6 +4,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   resizeMode?: ResizeMode;
   showActivityIndicator?: boolean;
   base64Placeholder?: string;
+  fadeDuration?: number;
   onError?: (result: { nativeEvent: { error: string } }) => void;
   onSuccess?: (result: {
     nativeEvent: {
