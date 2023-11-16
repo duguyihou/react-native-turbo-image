@@ -5,14 +5,8 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   showActivityIndicator?: boolean;
   base64Placeholder?: string;
   fadeDuration?: number;
-  onError?: (result: { nativeEvent: { error: string } }) => void;
-  onSuccess?: (result: {
-    nativeEvent: {
-      width: number;
-      height: number;
-      source: string;
-    };
-  }) => void;
+  onSuccess?: () => void;
+  onError?: (error: any) => void;
   ref?: React.Ref<any>;
   style?: StyleProp<ImageStyle>;
   testID?: string;

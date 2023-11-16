@@ -1,9 +1,17 @@
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
-import { base64Placeholder, images } from './mockData';
+import { base64Placeholder } from './mockData';
 
 export default function App() {
+  const imageURLs = Array.from(
+    { length: 100 },
+    (_, i) => `https://placedog.net/300/200?id=${i}`
+  );
+  const handleOnSuccess = () => {};
+  const handleOnError = (error: any) => {
+    console.log(`🐵 ------ error`, error);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -11,15 +19,17 @@ export default function App() {
         contentContainerStyle={styles.contentContainer}
       >
         <Text>Turbo Image</Text>
-        {images.map((img, idx) => (
+        {imageURLs.map((url, idx) => (
           <TurboImage
             key={idx}
-            url={img.url}
+            url={url}
             style={styles.box}
             resizeMode="contain"
             showActivityIndicator
             fadeDuration={10}
             base64Placeholder={base64Placeholder}
+            onSuccess={handleOnSuccess}
+            onError={handleOnError}
           />
         ))}
       </ScrollView>
