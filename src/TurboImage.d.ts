@@ -6,6 +6,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   base64Placeholder?: string;
   fadeDuration?: number;
   rounded?: boolean;
+  tintColor?: string;
   onSuccess?: () => void;
   onError?: (error: any) => void;
   ref?: React.Ref<any>;
