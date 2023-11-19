@@ -3,6 +3,7 @@ import React
 
 class TurboImageView : UIView {
   
+  private var placeholder: UIImage?
   lazy var lazyImageView = UIImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -30,15 +31,24 @@ class TurboImageView : UIView {
     }
   }
   
-  @objc var base64Placeholder: String?
+  @objc var base64Placeholder: String? {
+    didSet {
+      placeholder = UIImage(base64Placeholder: base64Placeholder)
+    }
+  }
   
   @objc var fadeDuration: NSNumber = 0.5
   
-  @objc var rounded: Bool = false
+  @objc var rounded: Bool = false {
+    didSet {
+      placeholder = placeholder?.roundedCorner(with: CGFloat(truncating: 100))
+    }
+  }
   
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
+    layer.masksToBounds = true
     lazyImageView.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
       lazyImageView.topAnchor.constraint(equalTo: topAnchor),
@@ -67,7 +77,7 @@ fileprivate extension TurboImageView {
     
     KF.url(url)
       .fade(duration: TimeInterval(truncating: fadeDuration))
-      .placeholder(UIImage(base64Placeholder: base64Placeholder))
+      .placeholder(placeholder)
       .setProcessor(processor)
       .onSuccess({ result in
         self.onSuccess?(["result": "success"])
@@ -81,7 +91,7 @@ fileprivate extension TurboImageView {
   func composeProcessor(_ rounded: Bool?) -> ImageProcessor {
     var processor: ImageProcessor = DefaultImageProcessor.default
     if rounded ?? false {
-      processor = processor |> RoundCornerImageProcessor(cornerRadius: CGFloat(truncating: 20))
+      processor = processor |> RoundCornerImageProcessor(cornerRadius: CGFloat(truncating: 100))
     }
     return processor
   }
