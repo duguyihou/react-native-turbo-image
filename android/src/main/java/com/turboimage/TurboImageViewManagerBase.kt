@@ -19,6 +19,7 @@ abstract class TurboImageViewManagerBase<T> : SimpleViewManager<T>() where T : I
   override fun createViewInstance(p0: ThemedReactContext): T {
     val instance = getImageView(p0)
     requestBuilder = ImageRequest.Builder(p0).target { instance.setImageDrawable(it) }
+      .listener(object : TurboImageListener<T>(instance) {})
     return instance
   }
 
