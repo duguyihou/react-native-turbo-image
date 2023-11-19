@@ -12,6 +12,8 @@ RCT_EXPORT_VIEW_PROPERTY(base64Placeholder, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(fadeDuration, NSNumber)
 
+RCT_EXPORT_VIEW_PROPERTY(rounded, BOOL)
+
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
