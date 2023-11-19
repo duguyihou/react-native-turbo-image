@@ -4,7 +4,7 @@ import React
 class TurboImageView : UIView {
   
   private var placeholder: UIImage?
-  private var cornerRadius: CGFloat?
+  private var cornerRadius: CGFloat = 0.0
   lazy var lazyImageView = UIImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -42,9 +42,10 @@ class TurboImageView : UIView {
   
   @objc var rounded: Bool = false {
     didSet {
-      guard let width = placeholder?.size.width else { return }
-      cornerRadius = width
-      placeholder = placeholder?.roundedCorner(with: width)
+      cornerRadius = 0.5
+      if let width = placeholder?.size.width {
+        placeholder = placeholder?.roundedCorner(with: width)
+      }
     }
   }
   
@@ -78,12 +79,11 @@ fileprivate extension TurboImageView {
     guard let url = URL(string: url!)
     else { return }
     
-    let processor = composeProcessor(tint, rounded)
-    
     KF.url(url)
       .fade(duration: TimeInterval(truncating: fadeDuration))
       .placeholder(placeholder)
-      .setProcessor(processor)
+      .roundCorner(radius:.widthFraction(cornerRadius))
+      .tint(color: tint)
       .onSuccess({ result in
         self.onSuccess?(["result": "success"])
       })
@@ -91,19 +91,5 @@ fileprivate extension TurboImageView {
         self.onError?(["error": error.localizedDescription])
       })
       .set(to: lazyImageView)
-  }
-  
-  func composeProcessor( _ tint: UIColor?, _ rounded: Bool?) -> ImageProcessor {
-    var processor: ImageProcessor = DefaultImageProcessor.default
-    
-    if tint != nil && tint != .clear  {
-      processor = processor |> TintImageProcessor(tint: tint!)
-    }
-    
-    if rounded ?? false && (cornerRadius != nil) {
-      processor = processor |> RoundCornerImageProcessor(cornerRadius: cornerRadius!)
-    }
-    
-    return processor
   }
 }
