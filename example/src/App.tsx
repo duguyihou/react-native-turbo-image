@@ -28,6 +28,7 @@ export default function App() {
             showActivityIndicator
             fadeDuration={10}
             base64Placeholder={base64Placeholder}
+            rounded
             onSuccess={handleOnSuccess}
             onError={handleOnError}
           />

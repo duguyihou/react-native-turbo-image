@@ -34,6 +34,8 @@ class TurboImageView : UIView {
   
   @objc var fadeDuration: NSNumber = 0.5
   
+  @objc var rounded: Bool = false
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -61,15 +63,26 @@ fileprivate extension TurboImageView {
     guard let url = URL(string: url!)
     else { return }
     
+    let processor = composeProcessor(rounded)
+    
     KF.url(url)
       .fade(duration: TimeInterval(truncating: fadeDuration))
       .placeholder(UIImage(base64Placeholder: base64Placeholder))
-      .onSuccess({ _ in
+      .setProcessor(processor)
+      .onSuccess({ result in
         self.onSuccess?(["result": "success"])
       })
       .onFailure({ error in
         self.onError?(["error": error.localizedDescription])
       })
       .set(to: lazyImageView)
+  }
+  
+  func composeProcessor(_ rounded: Bool?) -> ImageProcessor {
+    var processor: ImageProcessor = DefaultImageProcessor.default
+    if rounded ?? false {
+      processor = processor |> RoundCornerImageProcessor(cornerRadius: CGFloat(truncating: 20))
+    }
+    return processor
   }
 }
