@@ -82,8 +82,8 @@ fileprivate extension TurboImageView {
     KF.url(url)
       .fade(duration: TimeInterval(truncating: fadeDuration))
       .placeholder(placeholder)
-      .roundCorner(radius:.widthFraction(cornerRadius))
       .tint(color: tint)
+      .roundCorner(radius:.widthFraction(cornerRadius))
       .onSuccess({ result in
         self.onSuccess?(["result": "success"])
       })
