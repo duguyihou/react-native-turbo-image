@@ -48,6 +48,8 @@ class TurboImageView : UIView {
     }
   }
   
+  @objc var tint: UIColor = .clear
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -76,7 +78,7 @@ fileprivate extension TurboImageView {
     guard let url = URL(string: url!)
     else { return }
     
-    let processor = composeProcessor(rounded)
+    let processor = composeProcessor(tint, rounded)
     
     KF.url(url)
       .fade(duration: TimeInterval(truncating: fadeDuration))
@@ -91,11 +93,17 @@ fileprivate extension TurboImageView {
       .set(to: lazyImageView)
   }
   
-  func composeProcessor(_ rounded: Bool?) -> ImageProcessor {
+  func composeProcessor( _ tint: UIColor?, _ rounded: Bool?) -> ImageProcessor {
     var processor: ImageProcessor = DefaultImageProcessor.default
+    
+    if tint != nil && tint != .clear  {
+      processor = processor |> TintImageProcessor(tint: tint!)
+    }
+    
     if rounded ?? false && (cornerRadius != nil) {
       processor = processor |> RoundCornerImageProcessor(cornerRadius: cornerRadius!)
     }
+    
     return processor
   }
 }

@@ -29,6 +29,7 @@ export default function App() {
             fadeDuration={10}
             base64Placeholder={base64Placeholder}
             rounded
+            tintColor="red"
             onSuccess={handleOnSuccess}
             onError={handleOnError}
           />
