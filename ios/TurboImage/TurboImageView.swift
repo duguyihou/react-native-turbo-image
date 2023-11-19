@@ -64,8 +64,8 @@ fileprivate extension TurboImageView {
     KF.url(url)
       .fade(duration: TimeInterval(truncating: fadeDuration))
       .placeholder(UIImage(base64Placeholder: base64Placeholder))
-      .onSuccess({ result in
-        self.onSuccess?(["result": result])
+      .onSuccess({ _ in
+        self.onSuccess?(["result": "success"])
       })
       .onFailure({ error in
         self.onError?(["error": error.localizedDescription])
