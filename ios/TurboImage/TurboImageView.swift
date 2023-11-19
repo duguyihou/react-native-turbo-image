@@ -4,6 +4,7 @@ import React
 class TurboImageView : UIView {
   
   private var placeholder: UIImage?
+  private var cornerRadius: CGFloat?
   lazy var lazyImageView = UIImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -41,7 +42,9 @@ class TurboImageView : UIView {
   
   @objc var rounded: Bool = false {
     didSet {
-      placeholder = placeholder?.roundedCorner(with: CGFloat(truncating: 100))
+      guard let width = placeholder?.size.width else { return }
+      cornerRadius = width
+      placeholder = placeholder?.roundedCorner(with: width)
     }
   }
   
@@ -90,8 +93,8 @@ fileprivate extension TurboImageView {
   
   func composeProcessor(_ rounded: Bool?) -> ImageProcessor {
     var processor: ImageProcessor = DefaultImageProcessor.default
-    if rounded ?? false {
-      processor = processor |> RoundCornerImageProcessor(cornerRadius: CGFloat(truncating: 100))
+    if rounded ?? false && (cornerRadius != nil) {
+      processor = processor |> RoundCornerImageProcessor(cornerRadius: cornerRadius!)
     }
     return processor
   }

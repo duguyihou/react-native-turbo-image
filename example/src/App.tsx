@@ -18,7 +18,7 @@ export default function App() {
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
       >
-        <Text>Turbo Image</Text>
+        <Text style={styles.title}>Turbo Image Example</Text>
         {imageURLs.map((url, idx) => (
           <TurboImage
             key={idx}
@@ -46,10 +46,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  title: {
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
   box: {
     marginVertical: 20,
     width: 300,
     height: 200,
-    backgroundColor: 'blue',
   },
 });
