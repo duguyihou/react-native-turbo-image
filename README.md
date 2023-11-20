@@ -1,4 +1,4 @@
-https://github.com/duguyihou/react-native-turbo-image/assets/9347790/80e97f77-e6bd-4941-bb23-429a04f11af4
+[![Watch the video](https://github.com/duguyihou/react-native-turbo-image/assets/9347790/96d180db-2129-4b61-a59a-c91db6218057)](https://github.com/duguyihou/react-native-turbo-image/assets/9347790/80e97f77-e6bd-4941-bb23-429a04f11af4)
 
 # react-native-turbo-image
 
