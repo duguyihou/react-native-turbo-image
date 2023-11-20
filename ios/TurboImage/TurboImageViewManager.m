@@ -26,13 +26,18 @@ RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
 
 #pragma mark - methods
 
-RCT_EXTERN_METHOD(prefetch:(NSArray *)urlArray)
+RCT_EXTERN_METHOD(prefetch:(NSArray *)urlArray 
+                  resolve:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(clearAllCache)
+RCT_EXTERN_METHOD(clearAllCache:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(clearMemoryCache)
+RCT_EXTERN_METHOD(clearMemoryCache:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(clearDiskCache)
+RCT_EXTERN_METHOD(clearDiskCache:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject)
 
 @end
 
