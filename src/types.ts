@@ -5,3 +5,10 @@ export const resizeMode = {
   stretch: 'stretch',
   center: 'center',
 } as const;
+
+export type CachePolicy = 'shared' | 'memory';
+
+export const cachePolicy = {
+  shared: 'shared',
+  memory: 'memory',
+} as const;

@@ -1,4 +1,4 @@
-import type { ResizeMode } from './types';
+import type { CachePolicy, ResizeMode } from './types';
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   url: string;
   resizeMode?: ResizeMode;
@@ -7,6 +7,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   fadeDuration?: number;
   rounded?: boolean;
   tintColor?: string;
+  cachePolicy?: CachePolicy;
   onSuccess?: () => void;
   onError?: (error: any) => void;
   ref?: React.Ref<any>;

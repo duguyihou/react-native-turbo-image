@@ -29,7 +29,8 @@ export default function App() {
             fadeDuration={10}
             base64Placeholder={base64Placeholder}
             rounded
-            tintColor="red"
+            // tintColor="red"
+            // cachePolicy="memory"
             onSuccess={handleOnSuccess}
             onError={handleOnError}
           />
