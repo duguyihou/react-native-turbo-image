@@ -2,6 +2,8 @@
 
 @interface RCT_EXTERN_MODULE(TurboImageViewManager, RCTViewManager)
 
+#pragma mark - properties
+
 RCT_EXPORT_VIEW_PROPERTY(url, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
@@ -21,6 +23,16 @@ RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
+
+#pragma mark - methods
+
+RCT_EXTERN_METHOD(prefetch:(NSArray *)urlArray)
+
+RCT_EXTERN_METHOD(clearAllCache)
+
+RCT_EXTERN_METHOD(clearMemoryCache)
+
+RCT_EXTERN_METHOD(clearDiskCache)
 
 @end
 
