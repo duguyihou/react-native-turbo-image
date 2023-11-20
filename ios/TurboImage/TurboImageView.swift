@@ -5,6 +5,7 @@ class TurboImageView : UIView {
   
   private var placeholder: UIImage?
   private var cornerRadius: CGFloat = 0.0
+  private var enableCacheMemoryOnly: Bool = false
   lazy var lazyImageView = UIImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -51,6 +52,12 @@ class TurboImageView : UIView {
   
   @objc var tint: UIColor = .clear
   
+  @objc var cachePolicy = "shared" {
+    didSet {
+      enableCacheMemoryOnly = cachePolicy == CachePolicy.memory.rawValue
+    }
+  }
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -84,6 +91,7 @@ fileprivate extension TurboImageView {
       .placeholder(placeholder)
       .tint(color: tint)
       .roundCorner(radius:.widthFraction(cornerRadius))
+      .cacheMemoryOnly(enableCacheMemoryOnly)
       .onSuccess({ result in
         self.onSuccess?(["result": "success"])
       })

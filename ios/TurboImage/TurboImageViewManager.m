@@ -16,6 +16,8 @@ RCT_EXPORT_VIEW_PROPERTY(rounded, BOOL)
 
 RCT_REMAP_VIEW_PROPERTY(tintColor, tint, UIColor)
 
+RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
+
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
