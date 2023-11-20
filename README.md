@@ -1,6 +1,8 @@
+https://github.com/duguyihou/react-native-turbo-image/assets/9347790/80e97f77-e6bd-4941-bb23-429a04f11af4
+
 # react-native-turbo-image
 
-Performant React Native image component
+Performant React Native image component. Powered by [Kingfisher](https://github.com/onevcat/Kingfisher) and [Coil](https://github.com/coil-kt/coil)
 
 ## Installation
 
@@ -11,16 +13,15 @@ npm install react-native-turbo-image
 ## Usage
 
 ```js
-import { TurboImageView } from "react-native-turbo-image";
+import TurboImage from "react-native-turbo-image";
 
 // ...
 
 <TurboImage
-  source={{
-    uri: 'https://placedog.net/300/200?id=1',
-  }}
-  width={300}
-  height={200}
+    url={url}
+    style={styles.box}
+    showActivityIndicator
+    base64Placeholder={base64Placeholder}
 />
 ```
 
