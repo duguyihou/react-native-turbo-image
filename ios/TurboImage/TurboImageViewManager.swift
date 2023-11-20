@@ -14,7 +14,7 @@ class TurboImageViewManager: RCTViewManager {
 
 extension TurboImageViewManager {
   @objc
-  func prefetch(urlArray: [String]) {
+  func prefetch(_ urlArray: [String]) {
     let urls =  urlArray.map { url in URL(string: url )}.compactMap{ $0 }
     let prefetcher = ImagePrefetcher(urls: urls)
     prefetcher.start()

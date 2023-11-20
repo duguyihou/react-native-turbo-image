@@ -12,3 +12,10 @@ export const cachePolicy = {
   shared: 'shared',
   memory: 'memory',
 } as const;
+
+export type TurboImageApi = {
+  prefetch: (urls: string[]) => Promise<void>;
+  clearAllCache: () => Promise<void>;
+  clearMemoryCache: () => Promise<void>;
+  clearDiskCache: () => Promise<void>;
+};
