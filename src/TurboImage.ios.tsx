@@ -12,9 +12,17 @@ const TurboImage = (props: TurboImageProps) => {
   return <TurboImageView {...props} />;
 };
 
-TurboImage.prefetch = (urls: string[]) => TurboImageViewManager.prefetch(urls);
-TurboImage.clearAllCache = () => TurboImageViewManager.clearAllCache();
-TurboImage.clearMemoryCache = () => TurboImageViewManager.clearMemoryCache();
-TurboImage.clearDiskCache = () => TurboImageViewManager.clearDiskCache();
+TurboImage.prefetch = async (urls: string[]) => {
+  return await TurboImageViewManager.prefetch(urls);
+};
+TurboImage.clearAllCache = async () => {
+  return await TurboImageViewManager.clearAllCache();
+};
+TurboImage.clearMemoryCache = async () => {
+  return await TurboImageViewManager.clearMemoryCache();
+};
+TurboImage.clearDiskCache = async () => {
+  return await TurboImageViewManager.clearDiskCache();
+};
 
 export default TurboImage;

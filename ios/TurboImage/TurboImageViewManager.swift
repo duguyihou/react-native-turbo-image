@@ -13,25 +13,31 @@ class TurboImageViewManager: RCTViewManager {
 }
 
 extension TurboImageViewManager {
+  
   @objc
-  func prefetch(_ urlArray: [String]) {
+  func prefetch(_ urlArray: [String],
+                resolve: @escaping RCTPromiseResolveBlock,
+                reject: @escaping RCTPromiseRejectBlock) {
     let urls =  urlArray.map { url in URL(string: url )}.compactMap{ $0 }
     let prefetcher = ImagePrefetcher(urls: urls)
-    prefetcher.start()
+    resolve(prefetcher.start())
   }
   
   @objc
-  func clearAllCache() {
-    ImageCache.default.clearCache()
+  func clearAllCache(_ resolve: @escaping RCTPromiseResolveBlock,
+                     reject: @escaping RCTPromiseRejectBlock) {
+    resolve(ImageCache.default.clearCache())
   }
   
   @objc
-  func clearMemoryCache() {
-    ImageCache.default.clearMemoryCache()
+  func clearMemoryCache(_ resolve: @escaping RCTPromiseResolveBlock,
+                        reject: @escaping RCTPromiseRejectBlock) {
+    resolve(ImageCache.default.clearMemoryCache())
   }
   
   @objc
-  func clearDiskCache() {
-    ImageCache.default.clearDiskCache()
+  func clearDiskCache(_ resolve: @escaping RCTPromiseResolveBlock,
+                      reject: @escaping RCTPromiseRejectBlock) {
+    resolve(ImageCache.default.clearDiskCache())
   }
 }
