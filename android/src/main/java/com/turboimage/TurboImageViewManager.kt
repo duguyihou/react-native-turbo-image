@@ -2,7 +2,6 @@ package com.turboimage
 
 import android.widget.ImageView
 import coil.Coil
-import coil.drawable.CrossfadeDrawable
 import coil.request.Disposable
 import coil.request.ImageRequest
 import com.facebook.react.uimanager.SimpleViewManager
@@ -22,9 +21,8 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
-    val request = requestBuilder.build()
+    val request = requestBuilder.data(view.url).crossfade(view.crossfade).build()
     disposable = Coil.imageLoader(view.context).enqueue(request)
-    print("🐵 ---- disposable $disposable")
   }
 
   override fun onDropViewInstance(view: TurboImageView) {
@@ -36,7 +34,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "url")
   fun setUrl(view: TurboImageView, url: String) {
-    view.setUrl(url)
+    view.url = url
   }
 
   @ReactProp(name = "resizeMode")
@@ -46,12 +44,14 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "base64Placeholder")
   fun setBase64Placeholder(view: TurboImageView, base64Placeholder: String?) {
-    view.setBase64Placeholder(base64Placeholder)
+    view.base64Placeholder = base64Placeholder
   }
 
   @ReactProp(name = "fadeDuration")
-  fun setCrossfade(view: TurboImageView, crossfade: Int = CrossfadeDrawable.DEFAULT_DURATION) {
-    view.setCrossfade(crossfade)
+  fun setCrossfade(view: TurboImageView, crossfade: Int?) {
+    if (crossfade != null) {
+      view.crossfade = crossfade
+    }
   }
 
   companion object {
