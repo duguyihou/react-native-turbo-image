@@ -7,10 +7,10 @@ import android.graphics.drawable.Drawable
 import android.util.Base64
 import kotlin.collections.HashMap
 
-object TurboImageBase64 {
+object Base64Placeholder {
   private val cache = HashMap<String, Drawable>()
 
-  fun base64ToDrawable(context: Context, base64: String): Drawable {
+  fun toDrawable(context: Context, base64: String): Drawable {
     if (cache.containsKey(base64)) {
       return cache[base64]!!
     }
