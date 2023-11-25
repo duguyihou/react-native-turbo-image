@@ -2,6 +2,7 @@ package com.turboimage
 
 import android.widget.ImageView
 import coil.Coil
+import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
 import com.facebook.react.uimanager.SimpleViewManager
@@ -21,7 +22,10 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
-    val request = requestBuilder.data(view.url).crossfade(view.crossfade).build()
+    val placeholder = view.base64Placeholder?.let { Base64Placeholder.toDrawable(view.context, it) }
+    val request = requestBuilder.data(view.url)
+      .placeholder(placeholder).diskCachePolicy(CachePolicy.DISABLED)
+      .crossfade(view.crossfade).build()
     disposable = Coil.imageLoader(view.context).enqueue(request)
   }
 
