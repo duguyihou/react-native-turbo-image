@@ -22,12 +22,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
+    val placeholder = view.base64Placeholder?.let { Base64Placeholder.toDrawable(view.context, it) }
     val request = requestBuilder.data(view.url)
-      .placeholder(view.base64Placeholder?.let {
-        Base64Placeholder.toDrawable(view.context,
-          it
-        )
-      }).diskCachePolicy(CachePolicy.DISABLED)
+      .placeholder(placeholder).diskCachePolicy(CachePolicy.DISABLED)
       .crossfade(view.crossfade).build()
     disposable = Coil.imageLoader(view.context).enqueue(request)
   }
