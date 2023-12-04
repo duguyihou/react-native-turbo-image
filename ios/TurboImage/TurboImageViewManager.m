@@ -12,6 +12,8 @@ RCT_EXPORT_VIEW_PROPERTY(showActivityIndicator, BOOL)
 
 RCT_EXPORT_VIEW_PROPERTY(base64Placeholder, NSString)
 
+RCT_EXPORT_VIEW_PROPERTY(blurhash, NSString)
+
 RCT_EXPORT_VIEW_PROPERTY(fadeDuration, NSNumber)
 
 RCT_EXPORT_VIEW_PROPERTY(rounded, BOOL)

@@ -39,6 +39,13 @@ class TurboImageView : UIView {
     }
   }
   
+  @objc var blurhash: String? {
+    didSet {
+      placeholder = UIImage(blurHash: blurhash ?? "",
+                            size: CGSize(width: 32, height: 32))
+    }
+  }
+  
   @objc var fadeDuration: NSNumber = 0.5
   
   @objc var rounded: Bool = false {
