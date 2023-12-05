@@ -1,10 +1,13 @@
 package com.turboimage
 
+import android.graphics.Color
 import android.widget.ImageView
 import coil.Coil
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
+import coil.transform.Transformation
+import com.commit451.coiltransformations.ColorFilterTransformation
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
@@ -13,7 +16,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private lateinit var requestBuilder: ImageRequest.Builder
   private var disposable: Disposable? = null
-
+  private val transformations: MutableList<Transformation> = mutableListOf()
   override fun createViewInstance(p0: ThemedReactContext): TurboImageView {
     val instance = TurboImageView(p0)
     requestBuilder = ImageRequest.Builder(p0).target { instance.setImageDrawable(it) }
@@ -23,11 +26,15 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
     val placeholder = view.base64Placeholder?.let { Base64Placeholder.toDrawable(view.context, it) }
-
+    val color = view.tintColor?.let { Color.parseColor(it) }
+    if (color != null) {
+      transformations.add(ColorFilterTransformation(color))
+    }
     val request = requestBuilder
       .data(view.url)
       .placeholder(placeholder)
       .diskCachePolicy(CachePolicy.DISABLED)
+      .transformations(transformations)
       .crossfade(view.crossfade)
       .build()
     disposable = Coil.imageLoader(view.context).enqueue(request)
