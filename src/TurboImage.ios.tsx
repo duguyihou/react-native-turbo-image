@@ -15,9 +15,7 @@ const TurboImage = (props: TurboImageProps) => {
 TurboImage.prefetch = async (urls: string[]) => {
   return await TurboImageViewManager.prefetch(urls);
 };
-TurboImage.clearAllCache = async () => {
-  return await TurboImageViewManager.clearAllCache();
-};
+
 TurboImage.clearMemoryCache = async () => {
   return await TurboImageViewManager.clearMemoryCache();
 };

@@ -71,7 +71,11 @@ class TurboImageView : UIView {
     }
   }
   
-  @objc var tint: UIColor = .clear
+  @objc var tint: UIColor = .clear {
+    didSet {
+      lazyImageView.imageView.tintColor = tint
+    }
+  }
   
   @objc var cachePolicy = "memory" {
     didSet {
