@@ -2,7 +2,7 @@
 
 # react-native-turbo-image
 
-Performant React Native image component. Powered by [Kingfisher](https://github.com/onevcat/Kingfisher) and [Coil](https://github.com/coil-kt/coil)
+Performant React Native image component. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
 
 ## Features
 
@@ -26,7 +26,8 @@ import TurboImage from "react-native-turbo-image";
     url={url}
     style={styles.box}
     showActivityIndicator
-    base64Placeholder={base64Placeholder}
+    cachePolicy="dataCache"
+    blurhash="LMDSzI~pV=RO9ZV@xv%MRPRlxuog"
 />
 ```
 
