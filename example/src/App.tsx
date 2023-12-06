@@ -1,7 +1,7 @@
 import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
-import { base64Placeholder, blurhashString } from './mockData';
+import { blurhashString } from './mockData';
 
 export default function App() {
   const imageURLs = Array.from(
@@ -24,14 +24,12 @@ export default function App() {
             key={idx}
             url={url}
             style={styles.box}
-            resizeMode="stretch"
             showActivityIndicator
-            // fadeDuration={10}
             blurhash={blurhashString}
-            base64Placeholder={base64Placeholder}
-            // rounded
+            // base64Placeholder={base64Placeholder}
+            rounded
             // tintColor="red"
-            cachePolicy="memory"
+            cachePolicy="dataCache"
             onSuccess={handleOnSuccess}
             onError={handleOnError}
           />

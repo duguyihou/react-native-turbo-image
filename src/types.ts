@@ -6,11 +6,12 @@ export const resizeMode = {
   center: 'center',
 } as const;
 
-export type CachePolicy = 'shared' | 'memory';
+export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
 
 export const cachePolicy = {
-  shared: 'shared',
   memory: 'memory',
+  urlCache: 'urlCache',
+  dataCache: 'dataCache',
 } as const;
 
 export type TurboImageApi = {
