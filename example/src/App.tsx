@@ -8,10 +8,10 @@ export default function App() {
     { length: 100 },
     (_, i) => `https://placedog.net/300/200?id=${i}`
   );
-  const handleOnSuccess = () => {};
-  const handleOnError = (error: any) => {
-    console.log(`🐵 ------ error`, error);
-  };
+  // const handleOnSuccess = () => {};
+  // const handleOnError = (error: any) => {
+  //   console.log(`🐵 ------ error`, error);
+  // };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -27,11 +27,11 @@ export default function App() {
             showActivityIndicator
             blurhash={blurhashString}
             // base64Placeholder={base64Placeholder}
-            rounded
+            // rounded
             // tintColor="red"
             cachePolicy="dataCache"
-            onSuccess={handleOnSuccess}
-            onError={handleOnError}
+            // onSuccess={handleOnSuccess}
+            // onError={handleOnError}
           />
         ))}
       </ScrollView>
