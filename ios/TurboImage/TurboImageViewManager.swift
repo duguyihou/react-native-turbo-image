@@ -1,4 +1,4 @@
-import Kingfisher
+import Nuke
 
 @objc(TurboImageViewManager)
 class TurboImageViewManager: RCTViewManager {
@@ -18,26 +18,20 @@ extension TurboImageViewManager {
   func prefetch(_ urlArray: [String],
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
+    let prefetcher = ImagePrefetcher()
     let urls =  urlArray.map { url in URL(string: url )}.compactMap{ $0 }
-    let prefetcher = ImagePrefetcher(urls: urls)
-    resolve(prefetcher.start())
-  }
-  
-  @objc
-  func clearAllCache(_ resolve: @escaping RCTPromiseResolveBlock,
-                     reject: @escaping RCTPromiseRejectBlock) {
-    resolve(ImageCache.default.clearCache())
+    resolve(prefetcher.startPrefetching(with: urls))
   }
   
   @objc
   func clearMemoryCache(_ resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
-    resolve(ImageCache.default.clearMemoryCache())
+    resolve(ImageCache.shared.removeAll())
   }
   
   @objc
   func clearDiskCache(_ resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
-    resolve(ImageCache.default.clearDiskCache())
+    resolve(DataLoader.sharedUrlCache.removeAllCachedResponses())
   }
 }

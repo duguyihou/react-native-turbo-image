@@ -2,7 +2,7 @@
 
 # react-native-turbo-image
 
-Performant React Native image component. Powered by [Kingfisher](https://github.com/onevcat/Kingfisher) and [Coil](https://github.com/coil-kt/coil)
+Performant React Native image component. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
 
 ## Features
 
@@ -26,7 +26,8 @@ import TurboImage from "react-native-turbo-image";
     url={url}
     style={styles.box}
     showActivityIndicator
-    base64Placeholder={base64Placeholder}
+    cachePolicy="dataCache"
+    blurhash="LMDSzI~pV=RO9ZV@xv%MRPRlxuog"
 />
 ```
 
@@ -40,7 +41,7 @@ import TurboImage from "react-native-turbo-image";
 | showActivityIndicator     | boolean  | false   | Whether to show the UIActivityIndicatorView indicator when loading                                   |
 | base64Placeholder         | string   |         | The base64 encoded placeholder image to show while loading                                           |
 | blurhash                  | string   |         | The blurhash of the image to show while loading                                                      | 
-| cachePolicy               | string   | shared  | The cache policy of the image                                                                        |
+| cachePolicy               | string   | memory  | The cache policy of the image                                                                        |
 | fadeDuration              | number   | 0.5     | The transition duration of the image                                                                 |
 | rounded                   | boolean  | false   | Round the image into a circle                                                                        |
 | onError                   | function |         | The function to call when an error occurs.                                                           |
