@@ -44,6 +44,7 @@ import TurboImage from "react-native-turbo-image";
 | cachePolicy               | string   | memory  | The cache policy of the image                                                                        |
 | fadeDuration              | number   | 0.5     | The transition duration of the image                                                                 |
 | rounded                   | boolean  | false   | Round the image into a circle                                                                        |
+| tintColor                 | string   |         | tint color                                                                                           |
 | onError                   | function |         | The function to call when an error occurs.                                                           |
 | onSucess                  | function |         | The function to call when the image is successfully loaded                                           |
 
