@@ -1,59 +1,22 @@
 import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native';
-import TurboImage from 'react-native-turbo-image';
-import { blurhashString } from './mockData';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import HomeScreen from './screens/HomeScreen';
+import CacheScreen from './screens/CacheScreen';
+import ListScreen from './screens/ListScreen';
 
-export default function App() {
-  const imageURLs = Array.from(
-    { length: 100 },
-    (_, i) => `https://placedog.net/300/200?id=${i}`
-  );
-  // const handleOnSuccess = () => {};
-  // const handleOnError = (error: any) => {
-  //   console.log(`🐵 ------ error`, error);
-  // };
+const Tab = createBottomTabNavigator();
+
+function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.contentContainer}
-      >
-        <Text style={styles.title}>Turbo Image Example</Text>
-        {imageURLs.map((url, idx) => (
-          <TurboImage
-            key={idx}
-            url={url}
-            style={styles.box}
-            showActivityIndicator
-            blurhash={blurhashString}
-            // base64Placeholder={base64Placeholder}
-            // rounded
-            // tintColor="red"
-            cachePolicy="dataCache"
-            // onSuccess={handleOnSuccess}
-            // onError={handleOnError}
-          />
-        ))}
-      </ScrollView>
-    </SafeAreaView>
+    <NavigationContainer>
+      <Tab.Navigator>
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Cache" component={CacheScreen} />
+        <Tab.Screen name="List" component={ListScreen} />
+      </Tab.Navigator>
+    </NavigationContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-  },
-  box: {
-    marginVertical: 20,
-    width: 300,
-    height: 200,
-  },
-});
+export default App;
