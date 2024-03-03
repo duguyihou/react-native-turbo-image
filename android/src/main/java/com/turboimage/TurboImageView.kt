@@ -11,5 +11,4 @@ class TurboImageView(reactContext: ThemedReactContext) : AppCompatImageView(reac
   var url: String? = null
   var base64Placeholder: String? = null
   var crossfade: Int = CrossfadeDrawable.DEFAULT_DURATION
-  var tintColor: String? = null
 }
