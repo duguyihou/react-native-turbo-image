@@ -26,10 +26,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
     val placeholder = view.base64Placeholder?.let { Base64Placeholder.toDrawable(view.context, it) }
-    val color = view.tintColor?.let { Color.parseColor(it) }
-    if (color != null) {
-      transformations.add(ColorFilterTransformation(color))
-    }
     val request = requestBuilder
       .data(view.url)
       .placeholder(placeholder)
