@@ -69,13 +69,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     }
   }
 
-  @ReactProp(name = "tintColor")
-  fun setTintColor(view: TurboImageView, tintColor: String?) {
-    if (tintColor != null) {
-      view.tintColor = tintColor
-    }
-  }
-
   companion object {
     private const val REACT_CLASS = "TurboImageView"
     private val RESIZE_MODE = mapOf(

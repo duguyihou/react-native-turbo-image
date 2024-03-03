@@ -24,7 +24,6 @@ const ListScreen = () => {
               blurhash={blurhashString}
               // base64Placeholder={base64Placeholder}
               // rounded
-              // tintColor="red"
               cachePolicy="dataCache"
               // onSuccess={handleOnSuccess}
               // onError={handleOnError}
