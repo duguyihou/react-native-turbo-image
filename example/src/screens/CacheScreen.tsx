@@ -6,7 +6,7 @@ const CacheScreen = () => {
   const imgUrl = 'http://localhost:3000/101.jpeg';
   return (
     <View style={styles.container}>
-      <TurboImage url={imgUrl} style={styles.box} cachePolicy="memory" />
+      <TurboImage url={imgUrl} style={styles.box} cachePolicy="urlCache" />
     </View>
   );
 };
