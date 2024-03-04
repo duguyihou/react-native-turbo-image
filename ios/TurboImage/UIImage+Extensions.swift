@@ -1,7 +1,7 @@
 import UIKit
 
 public extension UIImage {
-  
+
   convenience init?(base64Placeholder: String?) {
     guard
       let base64Placeholder,
@@ -9,7 +9,7 @@ public extension UIImage {
     else { return nil }
     self.init(data: data)
   }
-  
+
   func roundedCorner(with radius: CGFloat) -> UIImage {
     let format = UIGraphicsImageRendererFormat()
     format.scale = scale
@@ -20,7 +20,7 @@ public extension UIImage {
                               byRoundingCorners: .allCorners,
                               cornerRadii: CGSize(width: radius, height: radius))
       path.close()
-      
+
       let cgContext = rendererContext.cgContext
       cgContext.saveGState()
       path.addClip()

@@ -1,10 +1,17 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import React from 'react';
+import TurboImage from '../../../src';
 
 const HomeScreen = () => {
+  const imgUrl = 'https://placedog.net/300/200?id=1';
   return (
     <View style={styles.container}>
-      <Text>HomeScreen</Text>
+      <TurboImage
+        url={imgUrl}
+        style={styles.box}
+        cachePolicy="urlCache"
+        rounded
+      />
     </View>
   );
 };
