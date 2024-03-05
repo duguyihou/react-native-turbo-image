@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    width: 300,
+    width: 200,
     height: 200,
   },
   title: {
