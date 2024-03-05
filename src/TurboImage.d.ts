@@ -7,6 +7,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   blurhash?: string;
   fadeDuration?: number;
   rounded?: boolean;
+  blur?: boolean;
   cachePolicy?: CachePolicy;
   onSuccess?: () => void;
   onError?: (error: any) => void;
