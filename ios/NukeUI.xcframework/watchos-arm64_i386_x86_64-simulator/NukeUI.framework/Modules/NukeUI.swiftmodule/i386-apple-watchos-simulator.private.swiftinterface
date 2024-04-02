@@ -1,0 +1,129 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.9.2 (swiftlang-5.9.2.2.56 clang-1500.1.0.2.5)
+// swift-module-flags: -target i386-apple-watchos6.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -module-name NukeUI
+// swift-module-flags-ignorable: -enable-bare-slash-regex
+import Combine
+import Foundation
+import Nuke
+import Swift
+import SwiftUI
+import UIKit
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+public typealias ImageRequest = Nuke.ImageRequest
+@available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+@_Concurrency.MainActor public struct LazyImage<Content> : SwiftUI.View where Content : SwiftUI.View {
+  @_Concurrency.MainActor public init(url: Foundation.URL?) where Content == SwiftUI.Image
+  @_Concurrency.MainActor public init(request: NukeUI.ImageRequest?) where Content == SwiftUI.Image
+  @_Concurrency.MainActor public init(url: Foundation.URL?, transaction: SwiftUI.Transaction = Transaction(animation: nil), @SwiftUI.ViewBuilder content: @escaping (any NukeUI.LazyImageState) -> Content)
+  @_Concurrency.MainActor public init(request: NukeUI.ImageRequest?, transaction: SwiftUI.Transaction = Transaction(animation: nil), @SwiftUI.ViewBuilder content: @escaping (any NukeUI.LazyImageState) -> Content)
+  @_Concurrency.MainActor public func processors(_ processors: [any Nuke.ImageProcessing]?) -> NukeUI.LazyImage<Content>
+  @_Concurrency.MainActor public func priority(_ priority: NukeUI.ImageRequest.Priority?) -> NukeUI.LazyImage<Content>
+  @_Concurrency.MainActor public func pipeline(_ pipeline: Nuke.ImagePipeline) -> NukeUI.LazyImage<Content>
+  public enum DisappearBehavior {
+    case cancel
+    case lowerPriority
+    public static func == (a: NukeUI.LazyImage<Content>.DisappearBehavior, b: NukeUI.LazyImage<Content>.DisappearBehavior) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  @_Concurrency.MainActor public func onStart(_ closure: @escaping (Nuke.ImageTask) -> Swift.Void) -> NukeUI.LazyImage<Content>
+  @_Concurrency.MainActor public func onDisappear(_ behavior: NukeUI.LazyImage<Content>.DisappearBehavior?) -> NukeUI.LazyImage<Content>
+  @_Concurrency.MainActor public func onCompletion(_ closure: @escaping (Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> Swift.Void) -> NukeUI.LazyImage<Content>
+  @_Concurrency.MainActor(unsafe) public var body: some SwiftUI.View {
+    get
+  }
+  public typealias Body = @_opaqueReturnTypeOf("$s6NukeUI9LazyImageV4bodyQrvp", 0) __<Content>
+}
+@_Concurrency.MainActor final public class FetchImage : Combine.ObservableObject, Swift.Identifiable {
+  @Combine.Published @_projectedValueProperty($result) @_Concurrency.MainActor final public var result: Swift.Result<Nuke.ImageResponse, any Swift.Error>? {
+    get
+  }
+  @_Concurrency.MainActor final public var $result: Combine.Published<Swift.Result<Nuke.ImageResponse, any Swift.Error>?>.Publisher {
+    get
+  }
+  @_Concurrency.MainActor final public var image: SwiftUI.Image? {
+    get
+  }
+  @Combine.Published @_projectedValueProperty($imageContainer) @_Concurrency.MainActor final public var imageContainer: Nuke.ImageContainer? {
+    get
+  }
+  @_Concurrency.MainActor final public var $imageContainer: Combine.Published<Nuke.ImageContainer?>.Publisher {
+    get
+  }
+  @Combine.Published @_projectedValueProperty($isLoading) @_Concurrency.MainActor final public var isLoading: Swift.Bool {
+    get
+  }
+  @_Concurrency.MainActor final public var $isLoading: Combine.Published<Swift.Bool>.Publisher {
+    get
+  }
+  @_Concurrency.MainActor final public var transaction: SwiftUI.Transaction
+  @_Concurrency.MainActor final public var progress: NukeUI.FetchImage.Progress {
+    get
+  }
+  @_hasMissingDesignatedInitializers final public class Progress : Combine.ObservableObject {
+    @Combine.Published @_projectedValueProperty($completed) final public var completed: Swift.Int64 {
+      get
+    }
+    final public var $completed: Combine.Published<Swift.Int64>.Publisher {
+      get
+    }
+    @Combine.Published @_projectedValueProperty($total) final public var total: Swift.Int64 {
+      get
+    }
+    final public var $total: Combine.Published<Swift.Int64>.Publisher {
+      get
+    }
+    final public var fraction: Swift.Float {
+      get
+    }
+    public typealias ObjectWillChangePublisher = Combine.ObservableObjectPublisher
+    @objc deinit
+  }
+  @_Concurrency.MainActor final public var priority: NukeUI.ImageRequest.Priority? {
+    get
+    set
+  }
+  @_Concurrency.MainActor final public var pipeline: Nuke.ImagePipeline
+  @_Concurrency.MainActor final public var processors: [any Nuke.ImageProcessing]
+  @_Concurrency.MainActor final public var onStart: ((Nuke.ImageTask) -> Swift.Void)?
+  @_Concurrency.MainActor final public var onCompletion: ((Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> Swift.Void)?
+  @objc deinit
+  @_Concurrency.MainActor public init()
+  @_Concurrency.MainActor final public func load(_ url: Foundation.URL?)
+  @_Concurrency.MainActor final public func load(_ request: NukeUI.ImageRequest?)
+  #if compiler(>=5.3) && $AsyncAwait
+  @_Concurrency.MainActor final public func load(_ action: @escaping () async throws -> Nuke.ImageResponse)
+  #endif
+  @_Concurrency.MainActor final public func load<P>(_ publisher: P) where P : Combine.Publisher, P.Output == Nuke.ImageResponse
+  @_Concurrency.MainActor final public func cancel()
+  @_Concurrency.MainActor final public func reset()
+  public typealias ID = Swift.ObjectIdentifier
+  public typealias ObjectWillChangePublisher = Combine.ObservableObjectPublisher
+}
+@_Concurrency.MainActor public protocol LazyImageState {
+  @_Concurrency.MainActor var result: Swift.Result<Nuke.ImageResponse, any Swift.Error>? { get }
+  @_Concurrency.MainActor var imageContainer: Nuke.ImageContainer? { get }
+  @_Concurrency.MainActor var isLoading: Swift.Bool { get }
+  @_Concurrency.MainActor var progress: NukeUI.FetchImage.Progress { get }
+}
+extension NukeUI.LazyImageState {
+  @_Concurrency.MainActor public var error: (any Swift.Error)? {
+    get
+  }
+  @_Concurrency.MainActor public var image: SwiftUI.Image? {
+    get
+  }
+}
+extension NukeUI.FetchImage : NukeUI.LazyImageState {
+}
+@available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+extension NukeUI.LazyImage : Swift.Sendable {}
+@available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+extension NukeUI.LazyImage.DisappearBehavior : Swift.Equatable {}
+@available(iOS 14.0, tvOS 14.0, watchOS 7.0, macOS 11.0, *)
+extension NukeUI.LazyImage.DisappearBehavior : Swift.Hashable {}
+extension NukeUI.FetchImage : Swift.Sendable {}

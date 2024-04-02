@@ -1,0 +1,945 @@
+// swift-interface-format-version: 1.0
+// swift-compiler-version: Apple Swift version 5.9.2 (swiftlang-5.9.2.2.56 clang-1500.1.0.2.5)
+// swift-module-flags: -target arm64-apple-tvos13.0 -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -module-name Nuke
+// swift-module-flags-ignorable: -enable-bare-slash-regex
+import AVKit
+import Combine
+import CoreGraphics
+import CoreImage
+import CryptoKit
+import Foundation
+import ImageIO
+import Swift
+import UIKit.UIApplication
+import UIKit.UIImage
+import UIKit
+import _Concurrency
+import _StringProcessing
+import _SwiftConcurrencyShims
+import os
+public protocol ImageProcessing : Swift.Sendable {
+  func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+  func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
+  var identifier: Swift.String { get }
+  var hashableIdentifier: Swift.AnyHashable { get }
+}
+extension Nuke.ImageProcessing {
+  public func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
+  public var hashableIdentifier: Swift.AnyHashable {
+    get
+  }
+}
+extension Nuke.ImageProcessing where Self : Swift.Hashable {
+  public var hashableIdentifier: Swift.AnyHashable {
+    get
+  }
+}
+public struct ImageProcessingContext : Swift.Sendable {
+  public var request: Nuke.ImageRequest
+  public var response: Nuke.ImageResponse
+  public var isCompleted: Swift.Bool
+  public init(request: Nuke.ImageRequest, response: Nuke.ImageResponse, isCompleted: Swift.Bool)
+}
+public enum ImageProcessingError : Swift.Error, Swift.CustomStringConvertible, Swift.Sendable {
+  case unknown
+  public var description: Swift.String {
+    get
+  }
+  public static func == (a: Nuke.ImageProcessingError, b: Nuke.ImageProcessingError) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension Nuke.ImageEncoders {
+  public struct ImageIO : Nuke.ImageEncoding {
+    public let type: Nuke.AssetType
+    public let compressionRatio: Swift.Float
+    public init(type: Nuke.AssetType, compressionRatio: Swift.Float = 0.8)
+    public static func isSupported(type: Nuke.AssetType) -> Swift.Bool
+    public func encode(_ image: Nuke.PlatformImage) -> Foundation.Data?
+  }
+}
+public struct ImageResponse : @unchecked Swift.Sendable {
+  public var container: Nuke.ImageContainer
+  public var image: UIKit.UIImage {
+    get
+  }
+  public var isPreview: Swift.Bool {
+    get
+  }
+  public var request: Nuke.ImageRequest
+  public var urlResponse: Foundation.URLResponse?
+  public var cacheType: Nuke.ImageResponse.CacheType?
+  public init(container: Nuke.ImageContainer, request: Nuke.ImageRequest, urlResponse: Foundation.URLResponse? = nil, cacheType: Nuke.ImageResponse.CacheType? = nil)
+  public enum CacheType : Swift.Sendable {
+    case memory
+    case disk
+    public static func == (a: Nuke.ImageResponse.CacheType, b: Nuke.ImageResponse.CacheType) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+final public class ImageCache : Nuke.ImageCaching {
+  final public var costLimit: Swift.Int {
+    get
+    set
+  }
+  final public var countLimit: Swift.Int {
+    get
+    set
+  }
+  final public var ttl: Foundation.TimeInterval? {
+    get
+    set
+  }
+  final public var entryCostLimit: Swift.Double {
+    get
+    set
+  }
+  final public var totalCount: Swift.Int {
+    get
+  }
+  final public var totalCost: Swift.Int {
+    get
+  }
+  public static let shared: Nuke.ImageCache
+  public init(costLimit: Swift.Int = ImageCache.defaultCostLimit(), countLimit: Swift.Int = Int.max)
+  public static func defaultCostLimit() -> Swift.Int
+  final public subscript(key: Nuke.ImageCacheKey) -> Nuke.ImageContainer? {
+    get
+    set
+  }
+  final public func removeAll()
+  final public func trim(toCost limit: Swift.Int)
+  final public func trim(toCount limit: Swift.Int)
+  @objc deinit
+}
+final public class ImagePipeline : @unchecked Swift.Sendable {
+  public static var shared: Nuke.ImagePipeline {
+    get
+    set
+  }
+  final public let configuration: Nuke.ImagePipeline.Configuration
+  final public var cache: Nuke.ImagePipeline.Cache {
+    get
+  }
+  @objc deinit
+  public init(configuration: Nuke.ImagePipeline.Configuration = Configuration(), delegate: (any Nuke.ImagePipelineDelegate)? = nil)
+  convenience public init(delegate: (any Nuke.ImagePipelineDelegate)? = nil, _ configure: (inout Nuke.ImagePipeline.Configuration) -> Swift.Void)
+  final public func invalidate()
+  final public func imageTask(with url: Foundation.URL) -> Nuke.AsyncImageTask
+  final public func imageTask(with request: Nuke.ImageRequest) -> Nuke.AsyncImageTask
+  #if compiler(>=5.3) && $AsyncAwait
+  final public func image(for url: Foundation.URL) async throws -> Nuke.PlatformImage
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  final public func image(for request: Nuke.ImageRequest) async throws -> Nuke.PlatformImage
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  @discardableResult
+  final public func data(for url: Foundation.URL) async throws -> (Foundation.Data, Foundation.URLResponse?)
+  #endif
+  #if compiler(>=5.3) && $AsyncAwait
+  @discardableResult
+  final public func data(for request: Nuke.ImageRequest) async throws -> (Foundation.Data, Foundation.URLResponse?)
+  #endif
+  @discardableResult
+  final public func loadImage(with url: Foundation.URL, completion: @escaping (_ result: Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  @discardableResult
+  final public func loadImage(with request: Nuke.ImageRequest, completion: @escaping (_ result: Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  @discardableResult
+  final public func loadImage(with request: Nuke.ImageRequest, queue: Dispatch.DispatchQueue? = nil, progress: ((_ response: Nuke.ImageResponse?, _ completed: Swift.Int64, _ total: Swift.Int64) -> Swift.Void)?, completion: @escaping (_ result: Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  @discardableResult
+  final public func loadData(with url: Foundation.URL, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  @discardableResult
+  final public func loadData(with request: Nuke.ImageRequest, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  @discardableResult
+  final public func loadData(with request: Nuke.ImageRequest, queue: Dispatch.DispatchQueue? = nil, progress: ((_ completed: Swift.Int64, _ total: Swift.Int64) -> Swift.Void)?, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  final public func imagePublisher(with url: Foundation.URL) -> Combine.AnyPublisher<Nuke.ImageResponse, Nuke.ImagePipeline.Error>
+  final public func imagePublisher(with request: Nuke.ImageRequest) -> Combine.AnyPublisher<Nuke.ImageResponse, Nuke.ImagePipeline.Error>
+}
+final public class DataLoader : Nuke.DataLoading, @unchecked Swift.Sendable {
+  final public let session: Foundation.URLSession
+  final public var prefersIncrementalDelivery: Swift.Bool
+  final public var delegate: (any Foundation.URLSessionDelegate)? {
+    get
+    set
+  }
+  @objc deinit
+  public init(configuration: Foundation.URLSessionConfiguration = DataLoader.defaultConfiguration, validate: @escaping (Foundation.URLResponse) -> (any Swift.Error)? = DataLoader.validate)
+  public static var defaultConfiguration: Foundation.URLSessionConfiguration {
+    get
+  }
+  public static func validate(response: Foundation.URLResponse) -> (any Swift.Error)?
+  public static let sharedUrlCache: Foundation.URLCache
+  final public func loadData(with request: Foundation.URLRequest, didReceiveData: @escaping (Foundation.Data, Foundation.URLResponse) -> Swift.Void, completion: @escaping ((any Swift.Error)?) -> Swift.Void) -> any Nuke.Cancellable
+  public enum Error : Swift.Error, Swift.CustomStringConvertible {
+    case statusCodeUnacceptable(Swift.Int)
+    public var description: Swift.String {
+      get
+    }
+  }
+}
+extension Nuke.ImagePipeline {
+  public enum Error : Swift.Error, Swift.CustomStringConvertible, @unchecked Swift.Sendable {
+    case dataMissingInCache
+    case dataLoadingFailed(error: any Swift.Error)
+    case dataIsEmpty
+    case decoderNotRegistered(context: Nuke.ImageDecodingContext)
+    case decodingFailed(decoder: any Nuke.ImageDecoding, context: Nuke.ImageDecodingContext, error: any Swift.Error)
+    case processingFailed(processor: any Nuke.ImageProcessing, context: Nuke.ImageProcessingContext, error: any Swift.Error)
+    case imageRequestMissing
+    case pipelineInvalidated
+  }
+}
+extension Nuke.ImagePipeline.Error {
+  public var dataLoadingError: (any Swift.Error)? {
+    get
+  }
+  public var description: Swift.String {
+    get
+  }
+}
+public protocol ImageEncoding : Swift.Sendable {
+  func encode(_ image: Nuke.PlatformImage) -> Foundation.Data?
+  func encode(_ container: Nuke.ImageContainer, context: Nuke.ImageEncodingContext) -> Foundation.Data?
+}
+extension Nuke.ImageEncoding {
+  public func encode(_ container: Nuke.ImageContainer, context: Nuke.ImageEncodingContext) -> Foundation.Data?
+}
+public struct ImageEncodingContext : @unchecked Swift.Sendable {
+  public let request: Nuke.ImageRequest
+  public let image: Nuke.PlatformImage
+  public let urlResponse: Foundation.URLResponse?
+}
+public protocol DataLoading : Swift.Sendable {
+  func loadData(with request: Foundation.URLRequest, didReceiveData: @escaping (Foundation.Data, Foundation.URLResponse) -> Swift.Void, completion: @escaping ((any Swift.Error)?) -> Swift.Void) -> any Nuke.Cancellable
+}
+public protocol Cancellable : AnyObject, Swift.Sendable {
+  func cancel()
+}
+extension Nuke.ImageEncoders {
+  public struct Default : Nuke.ImageEncoding {
+    public var compressionQuality: Swift.Float
+    public var isHEIFPreferred: Swift.Bool
+    public init(compressionQuality: Swift.Float = 0.8)
+    public func encode(_ image: Nuke.PlatformImage) -> Foundation.Data?
+  }
+}
+public typealias PlatformImage = UIKit.UIImage
+public struct ImageContainer : @unchecked Swift.Sendable {
+  public var image: UIKit.UIImage {
+    get
+    set
+  }
+  public var type: Nuke.AssetType? {
+    get
+    set
+  }
+  public var isPreview: Swift.Bool {
+    get
+    set
+  }
+  public var data: Foundation.Data? {
+    get
+    set
+  }
+  public var userInfo: [Nuke.ImageContainer.UserInfoKey : Any] {
+    get
+    set
+  }
+  public init(image: Nuke.PlatformImage, type: Nuke.AssetType? = nil, isPreview: Swift.Bool = false, data: Foundation.Data? = nil, userInfo: [Nuke.ImageContainer.UserInfoKey : Any] = [:])
+  public struct UserInfoKey : Swift.Hashable, Swift.ExpressibleByStringLiteral, Swift.Sendable {
+    public let rawValue: Swift.String
+    public init(_ rawValue: Swift.String)
+    public init(stringLiteral value: Swift.String)
+    public static let scanNumberKey: Nuke.ImageContainer.UserInfoKey
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageContainer.UserInfoKey, b: Nuke.ImageContainer.UserInfoKey) -> Swift.Bool
+    public typealias ExtendedGraphemeClusterLiteralType = Swift.String
+    public typealias StringLiteralType = Swift.String
+    public typealias UnicodeScalarLiteralType = Swift.String
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension Nuke.ImagePipeline {
+  public struct Cache : Swift.Sendable {
+  }
+}
+extension Nuke.ImagePipeline.Cache {
+  public subscript(url: Foundation.URL) -> Nuke.ImageContainer? {
+    get
+    nonmutating set
+  }
+  public subscript(request: Nuke.ImageRequest) -> Nuke.ImageContainer? {
+    get
+    nonmutating set
+  }
+  public func cachedImage(for request: Nuke.ImageRequest, caches: Nuke.ImagePipeline.Cache.Caches = [.all]) -> Nuke.ImageContainer?
+  public func storeCachedImage(_ image: Nuke.ImageContainer, for request: Nuke.ImageRequest, caches: Nuke.ImagePipeline.Cache.Caches = [.all])
+  public func removeCachedImage(for request: Nuke.ImageRequest, caches: Nuke.ImagePipeline.Cache.Caches = [.all])
+  public func containsCachedImage(for request: Nuke.ImageRequest, caches: Nuke.ImagePipeline.Cache.Caches = [.all]) -> Swift.Bool
+  public func cachedData(for request: Nuke.ImageRequest) -> Foundation.Data?
+  public func storeCachedData(_ data: Foundation.Data, for request: Nuke.ImageRequest)
+  public func containsData(for request: Nuke.ImageRequest) -> Swift.Bool
+  public func removeCachedData(for request: Nuke.ImageRequest)
+  public func makeImageCacheKey(for request: Nuke.ImageRequest) -> Nuke.ImageCacheKey
+  public func makeDataCacheKey(for request: Nuke.ImageRequest) -> Swift.String
+  public func removeAll(caches: Nuke.ImagePipeline.Cache.Caches = [.all])
+  public struct Caches : Swift.OptionSet {
+    public let rawValue: Swift.Int
+    public init(rawValue: Swift.Int)
+    public static let memory: Nuke.ImagePipeline.Cache.Caches
+    public static let disk: Nuke.ImagePipeline.Cache.Caches
+    public static let all: Nuke.ImagePipeline.Cache.Caches
+    public typealias ArrayLiteralElement = Nuke.ImagePipeline.Cache.Caches
+    public typealias Element = Nuke.ImagePipeline.Cache.Caches
+    public typealias RawValue = Swift.Int
+  }
+}
+extension Nuke.ImagePipeline.Cache.Caches : Swift.Sendable {
+}
+public protocol DataCaching : Swift.Sendable {
+  func cachedData(for key: Swift.String) -> Foundation.Data?
+  func containsData(for key: Swift.String) -> Swift.Bool
+  func storeData(_ data: Foundation.Data, for key: Swift.String)
+  func removeData(for key: Swift.String)
+  func removeAll()
+}
+public enum ImageProcessingOptions : Swift.Sendable {
+  public enum Unit : Swift.CustomStringConvertible, Swift.Sendable {
+    case points
+    case pixels
+    public var description: Swift.String {
+      get
+    }
+    public static func == (a: Nuke.ImageProcessingOptions.Unit, b: Nuke.ImageProcessingOptions.Unit) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public struct Border : Swift.Hashable, Swift.CustomStringConvertible, @unchecked Swift.Sendable {
+    public let width: CoreFoundation.CGFloat
+    public let color: UIKit.UIColor
+    public init(color: UIKit.UIColor, width: CoreFoundation.CGFloat = 1, unit: Nuke.ImageProcessingOptions.Unit = .points)
+    public var description: Swift.String {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageProcessingOptions.Border, b: Nuke.ImageProcessingOptions.Border) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public enum ContentMode : Swift.CustomStringConvertible, Swift.Sendable {
+    case aspectFill
+    case aspectFit
+    public var description: Swift.String {
+      get
+    }
+    public static func == (a: Nuke.ImageProcessingOptions.ContentMode, b: Nuke.ImageProcessingOptions.ContentMode) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+public protocol ImagePipelineDelegate : AnyObject, Swift.Sendable {
+  func dataLoader(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> any Nuke.DataLoading
+  func imageDecoder(for context: Nuke.ImageDecodingContext, pipeline: Nuke.ImagePipeline) -> (any Nuke.ImageDecoding)?
+  func imageEncoder(for context: Nuke.ImageEncodingContext, pipeline: Nuke.ImagePipeline) -> any Nuke.ImageEncoding
+  func imageCache(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> (any Nuke.ImageCaching)?
+  func dataCache(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> (any Nuke.DataCaching)?
+  func cacheKey(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Swift.String?
+  func willCache(data: Foundation.Data, image: Nuke.ImageContainer?, for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline, completion: @escaping (Foundation.Data?) -> Swift.Void)
+  func shouldDecompress(response: Nuke.ImageResponse, for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Swift.Bool
+  func decompress(response: Nuke.ImageResponse, request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Nuke.ImageResponse
+  func imageTaskCreated(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  func imageTaskDidStart(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  func imageTask(_ task: Nuke.ImageTask, didUpdateProgress progress: Nuke.ImageTask.Progress, pipeline: Nuke.ImagePipeline)
+  func imageTask(_ task: Nuke.ImageTask, didReceivePreview response: Nuke.ImageResponse, pipeline: Nuke.ImagePipeline)
+  func imageTaskDidCancel(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  func imageTask(_ task: Nuke.ImageTask, didCompleteWithResult result: Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>, pipeline: Nuke.ImagePipeline)
+}
+extension Nuke.ImagePipelineDelegate {
+  public func imageCache(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> (any Nuke.ImageCaching)?
+  public func dataLoader(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> any Nuke.DataLoading
+  public func dataCache(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> (any Nuke.DataCaching)?
+  public func imageDecoder(for context: Nuke.ImageDecodingContext, pipeline: Nuke.ImagePipeline) -> (any Nuke.ImageDecoding)?
+  public func imageEncoder(for context: Nuke.ImageEncodingContext, pipeline: Nuke.ImagePipeline) -> any Nuke.ImageEncoding
+  public func cacheKey(for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Swift.String?
+  public func willCache(data: Foundation.Data, image: Nuke.ImageContainer?, for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline, completion: @escaping (Foundation.Data?) -> Swift.Void)
+  public func shouldDecompress(response: Nuke.ImageResponse, for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Swift.Bool
+  public func decompress(response: Nuke.ImageResponse, request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Nuke.ImageResponse
+  public func imageTaskCreated(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  public func imageTaskDidStart(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  public func imageTask(_ task: Nuke.ImageTask, didUpdateProgress progress: Nuke.ImageTask.Progress, pipeline: Nuke.ImagePipeline)
+  public func imageTask(_ task: Nuke.ImageTask, didReceivePreview response: Nuke.ImageResponse, pipeline: Nuke.ImagePipeline)
+  public func imageTaskDidCancel(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  public func imageTask(_ task: Nuke.ImageTask, didCompleteWithResult result: Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>, pipeline: Nuke.ImagePipeline)
+}
+public protocol ImageCaching : AnyObject, Swift.Sendable {
+  subscript(key: Nuke.ImageCacheKey) -> Nuke.ImageContainer? { get set }
+  func removeAll()
+}
+public struct ImageCacheKey : Swift.Hashable, Swift.Sendable {
+  public init(key: Swift.String)
+  public init(request: Nuke.ImageRequest)
+  public func hash(into hasher: inout Swift.Hasher)
+  public static func == (a: Nuke.ImageCacheKey, b: Nuke.ImageCacheKey) -> Swift.Bool
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension Nuke.ImageProcessors {
+  public struct Anonymous : Nuke.ImageProcessing, Swift.CustomStringConvertible {
+    public let identifier: Swift.String
+    #if compiler(>=5.3) && $Sendable
+    public init(id: Swift.String, _ closure: @escaping @Sendable (Nuke.PlatformImage) -> Nuke.PlatformImage?)
+    #endif
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public var description: Swift.String {
+      get
+    }
+  }
+}
+extension Nuke.ImageProcessors {
+  public struct RoundedCorners : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
+    public init(radius: CoreFoundation.CGFloat, unit: Nuke.ImageProcessingOptions.Unit = .points, border: Nuke.ImageProcessingOptions.Border? = nil)
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public var identifier: Swift.String {
+      get
+    }
+    public var description: Swift.String {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageProcessors.RoundedCorners, b: Nuke.ImageProcessors.RoundedCorners) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension Nuke.ImageProcessors {
+  public struct Resize : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
+    @available(*, deprecated, message: "Renamed to `ImageProcessingOptions.ContentMode")
+    public typealias ContentMode = Nuke.ImageProcessingOptions.ContentMode
+    public init(size: CoreFoundation.CGSize, unit: Nuke.ImageProcessingOptions.Unit = .points, contentMode: Nuke.ImageProcessingOptions.ContentMode = .aspectFill, crop: Swift.Bool = false, upscale: Swift.Bool = false)
+    public init(width: CoreFoundation.CGFloat, unit: Nuke.ImageProcessingOptions.Unit = .points, upscale: Swift.Bool = false)
+    public init(height: CoreFoundation.CGFloat, unit: Nuke.ImageProcessingOptions.Unit = .points, upscale: Swift.Bool = false)
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public var identifier: Swift.String {
+      get
+    }
+    public var description: Swift.String {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageProcessors.Resize, b: Nuke.ImageProcessors.Resize) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+@_hasMissingDesignatedInitializers final public class AsyncImageTask : Swift.Sendable {
+  final public var priority: Nuke.ImageRequest.Priority {
+    get
+    set
+  }
+  #if compiler(>=5.3) && $EffectfulProp
+  final public var image: Nuke.PlatformImage {
+    get async throws
+  }
+  #endif
+  #if compiler(>=5.3) && $EffectfulProp
+  final public var response: Nuke.ImageResponse {
+    get async throws
+  }
+  #endif
+  final public let previews: _Concurrency.AsyncStream<Nuke.ImageResponse>
+  final public let progress: _Concurrency.AsyncStream<Nuke.ImageTask.Progress>
+  final public func cancel()
+  @objc deinit
+}
+extension Nuke.ImageProcessors {
+  public struct GaussianBlur : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
+    public init(radius: Swift.Int = 8)
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
+    public var identifier: Swift.String {
+      get
+    }
+    public var description: Swift.String {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageProcessors.GaussianBlur, b: Nuke.ImageProcessors.GaussianBlur) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+extension Nuke.ImageDecoders {
+  public struct Empty : Nuke.ImageDecoding, Swift.Sendable {
+    public let isProgressive: Swift.Bool
+    public var isAsynchronous: Swift.Bool {
+      get
+    }
+    public init(assetType: Nuke.AssetType? = nil, isProgressive: Swift.Bool = false)
+    public func decode(_ data: Foundation.Data) throws -> Nuke.ImageContainer
+    public func decodePartiallyDownloadedData(_ data: Foundation.Data) -> Nuke.ImageContainer?
+  }
+}
+final public class DataCache : Nuke.DataCaching, @unchecked Swift.Sendable {
+  final public var sizeLimit: Swift.Int
+  final public let path: Foundation.URL
+  final public var sweepInterval: Swift.Double
+  @available(*, deprecated, message: "It's not recommended to use compression with the popular image formats that already compress the data")
+  final public var isCompressionEnabled: Swift.Bool {
+    get
+    set
+  }
+  final public let queue: Dispatch.DispatchQueue
+  public typealias FilenameGenerator = (_ key: Swift.String) -> Swift.String?
+  convenience public init(name: Swift.String, filenameGenerator: @escaping (Swift.String) -> Swift.String? = DataCache.filename(for:)) throws
+  public init(path: Foundation.URL, filenameGenerator: @escaping (Swift.String) -> Swift.String? = DataCache.filename(for:)) throws
+  public static func filename(for key: Swift.String) -> Swift.String?
+  final public func cachedData(for key: Swift.String) -> Foundation.Data?
+  final public func containsData(for key: Swift.String) -> Swift.Bool
+  final public func storeData(_ data: Foundation.Data, for key: Swift.String)
+  final public func removeData(for key: Swift.String)
+  final public func removeAll()
+  final public subscript(key: Swift.String) -> Foundation.Data? {
+    get
+    set
+  }
+  final public func filename(for key: Swift.String) -> Swift.String?
+  final public func url(for key: Swift.String) -> Foundation.URL?
+  final public func flush()
+  final public func flush(for key: Swift.String)
+  final public func sweep()
+  final public var totalCount: Swift.Int {
+    get
+  }
+  final public var totalSize: Swift.Int {
+    get
+  }
+  final public var totalAllocatedSize: Swift.Int {
+    get
+  }
+  @objc deinit
+}
+final public class ImageDecoderRegistry : @unchecked Swift.Sendable {
+  public static let shared: Nuke.ImageDecoderRegistry
+  public init()
+  final public func decoder(for context: Nuke.ImageDecodingContext) -> (any Nuke.ImageDecoding)?
+  final public func register(_ match: @escaping (Nuke.ImageDecodingContext) -> (any Nuke.ImageDecoding)?)
+  final public func clear()
+  @objc deinit
+}
+public struct ImageDecodingContext : @unchecked Swift.Sendable {
+  public var request: Nuke.ImageRequest
+  public var data: Foundation.Data
+  public var isCompleted: Swift.Bool
+  public var urlResponse: Foundation.URLResponse?
+  public var cacheType: Nuke.ImageResponse.CacheType?
+  public init(request: Nuke.ImageRequest, data: Foundation.Data, isCompleted: Swift.Bool, urlResponse: Foundation.URLResponse?, cacheType: Nuke.ImageResponse.CacheType?)
+}
+public enum ImageProcessors {
+}
+extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.Resize {
+  public static func resize(size: CoreFoundation.CGSize, unit: Nuke.ImageProcessingOptions.Unit = .points, contentMode: Nuke.ImageProcessingOptions.ContentMode = .aspectFill, crop: Swift.Bool = false, upscale: Swift.Bool = false) -> Nuke.ImageProcessors.Resize
+  public static func resize(width: CoreFoundation.CGFloat, unit: Nuke.ImageProcessingOptions.Unit = .points, upscale: Swift.Bool = false) -> Nuke.ImageProcessors.Resize
+  public static func resize(height: CoreFoundation.CGFloat, unit: Nuke.ImageProcessingOptions.Unit = .points, upscale: Swift.Bool = false) -> Nuke.ImageProcessors.Resize
+}
+extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.Circle {
+  public static func circle(border: Nuke.ImageProcessingOptions.Border? = nil) -> Nuke.ImageProcessors.Circle
+}
+extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.RoundedCorners {
+  public static func roundedCorners(radius: CoreFoundation.CGFloat, unit: Nuke.ImageProcessingOptions.Unit = .points, border: Nuke.ImageProcessingOptions.Border? = nil) -> Nuke.ImageProcessors.RoundedCorners
+}
+extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.Anonymous {
+  #if compiler(>=5.3) && $Sendable
+  public static func process(id: Swift.String, _ closure: @escaping @Sendable (Nuke.PlatformImage) -> Nuke.PlatformImage?) -> Nuke.ImageProcessors.Anonymous
+  #endif
+}
+extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.CoreImageFilter {
+  public static func coreImageFilter(name: Swift.String, parameters: [Swift.String : Any], identifier: Swift.String) -> Nuke.ImageProcessors.CoreImageFilter
+  public static func coreImageFilter(name: Swift.String) -> Nuke.ImageProcessors.CoreImageFilter
+}
+extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.GaussianBlur {
+  public static func gaussianBlur(radius: Swift.Int = 8) -> Nuke.ImageProcessors.GaussianBlur
+}
+public struct ImageRequest : Swift.CustomStringConvertible, Swift.Sendable, Swift.ExpressibleByStringLiteral {
+  public var priority: Nuke.ImageRequest.Priority {
+    get
+    set
+  }
+  public var processors: [any Nuke.ImageProcessing] {
+    get
+    set
+  }
+  public var options: Nuke.ImageRequest.Options {
+    get
+    set
+  }
+  public var userInfo: [Nuke.ImageRequest.UserInfoKey : Any] {
+    get
+    set
+  }
+  public var urlRequest: Foundation.URLRequest? {
+    get
+  }
+  public var url: Foundation.URL? {
+    get
+  }
+  public var imageId: Swift.String? {
+    get
+  }
+  public var description: Swift.String {
+    get
+  }
+  public init(stringLiteral value: Swift.String)
+  public init(url: Foundation.URL?, processors: [any Nuke.ImageProcessing] = [], priority: Nuke.ImageRequest.Priority = .normal, options: Nuke.ImageRequest.Options = [], userInfo: [Nuke.ImageRequest.UserInfoKey : Any]? = nil)
+  public init(urlRequest: Foundation.URLRequest, processors: [any Nuke.ImageProcessing] = [], priority: Nuke.ImageRequest.Priority = .normal, options: Nuke.ImageRequest.Options = [], userInfo: [Nuke.ImageRequest.UserInfoKey : Any]? = nil)
+  #if compiler(>=5.3) && $AsyncAwait && $Sendable
+  public init(id: Swift.String, data: @escaping @Sendable () async throws -> Foundation.Data, processors: [any Nuke.ImageProcessing] = [], priority: Nuke.ImageRequest.Priority = .normal, options: Nuke.ImageRequest.Options = [], userInfo: [Nuke.ImageRequest.UserInfoKey : Any]? = nil)
+  #endif
+  public init<P>(id: Swift.String, dataPublisher: P, processors: [any Nuke.ImageProcessing] = [], priority: Nuke.ImageRequest.Priority = .normal, options: Nuke.ImageRequest.Options = [], userInfo: [Nuke.ImageRequest.UserInfoKey : Any]? = nil) where P : Combine.Publisher, P.Output == Foundation.Data
+  public enum Priority : Swift.Int, Swift.Comparable, Swift.Sendable {
+    case veryLow, low, normal, high, veryHigh
+    public static func < (lhs: Nuke.ImageRequest.Priority, rhs: Nuke.ImageRequest.Priority) -> Swift.Bool
+    public init?(rawValue: Swift.Int)
+    public typealias RawValue = Swift.Int
+    public var rawValue: Swift.Int {
+      get
+    }
+  }
+  public struct Options : Swift.OptionSet, Swift.Hashable, Swift.Sendable {
+    public let rawValue: Swift.UInt16
+    public init(rawValue: Swift.UInt16)
+    public static let disableMemoryCacheReads: Nuke.ImageRequest.Options
+    public static let disableMemoryCacheWrites: Nuke.ImageRequest.Options
+    public static let disableMemoryCache: Nuke.ImageRequest.Options
+    public static let disableDiskCacheReads: Nuke.ImageRequest.Options
+    public static let disableDiskCacheWrites: Nuke.ImageRequest.Options
+    public static let disableDiskCache: Nuke.ImageRequest.Options
+    public static let reloadIgnoringCachedData: Nuke.ImageRequest.Options
+    public static let returnCacheDataDontLoad: Nuke.ImageRequest.Options
+    public static let skipDecompression: Nuke.ImageRequest.Options
+    public static let skipDataLoadingQueue: Nuke.ImageRequest.Options
+    public typealias ArrayLiteralElement = Nuke.ImageRequest.Options
+    public typealias Element = Nuke.ImageRequest.Options
+    public typealias RawValue = Swift.UInt16
+  }
+  public struct UserInfoKey : Swift.Hashable, Swift.ExpressibleByStringLiteral, Swift.Sendable {
+    public let rawValue: Swift.String
+    public init(_ rawValue: Swift.String)
+    public init(stringLiteral value: Swift.String)
+    public static let imageIdKey: Nuke.ImageRequest.UserInfoKey
+    public static let scaleKey: Nuke.ImageRequest.UserInfoKey
+    public static let thumbnailKey: Nuke.ImageRequest.UserInfoKey
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageRequest.UserInfoKey, b: Nuke.ImageRequest.UserInfoKey) -> Swift.Bool
+    public typealias ExtendedGraphemeClusterLiteralType = Swift.String
+    public typealias StringLiteralType = Swift.String
+    public typealias UnicodeScalarLiteralType = Swift.String
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public struct ThumbnailOptions : Swift.Hashable, Swift.Sendable {
+    public var createThumbnailFromImageIfAbsent: Swift.Bool
+    public var createThumbnailFromImageAlways: Swift.Bool
+    public var createThumbnailWithTransform: Swift.Bool
+    public var shouldCacheImmediately: Swift.Bool
+    public init(maxPixelSize: Swift.Float)
+    public init(size: CoreFoundation.CGSize, unit: Nuke.ImageProcessingOptions.Unit = .points, contentMode: Nuke.ImageProcessingOptions.ContentMode = .aspectFill)
+    public func makeThumbnail(with data: Foundation.Data) -> Nuke.PlatformImage?
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageRequest.ThumbnailOptions, b: Nuke.ImageRequest.ThumbnailOptions) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  public typealias ExtendedGraphemeClusterLiteralType = Swift.String
+  public typealias StringLiteralType = Swift.String
+  public typealias UnicodeScalarLiteralType = Swift.String
+}
+public enum ImageDecoders {
+}
+extension Nuke.ImageDecoders {
+  final public class Default : Nuke.ImageDecoding, @unchecked Swift.Sendable {
+    final public var isAsynchronous: Swift.Bool {
+      get
+    }
+    public init()
+    public init?(context: Nuke.ImageDecodingContext)
+    final public func decode(_ data: Foundation.Data) throws -> Nuke.ImageContainer
+    final public func decodePartiallyDownloadedData(_ data: Foundation.Data) -> Nuke.ImageContainer?
+    @objc deinit
+  }
+}
+extension Nuke.ImageProcessors {
+  public struct Composition : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
+    public init(_ processors: [any Nuke.ImageProcessing])
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
+    public var identifier: Swift.String {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (lhs: Nuke.ImageProcessors.Composition, rhs: Nuke.ImageProcessors.Composition) -> Swift.Bool
+    public var description: Swift.String {
+      get
+    }
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+public struct AssetType : Swift.ExpressibleByStringLiteral, Swift.Hashable, Swift.Sendable {
+  public let rawValue: Swift.String
+  public init(rawValue: Swift.String)
+  public init(stringLiteral value: Swift.String)
+  public static let png: Nuke.AssetType
+  public static let jpeg: Nuke.AssetType
+  public static let gif: Nuke.AssetType
+  public static let heic: Nuke.AssetType
+  public static let webp: Nuke.AssetType
+  public static let mp4: Nuke.AssetType
+  public static let m4v: Nuke.AssetType
+  public static let mov: Nuke.AssetType
+  public func hash(into hasher: inout Swift.Hasher)
+  public static func == (a: Nuke.AssetType, b: Nuke.AssetType) -> Swift.Bool
+  public typealias ExtendedGraphemeClusterLiteralType = Swift.String
+  public typealias StringLiteralType = Swift.String
+  public typealias UnicodeScalarLiteralType = Swift.String
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+extension Nuke.AssetType {
+  public init?(_ data: Foundation.Data)
+}
+extension Nuke.ImagePipeline {
+  public struct Configuration : @unchecked Swift.Sendable {
+    public var dataLoader: any Nuke.DataLoading
+    public var dataCache: (any Nuke.DataCaching)?
+    public var imageCache: (any Nuke.ImageCaching)? {
+      get
+      set
+    }
+    public var makeImageDecoder: @Sendable (Nuke.ImageDecodingContext) -> (any Nuke.ImageDecoding)?
+    public var makeImageEncoder: @Sendable (Nuke.ImageEncodingContext) -> any Nuke.ImageEncoding
+    public var isDecompressionEnabled: Swift.Bool {
+      get
+      set
+    }
+    public var isUsingPrepareForDisplay: Swift.Bool
+    public var dataCachePolicy: Nuke.ImagePipeline.DataCachePolicy
+    public var isTaskCoalescingEnabled: Swift.Bool
+    public var isRateLimiterEnabled: Swift.Bool
+    public var isProgressiveDecodingEnabled: Swift.Bool
+    public var isStoringPreviewsInMemoryCache: Swift.Bool
+    public var isResumableDataEnabled: Swift.Bool
+    public var callbackQueue: Dispatch.DispatchQueue
+    public static var isSignpostLoggingEnabled: Swift.Bool
+    public var dataLoadingQueue: Foundation.OperationQueue
+    public var dataCachingQueue: Foundation.OperationQueue
+    public var imageDecodingQueue: Foundation.OperationQueue
+    public var imageEncodingQueue: Foundation.OperationQueue
+    public var imageProcessingQueue: Foundation.OperationQueue
+    public var imageDecompressingQueue: Foundation.OperationQueue
+    public init(dataLoader: any Nuke.DataLoading = DataLoader())
+    public static var withURLCache: Nuke.ImagePipeline.Configuration {
+      get
+    }
+    public static var withDataCache: Nuke.ImagePipeline.Configuration {
+      get
+    }
+    public static func withDataCache(name: Swift.String = "com.github.kean.Nuke.DataCache", sizeLimit: Swift.Int? = nil) -> Nuke.ImagePipeline.Configuration
+  }
+  public enum DataCachePolicy : Swift.Sendable {
+    case automatic
+    case storeOriginalData
+    case storeEncodedImages
+    case storeAll
+    public static func == (a: Nuke.ImagePipeline.DataCachePolicy, b: Nuke.ImagePipeline.DataCachePolicy) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+@_hasMissingDesignatedInitializers final public class ImageTask : Swift.Hashable, Swift.CustomStringConvertible, @unchecked Swift.Sendable {
+  final public let taskId: Swift.Int64
+  final public let request: Nuke.ImageRequest
+  final public var priority: Nuke.ImageRequest.Priority {
+    get
+    set
+  }
+  final public var progress: Nuke.ImageTask.Progress {
+    get
+  }
+  public struct Progress : Swift.Hashable, Swift.Sendable {
+    public let completed: Swift.Int64
+    public let total: Swift.Int64
+    public var fraction: Swift.Float {
+      get
+    }
+    public init(completed: Swift.Int64, total: Swift.Int64)
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageTask.Progress, b: Nuke.ImageTask.Progress) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  final public var state: Nuke.ImageTask.State {
+    get
+  }
+  public enum State {
+    case running
+    case cancelled
+    case completed
+    public static func == (a: Nuke.ImageTask.State, b: Nuke.ImageTask.State) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  @objc deinit
+  final public func cancel()
+  final public func hash(into hasher: inout Swift.Hasher)
+  public static func == (lhs: Nuke.ImageTask, rhs: Nuke.ImageTask) -> Swift.Bool
+  final public var description: Swift.String {
+    get
+  }
+  final public var hashValue: Swift.Int {
+    get
+  }
+}
+extension Nuke.ImageProcessors {
+  public struct Circle : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
+    public init(border: Nuke.ImageProcessingOptions.Border? = nil)
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public var identifier: Swift.String {
+      get
+    }
+    public var description: Swift.String {
+      get
+    }
+    public func hash(into hasher: inout Swift.Hasher)
+    public static func == (a: Nuke.ImageProcessors.Circle, b: Nuke.ImageProcessors.Circle) -> Swift.Bool
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+}
+public protocol ImageDecoding : Swift.Sendable {
+  var isAsynchronous: Swift.Bool { get }
+  func decode(_ data: Foundation.Data) throws -> Nuke.ImageContainer
+  func decodePartiallyDownloadedData(_ data: Foundation.Data) -> Nuke.ImageContainer?
+}
+extension Nuke.ImageDecoding {
+  public var isAsynchronous: Swift.Bool {
+    get
+  }
+  public func decodePartiallyDownloadedData(_ data: Foundation.Data) -> Nuke.ImageContainer?
+}
+public enum ImageDecodingError : Swift.Error, Swift.CustomStringConvertible, Swift.Sendable {
+  case unknown
+  public var description: Swift.String {
+    get
+  }
+  public static func == (a: Nuke.ImageDecodingError, b: Nuke.ImageDecodingError) -> Swift.Bool
+  public func hash(into hasher: inout Swift.Hasher)
+  public var hashValue: Swift.Int {
+    get
+  }
+}
+public enum ImageEncoders {
+}
+extension Nuke.ImageEncoding where Self == Nuke.ImageEncoders.Default {
+  public static func `default`(compressionQuality: Swift.Float = 0.8) -> Nuke.ImageEncoders.Default
+}
+extension Nuke.ImageEncoding where Self == Nuke.ImageEncoders.ImageIO {
+  public static func imageIO(type: Nuke.AssetType, compressionRatio: Swift.Float = 0.8) -> Nuke.ImageEncoders.ImageIO
+}
+extension Nuke.ImageProcessors {
+  public struct CoreImageFilter : Nuke.ImageProcessing, Swift.CustomStringConvertible, @unchecked Swift.Sendable {
+    public let name: Swift.String
+    public let parameters: [Swift.String : Any]
+    public let identifier: Swift.String
+    public init(name: Swift.String, parameters: [Swift.String : Any], identifier: Swift.String)
+    public init(name: Swift.String)
+    public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
+    public func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
+    public static var context: CoreImage.CIContext
+    public static func apply(filter: CoreImage.CIFilter, to image: Nuke.PlatformImage) throws -> Nuke.PlatformImage
+    public var description: Swift.String {
+      get
+    }
+    public enum Error : Swift.Error, Swift.CustomStringConvertible {
+      case failedToCreateFilter(name: Swift.String, parameters: [Swift.String : Any])
+      case inputImageIsEmpty(inputImage: Nuke.PlatformImage)
+      case failedToApplyFilter(filter: CoreImage.CIFilter)
+      case failedToCreateOutputCGImage(image: CoreImage.CIImage)
+      public var description: Swift.String {
+        get
+      }
+    }
+  }
+}
+final public class ImagePrefetcher : @unchecked Swift.Sendable {
+  final public var isPaused: Swift.Bool {
+    get
+    set
+  }
+  final public var priority: Nuke.ImageRequest.Priority {
+    get
+    set
+  }
+  public enum Destination : Swift.Sendable {
+    case memoryCache
+    case diskCache
+    public static func == (a: Nuke.ImagePrefetcher.Destination, b: Nuke.ImagePrefetcher.Destination) -> Swift.Bool
+    public func hash(into hasher: inout Swift.Hasher)
+    public var hashValue: Swift.Int {
+      get
+    }
+  }
+  final public var didComplete: (() -> Swift.Void)?
+  public init(pipeline: Nuke.ImagePipeline = ImagePipeline.shared, destination: Nuke.ImagePrefetcher.Destination = .memoryCache, maxConcurrentRequestCount: Swift.Int = 2)
+  @objc deinit
+  final public func startPrefetching(with urls: [Foundation.URL])
+  final public func startPrefetching(with requests: [Nuke.ImageRequest])
+  final public func _startPrefetching(with requests: [Nuke.ImageRequest])
+  final public func stopPrefetching(with urls: [Foundation.URL])
+  final public func stopPrefetching(with requests: [Nuke.ImageRequest])
+  final public func stopPrefetching()
+}
+extension Nuke.ImageProcessingError : Swift.Equatable {}
+extension Nuke.ImageProcessingError : Swift.Hashable {}
+extension Nuke.ImageResponse.CacheType : Swift.Equatable {}
+extension Nuke.ImageResponse.CacheType : Swift.Hashable {}
+extension Nuke.ImageProcessingOptions.Unit : Swift.Equatable {}
+extension Nuke.ImageProcessingOptions.Unit : Swift.Hashable {}
+extension Nuke.ImageProcessingOptions.ContentMode : Swift.Equatable {}
+extension Nuke.ImageProcessingOptions.ContentMode : Swift.Hashable {}
+extension Nuke.ImageRequest.Priority : Swift.Hashable {}
+extension Nuke.ImageRequest.Priority : Swift.RawRepresentable {}
+extension Nuke.ImagePipeline.DataCachePolicy : Swift.Equatable {}
+extension Nuke.ImagePipeline.DataCachePolicy : Swift.Hashable {}
+extension Nuke.ImageTask.State : Swift.Equatable {}
+extension Nuke.ImageTask.State : Swift.Hashable {}
+extension Nuke.ImageDecodingError : Swift.Equatable {}
+extension Nuke.ImageDecodingError : Swift.Hashable {}
+extension Nuke.ImagePrefetcher.Destination : Swift.Equatable {}
+extension Nuke.ImagePrefetcher.Destination : Swift.Hashable {}
