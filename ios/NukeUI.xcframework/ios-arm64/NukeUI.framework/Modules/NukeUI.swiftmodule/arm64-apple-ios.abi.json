@@ -3377,6 +3377,104 @@
           },
           {
             "kind": "Var",
+            "name": "showPlaceholderOnFailure",
+            "printedName": "showPlaceholderOnFailure",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Bool",
+                "printedName": "Swift.Bool",
+                "usr": "s:Sb"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvp",
+            "mangledName": "$s6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvp",
+            "moduleName": "NukeUI",
+            "declAttributes": [
+              "Custom",
+              "HasInitialValue",
+              "Final",
+              "HasStorage",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "hasStorage": true,
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvg",
+                "mangledName": "$s6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvg",
+                "moduleName": "NukeUI",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "get"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Set",
+                "printedName": "Set()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Bool",
+                    "printedName": "Swift.Bool",
+                    "usr": "s:Sb"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvs",
+                "mangledName": "$s6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvs",
+                "moduleName": "NukeUI",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "set"
+              },
+              {
+                "kind": "Accessor",
+                "name": "Modify",
+                "printedName": "Modify()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvM",
+                "mangledName": "$s6NukeUI13LazyImageViewC24showPlaceholderOnFailureSbvM",
+                "moduleName": "NukeUI",
+                "implicit": true,
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "_modify"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
             "name": "failureImage",
             "printedName": "failureImage",
             "children": [
@@ -7108,322 +7206,350 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 4248,
+      "offset": 4222,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 5335,
+      "offset": 5284,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 5819,
+      "offset": 5768,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 6669,
+      "offset": 6618,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 6837,
+      "offset": 6779,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 7959,
+      "offset": 7894,
+      "length": 5,
+      "value": "false"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
+      "kind": "BooleanLiteral",
+      "offset": 1710,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "Array",
-      "offset": 1634,
+      "offset": 1784,
       "length": 2,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "Array",
-      "offset": 2429,
+      "offset": 2579,
       "length": 2,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 5106,
+      "offset": 5240,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 5365,
+      "offset": 5499,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 5425,
+      "offset": 5559,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 5767,
+      "offset": 5901,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "FloatLiteral",
-      "offset": 6210,
+      "offset": 6344,
       "length": 4,
       "value": "0.33"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 6902,
+      "offset": 7036,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 6989,
+      "offset": 7123,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 7024,
+      "offset": 7158,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 7055,
+      "offset": 7189,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "StringLiteral",
-      "offset": 7349,
+      "offset": 7483,
       "length": 37,
       "value": "\"Must be called from the main thread\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 7500,
+      "offset": 7634,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 7645,
+      "offset": 7769,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 8099,
+      "offset": 8189,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 8317,
+      "offset": 8407,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 8404,
+      "offset": 8494,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 9074,
+      "offset": 9146,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 9328,
+      "offset": 9400,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 9383,
+      "offset": 9455,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 9532,
+      "offset": 9604,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 9718,
+      "offset": 9840,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 10286,
+      "offset": 9905,
+      "length": 5,
+      "value": "false"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
+      "kind": "BooleanLiteral",
+      "offset": 10487,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "IntegerLiteral",
-      "offset": 11168,
+      "offset": 11330,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "Array",
-      "offset": 11596,
+      "offset": 11774,
       "length": 2,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 12246,
+      "offset": 12389,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "IntegerLiteral",
-      "offset": 12290,
+      "offset": 12433,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "Array",
-      "offset": 12545,
+      "offset": 12688,
       "length": 2,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "IntegerLiteral",
-      "offset": 13214,
+      "offset": 13357,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "IntegerLiteral",
-      "offset": 13270,
+      "offset": 13413,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "IntegerLiteral",
-      "offset": 13344,
+      "offset": 13487,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImageView.swift",
       "kind": "BooleanLiteral",
-      "offset": 13648,
+      "offset": 13791,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
+      "kind": "Array",
+      "offset": 646,
+      "length": 2,
+      "value": "[]"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "BooleanLiteral",
-      "offset": 656,
+      "offset": 712,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
+      "kind": "Array",
+      "offset": 1226,
+      "length": 2,
+      "value": "[]"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "BooleanLiteral",
-      "offset": 1184,
+      "offset": 1292,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "StringLiteral",
-      "offset": 1827,
+      "offset": 1933,
       "length": 9,
       "value": "\"opacity\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "IntegerLiteral",
-      "offset": 1906,
+      "offset": 2012,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "IntegerLiteral",
-      "offset": 1936,
+      "offset": 2042,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "StringLiteral",
-      "offset": 1969,
+      "offset": 2075,
       "length": 17,
       "value": "\"imageTransition\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "BooleanLiteral",
-      "offset": 2741,
+      "offset": 2847,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
       "kind": "StringLiteral",
-      "offset": 3183,
+      "offset": 3289,
       "length": 2,
       "value": "\"\""
     }

@@ -26288,35 +26288,35 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 7906,
+      "offset": 7895,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 10513,
+      "offset": 10502,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 13721,
+      "offset": 13696,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 15916,
+      "offset": 15891,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 16357,
+      "offset": 16332,
       "length": 4,
       "value": "true"
     },
@@ -26484,126 +26484,126 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "BooleanLiteral",
-      "offset": 6227,
+      "offset": 6211,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8818,
+      "offset": 8759,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8821,
+      "offset": 8762,
       "length": 3,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8826,
+      "offset": 8767,
       "length": 6,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8834,
+      "offset": 8775,
       "length": 4,
       "value": "3"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8840,
+      "offset": 8781,
       "length": 8,
       "value": "4"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8818,
+      "offset": 8759,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8821,
+      "offset": 8762,
       "length": 3,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8826,
+      "offset": 8767,
       "length": 6,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8834,
+      "offset": 8775,
       "length": 4,
       "value": "3"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8840,
+      "offset": 8781,
       "length": 8,
       "value": "4"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8818,
+      "offset": 8759,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8821,
+      "offset": 8762,
       "length": 3,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8826,
+      "offset": 8767,
       "length": 6,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8834,
+      "offset": 8775,
       "length": 4,
       "value": "3"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 8840,
+      "offset": 8781,
       "length": 8,
       "value": "4"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "BooleanLiteral",
-      "offset": 9564,
+      "offset": 9505,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
       "kind": "BooleanLiteral",
-      "offset": 9602,
+      "offset": 9543,
       "length": 4,
       "value": "true"
     },
@@ -26750,133 +26750,133 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 1831,
+      "offset": 1824,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 2214,
+      "offset": 2207,
       "length": 32,
       "value": "\"DecodeCachedProcessedImageData\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 2899,
+      "offset": 2874,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 2922,
+      "offset": 2897,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "IntegerLiteral",
-      "offset": 3522,
+      "offset": 3497,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "Array",
-      "offset": 3625,
+      "offset": 3600,
       "length": 2,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "Array",
-      "offset": 4972,
+      "offset": 4947,
       "length": 2,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 6335,
+      "offset": 6310,
       "length": 14,
       "value": "\"ProcessImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 6365,
+      "offset": 6340,
       "length": 12,
       "value": "\"FinalImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 6380,
+      "offset": 6355,
       "length": 18,
       "value": "\"ProgressiveImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 7412,
+      "offset": 7380,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 8100,
+      "offset": 8061,
       "length": 17,
       "value": "\"DecompressImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 8133,
+      "offset": 8094,
       "length": 12,
       "value": "\"FinalImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 8148,
+      "offset": 8109,
       "length": 18,
       "value": "\"ProgressiveImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 8679,
+      "offset": 8640,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "StringLiteral",
-      "offset": 10079,
+      "offset": 10029,
       "length": 13,
       "value": "\"EncodeImage\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 10887,
+      "offset": 10837,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 10920,
+      "offset": 10870,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 11154,
+      "offset": 11104,
       "length": 5,
       "value": "false"
     },
@@ -27156,7 +27156,7 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/OperationTask.swift",
       "kind": "BooleanLiteral",
-      "offset": 923,
+      "offset": 916,
       "length": 4,
       "value": "true"
     },
@@ -27324,91 +27324,91 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 830,
+      "offset": 846,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "FloatLiteral",
-      "offset": 1230,
+      "offset": 1246,
       "length": 3,
       "value": "0.1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 1276,
+      "offset": 1292,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 1721,
+      "offset": 1753,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 2631,
+      "offset": 2679,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 2915,
+      "offset": 2963,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 2944,
+      "offset": 2992,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 2980,
+      "offset": 3028,
       "length": 13,
       "value": "2147483647"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 4408,
+      "offset": 4456,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "FloatLiteral",
-      "offset": 4859,
+      "offset": 4907,
       "length": 3,
       "value": "0.1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "FloatLiteral",
-      "offset": 4919,
+      "offset": 4967,
       "length": 3,
       "value": "0.1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "BooleanLiteral",
-      "offset": 5984,
+      "offset": 6019,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 6057,
+      "offset": 6092,
       "length": 1,
       "value": "0"
     },
@@ -27646,63 +27646,63 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchWithPublisher.swift",
       "kind": "StringLiteral",
-      "offset": 1393,
+      "offset": 1386,
       "length": 26,
       "value": "\"This should never happen\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchWithPublisher.swift",
       "kind": "BooleanLiteral",
-      "offset": 2337,
+      "offset": 2316,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "IntegerLiteral",
-      "offset": 576,
+      "offset": 592,
       "length": 1,
       "value": "8"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "StringLiteral",
-      "offset": 1160,
+      "offset": 1176,
       "length": 16,
       "value": "\"CIGaussianBlur\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "StringLiteral",
-      "offset": 1191,
+      "offset": 1207,
       "length": 13,
       "value": "\"inputRadius\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "StringLiteral",
-      "offset": 1289,
+      "offset": 1305,
       "length": 53,
       "value": "\"com.github.kean\/nuke\/gaussian_blur?radius=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "StringLiteral",
-      "offset": 1341,
+      "offset": 1357,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "StringLiteral",
-      "offset": 1407,
+      "offset": 1423,
       "length": 33,
       "value": "\"GaussianBlur(radius: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+GaussianBlur.swift",
       "kind": "StringLiteral",
-      "offset": 1438,
+      "offset": 1454,
       "length": 1,
       "value": "\")\""
     },
@@ -28052,44 +28052,58 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 6421,
+      "offset": 6408,
       "length": 1,
       "value": "8"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 6449,
+      "offset": 6436,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 7058,
+      "offset": 7045,
       "length": 1,
       "value": "8"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 7086,
+      "offset": 7073,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 8188,
+      "offset": 8175,
       "length": 1,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 8239,
+      "offset": 8226,
       "length": 1,
       "value": "2"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
+      "kind": "IntegerLiteral",
+      "offset": 11343,
+      "length": 1,
+      "value": "0"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
+      "kind": "IntegerLiteral",
+      "offset": 11355,
+      "length": 1,
+      "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
@@ -28108,70 +28122,56 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 11391,
-      "length": 1,
-      "value": "0"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
-      "kind": "IntegerLiteral",
-      "offset": 11403,
-      "length": 1,
-      "value": "0"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
-      "kind": "IntegerLiteral",
-      "offset": 11497,
+      "offset": 11473,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "StringLiteral",
-      "offset": 11525,
+      "offset": 11501,
       "length": 3,
       "value": "\"#\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "StringLiteral",
-      "offset": 11607,
+      "offset": 11583,
       "length": 7,
       "value": "\"%02lX\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 11636,
+      "offset": 11612,
       "length": 3,
       "value": "255"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "BooleanLiteral",
-      "offset": 11944,
+      "offset": 11920,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 12595,
+      "offset": 12571,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "BooleanLiteral",
-      "offset": 13052,
+      "offset": 13028,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
       "kind": "IntegerLiteral",
-      "offset": 13149,
+      "offset": 13125,
       "length": 1,
       "value": "0"
     },
@@ -28206,7 +28206,7 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors.swift",
       "kind": "IntegerLiteral",
-      "offset": 4738,
+      "offset": 4754,
       "length": 1,
       "value": "8"
     },
@@ -28220,14 +28220,14 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadData.swift",
       "kind": "BooleanLiteral",
-      "offset": 928,
+      "offset": 921,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskLoadData.swift",
       "kind": "Array",
-      "offset": 1234,
+      "offset": 1227,
       "length": 2,
       "value": "[]"
     },
@@ -28571,174 +28571,174 @@
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
       "offset": 14503,
-      "length": 36,
-      "value": "\"github.com\/kean\/nuke\/thumbmnailKey\""
+      "length": 32,
+      "value": "\"github.com\/kean\/nuke\/thumbnail\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 15064,
+      "offset": 15060,
       "length": 22,
       "value": "\"maxPixelSize=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 15085,
+      "offset": 15081,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 15169,
+      "offset": 15165,
       "length": 84,
       "value": "\"width=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 15196,
+      "offset": 15192,
       "length": 1,
       "value": "\",height=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 15225,
+      "offset": 15221,
       "length": 1,
       "value": "\",contentMode=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 15252,
+      "offset": 15248,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 15629,
+      "offset": 15625,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 15924,
+      "offset": 15920,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 16126,
+      "offset": 16122,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 16283,
+      "offset": 16279,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 17454,
+      "offset": 17450,
       "length": 190,
       "value": "\"com.github\/kean\/nuke\/thumbnail?\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 17510,
+      "offset": 17506,
       "length": 1,
       "value": "\",options=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 17554,
+      "offset": 17550,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 17587,
+      "offset": 17583,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 17618,
+      "offset": 17614,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 17643,
+      "offset": 17639,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 18285,
+      "offset": 18281,
       "length": 2,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20596,
+      "offset": 20592,
       "length": 33,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20622,
+      "offset": 20618,
       "length": 5,
       "value": "\"nil\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20628,
+      "offset": 20624,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20683,
+      "offset": 20679,
       "length": 15,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20697,
+      "offset": 20693,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20745,
+      "offset": 20741,
       "length": 9,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 20753,
+      "offset": 20749,
       "length": 1,
       "value": "\"\""
     },
@@ -28752,259 +28752,259 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 2428,
+      "offset": 2411,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 2601,
+      "offset": 2584,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 3070,
+      "offset": 3053,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 3154,
+      "offset": 3137,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "Dictionary",
-      "offset": 3170,
+      "offset": 3153,
       "length": 3,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 3301,
+      "offset": 3284,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 3416,
+      "offset": 3399,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 3570,
+      "offset": 3553,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 4016,
+      "offset": 3999,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 4037,
+      "offset": 4020,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 4124,
+      "offset": 4107,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 4145,
+      "offset": 4128,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4355,
+      "offset": 4338,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4396,
+      "offset": 4379,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4475,
+      "offset": 4458,
       "length": 2,
       "value": "-1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4758,
+      "offset": 4741,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4919,
+      "offset": 4902,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5005,
+      "offset": 4988,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5115,
+      "offset": 5098,
       "length": 4,
       "value": "0xFF"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5134,
+      "offset": 5117,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5140,
+      "offset": 5123,
       "length": 4,
       "value": "0xDA"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5220,
+      "offset": 5203,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5257,
+      "offset": 5240,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5690,
+      "offset": 5673,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5713,
+      "offset": 5696,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 5789,
+      "offset": 5772,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 6023,
+      "offset": 6006,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 6541,
+      "offset": 6524,
       "length": 1,
       "value": "3"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 6627,
+      "offset": 6610,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 7341,
+      "offset": 7324,
       "length": 4,
       "value": "0xFF"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 7384,
+      "offset": 7367,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 7390,
+      "offset": 7373,
       "length": 4,
       "value": "0xC2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 7428,
+      "offset": 7411,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 7491,
+      "offset": 7474,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 7497,
+      "offset": 7480,
       "length": 4,
       "value": "0xC0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "BooleanLiteral",
-      "offset": 7535,
+      "offset": 7518,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 7618,
+      "offset": 7601,
       "length": 1,
       "value": "1"
     },
@@ -29095,420 +29095,420 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "BooleanLiteral",
-      "offset": 1866,
+      "offset": 1857,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "BooleanLiteral",
-      "offset": 1939,
+      "offset": 1930,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2110,
+      "offset": 2101,
       "length": 4,
       "value": "0xFF"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2116,
+      "offset": 2107,
       "length": 4,
       "value": "0xD8"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2122,
+      "offset": 2113,
       "length": 4,
       "value": "0xFF"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2251,
+      "offset": 2242,
       "length": 4,
       "value": "0x89"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2257,
+      "offset": 2248,
       "length": 4,
       "value": "0x50"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2263,
+      "offset": 2254,
       "length": 4,
       "value": "0x4E"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2269,
+      "offset": 2260,
       "length": 4,
       "value": "0x47"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2275,
+      "offset": 2266,
       "length": 4,
       "value": "0x0D"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2281,
+      "offset": 2272,
       "length": 4,
       "value": "0x0A"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2287,
+      "offset": 2278,
       "length": 4,
       "value": "0x1A"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2293,
+      "offset": 2284,
       "length": 4,
       "value": "0x0A"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2399,
+      "offset": 2390,
       "length": 4,
       "value": "0x47"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2405,
+      "offset": 2396,
       "length": 4,
       "value": "0x49"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2411,
+      "offset": 2402,
       "length": 4,
       "value": "0x46"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2538,
+      "offset": 2529,
       "length": 4,
       "value": "0x52"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2544,
+      "offset": 2535,
       "length": 4,
       "value": "0x49"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2550,
+      "offset": 2541,
       "length": 4,
       "value": "0x46"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2556,
+      "offset": 2547,
       "length": 4,
       "value": "0x46"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2582,
+      "offset": 2573,
       "length": 4,
       "value": "0x57"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2588,
+      "offset": 2579,
       "length": 4,
       "value": "0x45"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2594,
+      "offset": 2585,
       "length": 4,
       "value": "0x42"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2600,
+      "offset": 2591,
       "length": 4,
       "value": "0x50"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2834,
+      "offset": 2825,
       "length": 4,
       "value": "0x66"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2840,
+      "offset": 2831,
       "length": 4,
       "value": "0x74"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2846,
+      "offset": 2837,
       "length": 4,
       "value": "0x79"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2852,
+      "offset": 2843,
       "length": 4,
       "value": "0x70"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2858,
+      "offset": 2849,
       "length": 4,
       "value": "0x69"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2864,
+      "offset": 2855,
       "length": 4,
       "value": "0x73"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2870,
+      "offset": 2861,
       "length": 4,
       "value": "0x6F"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2876,
+      "offset": 2867,
       "length": 4,
       "value": "0x6D"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2891,
+      "offset": 2882,
       "length": 1,
       "value": "4"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2992,
+      "offset": 2983,
       "length": 4,
       "value": "0x66"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 2998,
+      "offset": 2989,
       "length": 4,
       "value": "0x74"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3004,
+      "offset": 2995,
       "length": 4,
       "value": "0x79"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3010,
+      "offset": 3001,
       "length": 4,
       "value": "0x70"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3016,
+      "offset": 3007,
       "length": 4,
       "value": "0x6D"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3022,
+      "offset": 3013,
       "length": 4,
       "value": "0x70"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3028,
+      "offset": 3019,
       "length": 4,
       "value": "0x34"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3034,
+      "offset": 3025,
       "length": 4,
       "value": "0x32"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3049,
+      "offset": 3040,
       "length": 1,
       "value": "4"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3104,
+      "offset": 3079,
       "length": 4,
       "value": "0x66"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3110,
+      "offset": 3085,
       "length": 4,
       "value": "0x74"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3116,
+      "offset": 3091,
       "length": 4,
       "value": "0x79"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3122,
+      "offset": 3097,
       "length": 4,
       "value": "0x70"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3128,
+      "offset": 3103,
       "length": 4,
       "value": "0x4D"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3134,
+      "offset": 3109,
       "length": 4,
       "value": "0x34"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3140,
+      "offset": 3115,
       "length": 4,
       "value": "0x56"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3146,
+      "offset": 3121,
       "length": 4,
       "value": "0x20"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3161,
+      "offset": 3136,
       "length": 1,
       "value": "4"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3280,
+      "offset": 3255,
       "length": 4,
       "value": "0x66"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3286,
+      "offset": 3261,
       "length": 4,
       "value": "0x74"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3292,
+      "offset": 3267,
       "length": 4,
       "value": "0x79"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3298,
+      "offset": 3273,
       "length": 4,
       "value": "0x70"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3304,
+      "offset": 3279,
       "length": 4,
       "value": "0x71"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3310,
+      "offset": 3285,
       "length": 4,
       "value": "0x74"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3316,
+      "offset": 3291,
       "length": 4,
       "value": "0x20"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3322,
+      "offset": 3297,
       "length": 4,
       "value": "0x20"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/AssetType.swift",
       "kind": "IntegerLiteral",
-      "offset": 3337,
+      "offset": 3312,
       "length": 1,
       "value": "4"
     },
@@ -29949,161 +29949,161 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 1073,
+      "offset": 1066,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 1174,
+      "offset": 1167,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 2927,
+      "offset": 2913,
       "length": 15,
       "value": "\"LoadImageData\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 2952,
+      "offset": 2938,
       "length": 114,
       "value": "\"URL: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 2994,
+      "offset": 2980,
       "length": 2,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 2997,
+      "offset": 2983,
       "length": 1,
       "value": "\", resumable data: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "IntegerLiteral",
-      "offset": 3062,
+      "offset": 3048,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 3065,
+      "offset": 3051,
       "length": 2,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 3611,
+      "offset": 3583,
       "length": 15,
       "value": "\"LoadImageData\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 3634,
+      "offset": 3606,
       "length": 56,
       "value": "\"Finished with size \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 3689,
+      "offset": 3661,
       "length": 2,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 3928,
+      "offset": 3893,
       "length": 15,
       "value": "\"LoadImageData\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 3951,
+      "offset": 3916,
       "length": 11,
       "value": "\"Cancelled\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 4572,
+      "offset": 4521,
       "length": 15,
       "value": "\"LoadImageData\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 4597,
+      "offset": 4546,
       "length": 56,
       "value": "\"Resumed with data \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "StringLiteral",
-      "offset": 4652,
+      "offset": 4601,
       "length": 2,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 5898,
+      "offset": 5839,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 7221,
+      "offset": 7162,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 7285,
+      "offset": 7226,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 7318,
+      "offset": 7259,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 7540,
+      "offset": 7481,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 7598,
+      "offset": 7539,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalImageData.swift",
       "kind": "BooleanLiteral",
-      "offset": 7647,
+      "offset": 7588,
       "length": 4,
       "value": "true"
     },
@@ -30124,126 +30124,126 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "Dictionary",
-      "offset": 1482,
+      "offset": 1498,
       "length": 3,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 1516,
+      "offset": 1532,
       "length": 47,
       "value": "\"com.github.kean\/nuke\/core_image?name=\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 1561,
+      "offset": 1577,
       "length": 1,
       "value": "\")\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 2297,
+      "offset": 2309,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "Dictionary",
-      "offset": 2385,
+      "offset": 2397,
       "length": 3,
       "value": "[]"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 3757,
+      "offset": 3769,
       "length": 59,
       "value": "\"CoreImageFilter(name: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 3787,
+      "offset": 3799,
       "length": 1,
       "value": "\", parameters: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 3814,
+      "offset": 3826,
       "length": 1,
       "value": "\")\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4320,
+      "offset": 4332,
       "length": 70,
       "value": "\"Failed to create filter named \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4358,
+      "offset": 4370,
       "length": 4,
       "value": "\" with parameters: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4389,
+      "offset": 4401,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4475,
+      "offset": 4487,
       "length": 50,
       "value": "\"Failed to create input CIImage for \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4524,
+      "offset": 4536,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4608,
+      "offset": 4620,
       "length": 40,
       "value": "\"Failed to apply filter: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4647,
+      "offset": 4659,
       "length": 1,
       "value": "\"\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4738,
+      "offset": 4750,
       "length": 73,
       "value": "\"Failed to create output image for extent: \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4796,
+      "offset": 4808,
       "length": 4,
       "value": "\" from \""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "StringLiteral",
-      "offset": 4810,
+      "offset": 4822,
       "length": 1,
       "value": "\"\""
     },
@@ -30278,14 +30278,14 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Prefetching\/ImagePrefetcher.swift",
       "kind": "BooleanLiteral",
-      "offset": 5271,
+      "offset": 5264,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Prefetching\/ImagePrefetcher.swift",
       "kind": "BooleanLiteral",
-      "offset": 5516,
+      "offset": 5509,
       "length": 4,
       "value": "true"
     }
