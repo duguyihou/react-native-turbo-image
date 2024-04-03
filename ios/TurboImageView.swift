@@ -33,23 +33,11 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var base64Placeholder: String? {
-    didSet {
-      DispatchQueue.global(qos: .userInteractive).async {
-        DispatchQueue.main.async { [self] in
-          self.lazyImageView.placeholderImage = UIImage(base64Placeholder: base64Placeholder)
-        }
-      }
-    }
-  }
-
   @objc var blurhash: String? {
     didSet {
       DispatchQueue.global(qos: .userInteractive).async {
         DispatchQueue.main.async { [self] in
-          guard let image = UIImage(blurHash: blurhash ?? "",
-                                    size: CGSize(width: 32, height: 32))
-          else { return }
+          guard let image = UIImage(blurHash: blurhash) else { return }
           self.lazyImageView.placeholderImage = image
         }
       }
@@ -92,7 +80,8 @@ final class TurboImageView : UIView {
 
   @objc var cachePolicy = "memory" {
     didSet {
-      lazyImageView.pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline ?? .shared
+      let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
+      lazyImageView.pipeline = pipeline ?? .shared
     }
   }
 
