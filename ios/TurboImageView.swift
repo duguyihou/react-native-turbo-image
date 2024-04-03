@@ -7,6 +7,7 @@ final class TurboImageView : UIView {
   private lazy var lazyImageView = LazyImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
+  private var processors: [ImageProcessing]? = []
 
   @objc var url: String? = nil {
     didSet {
@@ -53,13 +54,8 @@ final class TurboImageView : UIView {
   @objc var rounded: Bool = false {
     didSet {
       if rounded {
-        if lazyImageView.processors == nil {
-          lazyImageView.processors = [
-            ImageProcessors.Circle()
-          ]
-        } else {
-          lazyImageView.processors?.append(ImageProcessors.Circle())
-        }
+        processors?.append(ImageProcessors.Circle())
+        lazyImageView.processors = processors
       }
     }
   }
@@ -67,13 +63,8 @@ final class TurboImageView : UIView {
   @objc var blur: Bool = false {
     didSet {
       if blur {
-        if lazyImageView.processors == nil {
-          lazyImageView.processors = [
-            ImageProcessors.GaussianBlur()
-          ]
-        } else {
-          lazyImageView.processors?.append(ImageProcessors.GaussianBlur())
-        }
+        processors?.append(ImageProcessors.GaussianBlur())
+        lazyImageView.processors = processors
       }
     }
   }
