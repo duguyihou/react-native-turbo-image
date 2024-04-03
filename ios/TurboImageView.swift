@@ -2,7 +2,7 @@ import Nuke
 import NukeUI
 import React
 
-class TurboImageView : UIView {
+final class TurboImageView : UIView {
 
   private lazy var lazyImageView = LazyImageView()
   @objc var onError: RCTDirectEventBlock?
@@ -10,7 +10,7 @@ class TurboImageView : UIView {
 
   @objc var url: String? = nil {
     didSet {
-      guard let url = url,
+      guard let url,
             let urlString = URL(string: url)
       else {
         onError?(["error": "invalid url: \(String(describing: url))"])
@@ -22,7 +22,8 @@ class TurboImageView : UIView {
 
   @objc var resizeMode = "contain" {
     didSet {
-      lazyImageView.contentMode = ResizeMode(rawValue: resizeMode)?.contentMode ?? .scaleAspectFit
+      let contentMode = ResizeMode(rawValue: resizeMode)?.contentMode
+      lazyImageView.contentMode = contentMode ?? .scaleAspectFit
     }
   }
 
