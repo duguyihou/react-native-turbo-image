@@ -2,15 +2,16 @@ import Nuke
 import NukeUI
 import React
 
-class TurboImageView : UIView {
+final class TurboImageView : UIView {
 
   private lazy var lazyImageView = LazyImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
+  private var processors: [ImageProcessing]? = []
 
   @objc var url: String? = nil {
     didSet {
-      guard let url = url,
+      guard let url,
             let urlString = URL(string: url)
       else {
         onError?(["error": "invalid url: \(String(describing: url))"])
@@ -22,7 +23,8 @@ class TurboImageView : UIView {
 
   @objc var resizeMode = "contain" {
     didSet {
-      lazyImageView.contentMode = ResizeMode(rawValue: resizeMode)?.contentMode ?? .scaleAspectFit
+      let contentMode = ResizeMode(rawValue: resizeMode)?.contentMode
+      lazyImageView.contentMode = contentMode ?? .scaleAspectFit
     }
   }
 
@@ -32,23 +34,11 @@ class TurboImageView : UIView {
     }
   }
 
-  @objc var base64Placeholder: String? {
-    didSet {
-      DispatchQueue.global(qos: .userInteractive).async {
-        DispatchQueue.main.async { [self] in
-          self.lazyImageView.placeholderImage = UIImage(base64Placeholder: base64Placeholder)
-        }
-      }
-    }
-  }
-
   @objc var blurhash: String? {
     didSet {
       DispatchQueue.global(qos: .userInteractive).async {
         DispatchQueue.main.async { [self] in
-          guard let image = UIImage(blurHash: blurhash ?? "",
-                                    size: CGSize(width: 32, height: 32))
-          else { return }
+          guard let image = UIImage(blurHash: blurhash) else { return }
           self.lazyImageView.placeholderImage = image
         }
       }
@@ -64,13 +54,8 @@ class TurboImageView : UIView {
   @objc var rounded: Bool = false {
     didSet {
       if rounded {
-        if lazyImageView.processors == nil {
-          lazyImageView.processors = [
-            ImageProcessors.Circle()
-          ]
-        } else {
-          lazyImageView.processors?.append(ImageProcessors.Circle())
-        }
+        processors?.append(ImageProcessors.Circle())
+        lazyImageView.processors = processors
       }
     }
   }
@@ -78,20 +63,16 @@ class TurboImageView : UIView {
   @objc var blur: Bool = false {
     didSet {
       if blur {
-        if lazyImageView.processors == nil {
-          lazyImageView.processors = [
-            ImageProcessors.GaussianBlur()
-          ]
-        } else {
-          lazyImageView.processors?.append(ImageProcessors.GaussianBlur())
-        }
+        processors?.append(ImageProcessors.GaussianBlur())
+        lazyImageView.processors = processors
       }
     }
   }
 
   @objc var cachePolicy = "memory" {
     didSet {
-      lazyImageView.pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline ?? .shared
+      let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
+      lazyImageView.pipeline = pipeline ?? .shared
     }
   }
 

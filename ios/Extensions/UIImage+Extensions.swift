@@ -2,16 +2,10 @@ import UIKit
 
 public extension UIImage {
 
-    convenience init?(base64Placeholder: String?) {
-        guard
-            let base64Placeholder,
-            let data = Data(base64Encoded: base64Placeholder, options: .ignoreUnknownCharacters)
-        else { return nil }
-        self.init(data: data)
-    }
-
     // https://github.com/woltapp/blurhash/blob/master/Swift/BlurHashDecode.swift
-    convenience init?(blurHash: String?, size: CGSize, punch: Float = 1) {
+  convenience init?(blurHash: String?,
+                    size: CGSize = .init(width: 32, height: 32),
+                    punch: Float = 1) {
         guard let blurHash, blurHash.count >= 6 else { return nil }
 
         let sizeFlag = String(blurHash[0]).decode83()
