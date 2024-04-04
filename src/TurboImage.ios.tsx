@@ -7,7 +7,6 @@ const ComponentName = 'TurboImageView';
 
 const TurboImageView = requireNativeComponent<TurboImageProps>(ComponentName);
 
-// TODO: 🐵 ref
 const TurboImage = (props: TurboImageProps) => {
   return <TurboImageView {...props} />;
 };

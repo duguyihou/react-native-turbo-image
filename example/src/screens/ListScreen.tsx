@@ -17,6 +17,7 @@ const ListScreen = () => {
         showActivityIndicator
         blurhash={blurhashString}
         cachePolicy="dataCache"
+        borderRadius={8}
       />
     );
   };
