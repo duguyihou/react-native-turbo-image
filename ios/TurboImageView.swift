@@ -75,6 +75,15 @@ final class TurboImageView : UIView {
       lazyImageView.pipeline = pipeline ?? .shared
     }
   }
+  @objc var borderRadius: NSNumber? {
+    didSet {
+      if let borderRadius {
+        lazyImageView.layer.cornerRadius = CGFloat(truncating: borderRadius)
+        lazyImageView.layer.masksToBounds = true
+        clipsToBounds = true
+      }
+    }
+  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
