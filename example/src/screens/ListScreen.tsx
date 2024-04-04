@@ -6,8 +6,8 @@ import { blurhashString } from '../mockData';
 const size = Dimensions.get('window').width / 3;
 const ListScreen = () => {
   const imageURLs = Array.from(
-    { length: 180 },
-    (_, i) => `https://placedog.net/300/200?id=${i + 1}`
+    { length: 236 },
+    (_, i) => `https://placedog.net/300/300?id=${i + 1}`
   );
   const renderItem = ({ item }: { item: string }) => {
     return (

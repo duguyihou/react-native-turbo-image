@@ -3,7 +3,7 @@ import React from 'react';
 import TurboImage from '../../../src';
 
 const ProcessScreen = () => {
-  const imgUrl = 'https://placedog.net/300/200?id=181';
+  const imgUrl = 'https://placedog.net/300/300?id=238';
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Original</Text>
@@ -30,8 +30,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    width: 200,
-    height: 200,
+    width: 300,
+    height: 300,
   },
   title: {
     fontSize: 16,
