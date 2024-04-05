@@ -72,6 +72,7 @@ final class TurboImageView : UIView {
   @objc var cachePolicy = "memory" {
     didSet {
       let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
+      print("🐵 --- pipeline \(pipeline)")
       lazyImageView.pipeline = pipeline ?? .shared
     }
   }

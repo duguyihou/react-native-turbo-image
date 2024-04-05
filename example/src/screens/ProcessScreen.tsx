@@ -1,23 +1,57 @@
-import { StyleSheet, Text, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, FlatList } from 'react-native';
 import React from 'react';
 import TurboImage from '../../../src';
 
-const ProcessScreen = () => {
-  const imgUrl = 'https://placedog.net/300/300?id=238';
+type Process = 'rounded' | 'blur' | null;
+type Props = {
+  title: string;
+  url: string;
+  process: Process;
+};
+const Card = ({ title, url, process }: Props) => {
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Original</Text>
-      <TurboImage url={imgUrl} style={styles.card} showActivityIndicator />
-      <Text style={styles.title}>Rounded</Text>
+    <View style={styles.card}>
       <TurboImage
-        url={imgUrl}
-        style={styles.card}
-        // showActivityIndicator
-        rounded
+        url={url}
+        style={styles.image}
+        rounded={process === 'rounded'}
+        blur={process === 'blur'}
       />
-      <Text style={styles.title}>Blur</Text>
-      <TurboImage url={imgUrl} style={styles.card} showActivityIndicator blur />
-    </ScrollView>
+      <Text style={styles.title}>{title}</Text>
+    </View>
+  );
+};
+
+const images = [
+  {
+    title: 'Original',
+    url: 'https://placedog.net/300/300?id=238',
+    process: null,
+  },
+  {
+    title: 'Rounded',
+    url: 'https://placedog.net/300/300?id=238',
+    process: 'rounded',
+  },
+  {
+    title: 'Blur',
+    url: 'https://placedog.net/300/300?id=238',
+    process: 'blur',
+  },
+];
+const ProcessScreen = () => {
+  return (
+    <FlatList
+      data={images}
+      renderItem={({ item }) => (
+        <Card
+          title={item.title}
+          url={item.url}
+          process={item.process as Process}
+        />
+      )}
+      keyExtractor={(item) => item.title}
+    />
   );
 };
 
@@ -30,6 +64,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  image: {
     width: 300,
     height: 300,
   },

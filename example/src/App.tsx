@@ -1,20 +1,23 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import CacheScreen from './screens/CacheScreen';
-import ListScreen from './screens/ListScreen';
+import GridScreen from './screens/GridScreen';
 import ProcessScreen from './screens/ProcessScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from './screens/HomeScreen';
+import { type HomeStackParamList, RouteName } from './screens/routes.type';
 
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<HomeStackParamList>();
 
 function App() {
   return (
     <NavigationContainer>
-      <Tab.Navigator>
-        <Tab.Screen name="Cache" component={CacheScreen} />
-        <Tab.Screen name="List" component={ListScreen} />
-        <Tab.Screen name="Process" component={ProcessScreen} />
-      </Tab.Navigator>
+      <Stack.Navigator>
+        <Stack.Screen name={RouteName.Home} component={HomeScreen} />
+        <Stack.Screen name={RouteName.Cache} component={CacheScreen} />
+        <Stack.Screen name={RouteName.Grid} component={GridScreen} />
+        <Stack.Screen name={RouteName.Process} component={ProcessScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
