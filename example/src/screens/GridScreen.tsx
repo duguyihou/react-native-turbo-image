@@ -4,10 +4,10 @@ import React from 'react';
 import { blurhashString } from '../mockData';
 
 const size = Dimensions.get('window').width / 3;
-const ListScreen = () => {
+const GridScreen = () => {
   const imageURLs = Array.from(
-    { length: 180 },
-    (_, i) => `https://placedog.net/300/200?id=${i + 1}`
+    { length: 234 },
+    (_, i) => `https://placedog.net/300/300?id=${i + 1}`
   );
   const renderItem = ({ item }: { item: string }) => {
     return (
@@ -17,7 +17,6 @@ const ListScreen = () => {
         showActivityIndicator
         blurhash={blurhashString}
         cachePolicy="dataCache"
-        borderRadius={8}
       />
     );
   };
@@ -40,7 +39,7 @@ const ListScreen = () => {
   );
 };
 
-export default ListScreen;
+export default GridScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -54,7 +53,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     alignItems: 'center',
-    justifyContent: 'space-between',
     width: '100%',
   },
   card: {
