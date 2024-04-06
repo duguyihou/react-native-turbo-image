@@ -1,11 +1,4 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  FlatList,
-  Dimensions,
-  processColor,
-} from 'react-native';
+import { StyleSheet, Text, View, FlatList, Dimensions } from 'react-native';
 import React from 'react';
 import TurboImage from '../../../src';
 
@@ -23,9 +16,7 @@ const Card = ({ title, url, processors }: Props) => {
         style={styles.image}
         rounded={processors.includes('rounded')}
         blur={processors.includes('blur') ? 5 : undefined}
-        monochrome={
-          processors.includes('monochrome') ? processColor('white') : undefined
-        }
+        monochrome={processors.includes('monochrome') ? 'white' : undefined}
         borderRadius={processors.includes('borderRadius') ? 12 : undefined}
       />
       <Text style={styles.title}>{title}</Text>

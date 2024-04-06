@@ -1,14 +1,21 @@
 import React from 'react';
-import { requireNativeComponent, NativeModules } from 'react-native';
+import {
+  requireNativeComponent,
+  NativeModules,
+  type ProcessedColorValue,
+  processColor,
+} from 'react-native';
 import { type TurboImageProps } from './TurboImage';
 
 const { TurboImageViewManager } = NativeModules;
 const ComponentName = 'TurboImageView';
+interface Props extends Omit<TurboImageProps, 'monochrome'> {
+  monochrome?: ProcessedColorValue | null;
+}
+const TurboImageView = requireNativeComponent<Props>(ComponentName);
 
-const TurboImageView = requireNativeComponent<TurboImageProps>(ComponentName);
-
-const TurboImage = (props: TurboImageProps) => {
-  return <TurboImageView {...props} />;
+const TurboImage = ({ monochrome, ...props }: TurboImageProps) => {
+  return <TurboImageView {...props} monochrome={processColor(monochrome)} />;
 };
 
 TurboImage.prefetch = async (urls: string[]) => {
