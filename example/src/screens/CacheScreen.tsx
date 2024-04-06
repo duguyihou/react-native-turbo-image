@@ -1,7 +1,7 @@
-import { View, StyleSheet, Text, FlatList } from 'react-native';
-import TurboImage from 'react-native-turbo-image';
+import { FlatList } from 'react-native';
 import React from 'react';
-import type { CachePolicy } from '../../../src/types';
+import { type CachePolicy } from 'react-native-turbo-image';
+import Card from '../components/Card';
 
 const images = [
   {
@@ -21,20 +21,6 @@ const images = [
   },
 ];
 
-type Props = {
-  title: string;
-  url: string;
-  cachePolicy: CachePolicy;
-};
-const Card = ({ title, url, cachePolicy }: Props) => {
-  return (
-    <View style={styles.card}>
-      <TurboImage url={url} style={styles.image} cachePolicy={cachePolicy} />
-      <Text style={styles.title}>{title}</Text>
-    </View>
-  );
-};
-
 const CacheScreen = () => {
   return (
     <FlatList
@@ -43,6 +29,7 @@ const CacheScreen = () => {
         <Card
           title={item.title}
           url={item.url}
+          size={200}
           cachePolicy={item.cachePolicy as CachePolicy}
         />
       )}
@@ -52,19 +39,3 @@ const CacheScreen = () => {
 };
 
 export default CacheScreen;
-
-const styles = StyleSheet.create({
-  card: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  image: {
-    width: 200,
-    height: 200,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
