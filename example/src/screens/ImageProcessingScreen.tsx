@@ -62,7 +62,7 @@ const images = [
 ];
 const size = Dimensions.get('window').width / 2 - 2;
 
-const ProcessScreen = () => {
+const ImageProcessingScreen = () => {
   return (
     <FlatList
       data={images}
@@ -79,14 +79,9 @@ const ProcessScreen = () => {
   );
 };
 
-export default ProcessScreen;
+export default ImageProcessingScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   card: {
     justifyContent: 'center',
     alignItems: 'center',

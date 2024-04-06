@@ -1,6 +1,6 @@
 import React from 'react';
 import { requireNativeComponent, NativeModules } from 'react-native';
-import type { TurboImageProps } from './TurboImage';
+import { type TurboImageProps } from './TurboImage';
 
 const { TurboImageViewManager } = NativeModules;
 const ComponentName = 'TurboImageView';
