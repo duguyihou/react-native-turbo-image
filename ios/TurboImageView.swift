@@ -3,12 +3,12 @@ import NukeUI
 import React
 
 final class TurboImageView : UIView {
-
+  
   private lazy var lazyImageView = LazyImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
   private var processors: [ImageProcessing] = []
-
+  
   @objc var url: String? {
     didSet {
       guard let url,
@@ -20,20 +20,20 @@ final class TurboImageView : UIView {
       lazyImageView.url = urlString
     }
   }
-
+  
   @objc var resizeMode = "contain" {
     didSet {
       let contentMode = ResizeMode(rawValue: resizeMode)?.contentMode
       lazyImageView.contentMode = contentMode ?? .scaleAspectFit
     }
   }
-
+  
   @objc var showActivityIndicator = false {
     didSet {
       lazyImageView.placeholderView = UIActivityIndicatorView()
     }
   }
-
+  
   @objc var blurhash: String? {
     didSet {
       DispatchQueue.global(qos: .userInteractive).async {
@@ -44,13 +44,21 @@ final class TurboImageView : UIView {
       }
     }
   }
-
+  
   @objc var fadeDuration: NSNumber = 0.5 {
     didSet {
       lazyImageView.transition = .fadeIn(duration: fadeDuration.doubleValue)
     }
   }
-
+  
+  @objc var priority: NSNumber? {
+    didSet {
+      if let priority {
+        lazyImageView.priority = ImageRequest.Priority.init(rawValue: Int(truncating: priority))
+      }
+    }
+  }
+  
   @objc var rounded: Bool = false {
     didSet {
       if rounded {
@@ -59,7 +67,7 @@ final class TurboImageView : UIView {
       }
     }
   }
-
+  
   @objc var blur: NSNumber? {
     didSet {
       if let blur {
@@ -68,7 +76,7 @@ final class TurboImageView : UIView {
       }
     }
   }
-
+  
   @objc var cachePolicy = "memory" {
     didSet {
       let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
@@ -85,7 +93,7 @@ final class TurboImageView : UIView {
       }
     }
   }
-
+  
   @objc var monochrome: UIColor! {
     didSet {
       if let monochrome {
@@ -96,13 +104,13 @@ final class TurboImageView : UIView {
         ] as [String : Any]
         let identifier = "turboImage.monochrome"
         processors.append(ImageProcessors.CoreImageFilter(name: name,
-                                                           parameters: parameters,
-                                                           identifier: identifier))
+                                                          parameters: parameters,
+                                                          identifier: identifier))
         lazyImageView.processors = processors
       }
     }
   }
-
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -114,19 +122,19 @@ final class TurboImageView : UIView {
       lazyImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
-
+    
     lazyImageView.onCompletion = { [weak self] result in
       self?.completionHandler(with: result)
     }
   }
-
+  
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 }
 
 fileprivate extension TurboImageView {
-
+  
   func completionHandler(with result: Result<ImageResponse, Error>) {
     switch result {
     case .success(let value):

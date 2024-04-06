@@ -1,4 +1,4 @@
-import { Dimensions, FlatList, StyleSheet, View } from 'react-native';
+import { Dimensions, FlatList, StyleSheet } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 import React from 'react';
 import { blurhashString } from '../mockData';
@@ -6,7 +6,7 @@ import { blurhashString } from '../mockData';
 const size = Dimensions.get('window').width / 3 - 2;
 const GridScreen = () => {
   const imageURLs = Array.from(
-    { length: 234 },
+    { length: 229 },
     (_, i) => `https://placedog.net/300/300?id=${i + 1}`
   );
   const renderItem = ({ item }: { item: string }) => {
@@ -21,40 +21,23 @@ const GridScreen = () => {
     );
   };
   return (
-    <View style={styles.container}>
-      <FlatList
-        style={styles.list}
-        columnWrapperStyle={styles.listContent}
-        keyExtractor={(item) => item}
-        data={imageURLs}
-        numColumns={3}
-        getItemLayout={(_, index) => ({
-          length: size,
-          offset: size * index,
-          index,
-        })}
-        renderItem={renderItem}
-      />
-    </View>
+    <FlatList
+      keyExtractor={(item) => item}
+      data={imageURLs}
+      numColumns={3}
+      getItemLayout={(_, index) => ({
+        length: size,
+        offset: size * index,
+        index,
+      })}
+      renderItem={renderItem}
+    />
   );
 };
 
 export default GridScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  list: {
-    width: '100%',
-    height: '100%',
-  },
-  listContent: {
-    alignItems: 'center',
-    width: '100%',
-  },
   card: {
     width: size,
     height: size,

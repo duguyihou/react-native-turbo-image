@@ -54,11 +54,6 @@ const CacheScreen = () => {
 export default CacheScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   card: {
     justifyContent: 'center',
     alignItems: 'center',

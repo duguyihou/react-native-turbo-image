@@ -48,7 +48,8 @@ const ButtonItem = ({
 const routes = [
   { name: 'Grid', destination: RouteName.Grid },
   { name: 'Cache', destination: RouteName.Cache },
-  { name: 'Process', destination: RouteName.Process },
+  { name: 'Image Processing', destination: RouteName.ImageProcessing },
+  { name: 'priority', destination: RouteName.Priority },
 ];
 
 const HomeScreen = () => {

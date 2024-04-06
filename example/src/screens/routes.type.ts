@@ -8,7 +8,8 @@ export type HomeStackParamList = {
   Home: undefined;
   Cache: undefined;
   Grid: undefined;
-  Process: undefined;
+  ImageProcessing: undefined;
+  Priority: undefined;
 };
 
 export type HomeStackProps = NativeStackScreenProps<HomeStackParamList>;
@@ -25,5 +26,6 @@ export enum RouteName {
   Home = 'Home',
   Cache = 'Cache',
   Grid = 'Grid',
-  Process = 'Process',
+  ImageProcessing = 'ImageProcessing',
+  Priority = 'Priority',
 }

@@ -1,4 +1,5 @@
 import type { CachePolicy, ResizeMode, TurboImageApi } from './types';
+
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   url: string;
   resizeMode?: ResizeMode;
@@ -9,6 +10,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   borderRadius?: number;
   rounded?: boolean;
   blur?: number;
+  priority?: number;
   monochrome?: ProcessedColorValue | null;
   cachePolicy?: CachePolicy;
   onSuccess?: () => void;
