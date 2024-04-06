@@ -1,21 +1,32 @@
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  Dimensions,
+  processColor,
+} from 'react-native';
 import React from 'react';
 import TurboImage from '../../../src';
 
-type Process = 'rounded' | 'blur' | null;
+type Processor = 'rounded' | 'blur' | 'monochrome' | 'borderRadius';
 type Props = {
   title: string;
   url: string;
-  process: Process;
+  processors: Processor[];
 };
-const Card = ({ title, url, process }: Props) => {
+const Card = ({ title, url, processors }: Props) => {
   return (
     <View style={styles.card}>
       <TurboImage
         url={url}
         style={styles.image}
-        rounded={process === 'rounded'}
-        blur={process === 'blur' ? 2 : undefined}
+        rounded={processors.includes('rounded')}
+        blur={processors.includes('blur') ? 5 : undefined}
+        monochrome={
+          processors.includes('monochrome') ? processColor('white') : undefined
+        }
+        borderRadius={processors.includes('borderRadius') ? 12 : undefined}
       />
       <Text style={styles.title}>{title}</Text>
     </View>
@@ -26,28 +37,41 @@ const images = [
   {
     title: 'Original',
     url: 'https://placedog.net/300/300?id=238',
-    process: null,
+    processors: [],
   },
   {
-    title: 'Rounded',
+    title: 'Monochrome',
     url: 'https://placedog.net/300/300?id=238',
-    process: 'rounded',
+    processors: ['monochrome'],
+  },
+  {
+    title: 'Rounded Corners',
+    url: 'https://placedog.net/300/300?id=238',
+    processors: ['borderRadius'],
+  },
+  {
+    title: 'Circle',
+    url: 'https://placedog.net/300/300?id=238',
+    processors: ['rounded'],
   },
   {
     title: 'Blur',
     url: 'https://placedog.net/300/300?id=238',
-    process: 'blur',
+    processors: ['rounded', 'blur'],
   },
 ];
+const size = Dimensions.get('window').width / 2 - 2;
+
 const ProcessScreen = () => {
   return (
     <FlatList
       data={images}
+      numColumns={2}
       renderItem={({ item }) => (
         <Card
           title={item.title}
           url={item.url}
-          process={item.process as Process}
+          processors={item.processors as Processor[]}
         />
       )}
       keyExtractor={(item) => item.title}
@@ -67,10 +91,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingBottom: 20,
+    margin: 1,
   },
   image: {
-    width: 300,
-    height: 300,
+    width: size,
+    height: size,
   },
   title: {
     fontSize: 16,
