@@ -15,7 +15,7 @@ const Card = ({ title, url, process }: Props) => {
         url={url}
         style={styles.image}
         rounded={process === 'rounded'}
-        blur={process === 'blur'}
+        blur={process === 'blur' ? 2 : undefined}
       />
       <Text style={styles.title}>{title}</Text>
     </View>

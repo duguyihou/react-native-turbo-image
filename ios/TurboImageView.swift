@@ -60,10 +60,10 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var blur: Bool = false {
+  @objc var blur: NSNumber? {
     didSet {
-      if blur {
-        processors?.append(ImageProcessors.GaussianBlur())
+      if let blur {
+        processors?.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
         lazyImageView.processors = processors
       }
     }
