@@ -7,9 +7,9 @@ final class TurboImageView : UIView {
   private lazy var lazyImageView = LazyImageView()
   @objc var onError: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
-  private var processors: [ImageProcessing]? = []
+  private var processors: [ImageProcessing] = []
 
-  @objc var url: String? = nil {
+  @objc var url: String? {
     didSet {
       guard let url,
             let urlString = URL(string: url)
@@ -54,7 +54,7 @@ final class TurboImageView : UIView {
   @objc var rounded: Bool = false {
     didSet {
       if rounded {
-        processors?.append(ImageProcessors.Circle())
+        processors.append(ImageProcessors.Circle())
         lazyImageView.processors = processors
       }
     }
@@ -63,7 +63,7 @@ final class TurboImageView : UIView {
   @objc var blur: NSNumber? {
     didSet {
       if let blur {
-        processors?.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
+        processors.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
         lazyImageView.processors = processors
       }
     }
@@ -75,12 +75,30 @@ final class TurboImageView : UIView {
       lazyImageView.pipeline = pipeline ?? .shared
     }
   }
+  
   @objc var borderRadius: NSNumber? {
     didSet {
       if let borderRadius {
-        lazyImageView.layer.cornerRadius = CGFloat(truncating: borderRadius)
-        lazyImageView.layer.masksToBounds = true
-        clipsToBounds = true
+        let radius = CGFloat(truncating: borderRadius)
+        processors.append(ImageProcessors.RoundedCorners(radius: radius))
+        lazyImageView.processors = processors
+      }
+    }
+  }
+
+  @objc var monochrome: UIColor! {
+    didSet {
+      if let monochrome {
+        let name = "CIColorMonochrome"
+        let parameters = [
+          "inputIntensity": 1,
+          "inputColor": CIColor(color: monochrome)
+        ] as [String : Any]
+        let identifier = "turboImage.monochrome"
+        processors.append(ImageProcessors.CoreImageFilter(name: name,
+                                                           parameters: parameters,
+                                                           identifier: identifier))
+        lazyImageView.processors = processors
       }
     }
   }
