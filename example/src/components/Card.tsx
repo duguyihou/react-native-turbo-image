@@ -13,28 +13,12 @@ type Props = {
   borderRadius?: number;
   blur?: number;
 };
-const Card = ({
-  title,
-  url,
-  cachePolicy,
-  size,
-  priority,
-  rounded,
-  monochrome,
-  borderRadius,
-  blur,
-}: Props) => {
+const Card = ({ title, size, ...props }: Props) => {
   return (
     <View style={styles.card}>
       <TurboImage
-        url={url}
         style={[styles.image, { width: size, height: size }]}
-        cachePolicy={cachePolicy}
-        priority={priority}
-        rounded={rounded}
-        monochrome={monochrome}
-        borderRadius={borderRadius}
-        blur={blur}
+        {...props}
       />
       {title && <Text style={styles.title}>{title}</Text>}
     </View>
