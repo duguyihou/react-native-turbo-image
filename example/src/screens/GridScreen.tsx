@@ -6,7 +6,7 @@ import { blurhashString } from '../mockData';
 const size = Dimensions.get('window').width / 3 - 2;
 const GridScreen = () => {
   const imageURLs = Array.from(
-    { length: 229 },
+    { length: 120 },
     (_, i) => `https://placedog.net/300/300?id=${i + 1}`
   );
   const renderItem = ({ item }: { item: string }) => {

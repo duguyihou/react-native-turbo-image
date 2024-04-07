@@ -12,10 +12,10 @@ const ComponentName = 'TurboImageView';
 interface Props extends Omit<TurboImageProps, 'monochrome'> {
   monochrome?: ProcessedColorValue | null;
 }
-const TurboImageView = requireNativeComponent<Props>(ComponentName);
+const NativeImage = requireNativeComponent<Props>(ComponentName);
 
 const TurboImage = ({ monochrome, ...props }: TurboImageProps) => {
-  return <TurboImageView {...props} monochrome={processColor(monochrome)} />;
+  return <NativeImage {...props} monochrome={processColor(monochrome)} />;
 };
 
 TurboImage.prefetch = async (urls: string[]) => {
