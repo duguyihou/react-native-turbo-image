@@ -1,7 +1,6 @@
 | grid | image processing |
 |---|---|
-| [![Watch the video](https://github.com/duguyihou/react-native-turbo-image/assets/9347790/0885c122-226c-40a6-b0eb-6c6e882e330b)](https://github.com/duguyihou/react-native-turbo-image/assets/9347790/030bf80c-98bc-451a-a4ec-7941b01da899)   | [![Watch the video](https://github.com/duguyihou/react-native-turbo-image/assets/9347790/6434207d-fb55-48f7-96ed-14d522247b61)](https://github.com/duguyihou/react-native-turbo-image/assets/9347790/70e6196a-099e-42eb-a203-0ae49cf696ef)  |
-
+| <img src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/2655214f-f63d-4102-8df2-d82afc1f5d19" width="300" height="600"/>  |  <img src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/6cfce7c3-8b75-4de9-b9ce-35b8e435d39d" width="300" height="600"/>   |
 
 # react-native-turbo-image
 
