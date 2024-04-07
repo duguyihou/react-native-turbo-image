@@ -1,13 +1,13 @@
-import { FlatList } from 'react-native';
+import { Dimensions, FlatList } from 'react-native';
 import React from 'react';
 import { type CachePolicy } from 'react-native-turbo-image';
 import Card from '../components/Card';
 
 const images = [
   {
-    title: 'shared',
+    title: 'memory',
     url: 'https://placedog.net/300/300?id=235',
-    cachePolicy: 'dataCache',
+    cachePolicy: 'memory',
   },
   {
     title: 'dataCache',
@@ -21,15 +21,18 @@ const images = [
   },
 ];
 
+const size = Dimensions.get('window').width / 2 - 2;
+
 const CacheScreen = () => {
   return (
     <FlatList
       data={images}
+      numColumns={2}
       renderItem={({ item }) => (
         <Card
           title={item.title}
           url={item.url}
-          size={200}
+          size={size}
           cachePolicy={item.cachePolicy as CachePolicy}
         />
       )}
