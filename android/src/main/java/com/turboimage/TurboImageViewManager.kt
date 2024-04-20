@@ -1,14 +1,13 @@
 package com.turboimage
 
-import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.widget.ImageView.ScaleType
-import coil.Coil
 import coil.Coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
+import coil.transform.RoundedCornersTransformation
 import coil.transform.Transformation
 import com.commit451.coiltransformations.ColorFilterTransformation
 import com.facebook.react.uimanager.SimpleViewManager
@@ -17,20 +16,18 @@ import com.facebook.react.uimanager.annotations.ReactProp
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
-  private lateinit var requestBuilder: ImageRequest.Builder
   private var disposable: Disposable? = null
   private val transformations: MutableList<Transformation> = mutableListOf()
-  override fun createViewInstance(themedConText: ThemedReactContext): TurboImageView {
-    val turboImageView = TurboImageView(themedConText)
-    requestBuilder =
-      ImageRequest.Builder(themedConText).target { turboImageView.setImageDrawable(it) }
-    return turboImageView
+  override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
+    return  TurboImageView(reactConText)
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
     val blurHashDrawable = view.blurhash?.let { drawBlurHash(view, it) }
-    val request = requestBuilder.data(view.url)
+    val request = ImageRequest.Builder(view.context)
+      .data(view.url)
+      .target(view)
       .memoryCachePolicy(if (view.cachePolicy == "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
       .diskCachePolicy(if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
       .placeholder(blurHashDrawable)
@@ -74,10 +71,20 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.blurhash = blurhash
   }
 
-  private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
-    val bitmap = BlurHashDecoder.decode(blurHash, 300, 300)
-    return  BitmapDrawable(view.context.resources, bitmap)
+  @ReactProp(name = "borderRadius")
+  fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
+    borderRadius?.let {
+      val  roundedCornersTransformation = RoundedCornersTransformation(borderRadius.toFloat())
+      transformations.add(roundedCornersTransformation)
+    }
+
   }
+
+  private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
+    val bitmap = BlurHashDecoder.decode(blurHash, 8, 8)
+    return BitmapDrawable(view.context.resources, bitmap)
+  }
+
   companion object {
     private const val REACT_CLASS = "TurboImageView"
     private val RESIZE_MODE = mapOf(
