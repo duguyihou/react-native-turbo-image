@@ -11,7 +11,7 @@ import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import coil.transform.Transformation
 import com.commit451.coiltransformations.BlurTransformation
-import com.commit451.coiltransformations.ColorFilterTransformation
+import com.commit451.coiltransformations.GrayscaleTransformation
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
@@ -94,6 +94,15 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     blur?.let {
       val blurTransformation = BlurTransformation(view.context, blur.toFloat())
       transformations.add(blurTransformation)
+    }
+  }
+
+  // TODO: custom color, not grayscale 
+  @ReactProp(name = "monochrome")
+  fun setMonochrome(view: TurboImageView, monochrome: Int?) {
+    monochrome?.let {
+      val grayscaleTransformation = GrayscaleTransformation()
+      transformations.add(grayscaleTransformation)
     }
   }
 
