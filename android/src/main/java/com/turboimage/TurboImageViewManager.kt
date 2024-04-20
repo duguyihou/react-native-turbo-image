@@ -1,6 +1,8 @@
 package com.turboimage
 
 import android.graphics.Color
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.widget.ImageView.ScaleType
 import coil.Coil
 import coil.Coil.imageLoader
@@ -27,12 +29,14 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
+    val blurHashDrawable = view.blurhash?.let { drawBlurHash(view, it) }
     val request = requestBuilder.data(view.url)
       .memoryCachePolicy(if (view.cachePolicy == "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
       .diskCachePolicy(if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
+      .placeholder(blurHashDrawable)
       .transformations(transformations)
       .crossfade(view.crossfade)
-      .allowHardware(true).build()
+      .build()
     disposable = imageLoader(view.context).enqueue(request)
   }
 
@@ -65,6 +69,15 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.cachePolicy = cachePolicy
   }
 
+  @ReactProp(name = "blurhash")
+  fun setBlurHash(view: TurboImageView, blurhash: String?) {
+    view.blurhash = blurhash
+  }
+
+  private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
+    val bitmap = BlurHashDecoder.decode(blurHash, 300, 300)
+    return  BitmapDrawable(view.context.resources, bitmap)
+  }
   companion object {
     private const val REACT_CLASS = "TurboImageView"
     private val RESIZE_MODE = mapOf(
