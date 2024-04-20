@@ -7,6 +7,7 @@ import coil.Coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
+import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import coil.transform.Transformation
 import com.commit451.coiltransformations.ColorFilterTransformation
@@ -77,7 +78,14 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       val  roundedCornersTransformation = RoundedCornersTransformation(borderRadius.toFloat())
       transformations.add(roundedCornersTransformation)
     }
+  }
 
+  @ReactProp(name = "rounded")
+  fun setRounded(view: TurboImageView, rounded: Boolean?) {
+    rounded?.let {
+      val  circleCropTransformation = CircleCropTransformation()
+      transformations.add(circleCropTransformation)
+    }
   }
 
   private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
