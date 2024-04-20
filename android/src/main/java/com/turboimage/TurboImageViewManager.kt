@@ -9,7 +9,6 @@ import coil.request.Disposable
 import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
-import coil.transform.Transformation
 import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.GrayscaleTransformation
 import com.facebook.react.uimanager.SimpleViewManager
@@ -19,7 +18,7 @@ import com.facebook.react.uimanager.annotations.ReactProp
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private var disposable: Disposable? = null
-  private val transformations: MutableList<Transformation> = mutableListOf()
+
   override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
     return TurboImageView(reactConText)
   }
@@ -33,7 +32,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .memoryCachePolicy(if (view.cachePolicy == "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
       .diskCachePolicy(if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
       .placeholder(blurHashDrawable)
-      .transformations(transformations)
+      .transformations(view.transformations)
       .crossfade(view.crossfade)
       .build()
     disposable = imageLoader(view.context).enqueue(request)
@@ -77,7 +76,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
     borderRadius?.let {
       val roundedCornersTransformation = RoundedCornersTransformation(borderRadius.toFloat())
-      transformations.add(roundedCornersTransformation)
+      view.transformations.add(roundedCornersTransformation)
     }
   }
 
@@ -85,7 +84,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setRounded(view: TurboImageView, rounded: Boolean?) {
     rounded?.let {
       val circleCropTransformation = CircleCropTransformation()
-      transformations.add(circleCropTransformation)
+      view.transformations.add(circleCropTransformation)
     }
   }
 
@@ -93,16 +92,16 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setBlur(view: TurboImageView, blur: Int?) {
     blur?.let {
       val blurTransformation = BlurTransformation(view.context, blur.toFloat())
-      transformations.add(blurTransformation)
+      view.transformations.add(blurTransformation)
     }
   }
 
-  // TODO: custom color, not grayscale 
+  // TODO: custom color, not grayscale
   @ReactProp(name = "monochrome")
   fun setMonochrome(view: TurboImageView, monochrome: Int?) {
     monochrome?.let {
       val grayscaleTransformation = GrayscaleTransformation()
-      transformations.add(grayscaleTransformation)
+      view.transformations.add(grayscaleTransformation)
     }
   }
 
