@@ -10,6 +10,7 @@ import coil.request.ImageRequest
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import coil.transform.Transformation
+import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.ColorFilterTransformation
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
@@ -20,7 +21,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   private var disposable: Disposable? = null
   private val transformations: MutableList<Transformation> = mutableListOf()
   override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
-    return  TurboImageView(reactConText)
+    return TurboImageView(reactConText)
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
@@ -75,7 +76,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "borderRadius")
   fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
     borderRadius?.let {
-      val  roundedCornersTransformation = RoundedCornersTransformation(borderRadius.toFloat())
+      val roundedCornersTransformation = RoundedCornersTransformation(borderRadius.toFloat())
       transformations.add(roundedCornersTransformation)
     }
   }
@@ -83,8 +84,16 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "rounded")
   fun setRounded(view: TurboImageView, rounded: Boolean?) {
     rounded?.let {
-      val  circleCropTransformation = CircleCropTransformation()
+      val circleCropTransformation = CircleCropTransformation()
       transformations.add(circleCropTransformation)
+    }
+  }
+
+  @ReactProp(name = "blur")
+  fun setBlur(view: TurboImageView, blur: Int?) {
+    blur?.let {
+      val blurTransformation = BlurTransformation(view.context, blur.toFloat())
+      transformations.add(blurTransformation)
     }
   }
 
