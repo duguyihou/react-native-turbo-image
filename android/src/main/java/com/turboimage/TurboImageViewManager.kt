@@ -1,8 +1,9 @@
 package com.turboimage
 
 import android.graphics.Color
-import android.widget.ImageView
+import android.widget.ImageView.ScaleType
 import coil.Coil
+import coil.Coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
@@ -17,23 +18,22 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   private lateinit var requestBuilder: ImageRequest.Builder
   private var disposable: Disposable? = null
   private val transformations: MutableList<Transformation> = mutableListOf()
-  override fun createViewInstance(p0: ThemedReactContext): TurboImageView {
-    val instance = TurboImageView(p0)
-    requestBuilder = ImageRequest.Builder(p0).target { instance.setImageDrawable(it) }
-    return instance
+  override fun createViewInstance(themedConText: ThemedReactContext): TurboImageView {
+    val turboImageView = TurboImageView(themedConText)
+    requestBuilder =
+      ImageRequest.Builder(themedConText).target { turboImageView.setImageDrawable(it) }
+    return turboImageView
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
-    val placeholder = view.base64Placeholder?.let { Base64Placeholder.toDrawable(view.context, it) }
-    val request = requestBuilder
-      .data(view.url)
-      .placeholder(placeholder)
-      .diskCachePolicy(CachePolicy.DISABLED)
+    val request = requestBuilder.data(view.url)
+      .memoryCachePolicy(if (view.cachePolicy == "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
+      .diskCachePolicy(if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
       .transformations(transformations)
       .crossfade(view.crossfade)
-      .build()
-    disposable = Coil.imageLoader(view.context).enqueue(request)
+      .allowHardware(true).build()
+    disposable = imageLoader(view.context).enqueue(request)
   }
 
   override fun onDropViewInstance(view: TurboImageView) {
@@ -53,11 +53,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.scaleType = RESIZE_MODE[resizeMode]
   }
 
-  @ReactProp(name = "base64Placeholder")
-  fun setBase64Placeholder(view: TurboImageView, base64Placeholder: String?) {
-    view.base64Placeholder = base64Placeholder
-  }
-
   @ReactProp(name = "fadeDuration")
   fun setCrossfade(view: TurboImageView, crossfade: Int?) {
     if (crossfade != null) {
@@ -65,13 +60,18 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     }
   }
 
+  @ReactProp(name = "cachePolicy")
+  fun setCachePolicy(view: TurboImageView, cachePolicy: String?) {
+    view.cachePolicy = cachePolicy
+  }
+
   companion object {
     private const val REACT_CLASS = "TurboImageView"
     private val RESIZE_MODE = mapOf(
-      "contain" to ImageView.ScaleType.FIT_CENTER,
-      "cover" to ImageView.ScaleType.CENTER_CROP,
-      "stretch" to ImageView.ScaleType.FIT_XY,
-      "center" to ImageView.ScaleType.CENTER_INSIDE
+      "contain" to ScaleType.FIT_CENTER,
+      "cover" to ScaleType.CENTER_CROP,
+      "stretch" to ScaleType.FIT_XY,
+      "center" to ScaleType.CENTER_INSIDE
     )
   }
 }
