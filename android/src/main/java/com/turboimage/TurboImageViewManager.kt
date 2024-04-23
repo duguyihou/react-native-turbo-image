@@ -3,7 +3,9 @@ package com.turboimage
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.widget.ImageView.ScaleType
+import coil.Coil
 import coil.Coil.imageLoader
+import coil.ImageLoader
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
@@ -25,16 +27,25 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
+
+    // TODO: refactor it
+    val imageLoader = ImageLoader.Builder(view.context)
+      .respectCacheHeaders(view.cachePolicy == "urlCache")
+      .build()
+    Coil.setImageLoader(imageLoader)
+
     val blurHashDrawable = view.blurhash?.let { drawBlurHash(view, it) }
+    val diskCacheEnabled = if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
     val request = ImageRequest.Builder(view.context)
       .data(view.url)
       .target(view)
-      .memoryCachePolicy(if (view.cachePolicy == "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
-      .diskCachePolicy(if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED)
+      .memoryCachePolicy(CachePolicy.ENABLED)
+      .diskCachePolicy(diskCacheEnabled)
       .placeholder(blurHashDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade)
       .build()
+
     disposable = imageLoader(view.context).enqueue(request)
   }
 
