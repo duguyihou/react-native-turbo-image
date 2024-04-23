@@ -13,14 +13,31 @@ import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.GrayscaleTransformation
+import com.facebook.react.bridge.ReactContext
+import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
+import com.facebook.react.uimanager.events.RCTEventEmitter
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private var disposable: Disposable? = null
 
+  override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
+    return mapOf(
+      "onError" to mapOf(
+        "phasedRegistrationNames" to mapOf(
+          "bubbled" to "onError"
+        )
+      ),
+      "onSuccess" to mapOf(
+        "phasedRegistrationNames" to mapOf(
+          "bubbled" to "onSuccess"
+        )
+      )
+    )
+  }
   override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
     return TurboImageView(reactConText)
   }
@@ -35,10 +52,32 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     Coil.setImageLoader(imageLoader)
 
     val blurHashDrawable = view.blurhash?.let { drawBlurHash(view, it) }
-    val diskCacheEnabled = if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
+    val diskCacheEnabled =
+      if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
     val request = ImageRequest.Builder(view.context)
       .data(view.url)
       .target(view)
+      .listener(
+        onSuccess = { request, result ->
+          val payload = WritableNativeMap().apply {
+            putInt("width", result.drawable.intrinsicWidth)
+            putInt("height", result.drawable.intrinsicHeight)
+            putString("source", request.data.toString())
+          }
+          val reactContext = view.context as ReactContext
+          reactContext.getJSModule(RCTEventEmitter::class.java)
+            .receiveEvent(view.id, "onSuccess", payload)
+        },
+        onError = { request, result ->
+          val payload = WritableNativeMap().apply {
+            putString("source", request.data.toString())
+            putString("error", result.throwable.cause?.localizedMessage)
+          }
+          val reactContext = view.context as ReactContext
+          reactContext.getJSModule(RCTEventEmitter::class.java)
+            .receiveEvent(view.id, "onError", payload)
+        }
+      )
       .memoryCachePolicy(CachePolicy.ENABLED)
       .diskCachePolicy(diskCacheEnabled)
       .placeholder(blurHashDrawable)
