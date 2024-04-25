@@ -946,7 +946,7 @@ PODS:
     - React-debug
   - react-native-safe-area-context (4.9.0):
     - React-Core
-  - react-native-turbo-image (0.4.2):
+  - react-native-turbo-image (0.11.1):
     - glog
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
@@ -1364,7 +1364,7 @@ SPEC CHECKSUMS:
   React-logger: 3eb80a977f0d9669468ef641a5e1fabbc50a09ec
   React-Mapbuffer: 84ea43c6c6232049135b1550b8c60b2faac19fab
   react-native-safe-area-context: b97eb6f9e3b7f437806c2ce5983f479f8eb5de4b
-  react-native-turbo-image: 80e25204125a8b5dca1837f31979fcd74c144285
+  react-native-turbo-image: 397779f1cbf252d99b852524c7a5ffdd665edc2e
   React-nativeconfig: b4d4e9901d4cabb57be63053fd2aa6086eb3c85f
   React-NativeModulesApple: cd26e56d56350e123da0c1e3e4c76cb58a05e1ee
   React-perflogger: 5f49905de275bac07ac7ea7f575a70611fa988f2
