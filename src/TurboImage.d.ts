@@ -1,4 +1,10 @@
-import type { CachePolicy, ResizeMode, TurboImageApi } from './types';
+import type {
+  CachePolicy,
+  FailureResult,
+  ResizeMode,
+  SuccessResult,
+  TurboImageApi,
+} from './types';
 import { type ColorValue } from 'react-native';
 
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
@@ -12,8 +18,8 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   blur?: number;
   monochrome?: number | ColorValue;
   cachePolicy?: CachePolicy;
-  onSuccess?: () => void;
-  onError?: (error: any) => void;
+  onSuccess?: (result: SuccessResult) => void;
+  onError?: (result: FailureResult) => void;
   ref?: LegacyRef<Component<TurboImageApi, {}, any>>;
   style?: StyleProp<ImageStyle>;
   testID?: string;

@@ -529,3 +529,9 @@ export const imageProcessingData = [
     rounded: true,
   },
 ];
+
+export const eventData = [
+  {
+    url: 'https://placedog.net/300/300?id=121',
+  },
+];

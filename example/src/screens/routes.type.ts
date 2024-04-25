@@ -8,6 +8,8 @@ export type HomeStackParamList = {
   Home: undefined;
   Cache: undefined;
   Grid: undefined;
+  SuccessResult: undefined;
+  FailureResult: undefined;
   ImageProcessing: undefined;
 };
 
@@ -25,5 +27,7 @@ export enum RouteName {
   Home = 'Home',
   Cache = 'Cache',
   Grid = 'Grid',
+  SuccessResult = 'SuccessResult',
+  FailureResult = 'FailureResult',
   ImageProcessing = 'ImageProcessing',
 }

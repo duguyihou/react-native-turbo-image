@@ -36,6 +36,9 @@ const ListItem = ({
 const routes = [
   { name: 'Grid', destination: RouteName.Grid },
   { name: 'Cache', destination: RouteName.Cache },
+  { name: 'SuccessResult', destination: RouteName.SuccessResult },
+  { name: 'FailureResult', destination: RouteName.FailureResult },
+
   { name: 'Image Processing', destination: RouteName.ImageProcessing },
 ];
 

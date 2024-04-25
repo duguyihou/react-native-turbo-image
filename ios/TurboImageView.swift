@@ -133,7 +133,7 @@ fileprivate extension TurboImageView {
       onSuccess?([
         "width": value.image.size.width,
         "height": value.image.size.height,
-        "source": value.urlResponse?.url?.absoluteString ?? ""
+        "source": value.request.url?.absoluteString ?? ""
       ])
     case .failure(let error):
       onError?([

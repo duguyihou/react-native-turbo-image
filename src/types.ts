@@ -19,3 +19,17 @@ export type TurboImageApi = {
   clearMemoryCache: () => Promise<void>;
   clearDiskCache: () => Promise<void>;
 };
+
+export type SuccessResult = {
+  nativeEvent: {
+    width: number;
+    height: number;
+    source: string;
+  };
+};
+
+export type FailureResult = {
+  nativeEvent: {
+    error: string;
+  };
+};

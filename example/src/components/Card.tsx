@@ -1,6 +1,10 @@
 import { StyleSheet, Text, View, type ColorValue } from 'react-native';
 import React from 'react';
-import TurboImage, { type CachePolicy } from 'react-native-turbo-image';
+import TurboImage, {
+  type CachePolicy,
+  type FailureResult,
+  type SuccessResult,
+} from 'react-native-turbo-image';
 
 type Props = {
   size: number;
@@ -13,6 +17,8 @@ type Props = {
   borderRadius?: number;
   blur?: number;
   blurhash?: string;
+  onSuccess?: (result: SuccessResult) => void;
+  onError?: (result: FailureResult) => void;
 };
 const Card = ({ title, size, ...props }: Props) => {
   return (
