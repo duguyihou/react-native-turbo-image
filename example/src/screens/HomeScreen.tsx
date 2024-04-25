@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   butttonGroup: {
-    bottom: 20,
+    bottom: 30,
   },
   buttonTitle: {
     paddingVertical: 10,

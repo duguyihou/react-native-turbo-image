@@ -496,7 +496,7 @@ export const cacheScreenData = [
   },
   {
     title: 'urlCache',
-    url: 'https://placedog.net/300/300?id=237',
+    url: 'https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e',
     cachePolicy: 'urlCache',
   },
 ];
