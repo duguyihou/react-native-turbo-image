@@ -500,3 +500,32 @@ export const cacheScreenData = [
     cachePolicy: 'urlCache',
   },
 ];
+
+export const imageProcessingData = [
+  {
+    title: 'Original',
+    url: 'https://placedog.net/300/300?id=238',
+  },
+  {
+    title: 'Rounded Corners',
+    url: 'https://placedog.net/300/300?id=238',
+    borderRadius: 12,
+  },
+  {
+    title: 'Monochrome',
+    url: 'https://placedog.net/300/300?id=238',
+    monochrome: 'white',
+    borderRadius: 12,
+  },
+  {
+    title: 'Circle',
+    url: 'https://placedog.net/300/300?id=238',
+    rounded: true,
+  },
+  {
+    title: 'Blur',
+    url: 'https://placedog.net/300/300?id=238',
+    blur: 5,
+    rounded: true,
+  },
+];
