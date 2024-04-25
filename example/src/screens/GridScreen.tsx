@@ -12,7 +12,7 @@ const GridScreen = () => {
   }) => {
     return (
       <TurboImage
-        url={item.url}
+        src={item.url}
         style={styles.card}
         showActivityIndicator
         blurhash={item.blurhash}

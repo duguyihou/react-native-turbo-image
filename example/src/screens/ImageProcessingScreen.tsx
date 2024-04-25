@@ -40,7 +40,7 @@ const ImageProcessingScreen = () => {
       renderItem={({ item }) => (
         <Card
           title={item.title}
-          url={item.url}
+          src={item.url}
           size={size}
           rounded={item.rounded}
           blur={item.blur}
