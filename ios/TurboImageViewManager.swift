@@ -26,12 +26,15 @@ extension TurboImageViewManager {
   @objc
   func clearMemoryCache(_ resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
-    resolve(ImageCache.shared.removeAll())
+    ImageCache.shared.removeAll()
+    resolve("Success")
   }
 
   @objc
   func clearDiskCache(_ resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
-    resolve(DataLoader.sharedUrlCache.removeAllCachedResponses())
+    ImagePipeline(configuration: .withDataCache).cache.removeAll()
+    DataLoader.sharedUrlCache.removeAllCachedResponses()
+    resolve("Success")
   }
 }
