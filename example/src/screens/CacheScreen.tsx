@@ -13,7 +13,7 @@ const CacheScreen = () => {
       renderItem={({ item }) => (
         <Card
           title={item.title}
-          url={item.url}
+          src={item.url}
           size={size}
           cachePolicy={item.cachePolicy as CachePolicy}
           blurhash={item.blurhash}

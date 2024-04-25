@@ -11,6 +11,7 @@ Performant React Native image component. Powered by [Nuke](https://github.com/ke
 - Image downloading and caching
 - TypeScript Support
 - written in Swift and Kotlin
+
 ## Installation
 
 ```sh
@@ -20,34 +21,34 @@ npm install react-native-turbo-image
 ## Usage
 
 ```js
-import TurboImage from "react-native-turbo-image";
+import TurboImage from 'react-native-turbo-image';
 
 // ...
 
 <TurboImage
-    url={url}
-    style={styles.box}
-    cachePolicy="dataCache"
-    blurhash="ULKKWp^+s,_300M{t7tR~XNHE2bI00xuWBRP"
-/>
+  src={url}
+  style={styles.box}
+  cachePolicy="dataCache"
+  blurhash="ULKKWp^+s,_300M{t7tR~XNHE2bI00xuWBRP"
+/>;
 ```
 
 ## Props
 
-| Prop                      | Type     | Default | Description                                                                                          |
-| ------------------------- | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| url                       | string   |         | The URL of the image                                                                                 |
-| resizeMode                | string   | contain | The resize mode of the image                                                                         |
-| showActivityIndicator (iOS only)     | boolean  | false   | Whether to show the indicator when loading                                   |
-| fadeDuration              | number   | 0.5(iOS) / 0.1(Android)     | The transition duration of the image                                                                 |
-| borderRadius              | number   |         | The border radius added to the image                                                                 |
-| rounded                   | boolean  | false   | Round the image into a circle                                                                        |
-| blur                      | number   |         | The blur radius of the blur filter added to the image                                                |
-| monochrome                | number/ColorValue ||                                                                                                      |
-| blurhash                  | string   |         | The blurhash of the image to show while loading                                                      | 
-| cachePolicy               | string   | memory  | The cache policy of the image                                                                        |
-| onError                   | function |         | The function to call when an error occurs.                                                           |
-| onSucess                  | function |         | The function to call when the image is successfully loaded                                           |
+| Prop                             | Type                | Default                 | Description                                                |
+| -------------------------------- | ------------------- | ----------------------- | ---------------------------------------------------------- |
+| src                              | string              |                         | The URL of the image                                       |
+| resizeMode                       | string              | contain                 | The resize mode of the image                               |
+| showActivityIndicator (iOS only) | boolean             | false                   | Whether to show the indicator when loading                 |
+| fadeDuration                     | number              | 0.3(iOS) / 0.1(Android) | The transition duration of the image                       |
+| borderRadius                     | number              |                         | The border radius added to the image                       |
+| rounded                          | boolean             | false                   | Round the image into a circle                              |
+| blur                             | number              |                         | The blur radius of the blur filter added to the image      |
+| monochrome                       | number / ColorValue |                         | The color applied to the image                             |
+| blurhash                         | string              |                         | The blurhash of the image to show while loading            |
+| cachePolicy                      | string              | memory                  | The cache policy of the image                              |
+| onError                          | function            |                         | The function to call when an error occurs.                 |
+| onSucess                         | function            |                         | The function to call when the image is successfully loaded |
 
 ## Contributing
 

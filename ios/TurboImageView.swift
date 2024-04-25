@@ -9,12 +9,12 @@ final class TurboImageView : UIView {
   @objc var onSuccess: RCTDirectEventBlock?
   private var processors: [ImageProcessing] = []
 
-  @objc var url: String? {
+  @objc var src: String? {
     didSet {
-      guard let url,
-            let urlString = URL(string: url)
+      guard let src,
+            let urlString = URL(string: src)
       else {
-        onError?(["error": "invalid url: \(String(describing: url))"])
+        onError?(["error": "invalid url: \(String(describing: src))"])
         return
       }
       lazyImageView.url = urlString
@@ -45,7 +45,7 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var fadeDuration: NSNumber = 0.5 {
+  @objc var fadeDuration: NSNumber = 0.3 {
     didSet {
       lazyImageView.transition = .fadeIn(duration: fadeDuration.doubleValue)
     }

@@ -4,7 +4,7 @@
 
 #pragma mark - properties
 
-RCT_EXPORT_VIEW_PROPERTY(url, NSString)
+RCT_EXPORT_VIEW_PROPERTY(src, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
 

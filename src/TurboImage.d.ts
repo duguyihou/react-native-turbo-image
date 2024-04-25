@@ -2,7 +2,7 @@ import type { CachePolicy, ResizeMode, TurboImageApi } from './types';
 import { type ColorValue } from 'react-native';
 
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
-  url: string;
+  src: string;
   resizeMode?: ResizeMode;
   showActivityIndicator?: boolean;
   blurhash?: string;

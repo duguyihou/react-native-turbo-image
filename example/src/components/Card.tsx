@@ -5,7 +5,7 @@ import TurboImage, { type CachePolicy } from 'react-native-turbo-image';
 type Props = {
   size: number;
   title?: string;
-  url: string;
+  src: string;
   cachePolicy?: CachePolicy;
   priority?: number;
   rounded?: boolean;

@@ -55,7 +55,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     val diskCacheEnabled =
       if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
     val request = ImageRequest.Builder(view.context)
-      .data(view.url)
+      .data(view.src)
       .target(view)
       .listener(
         onSuccess = { request, result ->
@@ -95,9 +95,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     }
   }
 
-  @ReactProp(name = "url")
-  fun setUrl(view: TurboImageView, url: String) {
-    view.url = url
+  @ReactProp(name = "src")
+  fun setSrc(view: TurboImageView, src: String) {
+    view.src = src
   }
 
   @ReactProp(name = "resizeMode")
