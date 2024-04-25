@@ -10,7 +10,6 @@ const CacheScreen = () => {
   return (
     <FlatList
       data={cacheScreenData}
-      numColumns={2}
       renderItem={({ item }) => (
         <Card
           title={item.title}

@@ -496,7 +496,7 @@ export const cacheScreenData = [
   },
   {
     title: 'urlCache',
-    url: 'http://localhost:3000/237.jpeg',
+    url: 'https://placedog.net/300/300?id=237',
     cachePolicy: 'urlCache',
   },
 ];
