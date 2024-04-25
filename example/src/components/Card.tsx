@@ -12,6 +12,7 @@ type Props = {
   monochrome?: number | ColorValue;
   borderRadius?: number;
   blur?: number;
+  blurhash?: string;
 };
 const Card = ({ title, size, ...props }: Props) => {
   return (

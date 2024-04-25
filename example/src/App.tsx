@@ -6,7 +6,6 @@ import ImageProcessingScreen from './screens/ImageProcessingScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/HomeScreen';
 import { type HomeStackParamList, RouteName } from './screens/routes.type';
-import PriorityScreen from './screens/PriorityScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -22,7 +21,6 @@ function App() {
           component={ImageProcessingScreen}
           options={{ title: 'Image Processing' }}
         />
-        <Stack.Screen name={RouteName.Priority} component={PriorityScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

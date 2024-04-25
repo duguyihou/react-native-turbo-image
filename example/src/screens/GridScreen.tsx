@@ -1,29 +1,29 @@
 import { Dimensions, FlatList, StyleSheet } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 import React from 'react';
-import { blurhashString } from '../mockData';
+import { gridScreenData } from '../mockData';
 
 const size = Dimensions.get('window').width / 3 - 2;
 const GridScreen = () => {
-  const imageURLs = Array.from(
-    { length: 120 },
-    (_, i) => `https://placedog.net/300/300?id=${i + 1}`
-  );
-  const renderItem = ({ item }: { item: string }) => {
+  const renderItem = ({
+    item,
+  }: {
+    item: { url: string; blurhash: string };
+  }) => {
     return (
       <TurboImage
-        url={item}
+        url={item.url}
         style={styles.card}
         showActivityIndicator
-        blurhash={blurhashString}
+        blurhash={item.blurhash}
         cachePolicy="dataCache"
       />
     );
   };
   return (
     <FlatList
-      keyExtractor={(item) => item}
-      data={imageURLs}
+      keyExtractor={(item) => item.url}
+      data={gridScreenData}
       numColumns={3}
       getItemLayout={(_, index) => ({
         length: size,

@@ -49,7 +49,6 @@ const routes = [
   { name: 'Grid', destination: RouteName.Grid },
   { name: 'Cache', destination: RouteName.Cache },
   { name: 'Image Processing', destination: RouteName.ImageProcessing },
-  { name: 'priority', destination: RouteName.Priority },
 ];
 
 const HomeScreen = () => {
@@ -60,7 +59,7 @@ const HomeScreen = () => {
     return await TurboImage.clearDiskCache();
   };
   return (
-    <View>
+    <View style={styles.container}>
       <FlatList
         data={routes}
         renderItem={({ item }) => (
@@ -71,11 +70,16 @@ const HomeScreen = () => {
         )}
         keyExtractor={(item) => item.name}
       />
-      <ButtonItem
-        title="Clean Memory Cache"
-        handlePress={handleClearMemoryCache}
-      />
-      <ButtonItem title="Clean Disk Cache" handlePress={handleClearDiskCache} />
+      <View style={styles.butttonGroup}>
+        <ButtonItem
+          title="Clear Memory Cache"
+          handlePress={handleClearMemoryCache}
+        />
+        <ButtonItem
+          title="Clear Disk Cache"
+          handlePress={handleClearDiskCache}
+        />
+      </View>
     </View>
   );
 };
@@ -83,11 +87,17 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    height: '100%',
+  },
   itemTitle: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: 'bold',
+  },
+  butttonGroup: {
+    bottom: 30,
   },
   buttonTitle: {
     paddingVertical: 10,
