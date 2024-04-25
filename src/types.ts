@@ -15,7 +15,7 @@ export const cachePolicy = {
 } as const;
 
 export type TurboImageApi = {
-  prefetch: (urls: string[]) => Promise<void>;
+  prefetch: (sources: string[]) => Promise<void>;
   clearMemoryCache: () => Promise<void>;
   clearDiskCache: () => Promise<void>;
 };

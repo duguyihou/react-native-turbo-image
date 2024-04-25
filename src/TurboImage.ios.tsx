@@ -18,8 +18,8 @@ const TurboImage = ({ monochrome, ...props }: TurboImageProps) => {
   return <NativeImage {...props} monochrome={processColor(monochrome)} />;
 };
 
-TurboImage.prefetch = async (urls: string[]) => {
-  return await TurboImageViewManager.prefetch(urls);
+TurboImage.prefetch = async (sources: string[]) => {
+  return await TurboImageViewManager.prefetch(sources);
 };
 
 TurboImage.clearMemoryCache = async () => {
