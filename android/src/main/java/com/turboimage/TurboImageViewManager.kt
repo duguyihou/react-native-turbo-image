@@ -15,6 +15,7 @@ import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.GrayscaleTransformation
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.WritableNativeMap
+import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
@@ -38,6 +39,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       )
     )
   }
+
   override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
     return TurboImageView(reactConText)
   }
@@ -124,7 +126,8 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "borderRadius")
   fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
     borderRadius?.let {
-      val roundedCornersTransformation = RoundedCornersTransformation(borderRadius.toFloat())
+      val borderRadii = PixelUtil.toPixelFromDIP(borderRadius.toFloat())
+      val roundedCornersTransformation = RoundedCornersTransformation(borderRadii)
       view.transformations.add(roundedCornersTransformation)
     }
   }
