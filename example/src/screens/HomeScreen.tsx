@@ -49,7 +49,6 @@ const routes = [
   { name: 'Grid', destination: RouteName.Grid },
   { name: 'Cache', destination: RouteName.Cache },
   { name: 'Image Processing', destination: RouteName.ImageProcessing },
-  { name: 'priority', destination: RouteName.Priority },
 ];
 
 const HomeScreen = () => {
