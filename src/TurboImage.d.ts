@@ -19,7 +19,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   monochrome?: number | ColorValue;
   cachePolicy?: CachePolicy;
   onSuccess?: (result: SuccessResult) => void;
-  onError?: (result: FailureResult) => void;
+  onFailure?: (result: FailureResult) => void;
   ref?: LegacyRef<Component<TurboImageApi, {}, any>>;
   style?: StyleProp<ImageStyle>;
   testID?: string;

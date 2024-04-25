@@ -8,7 +8,7 @@ type Information = {
 };
 const FailureResultScreen = () => {
   const [information, setInformation] = useState<Information | null>(null);
-  const handleSuccess = ({ nativeEvent }: FailureResult) => {
+  const handleFailure = ({ nativeEvent }: FailureResult) => {
     setInformation(nativeEvent);
   };
 
@@ -17,7 +17,7 @@ const FailureResultScreen = () => {
       <Card
         src="https://placedog.net/300/300?id=12100"
         size={300}
-        onError={handleSuccess}
+        onFailure={handleFailure}
       />
       {information?.error && <Text>error: {information?.error}</Text>}
     </View>

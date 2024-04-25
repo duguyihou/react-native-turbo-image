@@ -26,7 +26,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
-      "onError" to mapOf(
+      "onFailure" to mapOf(
         "phasedRegistrationNames" to mapOf(
           "bubbled" to "onError"
         )
@@ -70,12 +70,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         },
         onError = { request, result ->
           val payload = WritableNativeMap().apply {
-            putString("source", request.data.toString())
             putString("error", result.throwable.cause?.localizedMessage)
           }
           val reactContext = view.context as ReactContext
           reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onError", payload)
+            .receiveEvent(view.id, "onFailure", payload)
         }
       )
       .memoryCachePolicy(CachePolicy.ENABLED)

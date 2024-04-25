@@ -5,7 +5,7 @@ import React
 final class TurboImageView : UIView {
 
   private lazy var lazyImageView = LazyImageView()
-  @objc var onError: RCTDirectEventBlock?
+  @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
   private var processors: [ImageProcessing] = []
 
@@ -14,7 +14,7 @@ final class TurboImageView : UIView {
       guard let src,
             let urlString = URL(string: src)
       else {
-        onError?(["error": "invalid url: \(String(describing: src))"])
+        onFailure?(["error": "invalid url: \(String(describing: src))"])
         return
       }
       lazyImageView.url = urlString
@@ -136,7 +136,7 @@ fileprivate extension TurboImageView {
         "source": value.request.url?.absoluteString ?? ""
       ])
     case .failure(let error):
-      onError?([
+      onFailure?([
         "error": error.localizedDescription,
       ])
     }

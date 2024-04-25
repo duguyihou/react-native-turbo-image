@@ -18,7 +18,7 @@ type Props = {
   blur?: number;
   blurhash?: string;
   onSuccess?: (result: SuccessResult) => void;
-  onError?: (result: FailureResult) => void;
+  onFailure?: (result: FailureResult) => void;
 };
 const Card = ({ title, size, ...props }: Props) => {
   return (
