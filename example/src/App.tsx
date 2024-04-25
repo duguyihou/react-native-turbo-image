@@ -6,6 +6,8 @@ import ImageProcessingScreen from './screens/ImageProcessingScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/HomeScreen';
 import { type HomeStackParamList, RouteName } from './screens/routes.type';
+import SuccessResultScreen from './screens/SuccessResultScreen';
+import FailureResultScreen from './screens/FailureResultScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -20,6 +22,14 @@ function App() {
           name={RouteName.ImageProcessing}
           component={ImageProcessingScreen}
           options={{ title: 'Image Processing' }}
+        />
+        <Stack.Screen
+          name={RouteName.SuccessResult}
+          component={SuccessResultScreen}
+        />
+        <Stack.Screen
+          name={RouteName.FailureResult}
+          component={FailureResultScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

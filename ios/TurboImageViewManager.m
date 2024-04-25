@@ -28,7 +28,7 @@ RCT_EXPORT_VIEW_PROPERTY(monochrome, UIColor *)
 
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
-RCT_EXPORT_VIEW_PROPERTY(onError, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)
 
 #pragma mark - methods
 
