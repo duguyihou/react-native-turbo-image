@@ -26,6 +26,8 @@ RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(monochrome, UIColor *)
 
+RCT_EXPORT_VIEW_PROPERTY(onStart, RCTDirectEventBlock)
+
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)
@@ -34,9 +36,6 @@ RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)
 
 RCT_EXTERN_METHOD(prefetch:(NSArray *)urlArray
                   resolve:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(clearAllCache:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(clearMemoryCache:(RCTPromiseResolveBlock)resolve
