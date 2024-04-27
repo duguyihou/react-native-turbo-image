@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import React, { useState } from 'react';
 import Card from '../components/Card';
-import type { SuccessResult } from 'react-native-turbo-image';
+import type { SuccessResult, TaskState } from 'react-native-turbo-image';
 
 type Information = {
   width: number;
@@ -14,12 +14,17 @@ const SuccessResultScreen = () => {
     setInformation(nativeEvent);
   };
 
+  const handleStart = (state: TaskState) => {
+    console.log(`🐵 ------ start`, state);
+  };
+
   return (
     <View>
       <Card
         src="https://placedog.net/300/300?id=121"
         size={300}
         onSuccess={handleSuccess}
+        onStart={handleStart}
       />
       {information?.width && <Text>width: {information?.width}</Text>}
       {information?.height && <Text>height: {information?.height}</Text>}

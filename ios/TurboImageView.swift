@@ -5,9 +5,10 @@ import React
 final class TurboImageView : UIView {
 
   private lazy var lazyImageView = LazyImageView()
+  private var processors: [ImageProcessing] = []
+  @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
-  private var processors: [ImageProcessing] = []
 
   @objc var src: String? {
     didSet {
@@ -115,9 +116,21 @@ final class TurboImageView : UIView {
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
 
-    lazyImageView.onCompletion = { [weak self] result in
-      self?.completionHandler(with: result)
+
+    lazyImageView.onSuccess = { [weak self] response in
+      self?.onSuccessHandler(with: response)
     }
+
+    lazyImageView.onFailure = { [weak self] error in
+      self?.onFailureHandler(with: error)
+    }
+  }
+
+  override func layoutSubviews() {
+    lazyImageView.onStart = { [weak self] task in
+      self?.onStartHandler(with: task)
+    }
+
   }
 
   required init?(coder: NSCoder) {
@@ -127,18 +140,24 @@ final class TurboImageView : UIView {
 
 fileprivate extension TurboImageView {
 
-  func completionHandler(with result: Result<ImageResponse, Error>) {
-    switch result {
-    case .success(let value):
-      onSuccess?([
-        "width": value.image.size.width,
-        "height": value.image.size.height,
-        "source": value.request.url?.absoluteString ?? ""
-      ])
-    case .failure(let error):
-      onFailure?([
-        "error": error.localizedDescription,
-      ])
+  func onStartHandler(with task: ImageTask) {
+    print("🐵 --- task \(type(of: task.state.self))")
+    if let onStart {
+      onStart(["state" : "running"])
     }
+  }
+
+  func onSuccessHandler(with response: ImageResponse) {
+    onSuccess?([
+      "width": response.image.size.width,
+      "height": response.image.size.height,
+      "source": response.request.url?.absoluteString ?? ""
+    ])
+  }
+
+  func onFailureHandler(with error: Error) {
+    onFailure?([
+      "error": error.localizedDescription,
+    ])
   }
 }
