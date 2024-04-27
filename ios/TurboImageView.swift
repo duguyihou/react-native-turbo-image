@@ -116,6 +116,9 @@ final class TurboImageView : UIView {
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
 
+    lazyImageView.onStart = { [weak self] task in
+      self?.onStartHandler(with: task)
+    }
 
     lazyImageView.onSuccess = { [weak self] response in
       self?.onSuccessHandler(with: response)
@@ -126,13 +129,6 @@ final class TurboImageView : UIView {
     }
   }
 
-  override func layoutSubviews() {
-    lazyImageView.onStart = { [weak self] task in
-      self?.onStartHandler(with: task)
-    }
-
-  }
-
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
@@ -141,23 +137,28 @@ final class TurboImageView : UIView {
 fileprivate extension TurboImageView {
 
   func onStartHandler(with task: ImageTask) {
-    print("🐵 --- task \(type(of: task.state.self))")
-    if let onStart {
-      onStart(["state" : "running"])
-    }
+    let payload = [
+      "state" : "running"
+    ]
+
+    onStart?(payload)
   }
 
   func onSuccessHandler(with response: ImageResponse) {
-    onSuccess?([
+    let payload = [
       "width": response.image.size.width,
       "height": response.image.size.height,
       "source": response.request.url?.absoluteString ?? ""
-    ])
+    ] as [String : Any]
+
+    onSuccess?(payload)
   }
 
   func onFailureHandler(with error: Error) {
-    onFailure?([
+    let payload = [
       "error": error.localizedDescription,
-    ])
+    ]
+    
+    onFailure?(payload)
   }
 }

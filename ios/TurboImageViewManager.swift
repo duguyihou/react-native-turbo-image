@@ -8,7 +8,7 @@ class TurboImageViewManager: RCTViewManager {
   }
 
   @objc override static func requiresMainQueueSetup() -> Bool {
-    return false
+    return true
   }
 }
 
