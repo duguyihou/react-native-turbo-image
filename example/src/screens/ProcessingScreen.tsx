@@ -1,14 +1,14 @@
 import { FlatList, Dimensions } from 'react-native';
 import React from 'react';
 import Card from '../components/Card';
-import { imageProcessingData } from '../data';
+import { processingData } from '../data';
 
 const size = Dimensions.get('window').width / 2 - 2;
 
-const ImageProcessingScreen = () => {
+const ProcessingScreen = () => {
   return (
     <FlatList
-      data={imageProcessingData}
+      data={processingData}
       numColumns={2}
       renderItem={({ item }) => (
         <Card
@@ -26,4 +26,4 @@ const ImageProcessingScreen = () => {
   );
 };
 
-export default ImageProcessingScreen;
+export default ProcessingScreen;

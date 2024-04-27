@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import TurboImageScreen from './screens/TurboImageScreen';
-import ImageProcessingScreen from './screens/ImageProcessingScreen';
+import ProcessingScreen from './screens/ProcessingScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/HomeScreen';
 import { type HomeStackParamList, RouteName } from './screens/routes.type';
@@ -41,7 +41,7 @@ function App() {
 
         <Stack.Screen
           name={RouteName.ImageProcessing}
-          component={ImageProcessingScreen}
+          component={ProcessingScreen}
           options={{ title: 'Image Processing' }}
         />
         <Stack.Screen

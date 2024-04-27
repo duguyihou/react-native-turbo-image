@@ -24,13 +24,11 @@ export const routesData = [
     ],
   },
   {
-    title: 'Processing',
-    data: [
-      { name: 'Image Processing', destination: RouteName.ImageProcessing },
-    ],
+    title: 'Image Processing',
+    data: [{ name: 'Processing', destination: RouteName.ImageProcessing }],
   },
 ];
-export const gridScreenData = [
+export const listScreenData = [
   {
     url: 'https://placedog.net/300/300?id=1',
     blurhash: 'ULKKWp^+s,_300M{t7tR~XNHE2bI00xuWBRP',
@@ -538,7 +536,7 @@ export const dataCacheData = [
   },
 ];
 
-export const imageProcessingData = [
+export const processingData = [
   {
     title: 'Original',
     url: 'https://placedog.net/300/300?id=238',
@@ -564,11 +562,5 @@ export const imageProcessingData = [
     url: 'https://placedog.net/300/300?id=238',
     blur: 5,
     rounded: true,
-  },
-];
-
-export const eventData = [
-  {
-    url: 'https://placedog.net/300/300?id=121',
   },
 ];
