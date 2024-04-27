@@ -2,18 +2,18 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  FlatList,
   Button,
   Alert,
+  SectionList,
 } from 'react-native';
 import React, { useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import {
-  RouteName,
   type HomeStackNavigationProps,
   type HomeStackParamList,
 } from './routes.type';
 import TurboImage from 'react-native-turbo-image';
+import { routesData } from '../data';
 
 const ListItem = ({
   name,
@@ -32,15 +32,6 @@ const ListItem = ({
     </TouchableOpacity>
   );
 };
-
-const routes = [
-  { name: 'Grid', destination: RouteName.Grid },
-  { name: 'Cache', destination: RouteName.Cache },
-  { name: 'SuccessResult', destination: RouteName.SuccessResult },
-  { name: 'FailureResult', destination: RouteName.FailureResult },
-
-  { name: 'Image Processing', destination: RouteName.ImageProcessing },
-];
 
 const RightButton = () => {
   const handleClear = () => {
@@ -75,15 +66,18 @@ const HomeScreen = () => {
   );
 
   return (
-    <FlatList
-      data={routes}
+    <SectionList
+      sections={routesData}
       renderItem={({ item }) => (
         <ListItem
           name={item.name}
           destination={item.destination as keyof HomeStackParamList}
         />
       )}
-      keyExtractor={(item) => item.name}
+      renderSectionHeader={({ section: { title } }) => {
+        return <Text style={styles.header}>{title}</Text>;
+      }}
+      keyExtractor={(item, index) => item.name + index}
     />
   );
 };
@@ -91,10 +85,14 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
+  header: {
+    padding: 10,
+    fontSize: 26,
+    fontWeight: 'bold',
+  },
   itemTitle: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    fontSize: 26,
-    fontWeight: 'bold',
+    fontSize: 18,
   },
 });

@@ -1,29 +1,20 @@
-import { Dimensions, FlatList, StyleSheet } from 'react-native';
-import TurboImage from 'react-native-turbo-image';
+import { Dimensions, FlatList, Image, StyleSheet } from 'react-native';
 import React from 'react';
-import { gridScreenData } from '../mockData';
+import { listScreenData } from '../data';
 
 const size = Dimensions.get('window').width / 3 - 2;
-const GridScreen = () => {
+const ImageScreen = () => {
   const renderItem = ({
     item,
   }: {
     item: { url: string; blurhash: string };
   }) => {
-    return (
-      <TurboImage
-        src={item.url}
-        style={styles.card}
-        showActivityIndicator
-        blurhash={item.blurhash}
-        cachePolicy="dataCache"
-      />
-    );
+    return <Image src={item.url} style={styles.card} />;
   };
   return (
     <FlatList
       keyExtractor={(item) => item.url}
-      data={gridScreenData}
+      data={listScreenData}
       numColumns={3}
       getItemLayout={(_, index) => ({
         length: size,
@@ -35,7 +26,7 @@ const GridScreen = () => {
   );
 };
 
-export default GridScreen;
+export default ImageScreen;
 
 const styles = StyleSheet.create({
   card: {
