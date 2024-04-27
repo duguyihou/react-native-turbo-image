@@ -1,7 +1,7 @@
 import { FlatList, Dimensions } from 'react-native';
 import React from 'react';
 import Card from '../components/Card';
-import { imageProcessingData } from '../mockData';
+import { imageProcessingData } from '../data';
 
 const size = Dimensions.get('window').width / 2 - 2;
 

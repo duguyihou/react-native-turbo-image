@@ -1,10 +1,10 @@
 import { Dimensions, FlatList, StyleSheet } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 import React from 'react';
-import { gridScreenData } from '../mockData';
+import { gridScreenData } from '../data';
 
 const size = Dimensions.get('window').width / 3 - 2;
-const GridScreen = () => {
+const TurboImageScreen = () => {
   const renderItem = ({
     item,
   }: {
@@ -35,7 +35,7 @@ const GridScreen = () => {
   );
 };
 
-export default GridScreen;
+export default TurboImageScreen;
 
 const styles = StyleSheet.create({
   card: {

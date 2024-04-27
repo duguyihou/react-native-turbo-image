@@ -7,9 +7,13 @@ import type {
 export type HomeStackParamList = {
   Home: undefined;
   Cache: undefined;
-  Grid: undefined;
-  SuccessResult: undefined;
-  FailureResult: undefined;
+  TurboImage: undefined;
+  Image: undefined;
+  MemoryCache: undefined;
+  UrlCache: undefined;
+  DataCache: undefined;
+  Success: undefined;
+  Failure: undefined;
   ImageProcessing: undefined;
 };
 
@@ -26,8 +30,12 @@ export enum RouteName {
   HomeStack = 'HomeStack',
   Home = 'Home',
   Cache = 'Cache',
-  Grid = 'Grid',
-  SuccessResult = 'SuccessResult',
-  FailureResult = 'FailureResult',
+  TurboImage = 'TurboImage',
+  Image = 'Image',
+  MemoryCache = 'MemoryCache',
+  UrlCache = 'UrlCache',
+  DataCache = 'DataCache',
+  Success = 'Success',
+  Failure = 'Failure',
   ImageProcessing = 'ImageProcessing',
 }

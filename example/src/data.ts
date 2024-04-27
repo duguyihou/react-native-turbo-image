@@ -1,3 +1,35 @@
+import { RouteName } from './screens/routes.type';
+
+export const routesData = [
+  {
+    title: 'List',
+    data: [
+      { name: 'Turbo Image', destination: RouteName.TurboImage },
+      { name: 'React Native Image', destination: RouteName.Image },
+    ],
+  },
+  {
+    title: 'Cache',
+    data: [
+      { name: 'MemoryCache', destination: RouteName.MemoryCache },
+      { name: 'UrlCache', destination: RouteName.UrlCache },
+      { name: 'DataCache', destination: RouteName.DataCache },
+    ],
+  },
+  {
+    title: 'Callback',
+    data: [
+      { name: 'SuccessResult', destination: RouteName.Success },
+      { name: 'FailureResult', destination: RouteName.Failure },
+    ],
+  },
+  {
+    title: 'Processing',
+    data: [
+      { name: 'Image Processing', destination: RouteName.ImageProcessing },
+    ],
+  },
+];
 export const gridScreenData = [
   {
     url: 'https://placedog.net/300/300?id=1',
@@ -481,23 +513,28 @@ export const gridScreenData = [
   },
 ];
 
-export const cacheScreenData = [
+export const memoryCacheData = [
   {
     title: 'memory',
     url: 'https://placedog.net/300/300?id=235',
     blurhash: 'UCHx4#R3Si.8I^M{NGkCZLRkRPIA~qNGxtj[',
     cachePolicy: 'memory',
   },
+];
+export const urlCacheData = [
+  {
+    title: 'urlCache',
+    url: 'https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e',
+    blurhash: 'UiL;8D-;%Mxut7WCt7f6~qS5RjRijuazM|WB',
+    cachePolicy: 'urlCache',
+  },
+];
+export const dataCacheData = [
   {
     title: 'dataCache',
     url: 'https://placedog.net/300/300?id=236',
     blurhash: 'UELDlXjFE3^*00x^M|M{ve9Y%1Ri~VIVV@-p',
     cachePolicy: 'dataCache',
-  },
-  {
-    title: 'urlCache',
-    url: 'https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e',
-    cachePolicy: 'urlCache',
   },
 ];
 
