@@ -4,6 +4,7 @@ import TurboImage, {
   type CachePolicy,
   type FailureResult,
   type SuccessResult,
+  type TaskState,
 } from 'react-native-turbo-image';
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
   borderRadius?: number;
   blur?: number;
   blurhash?: string;
+  onStart?: (state: TaskState) => void;
   onSuccess?: (result: SuccessResult) => void;
   onFailure?: (result: FailureResult) => void;
 };
