@@ -104,6 +104,16 @@ final class TurboImageView : UIView {
     }
   }
 
+  @objc var resize: NSNumber? {
+    didSet {
+      if let resize {
+        let width = CGFloat(truncating: resize)
+        processors.append(ImageProcessors.Resize(width: width))
+        lazyImageView.processors = processors
+      }
+    }
+  }
+
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)

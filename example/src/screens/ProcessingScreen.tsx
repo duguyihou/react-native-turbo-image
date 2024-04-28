@@ -14,11 +14,12 @@ const ProcessingScreen = () => {
         <Card
           title={item.title}
           src={item.url}
-          size={size}
+          size={item.resize ?? size}
           rounded={item.rounded}
           blur={item.blur}
           monochrome={item.monochrome}
           borderRadius={item.borderRadius}
+          resize={item.resize}
         />
       )}
       keyExtractor={(item) => item.title}

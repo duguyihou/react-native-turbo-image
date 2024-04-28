@@ -23,6 +23,7 @@ type Props = {
   borderRadius?: number;
   blur?: number;
   blurhash?: string;
+  resize?: number;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
 };

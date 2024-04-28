@@ -18,6 +18,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   rounded?: boolean;
   blur?: number;
   monochrome?: number | ColorValue;
+  resize?: number;
   cachePolicy?: CachePolicy;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
