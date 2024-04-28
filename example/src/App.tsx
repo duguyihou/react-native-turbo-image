@@ -5,8 +5,8 @@ import ProcessingScreen from './screens/ProcessingScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/HomeScreen';
 import { type HomeStackParamList, RouteName } from './screens/routes.type';
-import SuccessResultScreen from './screens/SuccessResultScreen';
-import FailureResultScreen from './screens/FailureResultScreen';
+import SuccessScreen from './screens/SuccessScreen';
+import FailureScreen from './screens/FailureScreen';
 import ImageScreen from './screens/ImageScreen';
 import MemoryCacheScreen from './screens/MemoryCacheScreen';
 import UrlCacheScreen from './screens/UrlCacheScreen';
@@ -26,7 +26,6 @@ function App() {
           />
           <Stack.Screen name={RouteName.Image} component={ImageScreen} />
         </Stack.Group>
-
         <Stack.Group>
           <Stack.Screen
             name={RouteName.MemoryCache}
@@ -38,19 +37,14 @@ function App() {
             component={DataCacheScreen}
           />
         </Stack.Group>
-
+        <Stack.Group>
+          <Stack.Screen name={RouteName.Success} component={SuccessScreen} />
+          <Stack.Screen name={RouteName.Failure} component={FailureScreen} />
+        </Stack.Group>
         <Stack.Screen
           name={RouteName.ImageProcessing}
           component={ProcessingScreen}
           options={{ title: 'Image Processing' }}
-        />
-        <Stack.Screen
-          name={RouteName.Success}
-          component={SuccessResultScreen}
-        />
-        <Stack.Screen
-          name={RouteName.Failure}
-          component={FailureResultScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

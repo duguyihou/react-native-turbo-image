@@ -21,19 +21,17 @@ export type TurboImageApi = {
 };
 
 type State = 'running' | 'cancelled' | 'completed';
-export type TaskState = {
+
+export type Start = {
   state: State;
 };
-export type SuccessResult = {
-  nativeEvent: {
-    width: number;
-    height: number;
-    source: string;
-  };
+
+export type Success = {
+  width: number;
+  height: number;
+  source: string;
 };
 
-export type FailureResult = {
-  nativeEvent: {
-    error: string;
-  };
+export type Failure = {
+  error: string;
 };

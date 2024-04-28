@@ -1,8 +1,3 @@
 import TurboImage from './TurboImage';
-export type {
-  CachePolicy,
-  SuccessResult,
-  FailureResult,
-  TaskState,
-} from './types';
+export type { CachePolicy, Start, Success, Failure } from './types';
 export default TurboImage;

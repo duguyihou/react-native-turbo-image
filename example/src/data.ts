@@ -4,8 +4,8 @@ export const routesData = [
   {
     title: 'List',
     data: [
-      { name: 'Turbo Image', destination: RouteName.TurboImage },
       { name: 'React Native Image', destination: RouteName.Image },
+      { name: 'React-Naitve-Turbo-Image', destination: RouteName.TurboImage },
     ],
   },
   {
@@ -19,8 +19,8 @@ export const routesData = [
   {
     title: 'Callback',
     data: [
-      { name: 'SuccessResult', destination: RouteName.Success },
-      { name: 'FailureResult', destination: RouteName.Failure },
+      { name: 'Success', destination: RouteName.Success },
+      { name: 'Failure', destination: RouteName.Failure },
     ],
   },
   {
