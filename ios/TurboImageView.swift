@@ -106,6 +106,30 @@ final class TurboImageView : UIView {
 
   override init(frame: CGRect) {
     super.init(frame: frame)
+    print("🐵 --- init \(onStart)")
+    lazyImageView.onStart = { task in
+      print("🐵 --- onStart")
+      self.onStartHandler(with: task)
+    }
+
+    lazyImageView.onSuccess = { response in
+      print("🐵 --- onSuccess ")
+      self.onSuccessHandler(with: response)
+    }
+
+    lazyImageView.onFailure = { error in
+      self.onFailureHandler(with: error)
+    }
+  }
+
+  override func addSubview(_ view: UIView) {
+    super.addSubview(view)
+    print("🐵 --- addSubview \(onStart)")
+  }
+
+  override func didSetProps(_ changedProps: [String]!) {
+    super.didSetProps(changedProps)
+    print("🐵 --- didSetProps \(onStart)")
     addSubview(lazyImageView)
     layer.masksToBounds = true
     lazyImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -116,17 +140,8 @@ final class TurboImageView : UIView {
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
 
-    lazyImageView.onStart = { [weak self] task in
-      self?.onStartHandler(with: task)
-    }
 
-    lazyImageView.onSuccess = { [weak self] response in
-      self?.onSuccessHandler(with: response)
-    }
-
-    lazyImageView.onFailure = { [weak self] error in
-      self?.onFailureHandler(with: error)
-    }
+    layoutIfNeeded()
   }
 
   required init?(coder: NSCoder) {
@@ -140,7 +155,7 @@ fileprivate extension TurboImageView {
     let payload = [
       "state" : "running"
     ]
-
+print("🐵 --- onStartHandler \(onStart)")
     onStart?(payload)
   }
 

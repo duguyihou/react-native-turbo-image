@@ -1,12 +1,12 @@
 import type {
   CachePolicy,
-  FailureResult,
+  Failure,
   ResizeMode,
-  SuccessResult,
-  TaskState,
+  Start,
+  Success,
   TurboImageApi,
 } from './types';
-import { type ColorValue } from 'react-native';
+import { type ColorValue, type NativeSyntheticEvent } from 'react-native';
 
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   src: string;
@@ -20,9 +20,9 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   blur?: number;
   monochrome?: number | ColorValue;
   cachePolicy?: CachePolicy;
-  onStart?: (state: TaskState) => void;
-  onSuccess?: (result: SuccessResult) => void;
-  onFailure?: (result: FailureResult) => void;
+  onStart?: (state: NativeSyntheticEvent<Start>) => void;
+  onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
+  onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
   ref?: LegacyRef<Component<TurboImageApi, {}, any>>;
   testID?: string;
 }

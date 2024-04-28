@@ -1,16 +1,16 @@
-import { Text, View } from 'react-native';
+import { Text, View, type NativeSyntheticEvent } from 'react-native';
 import React, { useState } from 'react';
 import Card from '../components/Card';
-import type { SuccessResult } from 'react-native-turbo-image';
+import type { Success } from 'react-native-turbo-image';
 
 type Information = {
   width: number;
   height: number;
   source: string;
 };
-const SuccessResultScreen = () => {
+const SuccessScreen = () => {
   const [information, setInformation] = useState<Information | null>(null);
-  const handleSuccess = ({ nativeEvent }: SuccessResult) => {
+  const handleSuccess = ({ nativeEvent }: NativeSyntheticEvent<Success>) => {
     setInformation(nativeEvent);
   };
 
@@ -20,6 +20,7 @@ const SuccessResultScreen = () => {
         src="https://placedog.net/300/300?id=121"
         size={300}
         onSuccess={handleSuccess}
+        onStart={(state) => console.log(`🐵 ------ state`, state.nativeEvent)}
         blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
       />
       {information?.width && <Text>width: {information?.width}</Text>}
@@ -29,4 +30,4 @@ const SuccessResultScreen = () => {
   );
 };
 
-export default SuccessResultScreen;
+export default SuccessScreen;
