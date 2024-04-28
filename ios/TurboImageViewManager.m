@@ -26,8 +26,6 @@ RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(monochrome, UIColor *)
 
-RCT_EXPORT_VIEW_PROPERTY(onStart, RCTDirectEventBlock)
-
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)

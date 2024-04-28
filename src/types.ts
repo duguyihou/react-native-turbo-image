@@ -20,12 +20,6 @@ export type TurboImageApi = {
   clearDiskCache: () => Promise<void>;
 };
 
-type State = 'running' | 'cancelled' | 'completed';
-
-export type Start = {
-  state: State;
-};
-
 export type Success = {
   width: number;
   height: number;

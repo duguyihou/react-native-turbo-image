@@ -20,7 +20,6 @@ const SuccessScreen = () => {
         src="https://placedog.net/300/300?id=121"
         size={300}
         onSuccess={handleSuccess}
-        onStart={(state) => console.log(`🐵 ------ state`, state.nativeEvent)}
         blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
       />
       {information?.width && <Text>width: {information?.width}</Text>}

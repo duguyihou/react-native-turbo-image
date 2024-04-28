@@ -2,7 +2,6 @@ import type {
   CachePolicy,
   Failure,
   ResizeMode,
-  Start,
   Success,
   TurboImageApi,
 } from './types';
@@ -20,7 +19,6 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   blur?: number;
   monochrome?: number | ColorValue;
   cachePolicy?: CachePolicy;
-  onStart?: (state: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
   ref?: LegacyRef<Component<TurboImageApi, {}, any>>;

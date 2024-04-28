@@ -10,7 +10,6 @@ import TurboImage, {
   type CachePolicy,
   type Failure,
   type Success,
-  type Start,
 } from 'react-native-turbo-image';
 
 type Props = {
@@ -24,7 +23,6 @@ type Props = {
   borderRadius?: number;
   blur?: number;
   blurhash?: string;
-  onStart?: (state: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
 };
