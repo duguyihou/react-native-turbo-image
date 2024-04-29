@@ -174,7 +174,7 @@
               {
                 "kind": "TypeFunc",
                 "name": "Function",
-                "printedName": "(NukeUI.LazyImageState) -> τ_0_0",
+                "printedName": "(any NukeUI.LazyImageState) -> τ_0_0",
                 "children": [
                   {
                     "kind": "TypeNominal",
@@ -184,7 +184,7 @@
                   {
                     "kind": "TypeNominal",
                     "name": "LazyImageState",
-                    "printedName": "NukeUI.LazyImageState",
+                    "printedName": "any NukeUI.LazyImageState",
                     "usr": "s:6NukeUI14LazyImageStateP"
                   }
                 ]
@@ -245,7 +245,7 @@
               {
                 "kind": "TypeFunc",
                 "name": "Function",
-                "printedName": "(NukeUI.LazyImageState) -> τ_0_0",
+                "printedName": "(any NukeUI.LazyImageState) -> τ_0_0",
                 "children": [
                   {
                     "kind": "TypeNominal",
@@ -255,7 +255,7 @@
                   {
                     "kind": "TypeNominal",
                     "name": "LazyImageState",
-                    "printedName": "NukeUI.LazyImageState",
+                    "printedName": "any NukeUI.LazyImageState",
                     "usr": "s:6NukeUI14LazyImageStateP"
                   }
                 ]
@@ -295,17 +295,17 @@
               {
                 "kind": "TypeNominal",
                 "name": "Optional",
-                "printedName": "[Nuke.ImageProcessing]?",
+                "printedName": "[any Nuke.ImageProcessing]?",
                 "children": [
                   {
                     "kind": "TypeNominal",
                     "name": "Array",
-                    "printedName": "[Nuke.ImageProcessing]",
+                    "printedName": "[any Nuke.ImageProcessing]",
                     "children": [
                       {
                         "kind": "TypeNominal",
                         "name": "ImageProcessing",
-                        "printedName": "Nuke.ImageProcessing",
+                        "printedName": "any Nuke.ImageProcessing",
                         "usr": "s:4Nuke15ImageProcessingP"
                       }
                     ],
@@ -743,7 +743,7 @@
               {
                 "kind": "TypeFunc",
                 "name": "Function",
-                "printedName": "(Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ()",
+                "printedName": "(Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ()",
                 "children": [
                   {
                     "kind": "TypeNominal",
@@ -753,7 +753,7 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Result",
-                    "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                    "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                     "children": [
                       {
                         "kind": "TypeNominal",
@@ -764,7 +764,7 @@
                       {
                         "kind": "TypeNominal",
                         "name": "Error",
-                        "printedName": "Swift.Error",
+                        "printedName": "any Swift.Error",
                         "usr": "s:s5ErrorP"
                       }
                     ],
@@ -793,102 +793,16 @@
             "children": [
               {
                 "kind": "TypeNominal",
-                "name": "ModifiedContent",
-                "printedName": "SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>, SwiftUI._AppearanceActionModifier>, SwiftUI._ValueActionModifier<NukeUI.LazyImageContext?>>",
+                "name": "OpaqueTypeArchetype",
+                "printedName": "some SwiftUI.View",
                 "children": [
                   {
                     "kind": "TypeNominal",
-                    "name": "ModifiedContent",
-                    "printedName": "SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>, SwiftUI._AppearanceActionModifier>",
-                    "children": [
-                      {
-                        "kind": "TypeNominal",
-                        "name": "ModifiedContent",
-                        "printedName": "SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "ZStack",
-                            "printedName": "SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>",
-                            "children": [
-                              {
-                                "kind": "TypeNominal",
-                                "name": "_ConditionalContent",
-                                "printedName": "SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>",
-                                "children": [
-                                  {
-                                    "kind": "TypeNominal",
-                                    "name": "GenericTypeParam",
-                                    "printedName": "τ_0_0"
-                                  },
-                                  {
-                                    "kind": "TypeNominal",
-                                    "name": "_ConditionalContent",
-                                    "printedName": "SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>",
-                                    "children": [
-                                      {
-                                        "kind": "TypeNominal",
-                                        "name": "Image",
-                                        "printedName": "SwiftUI.Image",
-                                        "usr": "s:7SwiftUI5ImageV"
-                                      },
-                                      {
-                                        "kind": "TypeNominal",
-                                        "name": "Color",
-                                        "printedName": "SwiftUI.Color",
-                                        "usr": "s:7SwiftUI5ColorV"
-                                      }
-                                    ],
-                                    "usr": "s:7SwiftUI19_ConditionalContentV"
-                                  }
-                                ],
-                                "usr": "s:7SwiftUI19_ConditionalContentV"
-                              }
-                            ],
-                            "usr": "s:7SwiftUI6ZStackV"
-                          },
-                          {
-                            "kind": "TypeNominal",
-                            "name": "_AppearanceActionModifier",
-                            "printedName": "SwiftUI._AppearanceActionModifier",
-                            "usr": "s:7SwiftUI25_AppearanceActionModifierV"
-                          }
-                        ],
-                        "usr": "s:7SwiftUI15ModifiedContentV"
-                      },
-                      {
-                        "kind": "TypeNominal",
-                        "name": "_AppearanceActionModifier",
-                        "printedName": "SwiftUI._AppearanceActionModifier",
-                        "usr": "s:7SwiftUI25_AppearanceActionModifierV"
-                      }
-                    ],
-                    "usr": "s:7SwiftUI15ModifiedContentV"
-                  },
-                  {
-                    "kind": "TypeNominal",
-                    "name": "_ValueActionModifier",
-                    "printedName": "SwiftUI._ValueActionModifier<NukeUI.LazyImageContext?>",
-                    "children": [
-                      {
-                        "kind": "TypeNominal",
-                        "name": "Optional",
-                        "printedName": "NukeUI.LazyImageContext?",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "LazyImageContext",
-                            "printedName": "NukeUI.LazyImageContext",
-                            "usr": "s:6NukeUI16LazyImageContext33_E1506B8ED8B219EDD8C96ED0D435C021LLV"
-                          }
-                        ],
-                        "usr": "s:Sq"
-                      }
-                    ],
-                    "usr": "s:7SwiftUI20_ValueActionModifierV"
+                    "name": "View",
+                    "printedName": "SwiftUI.View",
+                    "usr": "s:7SwiftUI4ViewP"
                   }
-                ],
-                "usr": "s:7SwiftUI15ModifiedContentV"
+                ]
               }
             ],
             "declKind": "Var",
@@ -908,102 +822,16 @@
                 "children": [
                   {
                     "kind": "TypeNominal",
-                    "name": "ModifiedContent",
-                    "printedName": "SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>, SwiftUI._AppearanceActionModifier>, SwiftUI._ValueActionModifier<NukeUI.LazyImageContext?>>",
+                    "name": "OpaqueTypeArchetype",
+                    "printedName": "some SwiftUI.View",
                     "children": [
                       {
                         "kind": "TypeNominal",
-                        "name": "ModifiedContent",
-                        "printedName": "SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>, SwiftUI._AppearanceActionModifier>",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "ModifiedContent",
-                            "printedName": "SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>",
-                            "children": [
-                              {
-                                "kind": "TypeNominal",
-                                "name": "ZStack",
-                                "printedName": "SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>",
-                                "children": [
-                                  {
-                                    "kind": "TypeNominal",
-                                    "name": "_ConditionalContent",
-                                    "printedName": "SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>",
-                                    "children": [
-                                      {
-                                        "kind": "TypeNominal",
-                                        "name": "GenericTypeParam",
-                                        "printedName": "τ_0_0"
-                                      },
-                                      {
-                                        "kind": "TypeNominal",
-                                        "name": "_ConditionalContent",
-                                        "printedName": "SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>",
-                                        "children": [
-                                          {
-                                            "kind": "TypeNominal",
-                                            "name": "Image",
-                                            "printedName": "SwiftUI.Image",
-                                            "usr": "s:7SwiftUI5ImageV"
-                                          },
-                                          {
-                                            "kind": "TypeNominal",
-                                            "name": "Color",
-                                            "printedName": "SwiftUI.Color",
-                                            "usr": "s:7SwiftUI5ColorV"
-                                          }
-                                        ],
-                                        "usr": "s:7SwiftUI19_ConditionalContentV"
-                                      }
-                                    ],
-                                    "usr": "s:7SwiftUI19_ConditionalContentV"
-                                  }
-                                ],
-                                "usr": "s:7SwiftUI6ZStackV"
-                              },
-                              {
-                                "kind": "TypeNominal",
-                                "name": "_AppearanceActionModifier",
-                                "printedName": "SwiftUI._AppearanceActionModifier",
-                                "usr": "s:7SwiftUI25_AppearanceActionModifierV"
-                              }
-                            ],
-                            "usr": "s:7SwiftUI15ModifiedContentV"
-                          },
-                          {
-                            "kind": "TypeNominal",
-                            "name": "_AppearanceActionModifier",
-                            "printedName": "SwiftUI._AppearanceActionModifier",
-                            "usr": "s:7SwiftUI25_AppearanceActionModifierV"
-                          }
-                        ],
-                        "usr": "s:7SwiftUI15ModifiedContentV"
-                      },
-                      {
-                        "kind": "TypeNominal",
-                        "name": "_ValueActionModifier",
-                        "printedName": "SwiftUI._ValueActionModifier<NukeUI.LazyImageContext?>",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "Optional",
-                            "printedName": "NukeUI.LazyImageContext?",
-                            "children": [
-                              {
-                                "kind": "TypeNominal",
-                                "name": "LazyImageContext",
-                                "printedName": "NukeUI.LazyImageContext",
-                                "usr": "s:6NukeUI16LazyImageContext33_E1506B8ED8B219EDD8C96ED0D435C021LLV"
-                              }
-                            ],
-                            "usr": "s:Sq"
-                          }
-                        ],
-                        "usr": "s:7SwiftUI20_ValueActionModifierV"
+                        "name": "View",
+                        "printedName": "SwiftUI.View",
+                        "usr": "s:7SwiftUI4ViewP"
                       }
-                    ],
-                    "usr": "s:7SwiftUI15ModifiedContentV"
+                    ]
                   }
                 ],
                 "declKind": "Accessor",
@@ -1049,102 +877,16 @@
                 "children": [
                   {
                     "kind": "TypeNominal",
-                    "name": "ModifiedContent",
-                    "printedName": "SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>, SwiftUI._AppearanceActionModifier>, SwiftUI._ValueActionModifier<NukeUI.LazyImageContext?>>",
+                    "name": "OpaqueTypeArchetype",
+                    "printedName": "some SwiftUI.View",
                     "children": [
                       {
                         "kind": "TypeNominal",
-                        "name": "ModifiedContent",
-                        "printedName": "SwiftUI.ModifiedContent<SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>, SwiftUI._AppearanceActionModifier>",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "ModifiedContent",
-                            "printedName": "SwiftUI.ModifiedContent<SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>, SwiftUI._AppearanceActionModifier>",
-                            "children": [
-                              {
-                                "kind": "TypeNominal",
-                                "name": "ZStack",
-                                "printedName": "SwiftUI.ZStack<SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>>",
-                                "children": [
-                                  {
-                                    "kind": "TypeNominal",
-                                    "name": "_ConditionalContent",
-                                    "printedName": "SwiftUI._ConditionalContent<τ_0_0, SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>>",
-                                    "children": [
-                                      {
-                                        "kind": "TypeNominal",
-                                        "name": "GenericTypeParam",
-                                        "printedName": "τ_0_0"
-                                      },
-                                      {
-                                        "kind": "TypeNominal",
-                                        "name": "_ConditionalContent",
-                                        "printedName": "SwiftUI._ConditionalContent<SwiftUI.Image, SwiftUI.Color>",
-                                        "children": [
-                                          {
-                                            "kind": "TypeNominal",
-                                            "name": "Image",
-                                            "printedName": "SwiftUI.Image",
-                                            "usr": "s:7SwiftUI5ImageV"
-                                          },
-                                          {
-                                            "kind": "TypeNominal",
-                                            "name": "Color",
-                                            "printedName": "SwiftUI.Color",
-                                            "usr": "s:7SwiftUI5ColorV"
-                                          }
-                                        ],
-                                        "usr": "s:7SwiftUI19_ConditionalContentV"
-                                      }
-                                    ],
-                                    "usr": "s:7SwiftUI19_ConditionalContentV"
-                                  }
-                                ],
-                                "usr": "s:7SwiftUI6ZStackV"
-                              },
-                              {
-                                "kind": "TypeNominal",
-                                "name": "_AppearanceActionModifier",
-                                "printedName": "SwiftUI._AppearanceActionModifier",
-                                "usr": "s:7SwiftUI25_AppearanceActionModifierV"
-                              }
-                            ],
-                            "usr": "s:7SwiftUI15ModifiedContentV"
-                          },
-                          {
-                            "kind": "TypeNominal",
-                            "name": "_AppearanceActionModifier",
-                            "printedName": "SwiftUI._AppearanceActionModifier",
-                            "usr": "s:7SwiftUI25_AppearanceActionModifierV"
-                          }
-                        ],
-                        "usr": "s:7SwiftUI15ModifiedContentV"
-                      },
-                      {
-                        "kind": "TypeNominal",
-                        "name": "_ValueActionModifier",
-                        "printedName": "SwiftUI._ValueActionModifier<NukeUI.LazyImageContext?>",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "Optional",
-                            "printedName": "NukeUI.LazyImageContext?",
-                            "children": [
-                              {
-                                "kind": "TypeNominal",
-                                "name": "LazyImageContext",
-                                "printedName": "NukeUI.LazyImageContext",
-                                "usr": "s:6NukeUI16LazyImageContext33_E1506B8ED8B219EDD8C96ED0D435C021LLV"
-                              }
-                            ],
-                            "usr": "s:Sq"
-                          }
-                        ],
-                        "usr": "s:7SwiftUI20_ValueActionModifierV"
+                        "name": "View",
+                        "printedName": "SwiftUI.View",
+                        "usr": "s:7SwiftUI4ViewP"
                       }
-                    ],
-                    "usr": "s:7SwiftUI15ModifiedContentV"
+                    ]
                   }
                 ]
               }
@@ -1198,12 +940,12 @@
               {
                 "kind": "TypeNominal",
                 "name": "Optional",
-                "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>?",
+                "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>?",
                 "children": [
                   {
                     "kind": "TypeNominal",
                     "name": "Result",
-                    "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                    "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                     "children": [
                       {
                         "kind": "TypeNominal",
@@ -1214,7 +956,7 @@
                       {
                         "kind": "TypeNominal",
                         "name": "Error",
-                        "printedName": "Swift.Error",
+                        "printedName": "any Swift.Error",
                         "usr": "s:s5ErrorP"
                       }
                     ],
@@ -1229,8 +971,8 @@
             "mangledName": "$s6NukeUI10FetchImageC6results6ResultOy0A00D8ResponseVs5Error_pGSgvp",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Custom",
               "Final",
+              "Custom",
               "ProjectedValueProperty",
               "SetterAccess",
               "AccessControl",
@@ -1246,12 +988,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Optional",
-                    "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>?",
+                    "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>?",
                     "children": [
                       {
                         "kind": "TypeNominal",
                         "name": "Result",
-                        "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                        "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                         "children": [
                           {
                             "kind": "TypeNominal",
@@ -1262,7 +1004,7 @@
                           {
                             "kind": "TypeNominal",
                             "name": "Error",
-                            "printedName": "Swift.Error",
+                            "printedName": "any Swift.Error",
                             "usr": "s:s5ErrorP"
                           }
                         ],
@@ -1292,7 +1034,7 @@
               {
                 "kind": "TypeNominal",
                 "name": "Publisher",
-                "printedName": "Combine.Published<Swift.Optional<Swift.Result<Nuke.ImageResponse, Swift.Error>>>.Publisher",
+                "printedName": "Combine.Published<Swift.Optional<Swift.Result<Nuke.ImageResponse, any Swift.Error>>>.Publisher",
                 "usr": "s:7Combine9PublishedV9PublisherV"
               }
             ],
@@ -1302,8 +1044,8 @@
             "moduleName": "NukeUI",
             "implicit": true,
             "declAttributes": [
-              "Custom",
-              "Final"
+              "Final",
+              "Custom"
             ],
             "accessors": [
               {
@@ -1314,7 +1056,7 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Publisher",
-                    "printedName": "Combine.Published<Swift.Optional<Swift.Result<Nuke.ImageResponse, Swift.Error>>>.Publisher",
+                    "printedName": "Combine.Published<Swift.Optional<Swift.Result<Nuke.ImageResponse, any Swift.Error>>>.Publisher",
                     "usr": "s:7Combine9PublishedV9PublisherV"
                   }
                 ],
@@ -1355,8 +1097,8 @@
             "mangledName": "$s6NukeUI10FetchImageC5image05SwiftB00D0VSgvp",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Custom",
               "Final",
+              "Custom",
               "AccessControl",
               "RawDocComment"
             ],
@@ -1417,8 +1159,8 @@
             "mangledName": "$s6NukeUI10FetchImageC14imageContainer0A00dF0VSgvp",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Custom",
               "Final",
+              "Custom",
               "ProjectedValueProperty",
               "SetterAccess",
               "AccessControl",
@@ -1476,8 +1218,8 @@
             "moduleName": "NukeUI",
             "implicit": true,
             "declAttributes": [
-              "Custom",
-              "Final"
+              "Final",
+              "Custom"
             ],
             "accessors": [
               {
@@ -1521,8 +1263,8 @@
             "mangledName": "$s6NukeUI10FetchImageC9isLoadingSbvp",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Custom",
               "Final",
+              "Custom",
               "ProjectedValueProperty",
               "SetterAccess",
               "AccessControl",
@@ -1572,8 +1314,8 @@
             "moduleName": "NukeUI",
             "implicit": true,
             "declAttributes": [
-              "Custom",
-              "Final"
+              "Final",
+              "Custom"
             ],
             "accessors": [
               {
@@ -1715,8 +1457,8 @@
             "mangledName": "$s6NukeUI10FetchImageC8progressAC8ProgressCvp",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Custom",
               "Final",
+              "Custom",
               "AccessControl",
               "RawDocComment"
             ],
@@ -2246,12 +1988,12 @@
               {
                 "kind": "TypeNominal",
                 "name": "Array",
-                "printedName": "[Nuke.ImageProcessing]",
+                "printedName": "[any Nuke.ImageProcessing]",
                 "children": [
                   {
                     "kind": "TypeNominal",
                     "name": "ImageProcessing",
-                    "printedName": "Nuke.ImageProcessing",
+                    "printedName": "any Nuke.ImageProcessing",
                     "usr": "s:4Nuke15ImageProcessingP"
                   }
                 ],
@@ -2263,10 +2005,10 @@
             "mangledName": "$s6NukeUI10FetchImageC10processorsSay0A00D10Processing_pGvp",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Custom",
               "HasInitialValue",
               "Final",
               "HasStorage",
+              "Custom",
               "AccessControl",
               "RawDocComment"
             ],
@@ -2280,12 +2022,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Array",
-                    "printedName": "[Nuke.ImageProcessing]",
+                    "printedName": "[any Nuke.ImageProcessing]",
                     "children": [
                       {
                         "kind": "TypeNominal",
                         "name": "ImageProcessing",
-                        "printedName": "Nuke.ImageProcessing",
+                        "printedName": "any Nuke.ImageProcessing",
                         "usr": "s:4Nuke15ImageProcessingP"
                       }
                     ],
@@ -2315,12 +2057,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Array",
-                    "printedName": "[Nuke.ImageProcessing]",
+                    "printedName": "[any Nuke.ImageProcessing]",
                     "children": [
                       {
                         "kind": "TypeNominal",
                         "name": "ImageProcessing",
-                        "printedName": "Nuke.ImageProcessing",
+                        "printedName": "any Nuke.ImageProcessing",
                         "usr": "s:4Nuke15ImageProcessingP"
                       }
                     ],
@@ -2526,12 +2268,12 @@
               {
                 "kind": "TypeNominal",
                 "name": "Optional",
-                "printedName": "((Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ())?",
+                "printedName": "((Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ())?",
                 "children": [
                   {
                     "kind": "TypeFunc",
                     "name": "Function",
-                    "printedName": "(Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ()",
+                    "printedName": "(Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ()",
                     "children": [
                       {
                         "kind": "TypeNominal",
@@ -2541,7 +2283,7 @@
                       {
                         "kind": "TypeNominal",
                         "name": "Result",
-                        "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                        "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                         "children": [
                           {
                             "kind": "TypeNominal",
@@ -2552,7 +2294,7 @@
                           {
                             "kind": "TypeNominal",
                             "name": "Error",
-                            "printedName": "Swift.Error",
+                            "printedName": "any Swift.Error",
                             "usr": "s:s5ErrorP"
                           }
                         ],
@@ -2586,12 +2328,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Optional",
-                    "printedName": "((Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ())?",
+                    "printedName": "((Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ())?",
                     "children": [
                       {
                         "kind": "TypeFunc",
                         "name": "Function",
-                        "printedName": "(Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ()",
+                        "printedName": "(Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ()",
                         "children": [
                           {
                             "kind": "TypeNominal",
@@ -2601,7 +2343,7 @@
                           {
                             "kind": "TypeNominal",
                             "name": "Result",
-                            "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                            "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                             "children": [
                               {
                                 "kind": "TypeNominal",
@@ -2612,7 +2354,7 @@
                               {
                                 "kind": "TypeNominal",
                                 "name": "Error",
-                                "printedName": "Swift.Error",
+                                "printedName": "any Swift.Error",
                                 "usr": "s:s5ErrorP"
                               }
                             ],
@@ -2647,12 +2389,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Optional",
-                    "printedName": "((Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ())?",
+                    "printedName": "((Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ())?",
                     "children": [
                       {
                         "kind": "TypeFunc",
                         "name": "Function",
-                        "printedName": "(Swift.Result<Nuke.ImageResponse, Swift.Error>) -> ()",
+                        "printedName": "(Swift.Result<Nuke.ImageResponse, any Swift.Error>) -> ()",
                         "children": [
                           {
                             "kind": "TypeNominal",
@@ -2662,7 +2404,7 @@
                           {
                             "kind": "TypeNominal",
                             "name": "Result",
-                            "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                            "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                             "children": [
                               {
                                 "kind": "TypeNominal",
@@ -2673,7 +2415,7 @@
                               {
                                 "kind": "TypeNominal",
                                 "name": "Error",
-                                "printedName": "Swift.Error",
+                                "printedName": "any Swift.Error",
                                 "usr": "s:s5ErrorP"
                               }
                             ],
@@ -2771,8 +2513,8 @@
             "mangledName": "$s6NukeUI10FetchImageC4loadyy10Foundation3URLVSgF",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Final",
               "Custom",
+              "Final",
               "AccessControl",
               "RawDocComment"
             ],
@@ -2808,8 +2550,8 @@
             "mangledName": "$s6NukeUI10FetchImageC4loadyy0A00D7RequestVSgF",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Final",
               "Custom",
+              "Final",
               "AccessControl",
               "RawDocComment"
             ],
@@ -2849,8 +2591,8 @@
             "mangledName": "$s6NukeUI10FetchImageC4loadyy0A00D8ResponseVyYaKcF",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Final",
               "Custom",
+              "Final",
               "AccessControl",
               "RawDocComment"
             ],
@@ -2879,8 +2621,8 @@
             "genericSig": "<τ_0_0 where τ_0_0 : Combine.Publisher, τ_0_0.Output == Nuke.ImageResponse>",
             "sugared_genericSig": "<P where P : Combine.Publisher, P.Output == Nuke.ImageResponse>",
             "declAttributes": [
-              "Final",
               "Custom",
+              "Final",
               "AccessControl",
               "RawDocComment"
             ],
@@ -2902,8 +2644,8 @@
             "mangledName": "$s6NukeUI10FetchImageC6cancelyyF",
             "moduleName": "NukeUI",
             "declAttributes": [
-              "Final",
               "Custom",
+              "Final",
               "AccessControl",
               "RawDocComment"
             ],
@@ -3089,12 +2831,12 @@
               {
                 "kind": "TypeNominal",
                 "name": "Optional",
-                "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>?",
+                "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>?",
                 "children": [
                   {
                     "kind": "TypeNominal",
                     "name": "Result",
-                    "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                    "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                     "children": [
                       {
                         "kind": "TypeNominal",
@@ -3105,7 +2847,7 @@
                       {
                         "kind": "TypeNominal",
                         "name": "Error",
-                        "printedName": "Swift.Error",
+                        "printedName": "any Swift.Error",
                         "usr": "s:s5ErrorP"
                       }
                     ],
@@ -3133,12 +2875,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Optional",
-                    "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>?",
+                    "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>?",
                     "children": [
                       {
                         "kind": "TypeNominal",
                         "name": "Result",
-                        "printedName": "Swift.Result<Nuke.ImageResponse, Swift.Error>",
+                        "printedName": "Swift.Result<Nuke.ImageResponse, any Swift.Error>",
                         "children": [
                           {
                             "kind": "TypeNominal",
@@ -3149,7 +2891,7 @@
                           {
                             "kind": "TypeNominal",
                             "name": "Error",
-                            "printedName": "Swift.Error",
+                            "printedName": "any Swift.Error",
                             "usr": "s:s5ErrorP"
                           }
                         ],
@@ -3333,12 +3075,12 @@
               {
                 "kind": "TypeNominal",
                 "name": "Optional",
-                "printedName": "Swift.Error?",
+                "printedName": "(any Swift.Error)?",
                 "children": [
                   {
                     "kind": "TypeNominal",
                     "name": "Error",
-                    "printedName": "Swift.Error",
+                    "printedName": "any Swift.Error",
                     "usr": "s:s5ErrorP"
                   }
                 ],
@@ -3364,12 +3106,12 @@
                   {
                     "kind": "TypeNominal",
                     "name": "Optional",
-                    "printedName": "Swift.Error?",
+                    "printedName": "(any Swift.Error)?",
                     "children": [
                       {
                         "kind": "TypeNominal",
                         "name": "Error",
-                        "printedName": "Swift.Error",
+                        "printedName": "any Swift.Error",
                         "usr": "s:s5ErrorP"
                       }
                     ],
@@ -3465,13 +3207,6 @@
   },
   "ConstValues": [
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/LazyImage.swift",
-      "kind": "Array",
-      "offset": 3476,
-      "length": 2,
-      "value": "[]"
-    },
-    {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "BooleanLiteral",
       "offset": 1057,
@@ -3494,101 +3229,10 @@
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "IntegerLiteral",
-      "offset": 1989,
-      "length": 1,
-      "value": "0"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "IntegerLiteral",
-      "offset": 2005,
-      "length": 1,
-      "value": "0"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "IntegerLiteral",
-      "offset": 2032,
-      "length": 1,
-      "value": "1"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
       "kind": "Array",
       "offset": 2578,
       "length": 2,
       "value": "[]"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "StringLiteral",
-      "offset": 3390,
-      "length": 37,
-      "value": "\"Must be called from the main thread\""
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "BooleanLiteral",
-      "offset": 4222,
-      "length": 4,
-      "value": "true"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "BooleanLiteral",
-      "offset": 5284,
-      "length": 5,
-      "value": "false"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "BooleanLiteral",
-      "offset": 5768,
-      "length": 4,
-      "value": "true"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "BooleanLiteral",
-      "offset": 6618,
-      "length": 4,
-      "value": "true"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "BooleanLiteral",
-      "offset": 6779,
-      "length": 5,
-      "value": "false"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/FetchImage.swift",
-      "kind": "BooleanLiteral",
-      "offset": 7894,
-      "length": 5,
-      "value": "false"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
-      "kind": "FloatLiteral",
-      "offset": 2696,
-      "length": 3,
-      "value": "0.5"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
-      "kind": "BooleanLiteral",
-      "offset": 2847,
-      "length": 5,
-      "value": "false"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/NukeUI\/Internal.swift",
-      "kind": "StringLiteral",
-      "offset": 3289,
-      "length": 2,
-      "value": "\"\""
     }
   ]
 }

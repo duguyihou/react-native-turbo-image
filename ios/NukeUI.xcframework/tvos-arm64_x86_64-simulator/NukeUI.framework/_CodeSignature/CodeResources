@@ -6,51 +6,51 @@
 	<dict>
 		<key>Headers/NukeUI-Swift.h</key>
 		<data>
-		OeZ34NfwvNFpNhmTwg9a4SAPma4=
+		PRUa8n0FBWS9KtwPOvAalc3pZ7E=
 		</data>
 		<key>Info.plist</key>
 		<data>
-		uoT4FTtTCtLO4thgqro0JIs0fkM=
+		kYNRkpTARzaIWIcAN9hhnW5tSgM=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.abi.json</key>
 		<data>
-		UXUlBhIDEnX/SN/L5Y1fIyUopvM=
+		7gX1RPTRwVg7DWKpQ+HvnL383tg=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.private.swiftinterface</key>
 		<data>
-		+nxx6zrA3JXYQyo9UJV0GspwyCk=
+		K7+P5nuwxbo+wTC+vW0cM3MC0Is=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.swiftdoc</key>
 		<data>
-		/U0oXZlJGQ7wvCUcCm8ExqF+7Uc=
+		ByZjxvMaZbG7dOKvxEpRBAHhJ28=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.swiftinterface</key>
 		<data>
-		+nxx6zrA3JXYQyo9UJV0GspwyCk=
+		K7+P5nuwxbo+wTC+vW0cM3MC0Is=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.swiftmodule</key>
 		<data>
-		k/37YlpgtOwxwJZGGCeH9Sv6SZQ=
+		z9vqgobKi5iEbIUhkpksZyubDuU=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.abi.json</key>
 		<data>
-		UXUlBhIDEnX/SN/L5Y1fIyUopvM=
+		7gX1RPTRwVg7DWKpQ+HvnL383tg=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.private.swiftinterface</key>
 		<data>
-		dTk3jrvDqEr4ugKQFStvEQvFMmY=
+		dHR/6ObVx9vF5gyeBR87EnSi7Gw=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.swiftdoc</key>
 		<data>
-		Qq1kWaZ3Bo7MGFIJskZJFqEtIy4=
+		ELExPIeJRAwiHJyL5Fu/6Gav5sc=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.swiftinterface</key>
 		<data>
-		dTk3jrvDqEr4ugKQFStvEQvFMmY=
+		dHR/6ObVx9vF5gyeBR87EnSi7Gw=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.swiftmodule</key>
 		<data>
-		l1qMy3KT82eZtQteWBv0zkiYjoM=
+		wkeVGw9te3BKwk2hMRfa2bE40/k=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -59,77 +59,77 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			X9Wtm8MtVkH+mv2Oi74qlzIyaRNqS4SJdxCfbS/AC6M=
+			DSGHoZ7mQ0MlGjSxjqOaCExtfm8KaRcJ7g8AUMuuiI4=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			IAMXuplNjZmAe15NatPc1HhuGPk8kTUgglybxPu+8u8=
+			hXDOm0V51Xrs3baWrzF8hDZI+1ghzcuYafzrsztqouU=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			RK0dewVO+JhvP+4493WYG14Ab2iKn0VAjKBqmYBxt8E=
+			kWngvKMkx61mw3yZfpmSDNrFaz1geZ0EKgcKMpQEIx0=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			GNfXAZa8QQo+SOAG+sm7xnullE/Osma8MCmB7YsRp6M=
+			c1Qnzo6UJ87iDp4gdXhyxuzuY5MQIa4Y85OVeJYUgio=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			RK0dewVO+JhvP+4493WYG14Ab2iKn0VAjKBqmYBxt8E=
+			kWngvKMkx61mw3yZfpmSDNrFaz1geZ0EKgcKMpQEIx0=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-tvos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			cLRt5ajFCe21eUNA3gH0XZTjmL53ZJ0nq3C+RwC0eOU=
+			Qc1JqQNXQk5UjtGMb2Tzx6UplmPp/Xn8p8J4OQeucr4=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			IAMXuplNjZmAe15NatPc1HhuGPk8kTUgglybxPu+8u8=
+			hXDOm0V51Xrs3baWrzF8hDZI+1ghzcuYafzrsztqouU=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			1Sa3g2kBiM/sE+t7NlHLWxCvY9lB0GdfzThm357TRcc=
+			Hb3Vp3oj60xc1ZMvR4L7EWnIYV9prkmY/Vawcp34K4Q=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			3w0l+YOfz2sFCR48g4+4xyxdYXatQ2OQ0h2KdC0uYkQ=
+			9+ZGqj+J7iDhsEJd+1gNhZzPjP5neHdg7+zKakyCUpU=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			1Sa3g2kBiM/sE+t7NlHLWxCvY9lB0GdfzThm357TRcc=
+			Hb3Vp3oj60xc1ZMvR4L7EWnIYV9prkmY/Vawcp34K4Q=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-tvos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ePq0syx0PgJdnNABArKZiZz61pE0BFtIf/pZD7Zbnog=
+			0OUWyDDXKdjA1sjqkjhOT9RKxr4tpMEkSYthIrmqAjk=
 			</data>
 		</dict>
 	</dict>
