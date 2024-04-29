@@ -1,7 +1,6 @@
 // swift-interface-format-version: 1.0
-// swift-compiler-version: Apple Swift version 5.9.2 (swiftlang-5.9.2.2.56 clang-1500.1.0.2.5)
-// swift-module-flags: -target arm64-apple-ios13.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -module-name Nuke
-// swift-module-flags-ignorable: -enable-bare-slash-regex
+// swift-compiler-version: Apple Swift version 5.10 (swiftlang-5.10.0.13 clang-1500.3.9.4)
+// swift-module-flags: -target arm64-apple-ios13.0-simulator -enable-objc-interop -enable-library-evolution -swift-version 5 -enforce-exclusivity=checked -O -enable-bare-slash-regex -module-name Nuke
 import AVKit
 import Combine
 import CoreGraphics
@@ -549,7 +548,7 @@ public struct ImageDecodingContext : @unchecked Swift.Sendable {
   public var isCompleted: Swift.Bool
   public var urlResponse: Foundation.URLResponse?
   public var cacheType: Nuke.ImageResponse.CacheType?
-  public init(request: Nuke.ImageRequest, data: Foundation.Data, isCompleted: Swift.Bool, urlResponse: Foundation.URLResponse?, cacheType: Nuke.ImageResponse.CacheType?)
+  public init(request: Nuke.ImageRequest, data: Foundation.Data, isCompleted: Swift.Bool = true, urlResponse: Foundation.URLResponse? = nil, cacheType: Nuke.ImageResponse.CacheType? = nil)
 }
 public enum ImageProcessors {
 }
@@ -572,6 +571,7 @@ extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.Anonymous {
 extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.CoreImageFilter {
   public static func coreImageFilter(name: Swift.String, parameters: [Swift.String : Any], identifier: Swift.String) -> Nuke.ImageProcessors.CoreImageFilter
   public static func coreImageFilter(name: Swift.String) -> Nuke.ImageProcessors.CoreImageFilter
+  public static func coreImageFilter(_ filter: CoreImage.CIFilter, identifier: Swift.String) -> Nuke.ImageProcessors.CoreImageFilter
 }
 extension Nuke.ImageProcessing where Self == Nuke.ImageProcessors.GaussianBlur {
   public static func gaussianBlur(radius: Swift.Int = 8) -> Nuke.ImageProcessors.GaussianBlur
@@ -749,9 +749,11 @@ extension Nuke.ImagePipeline {
     public var isProgressiveDecodingEnabled: Swift.Bool
     public var isStoringPreviewsInMemoryCache: Swift.Bool
     public var isResumableDataEnabled: Swift.Bool
+    public var isLocalResourcesSupportEnabled: Swift.Bool
     public var callbackQueue: Dispatch.DispatchQueue
     public static var isSignpostLoggingEnabled: Swift.Bool
     public var dataLoadingQueue: Foundation.OperationQueue
+    @available(*, deprecated, message: "The pipeline now performs cache lookup on the internal queue, reducing the amount of context switching")
     public var dataCachingQueue: Foundation.OperationQueue
     public var imageDecodingQueue: Foundation.OperationQueue
     public var imageEncodingQueue: Foundation.OperationQueue
@@ -874,11 +876,10 @@ extension Nuke.ImageEncoding where Self == Nuke.ImageEncoders.ImageIO {
 }
 extension Nuke.ImageProcessors {
   public struct CoreImageFilter : Nuke.ImageProcessing, Swift.CustomStringConvertible, @unchecked Swift.Sendable {
-    public let name: Swift.String
-    public let parameters: [Swift.String : Any]
     public let identifier: Swift.String
     public init(name: Swift.String, parameters: [Swift.String : Any], identifier: Swift.String)
     public init(name: Swift.String)
+    public init(_ filter: CoreImage.CIFilter, identifier: Swift.String)
     public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
     public func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
     public static var context: CoreImage.CIContext
