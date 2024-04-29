@@ -5,7 +5,9 @@ import React
 final class TurboImageView : UIView {
 
   private lazy var lazyImageView = LazyImageView()
-  private var processors: [ImageProcessing] = []
+  private var processors: [ImageProcessing] {
+    return composeProcessors()
+  }
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -20,6 +22,16 @@ final class TurboImageView : UIView {
       }
     }
   }
+
+  @objc var rounded: Bool = false
+
+  @objc var blur: NSNumber?
+
+  @objc var borderRadius: NSNumber?
+
+  @objc var monochrome: UIColor!
+
+  @objc var resize: NSNumber?
 
   @objc var resizeMode = "contain" {
     didSet {
@@ -54,56 +66,6 @@ final class TurboImageView : UIView {
           guard let image = UIImage(blurHash: blurhash) else { return }
           self.lazyImageView.placeholderImage = image
         }
-      }
-    }
-  }
-
-  @objc var rounded: Bool = false {
-    didSet {
-      if rounded {
-        processors.append(ImageProcessors.Circle())
-      }
-    }
-  }
-
-  @objc var blur: NSNumber? {
-    didSet {
-      if let blur {
-        processors.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
-      }
-    }
-  }
-
-  @objc var borderRadius: NSNumber? {
-    didSet {
-      if let borderRadius {
-        let radius = CGFloat(truncating: borderRadius)
-        processors.append(ImageProcessors.RoundedCorners(radius: radius))
-      }
-    }
-  }
-
-  @objc var monochrome: UIColor! {
-    didSet {
-      if let monochrome {
-        let name = "CIColorMonochrome"
-        let parameters = [
-          "inputIntensity": 1,
-          "inputColor": CIColor(color: monochrome)
-        ] as [String : Any]
-        let identifier = "turboImage.monochrome"
-        processors.append(ImageProcessors.CoreImageFilter(name: name,
-                                                          parameters: parameters,
-                                                          identifier: identifier))
-      }
-    }
-  }
-
-  @objc var resize: NSNumber? {
-    didSet {
-      if let resize {
-        let width = CGFloat(truncating: resize)
-        processors.append(ImageProcessors.Resize(width: width))
       }
     }
   }
@@ -144,7 +106,43 @@ final class TurboImageView : UIView {
     fatalError("init(coder:) has not been implemented")
   }
 }
+// MARK: - processors
+fileprivate extension TurboImageView {
 
+  func composeProcessors() -> [ImageProcessing] {
+    var initialProcessors: [ImageProcessing] = []
+
+    if let resize {
+      let width = CGFloat(truncating: resize)
+      initialProcessors.append(ImageProcessors.Resize(width: width))
+    }
+    if let borderRadius {
+      let radius = CGFloat(truncating: borderRadius)
+      initialProcessors.append(ImageProcessors.RoundedCorners(radius: radius))
+    }
+    if rounded {
+      initialProcessors.append(ImageProcessors.Circle())
+    }
+    if let blur {
+      initialProcessors.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
+    }
+    if let monochrome {
+      let name = "CIColorMonochrome"
+      let parameters = [
+        "inputIntensity": 1,
+        "inputColor": CIColor(color: monochrome)
+      ] as [String : Any]
+      let identifier = "turboImage.monochrome"
+      initialProcessors.append(ImageProcessors.CoreImageFilter(name: name,
+                                                               parameters: parameters,
+                                                               identifier: identifier))
+    }
+
+    return initialProcessors
+  }
+}
+
+// MARK: - callback handler
 fileprivate extension TurboImageView {
 
   func onStartHandler(with task: ImageTask) {
@@ -168,7 +166,7 @@ fileprivate extension TurboImageView {
     let payload = [
       "error": error.localizedDescription,
     ]
-    
+
     onFailure?(payload)
   }
 }
