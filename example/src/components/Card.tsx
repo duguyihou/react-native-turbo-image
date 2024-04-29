@@ -14,7 +14,7 @@ import TurboImage, {
 } from 'react-native-turbo-image';
 
 type Props = {
-  size: number;
+  size: number[];
   title?: string;
   src: string;
   cachePolicy?: CachePolicy;
@@ -24,7 +24,7 @@ type Props = {
   borderRadius?: number;
   blur?: number;
   blurhash?: string;
-  resize?: number;
+  resize?: number[];
   showActivityIndicator?: boolean;
   onStart?: (result: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
@@ -34,7 +34,7 @@ const Card = ({ title, size, ...props }: Props) => {
   return (
     <View style={styles.card}>
       <TurboImage
-        style={[styles.image, { width: size, height: size }]}
+        style={[styles.image, { width: size[0], height: size[1] }]}
         {...props}
       />
       {title && <Text style={styles.title}>{title}</Text>}

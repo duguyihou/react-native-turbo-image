@@ -9,11 +9,13 @@ import coil.ImageLoader
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
+import coil.size.Size
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.GrayscaleTransformation
 import com.facebook.react.bridge.ReactContext
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
@@ -97,6 +99,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .placeholder(blurHashDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade)
+      .size(view.resize ?: Size.ORIGINAL)
       .build()
 
     disposable = imageLoader(view.context).enqueue(request)
@@ -167,6 +170,15 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     monochrome?.let {
       val grayscaleTransformation = GrayscaleTransformation()
       view.transformations.add(grayscaleTransformation)
+    }
+  }
+
+  @ReactProp(name = "resize")
+  fun setResize(view: TurboImageView, resize: ReadableArray?) {
+    resize?.toArrayList()?.let {
+      val width = (it[0] as Double).toInt()
+      val height = (it[1] as Double).toInt()
+      view.resize = Size(width, height)
     }
   }
 

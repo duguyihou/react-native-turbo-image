@@ -15,7 +15,7 @@ const ProcessingScreen = () => {
         <Card
           title={item.title}
           src={item.url}
-          size={item.resize ?? size}
+          size={item.resize ?? [size, size]}
           rounded={item.rounded}
           blur={item.blur}
           monochrome={item.monochrome}
