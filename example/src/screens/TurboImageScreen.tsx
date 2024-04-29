@@ -16,7 +16,6 @@ const TurboImageScreen = () => {
         style={styles.card}
         showActivityIndicator
         blurhash={item.blurhash}
-        cachePolicy="dataCache"
       />
     );
   };

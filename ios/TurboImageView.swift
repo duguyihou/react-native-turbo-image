@@ -13,12 +13,11 @@ final class TurboImageView : UIView {
   @objc var src: String? {
     didSet {
       guard let src,
-            let urlString = URL(string: src)
+            let _ = URL(string: src)
       else {
         onFailure?(["error": "invalid url: \(String(describing: src))"])
         return
       }
-      lazyImageView.url = urlString
     }
   }
 
@@ -35,6 +34,19 @@ final class TurboImageView : UIView {
     }
   }
 
+  @objc var fadeDuration: NSNumber = 0.3 {
+    didSet {
+      lazyImageView.transition = .fadeIn(duration: fadeDuration.doubleValue)
+    }
+  }
+
+  @objc var cachePolicy = "memory" {
+    didSet {
+      let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
+      lazyImageView.pipeline = pipeline ?? .shared
+    }
+  }
+
   @objc var blurhash: String? {
     didSet {
       DispatchQueue.global(qos: .userInteractive).async {
@@ -46,17 +58,10 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var fadeDuration: NSNumber = 0.3 {
-    didSet {
-      lazyImageView.transition = .fadeIn(duration: fadeDuration.doubleValue)
-    }
-  }
-
   @objc var rounded: Bool = false {
     didSet {
       if rounded {
         processors.append(ImageProcessors.Circle())
-        lazyImageView.processors = processors
       }
     }
   }
@@ -65,15 +70,7 @@ final class TurboImageView : UIView {
     didSet {
       if let blur {
         processors.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
-        lazyImageView.processors = processors
       }
-    }
-  }
-
-  @objc var cachePolicy = "memory" {
-    didSet {
-      let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
-      lazyImageView.pipeline = pipeline ?? .shared
     }
   }
 
@@ -82,7 +79,6 @@ final class TurboImageView : UIView {
       if let borderRadius {
         let radius = CGFloat(truncating: borderRadius)
         processors.append(ImageProcessors.RoundedCorners(radius: radius))
-        lazyImageView.processors = processors
       }
     }
   }
@@ -99,7 +95,15 @@ final class TurboImageView : UIView {
         processors.append(ImageProcessors.CoreImageFilter(name: name,
                                                           parameters: parameters,
                                                           identifier: identifier))
-        lazyImageView.processors = processors
+      }
+    }
+  }
+
+  @objc var resize: NSNumber? {
+    didSet {
+      if let resize {
+        let width = CGFloat(truncating: resize)
+        processors.append(ImageProcessors.Resize(width: width))
       }
     }
   }
@@ -115,6 +119,14 @@ final class TurboImageView : UIView {
       lazyImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
+  }
+
+  override func didSetProps(_ changedProps: [String]!) {
+    super.didSetProps(changedProps)
+
+    lazyImageView.onStart = { task in
+      self.onStartHandler(with: task)
+    }
 
     lazyImageView.onSuccess = { response in
       self.onSuccessHandler(with: response)
@@ -123,6 +135,9 @@ final class TurboImageView : UIView {
     lazyImageView.onFailure = { error in
       self.onFailureHandler(with: error)
     }
+
+    lazyImageView.processors = processors
+    lazyImageView.url = URL(string: src!)
   }
 
   required init?(coder: NSCoder) {
@@ -131,6 +146,13 @@ final class TurboImageView : UIView {
 }
 
 fileprivate extension TurboImageView {
+
+  func onStartHandler(with task: ImageTask) {
+    let payload = [
+      "state": "running"
+    ]
+    onStart?(payload)
+  }
 
   func onSuccessHandler(with response: ImageResponse) {
     let payload = [
