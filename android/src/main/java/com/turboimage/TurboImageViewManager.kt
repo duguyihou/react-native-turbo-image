@@ -36,6 +36,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         "phasedRegistrationNames" to mapOf(
           "bubbled" to "onSuccess"
         )
+      ),
+      "onStart" to mapOf(
+        "phasedRegistrationNames" to mapOf(
+          "bubbled" to "onStart"
+        )
       )
     )
   }
@@ -60,6 +65,14 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .data(view.src)
       .target(view)
       .listener(
+        onStart = { _ ->
+          val payload = WritableNativeMap().apply {
+            putString("state", "running")
+          }
+          val reactContext = view.context as ReactContext
+          reactContext.getJSModule(RCTEventEmitter::class.java)
+            .receiveEvent(view.id, "onStart", payload)
+        },
         onSuccess = { request, result ->
           val payload = WritableNativeMap().apply {
             putInt("width", result.drawable.intrinsicWidth)
@@ -70,7 +83,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           reactContext.getJSModule(RCTEventEmitter::class.java)
             .receiveEvent(view.id, "onSuccess", payload)
         },
-        onError = { request, result ->
+        onError = { _, result ->
           val payload = WritableNativeMap().apply {
             putString("error", result.throwable.cause?.localizedMessage)
           }
