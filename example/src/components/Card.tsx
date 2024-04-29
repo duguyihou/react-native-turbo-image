@@ -25,6 +25,7 @@ type Props = {
   blur?: number;
   blurhash?: string;
   resize?: number;
+  showActivityIndicator?: boolean;
   onStart?: (result: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
