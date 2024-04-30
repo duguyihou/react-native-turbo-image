@@ -27,6 +27,10 @@ export const routesData = [
     title: 'Image Processing',
     data: [{ name: 'Processing', destination: RouteName.ImageProcessing }],
   },
+  {
+    title: 'SVG',
+    data: [{ name: 'SVG', destination: RouteName.SVG }],
+  },
 ];
 export const listScreenData = [
   {
@@ -571,5 +575,12 @@ export const processingData = [
     resize: [150, 150],
     blur: 5,
     rounded: true,
+  },
+];
+
+export const svgData = [
+  {
+    title: 'SVG',
+    url: 'https://upload.wikimedia.org/wikipedia/commons/9/9d/Swift_logo.svg',
   },
 ];
