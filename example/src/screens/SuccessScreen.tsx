@@ -23,7 +23,8 @@ const SuccessScreen = () => {
     <View>
       <Card
         src="https://placedog.net/300/300?id=121"
-        size={300}
+        size={[200, 200]}
+        resize={[200, 200]}
         onStart={handleStart}
         onSuccess={handleSuccess}
         blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"

@@ -16,7 +16,7 @@ const TurboImageScreen = () => {
         style={styles.card}
         showActivityIndicator
         blurhash={item.blurhash}
-        resize={size}
+        resize={[size, size]}
       />
     );
   };

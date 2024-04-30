@@ -31,7 +31,7 @@ final class TurboImageView : UIView {
 
   @objc var monochrome: UIColor!
 
-  @objc var resize: NSNumber?
+  @objc var resize: NSArray?
 
   @objc var resizeMode = "contain" {
     didSet {
@@ -112,9 +112,11 @@ fileprivate extension TurboImageView {
   func composeProcessors() -> [ImageProcessing] {
     var initialProcessors: [ImageProcessing] = []
 
-    if let resize {
-      let width = CGFloat(truncating: resize)
-      initialProcessors.append(ImageProcessors.Resize(width: width))
+    if let resize = resize as? [NSNumber] {
+      let width = CGFloat(truncating: resize[0])
+      let height = CGFloat(truncating: resize[1])
+      initialProcessors.append(ImageProcessors.Resize(size:
+          .init(width: width, height: height)))
     }
     if let borderRadius {
       let radius = CGFloat(truncating: borderRadius)
