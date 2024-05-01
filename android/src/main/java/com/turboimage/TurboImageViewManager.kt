@@ -6,6 +6,7 @@ import android.widget.ImageView.ScaleType
 import coil.Coil
 import coil.Coil.imageLoader
 import coil.ImageLoader
+import coil.decode.SvgDecoder
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
@@ -57,6 +58,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     // TODO: refactor it
     val imageLoader = ImageLoader.Builder(view.context)
       .respectCacheHeaders(view.cachePolicy == "urlCache")
+      .components{
+        add(SvgDecoder.Factory())
+      }
       .build()
     Coil.setImageLoader(imageLoader)
 
