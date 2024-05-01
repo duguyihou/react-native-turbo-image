@@ -67,6 +67,7 @@ PODS:
     - FlipperKit/Core
     - FlipperKit/FlipperKitNetworkPlugin
   - fmt (6.2.1)
+  - Gifu (3.3.1)
   - glog (0.3.5)
   - hermes-engine (0.73.6):
     - hermes-engine/Pre-built (= 0.73.6)
@@ -946,7 +947,8 @@ PODS:
     - React-debug
   - react-native-safe-area-context (4.9.0):
     - React-Core
-  - react-native-turbo-image (0.12.0):
+  - react-native-turbo-image (0.13.0):
+    - Gifu
     - glog
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
@@ -1216,6 +1218,7 @@ SPEC REPOS:
     - Flipper-PeerTalk
     - FlipperKit
     - fmt
+    - Gifu
     - libevent
     - OpenSSL-Universal
     - SocketRocket
@@ -1341,6 +1344,7 @@ SPEC CHECKSUMS:
   Flipper-PeerTalk: 116d8f857dc6ef55c7a5a75ea3ceaafe878aadc9
   FlipperKit: 37525a5d056ef9b93d1578e04bc3ea1de940094f
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
+  Gifu: 416d4e38c4c2fed012f019e0a1d3ffcb58e5b842
   glog: c5d68082e772fa1c511173d6b30a9de2c05a69a2
   hermes-engine: 9cecf9953a681df7556b8cc9c74905de8f3293c0
   libevent: 4049cae6c81cdb3654a443be001fb9bdceff7913
@@ -1367,7 +1371,7 @@ SPEC CHECKSUMS:
   React-logger: 3eb80a977f0d9669468ef641a5e1fabbc50a09ec
   React-Mapbuffer: 84ea43c6c6232049135b1550b8c60b2faac19fab
   react-native-safe-area-context: b97eb6f9e3b7f437806c2ce5983f479f8eb5de4b
-  react-native-turbo-image: 42d6dee20eff48dae2279431919407ebd25e6da9
+  react-native-turbo-image: 6dc01ebb3f2ca251dca492cab941a72a2765f3a4
   React-nativeconfig: b4d4e9901d4cabb57be63053fd2aa6086eb3c85f
   React-NativeModulesApple: cd26e56d56350e123da0c1e3e4c76cb58a05e1ee
   React-perflogger: 5f49905de275bac07ac7ea7f575a70611fa988f2
