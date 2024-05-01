@@ -12,6 +12,7 @@ import MemoryCacheScreen from './screens/MemoryCacheScreen';
 import UrlCacheScreen from './screens/UrlCacheScreen';
 import DataCacheScreen from './screens/DataCacheScreen';
 import SVGScreen from './screens/SVGScreen';
+import GifScreen from './screens/GifScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -47,7 +48,10 @@ function App() {
           component={ProcessingScreen}
           options={{ title: 'Image Processing' }}
         />
-        <Stack.Screen name={RouteName.SVG} component={SVGScreen} />
+        <Stack.Group>
+          <Stack.Screen name={RouteName.SVG} component={SVGScreen} />
+          <Stack.Screen name={RouteName.Gif} component={GifScreen} />
+        </Stack.Group>
       </Stack.Navigator>
     </NavigationContainer>
   );
