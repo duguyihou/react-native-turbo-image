@@ -1,5 +1,6 @@
 import Nuke
 import NukeUI
+import SwiftSVG
 import React
 
 final class TurboImageView : UIView {
@@ -7,6 +8,9 @@ final class TurboImageView : UIView {
   private lazy var lazyImageView = LazyImageView()
   private var processors: [ImageProcessing] {
     return composeProcessors()
+  }
+  private var isSVG: Bool {
+    return src?.hasSuffix(".svg") == true
   }
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
@@ -85,6 +89,16 @@ final class TurboImageView : UIView {
 
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
+
+    if isSVG {
+      ImageDecoderRegistry.shared.register {_ in ImageDecoders.Empty()}
+      ImagePipeline.shared.loadImage(with: URL(string: src!)!) { result in
+        guard let data = try? result.get().container.data else { return }
+        let svgView = UIView(SVGData: data)
+        self.addSubview(svgView)
+      }
+      return
+    }
 
     lazyImageView.onStart = { task in
       self.onStartHandler(with: task)

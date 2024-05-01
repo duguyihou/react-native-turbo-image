@@ -28,7 +28,7 @@ export const routesData = [
     data: [{ name: 'Processing', destination: RouteName.ImageProcessing }],
   },
   {
-    title: 'SVG',
+    title: 'Other Formats',
     data: [{ name: 'SVG', destination: RouteName.SVG }],
   },
 ];
