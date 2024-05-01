@@ -15,6 +15,7 @@ export type HomeStackParamList = {
   Failure: undefined;
   ImageProcessing: undefined;
   SVG: undefined;
+  Gif: undefined;
 };
 
 export type HomeStackProps = NativeStackScreenProps<HomeStackParamList>;
@@ -38,4 +39,5 @@ export enum RouteName {
   Failure = 'Failure',
   ImageProcessing = 'ImageProcessing',
   SVG = 'SVG',
+  Gif = 'Gif',
 }

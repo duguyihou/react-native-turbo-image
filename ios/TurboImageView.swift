@@ -1,6 +1,7 @@
 import Nuke
 import NukeUI
 import SwiftSVG
+import Gifu
 import React
 
 final class TurboImageView : UIView {
@@ -11,6 +12,9 @@ final class TurboImageView : UIView {
   }
   private var isSVG: Bool {
     return src?.hasSuffix(".svg") == true
+  }
+  private var isGif: Bool {
+    return src?.hasSuffix(".gif") == true
   }
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
@@ -98,6 +102,17 @@ final class TurboImageView : UIView {
         self.addSubview(svgView)
       }
       return
+    }
+
+    if isGif {
+      lazyImageView.makeImageView = { container in
+          if container.type == .gif, let data = container.data {
+              let view = GIFImageView()
+              view.animate(withGIFData: data)
+              return view
+          }
+          return nil
+      }
     }
 
     lazyImageView.onStart = { task in

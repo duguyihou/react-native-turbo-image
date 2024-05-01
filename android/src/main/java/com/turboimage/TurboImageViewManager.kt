@@ -2,10 +2,13 @@ package com.turboimage
 
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
 import coil.Coil
 import coil.Coil.imageLoader
 import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import coil.request.CachePolicy
 import coil.request.Disposable
@@ -60,6 +63,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .respectCacheHeaders(view.cachePolicy == "urlCache")
       .components{
         add(SvgDecoder.Factory())
+        if (SDK_INT >= 28) {
+          add(ImageDecoderDecoder.Factory())
+        } else {
+          add(GifDecoder.Factory())
+        }
       }
       .build()
     Coil.setImageLoader(imageLoader)
