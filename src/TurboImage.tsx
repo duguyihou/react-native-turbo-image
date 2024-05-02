@@ -1,11 +1,11 @@
 import React from 'react';
 import {
-  NativeModules,
   requireNativeComponent,
-  processColor,
+  NativeModules,
   type ProcessedColorValue,
+  processColor,
 } from 'react-native';
-import type { TurboImageProps } from './TurboImage';
+import type { TurboImageApi, TurboImageProps } from './types';
 
 const { TurboImageViewManager } = NativeModules;
 const ComponentName = 'TurboImageView';
@@ -29,4 +29,4 @@ TurboImage.clearDiskCache = async () => {
   return await TurboImageViewManager.clearDiskCache();
 };
 
-export default TurboImage;
+export default TurboImage as React.FC<TurboImageProps> & TurboImageApi;
