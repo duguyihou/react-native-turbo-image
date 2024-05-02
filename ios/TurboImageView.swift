@@ -7,9 +7,7 @@ import React
 final class TurboImageView : UIView {
 
   private lazy var lazyImageView = LazyImageView()
-  private var processors: [ImageProcessing] {
-    return composeProcessors()
-  }
+  private var processors: [ImageProcessing] = []
   private var isSVG: Bool {
     return src?.hasSuffix(".svg") == true
   }
@@ -31,15 +29,59 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var rounded: Bool = false
+  @objc var rounded: Bool = false {
+    didSet {
+      if rounded {
+        processors.append(ImageProcessors.Circle())
+      }
+    }
+  }
 
-  @objc var blur: NSNumber?
+  @objc var blur: NSNumber? {
+    didSet {
+      if let blur {
+        processors.append(ImageProcessors
+          .GaussianBlur(radius: blur.intValue))
+      }
+    }
+  }
 
-  @objc var borderRadius: NSNumber?
+  @objc var borderRadius: NSNumber? {
+    didSet {
+      if let borderRadius {
+        let radius = CGFloat(truncating: borderRadius)
+        processors.append(ImageProcessors.RoundedCorners(radius: radius))
+      }
+    }
+  }
 
-  @objc var monochrome: UIColor!
+  @objc var monochrome: UIColor! {
+    didSet {
+      if let monochrome {
+        let name = "CIColorMonochrome"
+        let parameters = [
+          "inputIntensity": 1,
+          "inputColor": CIColor(color: monochrome)
+        ] as [String : Any]
+        let identifier = "turboImage.monochrome"
+        processors.append(ImageProcessors
+          .CoreImageFilter(name: name,
+                           parameters: parameters,
+                           identifier: identifier))
+      }
+    }
+  }
 
-  @objc var resize: NSArray?
+  @objc var resize: NSArray? {
+    didSet {
+      if let resize = resize as? [NSNumber] {
+        let width = CGFloat(truncating: resize[0])
+        let height = CGFloat(truncating: resize[1])
+       processors.append(ImageProcessors.Resize(size:
+            .init(width: width, height: height)))
+      }
+    }
+  }
 
   @objc var resizeMode = "contain" {
     didSet {
@@ -56,7 +98,8 @@ final class TurboImageView : UIView {
 
   @objc var fadeDuration: NSNumber = 0.3 {
     didSet {
-      lazyImageView.transition = .fadeIn(duration: fadeDuration.doubleValue)
+      lazyImageView.transition = .fadeIn(duration: 
+                                          fadeDuration.doubleValue)
     }
   }
 
@@ -93,11 +136,12 @@ final class TurboImageView : UIView {
 
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
+    defer { lazyImageView.url = URL(string: src!) }
 
     if isSVG {
       ImageDecoderRegistry.shared.register { context in
         context.urlResponse?.url?.absoluteString.hasSuffix(".svg") ?? false
-        ? ImageDecoders.Empty() 
+        ? ImageDecoders.Empty()
         : nil
       }
       lazyImageView.makeImageView = { container in
@@ -135,48 +179,10 @@ final class TurboImageView : UIView {
     }
 
     lazyImageView.processors = processors
-    lazyImageView.url = URL(string: src!)
   }
 
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
-  }
-}
-// MARK: - processors
-fileprivate extension TurboImageView {
-
-  func composeProcessors() -> [ImageProcessing] {
-    var initialProcessors: [ImageProcessing] = []
-
-    if let resize = resize as? [NSNumber] {
-      let width = CGFloat(truncating: resize[0])
-      let height = CGFloat(truncating: resize[1])
-      initialProcessors.append(ImageProcessors.Resize(size:
-          .init(width: width, height: height)))
-    }
-    if let borderRadius {
-      let radius = CGFloat(truncating: borderRadius)
-      initialProcessors.append(ImageProcessors.RoundedCorners(radius: radius))
-    }
-    if rounded {
-      initialProcessors.append(ImageProcessors.Circle())
-    }
-    if let blur {
-      initialProcessors.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
-    }
-    if let monochrome {
-      let name = "CIColorMonochrome"
-      let parameters = [
-        "inputIntensity": 1,
-        "inputColor": CIColor(color: monochrome)
-      ] as [String : Any]
-      let identifier = "turboImage.monochrome"
-      initialProcessors.append(ImageProcessors.CoreImageFilter(name: name,
-                                                               parameters: parameters,
-                                                               identifier: identifier))
-    }
-
-    return initialProcessors
   }
 }
 
