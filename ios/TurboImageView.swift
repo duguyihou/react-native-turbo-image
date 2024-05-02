@@ -95,23 +95,30 @@ final class TurboImageView : UIView {
     super.didSetProps(changedProps)
 
     if isSVG {
-      ImageDecoderRegistry.shared.register {_ in ImageDecoders.Empty()}
-      ImagePipeline.shared.loadImage(with: URL(string: src!)!) { result in
-        guard let data = try? result.get().container.data else { return }
-        let svgView = UIView(SVGData: data)
-        self.addSubview(svgView)
+      ImageDecoderRegistry.shared.register { context in
+        context.urlResponse?.url?.absoluteString.hasSuffix(".svg") ?? false
+        ? ImageDecoders.Empty() 
+        : nil
       }
-      return
+      lazyImageView.makeImageView = { container in
+        if let data = container.data {
+          let view = UIView(SVGData: data)
+          self.addSubview(view)
+          return view
+        }
+        return nil
+      }
     }
 
     if isGif {
       lazyImageView.makeImageView = { container in
-          if container.type == .gif, let data = container.data {
-              let view = GIFImageView()
-              view.animate(withGIFData: data)
-              return view
-          }
-          return nil
+        if container.type == .gif,
+           let data = container.data {
+          let view = GIFImageView()
+          view.animate(withGIFData: data)
+          return view
+        }
+        return nil
       }
     }
 
