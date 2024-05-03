@@ -35,7 +35,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     return mapOf(
       "onFailure" to mapOf(
         "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onError"
+          "bubbled" to "onFailure"
         )
       ),
       "onSuccess" to mapOf(
@@ -99,7 +99,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         },
         onError = { _, result ->
           val payload = WritableNativeMap().apply {
-            putString("error", result.throwable.cause?.localizedMessage)
+            putString("error", result.throwable.message)
           }
           val reactContext = view.context as ReactContext
           reactContext.getJSModule(RCTEventEmitter::class.java)
