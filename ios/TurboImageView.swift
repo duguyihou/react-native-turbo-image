@@ -142,6 +142,13 @@ final class TurboImageView : UIView {
     lazyImageView.processors = processors
   }
   
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window == nil {
+      lazyImageView.cancel()
+    }
+  }
+
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
