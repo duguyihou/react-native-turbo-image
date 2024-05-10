@@ -15,12 +15,13 @@ class TurboImageViewManager: RCTViewManager {
 extension TurboImageViewManager {
 
   @objc
-  func prefetch(_ urlArray: [String],
+  func prefetch(_ sources: [String],
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
     let prefetcher = ImagePrefetcher()
-    let urls =  urlArray.map { url in URL(string: url )}.compactMap{ $0 }
-    resolve(prefetcher.startPrefetching(with: urls))
+    let urls =  sources.map { url in URL(string: url )}.compactMap{ $0 }
+    prefetcher.startPrefetching(with: urls)
+    resolve("Success")
   }
 
   @objc

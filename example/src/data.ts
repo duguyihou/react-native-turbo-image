@@ -14,6 +14,7 @@ export const routesData = [
       { name: 'MemoryCache', destination: RouteName.MemoryCache },
       { name: 'UrlCache', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
+      { name: 'Prefetch', destination: RouteName.Prefetch },
     ],
   },
   {
@@ -518,6 +519,13 @@ export const listScreenData = [
   },
 ];
 
+export const prefetchData = [
+  'https://placedog.net/300/300?id=122',
+  'https://placedog.net/300/300?id=123',
+  'https://placedog.net/300/300?id=124',
+  'https://placedog.net/300/300?id=125',
+  'https://placedog.net/300/300?id=126',
+];
 export const memoryCacheData = [
   {
     title: 'memory',

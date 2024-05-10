@@ -13,6 +13,7 @@ import UrlCacheScreen from './screens/UrlCacheScreen';
 import DataCacheScreen from './screens/DataCacheScreen';
 import SVGScreen from './screens/SVGScreen';
 import GifScreen from './screens/GifScreen';
+import PrefetchScreen from './screens/PrefetchScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -38,6 +39,7 @@ function App() {
             name={RouteName.DataCache}
             component={DataCacheScreen}
           />
+          <Stack.Screen name={RouteName.Prefetch} component={PrefetchScreen} />
         </Stack.Group>
         <Stack.Group>
           <Stack.Screen name={RouteName.Success} component={SuccessScreen} />
