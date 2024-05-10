@@ -36,7 +36,7 @@ RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)
 
 #pragma mark - methods
 
-RCT_EXTERN_METHOD(prefetch:(NSArray *)urlArray
+RCT_EXTERN_METHOD(prefetch:(NSArray *)sources
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
