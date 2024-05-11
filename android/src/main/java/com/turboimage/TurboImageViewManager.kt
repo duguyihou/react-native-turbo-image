@@ -176,12 +176,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     }
   }
 
-  // TODO: custom color, not grayscale
   @ReactProp(name = "monochrome")
   fun setMonochrome(view: TurboImageView, monochrome: Int?) {
     monochrome?.let {
-      val grayscaleTransformation = GrayscaleTransformation()
-      view.transformations.add(grayscaleTransformation)
+      val monochromeTransformation = MonochromeTransformation(monochrome)
+      view.transformations.add(monochromeTransformation)
     }
   }
 
