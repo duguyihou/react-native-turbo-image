@@ -14,7 +14,7 @@ const TurboImageScreen = () => {
       <TurboImage
         src={item.url}
         style={styles.card}
-        showActivityIndicator
+        indicator="large"
         blurhash={item.blurhash}
         resize={[size, size]}
       />

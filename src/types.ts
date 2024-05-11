@@ -7,6 +7,7 @@ import type {
   NativeSyntheticEvent,
 } from 'react-native';
 
+export type Indicator = 'large' | 'medium';
 export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
 export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
@@ -31,7 +32,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   src: string;
   style: StyleProp<ImageStyle>;
   resizeMode?: ResizeMode;
-  showActivityIndicator?: boolean;
+  indicator?: Indicator;
   blurhash?: string;
   fadeDuration?: number;
   borderRadius?: number;

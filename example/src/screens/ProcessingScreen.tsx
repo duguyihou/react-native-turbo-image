@@ -21,7 +21,7 @@ const ProcessingScreen = () => {
           monochrome={item.monochrome}
           borderRadius={item.borderRadius}
           resize={item.resize}
-          showActivityIndicator
+          indicator="large"
         />
       )}
       keyExtractor={(item) => item.title}
