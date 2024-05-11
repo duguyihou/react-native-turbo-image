@@ -48,9 +48,12 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var showActivityIndicator = false {
+  @objc var indicator = "medium" {
     didSet {
-      lazyImageView.placeholderView = UIActivityIndicatorView()
+      let indicatorView = indicator == "medium"
+      ?  UIActivityIndicatorView(style: .medium)
+      : UIActivityIndicatorView(style: .large)
+      lazyImageView.placeholderView = indicatorView
     }
   }
 
