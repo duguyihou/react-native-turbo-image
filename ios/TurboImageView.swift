@@ -5,7 +5,7 @@ import Gifu
 import React
 
 final class TurboImageView : UIView {
-  
+
   private lazy var lazyImageView = LazyImageView()
   private var processors: [ImageProcessing] {
     return composeProcessors()
@@ -19,7 +19,7 @@ final class TurboImageView : UIView {
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
-  
+
   @objc var src: String? {
     didSet {
       guard let src,
@@ -30,55 +30,57 @@ final class TurboImageView : UIView {
       }
     }
   }
-  
+
   @objc var rounded: Bool = false
-  
+
   @objc var blur: NSNumber?
-  
+
   @objc var borderRadius: NSNumber?
-  
+
   @objc var monochrome: UIColor!
-  
+
   @objc var resize: NSArray?
-  
+
   @objc var resizeMode = "contain" {
     didSet {
       let contentMode = ResizeMode(rawValue: resizeMode)?.contentMode
-      lazyImageView.contentMode = contentMode ?? .scaleAspectFit
+      lazyImageView.imageView.contentMode = contentMode ?? .scaleAspectFill
     }
   }
-  
+
   @objc var showActivityIndicator = false {
     didSet {
       lazyImageView.placeholderView = UIActivityIndicatorView()
     }
   }
-  
+
   @objc var fadeDuration: NSNumber = 0.3 {
     didSet {
       lazyImageView.transition = .fadeIn(duration:
                                           fadeDuration.doubleValue)
     }
   }
-  
+
   @objc var cachePolicy = "memory" {
     didSet {
       let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
       lazyImageView.pipeline = pipeline ?? .shared
     }
   }
-  
+
   @objc var blurhash: String? {
     didSet {
-      DispatchQueue.global(qos: .userInteractive).async {
-        DispatchQueue.main.async { [self] in
-          guard let image = UIImage(blurHash: blurhash) else { return }
-          self.lazyImageView.placeholderImage = image
+      if let blurhash {
+        DispatchQueue.global(qos: .userInteractive).async {
+          let image = UIImage(blurHash: blurhash)
+          DispatchQueue.main.async { [self] in
+            self.lazyImageView.placeholderImage = image
+          }
         }
       }
     }
   }
-  
+
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
@@ -91,57 +93,26 @@ final class TurboImageView : UIView {
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
   }
-  
+
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
-    
+
     defer {
       lazyImageView.url = URL(string: src!)
     }
-    
+
     if isSVG {
-      ImageDecoderRegistry.shared.register { context in
-        context.urlResponse?.url?.absoluteString.hasSuffix(".svg") ?? false
-        ? ImageDecoders.Empty()
-        : nil
-      }
-      lazyImageView.makeImageView = { container in
-        if let data = container.data {
-          let view = UIView(SVGData: data)
-          self.addSubview(view)
-          return view
-        }
-        return nil
-      }
+      handleSvg()
     }
-    
+
     if isGif {
-      lazyImageView.makeImageView = { container in
-        if container.type == .gif,
-           let data = container.data {
-          let view = GIFImageView()
-          view.animate(withGIFData: data)
-          return view
-        }
-        return nil
-      }
+      handleGif()
     }
-    
-    lazyImageView.onStart = { task in
-      self.onStartHandler(with: task)
-    }
-    
-    lazyImageView.onSuccess = { response in
-      self.onSuccessHandler(with: response)
-    }
-    
-    lazyImageView.onFailure = { error in
-      self.onFailureHandler(with: error)
-    }
-    
+
+    registerObservers()
     lazyImageView.processors = processors
   }
-  
+
   override func didMoveToWindow() {
     super.didMoveToWindow()
     if window == nil {
@@ -153,12 +124,43 @@ final class TurboImageView : UIView {
     fatalError("init(coder:) has not been implemented")
   }
 }
+// MARK: - other formats
+fileprivate extension TurboImageView {
+
+  func handleSvg() {
+    ImageDecoderRegistry.shared.register { context in
+      context.urlResponse?.url?.absoluteString.hasSuffix(".svg") ?? false
+      ? ImageDecoders.Empty()
+      : nil
+    }
+    lazyImageView.makeImageView = { container in
+      if let data = container.data {
+        let view = UIView(SVGData: data)
+        self.addSubview(view)
+        return view
+      }
+      return nil
+    }
+  }
+
+  func handleGif() {
+    lazyImageView.makeImageView = { container in
+      if container.type == .gif,
+         let data = container.data {
+        let view = GIFImageView()
+        view.animate(withGIFData: data)
+        return view
+      }
+      return nil
+    }
+  }
+}
 // MARK: - processors
 fileprivate extension TurboImageView {
-  
+
   func composeProcessors() -> [ImageProcessing] {
     var initialProcessors: [ImageProcessing] = []
-    
+
     if let resize = resize as? [NSNumber] {
       let width = CGFloat(truncating: resize[0])
       let height = CGFloat(truncating: resize[1])
@@ -187,36 +189,51 @@ fileprivate extension TurboImageView {
                          parameters: parameters,
                          identifier: identifier))
     }
-    
+
     return initialProcessors
   }
 }
 
 // MARK: - callback handler
 fileprivate extension TurboImageView {
-  
+
+  func registerObservers() {
+    lazyImageView.onStart = { task in
+      self.onStartHandler(with: task)
+    }
+
+    lazyImageView.onSuccess = { response in
+      self.onSuccessHandler(with: response)
+    }
+
+    lazyImageView.onFailure = { error in
+      self.onFailureHandler(with: error)
+    }
+
+  }
+
   func onStartHandler(with task: ImageTask) {
     let payload = [
       "state": "running"
     ]
     onStart?(payload)
   }
-  
+
   func onSuccessHandler(with response: ImageResponse) {
     let payload = [
       "width": response.image.size.width,
       "height": response.image.size.height,
       "source": response.request.url?.absoluteString ?? ""
     ] as [String : Any]
-    
+
     onSuccess?(payload)
   }
-  
+
   func onFailureHandler(with error: Error) {
     let payload = [
       "error": error.localizedDescription,
     ]
-    
+
     onFailure?(payload)
   }
 }
