@@ -69,7 +69,7 @@ The resize mode of the image, default value `contain`
 - `stretch` 
 - `center`
 
-### `indicator?: enum` (iOS only, Android in progress)
+### `indicator?: enum` (iOS only, Android WIP)
 show the indicator when loading, default value `medium`
 - `medium`
 - `large`
@@ -114,7 +114,7 @@ The function to call when the request failed
 
 ## Methods
 
-### `prefetch: (sources: string[]) => Promise<void>`
+### `prefetch: (sources: string[]) => Promise<void>` (WIP)
 
 ```ts
 TurboImage.prefetch([
