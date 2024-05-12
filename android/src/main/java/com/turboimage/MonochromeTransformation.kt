@@ -28,9 +28,8 @@ class MonochromeTransformation(
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       paint.colorFilter = BlendModeColorFilter(color, BlendMode.COLOR)
     } else {
-      // TODO: custom color 
-     val colorMatrix = ColorMatrix()
-      colorMatrix.setSaturation(0.1F)
+      // TODO: custom color
+      val colorMatrix = ColorMatrix().apply { setSaturation(0.1f) }
       paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
     }
     canvas.drawBitmap(input, 0f, 0f, paint)
