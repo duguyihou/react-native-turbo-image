@@ -112,6 +112,31 @@ The function to call when the image is successfully loaded
 
 The function to call when the request failed
 
+## Methods
+
+### `prefetch: (sources: string[]) => Promise<void>`
+
+```ts
+TurboImage.prefetch([
+  'https://placedog.net/300/300?id=122',
+  'https://placedog.net/300/300?id=123',
+  'https://placedog.net/300/300?id=124',
+  'https://placedog.net/300/300?id=125',
+  'https://placedog.net/300/300?id=126',
+])
+```
+### `clearMemoryCache: () => Promise<void>`
+
+```ts
+await TurboImage.clearMemoryCache()
+```
+
+### `clearDiskCache: () => Promise<void>`
+
+```ts
+await TurboImage.clearDiskCache()
+```
+
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
