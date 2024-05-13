@@ -587,6 +587,14 @@ export const processingData = [
     blur: 5,
     rounded: true,
   },
+  {
+    title: 'Tint',
+    url: 'https://placedog.net/300/300?id=238',
+    resize: 100,
+    blur: 5,
+    rounded: true,
+    tint: 'black',
+  },
 ];
 
 export const svgData = [

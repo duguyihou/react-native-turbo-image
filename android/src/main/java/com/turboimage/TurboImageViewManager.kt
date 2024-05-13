@@ -19,8 +19,8 @@ import coil.size.Size
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import com.commit451.coiltransformations.BlurTransformation
+import com.commit451.coiltransformations.ColorFilterTransformation
 import com.facebook.react.bridge.ReactContext
-import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
@@ -207,6 +207,14 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setResize(view: TurboImageView, resize: Int?) {
     resize?.let {
       view.resize = Size(resize, Dimension.Undefined)
+    }
+  }
+
+  @ReactProp(name = "tint")
+  fun setTint(view: TurboImageView, tint: Int?) {
+    tint?.let {
+      val tintTransformation = ColorFilterTransformation(tint)
+      view.transformations.add(tintTransformation)
     }
   }
 
