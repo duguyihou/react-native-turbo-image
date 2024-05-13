@@ -59,8 +59,8 @@ final class TurboImageView : UIView {
 
   @objc var fadeDuration: NSNumber = 0.3 {
     didSet {
-      lazyImageView.transition = .fadeIn(duration:
-                                          fadeDuration.doubleValue)
+      lazyImageView.transition =
+        .fadeIn(duration: fadeDuration.doubleValue)
     }
   }
 
@@ -77,7 +77,7 @@ final class TurboImageView : UIView {
         DispatchQueue.global(qos: .userInteractive).async {
           let image = UIImage(blurHash: blurhash)
           DispatchQueue.main.async { [self] in
-            self.lazyImageView.placeholderImage = image
+            lazyImageView.placeholderImage = image
           }
         }
       }
