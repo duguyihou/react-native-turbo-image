@@ -106,6 +106,10 @@ The color applied to the image.
 
 Scales an image to the given width preserving aspect ratio
 
+### `tint?: number / ColorValue`
+
+The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders.
+
 ### `onStart?: (result: NativeSyntheticEvent<Start>) => void`
 
 The function to call when the image is fetching
