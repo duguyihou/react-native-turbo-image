@@ -18,6 +18,7 @@ const ProcessingScreen = () => {
           size={item.resize ?? size}
           rounded={item.rounded}
           blur={item.blur}
+          borderRadius={item.borderRadius}
           monochrome={item.monochrome}
           resize={item.resize}
           indicator="large"
