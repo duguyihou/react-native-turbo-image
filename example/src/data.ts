@@ -590,7 +590,7 @@ export const processingData = [
   {
     title: 'Tint',
     url: 'https://placedog.net/300/300?id=238',
-    resize: 150,
+    resize: 100,
     blur: 5,
     rounded: true,
     tint: 'black',
