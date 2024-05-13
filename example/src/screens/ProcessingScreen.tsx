@@ -11,18 +11,8 @@ const ProcessingScreen = () => {
       contentContainerStyle={styles.container}
       data={processingData}
       numColumns={2}
-      renderItem={({ item }) => (
-        <Card
-          title={item.title}
-          src={item.url}
-          size={item.resize ?? size}
-          rounded={item.rounded}
-          blur={item.blur}
-          borderRadius={item.borderRadius}
-          monochrome={item.monochrome}
-          resize={item.resize}
-          indicator="large"
-        />
+      renderItem={({ item: { url, resize, ...props } }) => (
+        <Card {...props} src={url} size={resize ?? size} indicator="large" />
       )}
       keyExtractor={(item) => item.title}
     />
