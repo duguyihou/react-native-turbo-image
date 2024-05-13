@@ -1,6 +1,6 @@
-<p align="center">
-  <video src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/719cd0f9-502b-4a9e-9e86-00c97651aca1"  />
-</p>
+|  |  |
+|---|---|
+|<video src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/f7cf653e-b598-4432-96c9-5423e65d2492"  /> | <video src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/f76e92a3-6bcd-4082-8e4e-bbed61a7c51a"  /> |
     
 > You can find more examples in [example folder](https://github.com/duguyihou/react-native-turbo-image/tree/main/example)
 
