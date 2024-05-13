@@ -6,11 +6,13 @@
 
 RCT_EXPORT_VIEW_PROPERTY(src, NSString)
 
+RCT_EXPORT_VIEW_PROPERTY(blurhash, NSString)
+
+RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
+
 RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(indicator, NSString)
-
-RCT_EXPORT_VIEW_PROPERTY(blurhash, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(showPlaceholderOnFailure, BOOL)
 
@@ -21,8 +23,6 @@ RCT_EXPORT_VIEW_PROPERTY(borderRadius, NSNumber)
 RCT_EXPORT_VIEW_PROPERTY(rounded, BOOL)
 
 RCT_EXPORT_VIEW_PROPERTY(blur, NSNumber)
-
-RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(monochrome, UIColor *)
 
