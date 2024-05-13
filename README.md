@@ -62,15 +62,17 @@ The cache policy of the image
 
 ### `resizeMode?: enum`
 
-The resize mode of the image, default value `contain`  
+The resize mode of the image, default value `contain`
 
 - `contain`
-- `cover` 
-- `stretch` 
+- `cover`
+- `stretch`
 - `center`
 
-### `indicator?: enum` (iOS only, Android WIP)
-show the indicator when loading, default value `medium`
+### `indicator?: enum`
+
+show the indicator when loading, default value `medium`. It does not work with `blurhash`
+
 - `medium`
 - `large`
 
@@ -84,11 +86,11 @@ The transition duration of the image. default value: 0.3(iOS) / 0.1(Android)
 
 ### `borderRadius?: number`
 
-The border radius added to the image 
+The border radius added to the image
 
 ### `rounded?: boolean`
 
-Round the image into a circle 
+Round the image into a circle
 
 ### `blur?: number`
 
@@ -96,9 +98,9 @@ The blur radius of the blur filter added to the image
 
 ### `monochrome?: number / ColorValue`
 
-The color applied to the image. 
+The color applied to the image.
 
->note: For iOS and Android Q+, it works with any color. For Android Q-, it only supports grayscale.
+> note: For iOS and Android Q+, it works with any color. For Android Q-, it only supports grayscale.
 
 ### `resize?: number[]`
 
@@ -127,18 +129,19 @@ TurboImage.prefetch([
   'https://placedog.net/300/300?id=124',
   'https://placedog.net/300/300?id=125',
   'https://placedog.net/300/300?id=126',
-])
+]);
 ```
+
 ### `clearMemoryCache: () => Promise<void>`
 
 ```ts
-await TurboImage.clearMemoryCache()
+await TurboImage.clearMemoryCache();
 ```
 
 ### `clearDiskCache: () => Promise<void>`
 
 ```ts
-await TurboImage.clearDiskCache()
+await TurboImage.clearDiskCache();
 ```
 
 ## Contributing
