@@ -16,7 +16,7 @@ const FailureResultScreen = () => {
     <View>
       <Card
         src="https://placedog.net/300/300?id=12100"
-        size={[300, 300]}
+        size={300}
         blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
         onFailure={handleFailure}
         showPlaceholderOnFailure

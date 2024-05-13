@@ -39,7 +39,7 @@ final class TurboImageView : UIView {
 
   @objc var monochrome: UIColor!
 
-  @objc var resize: NSArray?
+  @objc var resize: NSNumber?
 
   @objc var resizeMode = "contain" {
     didSet {
@@ -172,21 +172,22 @@ fileprivate extension TurboImageView {
   func composeProcessors() -> [ImageProcessing] {
     var initialProcessors: [ImageProcessing] = []
 
-    if let resize = resize as? [NSNumber] {
-      let width = CGFloat(truncating: resize[0])
-      let height = CGFloat(truncating: resize[1])
-      initialProcessors.append(ImageProcessors.Resize(size:
-          .init(width: width, height: height)))
+    if let resize {
+      initialProcessors.append(
+        ImageProcessors.Resize(width: resize.doubleValue))
     }
     if let borderRadius {
       let radius = CGFloat(truncating: borderRadius)
-      initialProcessors.append(ImageProcessors.RoundedCorners(radius: radius))
+      initialProcessors.append(
+        ImageProcessors.RoundedCorners(radius: radius))
     }
     if rounded {
-      initialProcessors.append(ImageProcessors.Circle())
+      initialProcessors.append(
+        ImageProcessors.Circle())
     }
     if let blur {
-      initialProcessors.append(ImageProcessors.GaussianBlur(radius: blur.intValue))
+      initialProcessors.append(
+        ImageProcessors.GaussianBlur(radius: blur.intValue))
     }
     if let monochrome {
       let name = "CIColorMonochrome"
@@ -195,8 +196,8 @@ fileprivate extension TurboImageView {
         "inputColor": CIColor(color: monochrome)
       ] as [String : Any]
       let identifier = "turboImage.monochrome"
-      initialProcessors.append(ImageProcessors
-        .CoreImageFilter(name: name,
+      initialProcessors.append(
+        ImageProcessors.CoreImageFilter(name: name,
                          parameters: parameters,
                          identifier: identifier))
     }
