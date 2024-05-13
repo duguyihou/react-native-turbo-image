@@ -74,6 +74,10 @@ show the indicator when loading, default value `medium`
 - `medium`
 - `large`
 
+### `showPlaceholderOnFailure?: boolean`
+
+Show the blur placeholder image in the case of a failure.
+
 ### `fadeDuration?: number`
 
 The transition duration of the image. default value: 0.3(iOS) / 0.1(Android)

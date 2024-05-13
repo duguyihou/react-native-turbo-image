@@ -111,6 +111,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .placeholder(blurHashDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade)
+      .error(blurHashDrawable)
       .size(view.resize ?: Size.ORIGINAL)
       .build()
 

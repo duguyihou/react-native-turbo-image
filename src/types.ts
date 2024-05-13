@@ -34,6 +34,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   resizeMode?: ResizeMode;
   indicator?: Indicator;
   blurhash?: string;
+  showPlaceholderOnFailure?: boolean;
   fadeDuration?: number;
   borderRadius?: number;
   rounded?: boolean;

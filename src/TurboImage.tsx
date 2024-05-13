@@ -14,8 +14,41 @@ interface Props extends Omit<TurboImageProps, 'monochrome'> {
 }
 const NativeImage = requireNativeComponent<Props>(ComponentName);
 
-const TurboImage = ({ monochrome, ...props }: TurboImageProps) => {
-  return <NativeImage {...props} monochrome={processColor(monochrome)} />;
+const TurboImage = (props: TurboImageProps) => {
+  const {
+    blurhash,
+    cachePolicy,
+    resizeMode,
+    indicator,
+    fadeDuration,
+    borderRadius,
+    rounded,
+    blur,
+    monochrome,
+    resize,
+    onStart,
+    onSuccess,
+    onFailure,
+    ...restProps
+  } = props;
+  return (
+    <NativeImage
+      {...restProps}
+      blurhash={blurhash}
+      cachePolicy={cachePolicy}
+      resizeMode={resizeMode}
+      indicator={indicator}
+      fadeDuration={fadeDuration}
+      borderRadius={borderRadius}
+      rounded={rounded}
+      blur={blur}
+      monochrome={processColor(monochrome)}
+      resize={resize}
+      onStart={onStart}
+      onSuccess={onSuccess}
+      onFailure={onFailure}
+    />
+  );
 };
 
 TurboImage.prefetch = async (sources: string[]) => {

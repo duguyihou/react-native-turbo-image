@@ -19,6 +19,7 @@ const FailureResultScreen = () => {
         size={[300, 300]}
         blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
         onFailure={handleFailure}
+        showPlaceholderOnFailure
       />
       {information?.error && <Text>error: {information?.error}</Text>}
     </View>
