@@ -13,7 +13,7 @@ const DataCacheScreen = () => {
             src={url}
             blurhash={blurhash}
             cachePolicy={cachePolicy as CachePolicy}
-            size={[300, 300]}
+            size={300}
           />
         );
       })}

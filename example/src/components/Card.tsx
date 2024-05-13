@@ -3,7 +3,7 @@ import React from 'react';
 import TurboImage, { type TurboImageProps } from 'react-native-turbo-image';
 
 interface Props extends Omit<TurboImageProps, 'style'> {
-  size: number[];
+  size: number;
   title?: string;
 }
 const Card = ({ title, size, ...props }: Props) => {
@@ -11,7 +11,7 @@ const Card = ({ title, size, ...props }: Props) => {
     <View style={styles.card}>
       <TurboImage
         {...props}
-        style={[styles.image, { width: size[0], height: size[1] }]}
+        style={[styles.image, { width: size, height: size }]}
       />
       {title && <Text style={styles.title}>{title}</Text>}
     </View>

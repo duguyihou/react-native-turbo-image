@@ -14,6 +14,7 @@ import coil.decode.SvgDecoder
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
+import coil.size.Dimension
 import coil.size.Size
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
@@ -203,11 +204,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   }
 
   @ReactProp(name = "resize")
-  fun setResize(view: TurboImageView, resize: ReadableArray?) {
-    resize?.toArrayList()?.let {
-      val width = (it[0] as Double).toInt()
-      val height = (it[1] as Double).toInt()
-      view.resize = Size(width, height)
+  fun setResize(view: TurboImageView, resize: Int?) {
+    resize?.let {
+      view.resize = Size(resize, Dimension.Undefined)
     }
   }
 

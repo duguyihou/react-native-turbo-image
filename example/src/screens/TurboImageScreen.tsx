@@ -15,7 +15,7 @@ const TurboImageScreen = () => {
         src={item.url}
         style={styles.card}
         blurhash={item.blurhash}
-        resize={[size, size]}
+        resize={size}
       />
     );
   };

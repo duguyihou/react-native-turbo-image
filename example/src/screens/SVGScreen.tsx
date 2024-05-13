@@ -6,7 +6,7 @@ const SVGScreen = () => {
   return (
     <>
       {svgData.map(({ url }) => {
-        return <Card key={url} src={url} size={[300, 300]} indicator="large" />;
+        return <Card key={url} src={url} size={300} indicator="large" />;
       })}
     </>
   );
