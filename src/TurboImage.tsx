@@ -9,8 +9,9 @@ import type { TurboImageApi, TurboImageProps } from './types';
 
 const { TurboImageViewManager } = NativeModules;
 const ComponentName = 'TurboImageView';
-interface Props extends Omit<TurboImageProps, 'monochrome'> {
+interface Props extends Omit<TurboImageProps, 'monochrome' | 'tint'> {
   monochrome?: ProcessedColorValue | null;
+  tint?: ProcessedColorValue | null;
 }
 const NativeImage = requireNativeComponent<Props>(ComponentName);
 
@@ -26,6 +27,7 @@ const TurboImage = (props: TurboImageProps) => {
     blur,
     monochrome,
     resize,
+    tint,
     onStart,
     onSuccess,
     onFailure,
@@ -44,6 +46,7 @@ const TurboImage = (props: TurboImageProps) => {
       blur={blur}
       monochrome={processColor(monochrome)}
       resize={resize}
+      tint={processColor(tint)}
       onStart={onStart}
       onSuccess={onSuccess}
       onFailure={onFailure}

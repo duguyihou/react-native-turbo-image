@@ -41,6 +41,8 @@ final class TurboImageView : UIView {
 
   @objc var resize: NSNumber?
 
+  @objc var tint: UIColor!
+
   @objc var resizeMode = "contain" {
     didSet {
       let contentMode = ResizeMode(rawValue: resizeMode)?.contentMode
@@ -200,6 +202,14 @@ fileprivate extension TurboImageView {
         ImageProcessors.CoreImageFilter(name: name,
                          parameters: parameters,
                          identifier: identifier))
+    }
+
+    if let tint {
+      let tintProcessor = ImageProcessors
+        .Anonymous(id: "turboImage.tine") { image in
+        image.withTintColor(tint)
+      }
+      initialProcessors.append(tintProcessor)
     }
 
     return initialProcessors
