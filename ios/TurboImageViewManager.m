@@ -10,9 +10,9 @@ RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(indicator, NSString)
 
-RCT_EXPORT_VIEW_PROPERTY(base64Placeholder, NSString)
-
 RCT_EXPORT_VIEW_PROPERTY(blurhash, NSString)
+
+RCT_EXPORT_VIEW_PROPERTY(showPlaceholderOnFailure, BOOL)
 
 RCT_EXPORT_VIEW_PROPERTY(fadeDuration, NSNumber)
 

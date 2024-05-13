@@ -84,6 +84,14 @@ final class TurboImageView : UIView {
     }
   }
 
+  @objc var showPlaceholderOnFailure: Bool = false {
+    didSet {
+      if showPlaceholderOnFailure {
+        lazyImageView.showPlaceholderOnFailure = showPlaceholderOnFailure
+      }
+    }
+  }
+
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
