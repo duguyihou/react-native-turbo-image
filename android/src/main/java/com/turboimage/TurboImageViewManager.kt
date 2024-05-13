@@ -4,6 +4,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import coil.Coil
 import coil.Coil.imageLoader
 import coil.ImageLoader
@@ -17,7 +18,6 @@ import coil.size.Size
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import com.commit451.coiltransformations.BlurTransformation
-import com.commit451.coiltransformations.GrayscaleTransformation
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableNativeMap
@@ -30,6 +30,8 @@ import com.facebook.react.uimanager.events.RCTEventEmitter
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private var disposable: Disposable? = null
+  private  var circleProgressDrawable: CircularProgressDrawable? = null
+  private  var blurHashDrawable: Drawable? = null
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
@@ -72,9 +74,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .build()
     Coil.setImageLoader(imageLoader)
 
-    val blurHashDrawable = view.blurhash?.let { drawBlurHash(view, it) }
     val diskCacheEnabled =
       if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
+
     val request = ImageRequest.Builder(view.context)
       .data(view.src)
       .target(view)
@@ -108,7 +110,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       )
       .memoryCachePolicy(CachePolicy.ENABLED)
       .diskCachePolicy(diskCacheEnabled)
-      .placeholder(blurHashDrawable)
+      .placeholder( blurHashDrawable ?: circleProgressDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade)
       .error(blurHashDrawable)
@@ -130,15 +132,10 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.src = src
   }
 
-  @ReactProp(name = "resizeMode")
-  fun setResizeMode(view: TurboImageView, resizeMode: String?) {
-    view.scaleType = RESIZE_MODE[resizeMode]
-  }
-
-  @ReactProp(name = "fadeDuration")
-  fun setCrossfade(view: TurboImageView, crossfade: Int?) {
-    if (crossfade != null) {
-      view.crossfade = crossfade
+  @ReactProp(name = "blurhash")
+  fun setBlurHash(view: TurboImageView, blurhash: String?) {
+    blurhash?.let {
+      blurHashDrawable = drawBlurHash(view, it)
     }
   }
 
@@ -147,9 +144,29 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.cachePolicy = cachePolicy
   }
 
-  @ReactProp(name = "blurhash")
-  fun setBlurHash(view: TurboImageView, blurhash: String?) {
-    view.blurhash = blurhash
+  @ReactProp(name = "resizeMode")
+  fun setResizeMode(view: TurboImageView, resizeMode: String?) {
+    view.scaleType = RESIZE_MODE[resizeMode]
+  }
+
+  @ReactProp(name = "indicator")
+  fun setIndicator(view: TurboImageView, indicator: String?) {
+    circleProgressDrawable = if (indicator == "medium") {
+      CircularProgressDrawable(view.context).apply {
+        setStyle(CircularProgressDrawable.DEFAULT)
+      }
+    } else {
+      CircularProgressDrawable(view.context).apply {
+        setStyle(CircularProgressDrawable.LARGE)
+      }
+    }
+  }
+
+  @ReactProp(name = "fadeDuration")
+  fun setCrossfade(view: TurboImageView, crossfade: Int?) {
+    if (crossfade != null) {
+      view.crossfade = crossfade
+    }
   }
 
   @ReactProp(name = "borderRadius")
