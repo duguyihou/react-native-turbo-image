@@ -102,9 +102,9 @@ The color applied to the image.
 
 > note: For iOS and Android Q+, it works with any color. For Android Q-, it only supports grayscale.
 
-### `resize?: number[]`
+### `resize?: number`
 
-The size applied to the image. `[width, height]`
+Scales an image to the given width preserving aspect ratio
 
 ### `onStart?: (result: NativeSyntheticEvent<Start>) => void`
 
