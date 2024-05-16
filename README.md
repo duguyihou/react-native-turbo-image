@@ -111,7 +111,7 @@ Scales an image to the given width preserving aspect ratio
 
 The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders.
 
-### `onStart?: (result: NativeSyntheticEvent<Start>) => void`
+### `onStart?: (result: NativeSyntheticEvent<TaskState>) => void`
 
 The function to call when the image is fetching
 
@@ -123,7 +123,7 @@ The function to call when the image is successfully loaded
 
 The function to call when the request failed
 
-### `onCompletion?: (result: NativeSyntheticEvent<Completion>) => void`
+### `onCompletion?: (result: NativeSyntheticEvent<TaskState>) => void`
 
 The function to call when the request is completed
 
