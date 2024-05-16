@@ -1,8 +1,9 @@
-|  |  |
-|---|---|
-|<video src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/f7cf653e-b598-4432-96c9-5423e65d2492"  /> | <video src="https://github.com/duguyihou/react-native-turbo-image/assets/9347790/f76e92a3-6bcd-4082-8e4e-bbed61a7c51a"  /> |
-    
-> You can find more examples in [example folder](https://github.com/duguyihou/react-native-turbo-image/tree/main/example)
+<div align="center">
+  <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/list.gif" width="200" />
+  <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/process.gif" width="200" />
+  
+  > You can find more examples in [example folder](https://github.com/duguyihou/react-native-turbo-image/tree/main/example)
+</div>
 
 # react-native-turbo-image
 
