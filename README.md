@@ -12,7 +12,7 @@ Performant React Native image component. Powered by [Nuke](https://github.com/ke
 ## Features
 
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
-- Image Processing & Decompression (borderRadius, rounded, blur, monochrome and resize)
+- Image Processing & Decompression (borderRadius, rounded, blur, monochrome, tint and resize)
 - Written in TypeScript, Swift and Kotlin
 - Support SVG and Gif
 
@@ -122,6 +122,10 @@ The function to call when the image is successfully loaded
 ### `onFailure?: (result: NativeSyntheticEvent<Failure>) => void`
 
 The function to call when the request failed
+
+### `onCompletion?: (result: NativeSyntheticEvent<Completion>) => void`
+
+The function to call when the request is completed
 
 ## Methods
 
