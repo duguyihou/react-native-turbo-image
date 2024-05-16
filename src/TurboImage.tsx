@@ -31,6 +31,7 @@ const TurboImage = (props: TurboImageProps) => {
     onStart,
     onSuccess,
     onFailure,
+    onCompletion,
     ...restProps
   } = props;
   return (
@@ -50,6 +51,7 @@ const TurboImage = (props: TurboImageProps) => {
       onStart={onStart}
       onSuccess={onSuccess}
       onFailure={onFailure}
+      onCompletion={onCompletion}
     />
   );
 };

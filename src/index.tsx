@@ -4,6 +4,7 @@ export type {
   Start,
   Success,
   Failure,
+  Completion,
   ResizeMode,
   TurboImageProps,
 } from './types';

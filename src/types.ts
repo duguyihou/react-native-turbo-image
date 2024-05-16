@@ -18,6 +18,10 @@ export type Start = {
   state: string;
 };
 
+export type Completion = {
+  state: string;
+};
+
 export type Success = {
   width: number;
   height: number;
@@ -46,6 +50,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   onStart?: (result: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
+  onCompletion?: (result: NativeSyntheticEvent<Completion>) => void;
 }
 
 export type TurboImageApi = {

@@ -19,6 +19,7 @@ final class TurboImageView : UIView {
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
+  @objc var onCompletion: RCTDirectEventBlock?
 
   @objc var src: String? {
     didSet {
@@ -232,6 +233,10 @@ fileprivate extension TurboImageView {
       self.onFailureHandler(with: error)
     }
 
+    lazyImageView.onCompletion = { result in
+      self.onCompletionHandler(with: result)
+    }
+
   }
 
   func onStartHandler(with task: ImageTask) {
@@ -258,4 +263,9 @@ fileprivate extension TurboImageView {
 
     onFailure?(payload)
   }
+
+  func onCompletionHandler(with result: Result<ImageResponse, any Error>) {
+    onCompletion?(["state": "completed"])
+  }
+
 }
