@@ -1,7 +1,7 @@
 import { Text, View, type NativeSyntheticEvent } from 'react-native';
 import React, { useState } from 'react';
 import Card from '../components/Card';
-import type { Start, Success } from 'react-native-turbo-image';
+import type { Success, TaskState } from 'react-native-turbo-image';
 
 type Information = {
   width: number;
@@ -10,13 +10,21 @@ type Information = {
 };
 const SuccessScreen = () => {
   const [start, setStart] = useState(false);
+  const [completion, setCompletion] = useState(false);
+
   const [information, setInformation] = useState<Information | null>(null);
   const handleSuccess = ({ nativeEvent }: NativeSyntheticEvent<Success>) => {
     setInformation(nativeEvent);
   };
 
-  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<Start>) => {
+  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<TaskState>) => {
     setStart(nativeEvent.state === 'running');
+  };
+
+  const handleCompletion = ({
+    nativeEvent,
+  }: NativeSyntheticEvent<TaskState>) => {
+    setCompletion(nativeEvent.state === 'completed');
   };
 
   return (
@@ -27,6 +35,7 @@ const SuccessScreen = () => {
         resize={200}
         onStart={handleStart}
         onSuccess={handleSuccess}
+        onCompletion={handleCompletion}
         blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
       />
 
@@ -34,6 +43,7 @@ const SuccessScreen = () => {
       {information?.width && <Text>width: {information?.width}</Text>}
       {information?.height && <Text>height: {information?.height}</Text>}
       {information?.source && <Text>source: {information?.source}</Text>}
+      {completion && <Text>Complete at {Date()}</Text>}
     </View>
   );
 };

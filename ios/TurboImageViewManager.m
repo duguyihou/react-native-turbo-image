@@ -36,6 +36,8 @@ RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)
 
+RCT_EXPORT_VIEW_PROPERTY(onCompletion, RCTDirectEventBlock)
+
 #pragma mark - methods
 
 RCT_EXTERN_METHOD(prefetch:(NSArray *)sources

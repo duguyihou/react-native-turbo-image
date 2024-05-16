@@ -12,10 +12,10 @@ export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
 export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
 
-export type TaskState = 'running' | 'cancelled' | 'completed';
+type State = 'running' | 'cancelled' | 'completed';
 
-export type Start = {
-  state: string;
+export type TaskState = {
+  state: State;
 };
 
 export type Success = {
@@ -43,9 +43,10 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   resize?: number;
   tint?: number | ColorValue;
   cachePolicy?: CachePolicy;
-  onStart?: (result: NativeSyntheticEvent<Start>) => void;
+  onStart?: (result: NativeSyntheticEvent<TaskState>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
+  onCompletion?: (result: NativeSyntheticEvent<TaskState>) => void;
 }
 
 export type TurboImageApi = {

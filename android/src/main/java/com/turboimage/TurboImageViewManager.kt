@@ -31,8 +31,8 @@ import com.facebook.react.uimanager.events.RCTEventEmitter
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private var disposable: Disposable? = null
-  private  var circleProgressDrawable: CircularProgressDrawable? = null
-  private  var blurHashDrawable: Drawable? = null
+  private var circleProgressDrawable: CircularProgressDrawable? = null
+  private var blurHashDrawable: Drawable? = null
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
@@ -50,6 +50,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         "phasedRegistrationNames" to mapOf(
           "bubbled" to "onStart"
         )
+      ),
+      "onCompletion" to mapOf(
+        "phasedRegistrationNames" to mapOf(
+          "bubbled" to "onCompletion"
+        )
       )
     )
   }
@@ -64,7 +69,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     // TODO: refactor it
     val imageLoader = ImageLoader.Builder(view.context)
       .respectCacheHeaders(view.cachePolicy == "urlCache")
-      .components{
+      .components {
         add(SvgDecoder.Factory())
         if (SDK_INT >= 28) {
           add(ImageDecoderDecoder.Factory())
@@ -91,27 +96,37 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
             .receiveEvent(view.id, "onStart", payload)
         },
         onSuccess = { request, result ->
-          val payload = WritableNativeMap().apply {
+          val successPayload = WritableNativeMap().apply {
             putInt("width", result.drawable.intrinsicWidth)
             putInt("height", result.drawable.intrinsicHeight)
             putString("source", request.data.toString())
           }
           val reactContext = view.context as ReactContext
           reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onSuccess", payload)
+            .receiveEvent(view.id, "onSuccess", successPayload)
+          val completionPayload = WritableNativeMap().apply {
+            putString("state", "completed")
+          }
+          reactContext.getJSModule(RCTEventEmitter::class.java)
+            .receiveEvent(view.id, "onCompletion", completionPayload)
         },
         onError = { _, result ->
-          val payload = WritableNativeMap().apply {
+          val failurePayload = WritableNativeMap().apply {
             putString("error", result.throwable.message)
           }
           val reactContext = view.context as ReactContext
           reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onFailure", payload)
+            .receiveEvent(view.id, "onFailure", failurePayload)
+          val completionPayload = WritableNativeMap().apply {
+            putString("state", "completed")
+          }
+          reactContext.getJSModule(RCTEventEmitter::class.java)
+            .receiveEvent(view.id, "onCompletion", completionPayload)
         }
       )
       .memoryCachePolicy(CachePolicy.ENABLED)
       .diskCachePolicy(diskCacheEnabled)
-      .placeholder( blurHashDrawable ?: circleProgressDrawable)
+      .placeholder(blurHashDrawable ?: circleProgressDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade)
       .error(blurHashDrawable)
