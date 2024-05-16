@@ -1,7 +1,7 @@
 import { Text, View, type NativeSyntheticEvent } from 'react-native';
 import React, { useState } from 'react';
 import Card from '../components/Card';
-import type { Completion, Failure, Start } from 'react-native-turbo-image';
+import type { Failure, TaskState } from 'react-native-turbo-image';
 
 type Information = {
   error: string;
@@ -14,13 +14,13 @@ const FailureResultScreen = () => {
     setInformation(nativeEvent);
   };
 
-  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<Start>) => {
+  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<TaskState>) => {
     setStart(nativeEvent.state === 'running');
   };
 
   const handleCompletion = ({
     nativeEvent,
-  }: NativeSyntheticEvent<Completion>) => {
+  }: NativeSyntheticEvent<TaskState>) => {
     setCompletion(nativeEvent.state === 'completed');
   };
 

@@ -1,10 +1,9 @@
 import TurboImage from './TurboImage';
 export type {
   CachePolicy,
-  Start,
   Success,
   Failure,
-  Completion,
+  TaskState,
   ResizeMode,
   TurboImageProps,
 } from './types';
