@@ -6,6 +6,14 @@ import React
 
 final class TurboImageView : UIView {
 
+  private struct Constants {
+    static let error = "error"
+    static let state = "state"
+    static let width = "width"
+    static let height = "height"
+    static let source = "source"
+  }
+
   private lazy var lazyImageView = LazyImageView()
   private var processors: [ImageProcessing] {
     return composeProcessors()
@@ -26,7 +34,9 @@ final class TurboImageView : UIView {
       guard let src,
             let _ = URL(string: src)
       else {
-        onFailure?(["error": "invalid url: \(String(describing: src))"])
+        onFailure?([
+          Constants.error: "invalid url: \(String(describing: src))"
+        ])
         return
       }
     }
@@ -207,7 +217,7 @@ fileprivate extension TurboImageView {
 
     if let tint {
       let tintProcessor = ImageProcessors
-        .Anonymous(id: "turboImage.tine") { image in
+        .Anonymous(id: "turboImage.tint") { image in
         image.withTintColor(tint)
       }
       initialProcessors.append(tintProcessor)
@@ -241,16 +251,16 @@ fileprivate extension TurboImageView {
 
   func onStartHandler(with task: ImageTask) {
     let payload = [
-      "state": "running"
+      Constants.state: "running"
     ]
     onStart?(payload)
   }
 
   func onSuccessHandler(with response: ImageResponse) {
     let payload = [
-      "width": response.image.size.width,
-      "height": response.image.size.height,
-      "source": response.request.url?.absoluteString ?? ""
+      Constants.width: response.image.size.width,
+      Constants.height: response.image.size.height,
+      Constants.state: response.request.url?.absoluteString ?? ""
     ] as [String : Any]
 
     onSuccess?(payload)
@@ -258,14 +268,14 @@ fileprivate extension TurboImageView {
 
   func onFailureHandler(with error: Error) {
     let payload = [
-      "error": error.localizedDescription,
+      Constants.error: error.localizedDescription,
     ]
 
     onFailure?(payload)
   }
 
   func onCompletionHandler(with result: Result<ImageResponse, any Error>) {
-    onCompletion?(["state": "completed"])
+    onCompletion?([Constants.state: "completed"])
   }
 
 }
