@@ -13,7 +13,6 @@ class TurboImageView(reactContext: ThemedReactContext) : AppCompatImageView(reac
   var src: String? = null
   var cachePolicy: String? = "memory"
   var crossfade: Int = CrossfadeDrawable.DEFAULT_DURATION
-  var blurhash: String? = null
   var resize: Size? = null
 
   val transformations: MutableList<Transformation> = mutableListOf()

@@ -20,13 +20,10 @@ import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
 import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.ColorFilterTransformation
-import com.facebook.react.bridge.ReactContext
-import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
-import com.facebook.react.uimanager.events.RCTEventEmitter
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
@@ -84,44 +81,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     val request = ImageRequest.Builder(view.context)
       .data(view.src)
       .target(view)
-      .listener(
-        onStart = { _ ->
-          val payload = WritableNativeMap().apply {
-            putString("state", "running")
-          }
-          val reactContext = view.context as ReactContext
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onStart", payload)
-        },
-        onSuccess = { request, result ->
-          val successPayload = WritableNativeMap().apply {
-            putInt("width", result.drawable.intrinsicWidth)
-            putInt("height", result.drawable.intrinsicHeight)
-            putString("source", request.data.toString())
-          }
-          val reactContext = view.context as ReactContext
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onSuccess", successPayload)
-          val completionPayload = WritableNativeMap().apply {
-            putString("state", "completed")
-          }
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onCompletion", completionPayload)
-        },
-        onError = { _, result ->
-          val failurePayload = WritableNativeMap().apply {
-            putString("error", result.throwable.message)
-          }
-          val reactContext = view.context as ReactContext
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onFailure", failurePayload)
-          val completionPayload = WritableNativeMap().apply {
-            putString("state", "completed")
-          }
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onCompletion", completionPayload)
-        }
-      )
+      .listener(TurboImageListener(view))
       .memoryCachePolicy(CachePolicy.ENABLED)
       .diskCachePolicy(diskCacheEnabled)
       .placeholder(blurHashDrawable ?: circleProgressDrawable)
