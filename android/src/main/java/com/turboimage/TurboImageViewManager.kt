@@ -5,28 +5,22 @@ import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
-import coil.Coil
+import coil.Coil.setImageLoader
 import coil.Coil.imageLoader
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.drawable.CrossfadeDrawable
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
 import coil.size.Dimension
 import coil.size.Size
-import coil.transform.CircleCropTransformation
-import coil.transform.RoundedCornersTransformation
-import com.commit451.coiltransformations.BlurTransformation
-import com.commit451.coiltransformations.ColorFilterTransformation
-import com.facebook.react.bridge.ReactContext
-import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
-import com.facebook.react.uimanager.events.RCTEventEmitter
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
@@ -59,17 +53,16 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     )
   }
 
-  override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
-    return TurboImageView(reactConText)
+  override fun createViewInstance(reactContext: ThemedReactContext): TurboImageView {
+    return TurboImageView(reactContext)
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
 
-    // TODO: refactor it
-    val imageLoader = ImageLoader.Builder(view.context)
-      .respectCacheHeaders(view.cachePolicy == "urlCache")
-      .components {
+    setImageLoader(ImageLoader.Builder(view.context).apply {
+      respectCacheHeaders(view.cachePolicy == "urlCache")
+      components {
         add(SvgDecoder.Factory())
         if (SDK_INT >= 28) {
           add(ImageDecoderDecoder.Factory())
@@ -77,8 +70,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           add(GifDecoder.Factory())
         }
       }
-      .build()
-    Coil.setImageLoader(imageLoader)
+    }.build())
 
     val diskCacheEnabled =
       if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
@@ -86,49 +78,12 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     val request = ImageRequest.Builder(view.context)
       .data(view.src)
       .target(view)
-      .listener(
-        onStart = { _ ->
-          val payload = WritableNativeMap().apply {
-            putString("state", "running")
-          }
-          val reactContext = view.context as ReactContext
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onStart", payload)
-        },
-        onSuccess = { request, result ->
-          val successPayload = WritableNativeMap().apply {
-            putInt("width", result.drawable.intrinsicWidth)
-            putInt("height", result.drawable.intrinsicHeight)
-            putString("source", request.data.toString())
-          }
-          val reactContext = view.context as ReactContext
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onSuccess", successPayload)
-          val completionPayload = WritableNativeMap().apply {
-            putString("state", "completed")
-          }
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onCompletion", completionPayload)
-        },
-        onError = { _, result ->
-          val failurePayload = WritableNativeMap().apply {
-            putString("error", result.throwable.message)
-          }
-          val reactContext = view.context as ReactContext
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onFailure", failurePayload)
-          val completionPayload = WritableNativeMap().apply {
-            putString("state", "completed")
-          }
-          reactContext.getJSModule(RCTEventEmitter::class.java)
-            .receiveEvent(view.id, "onCompletion", completionPayload)
-        }
-      )
+      .listener(TurboImageListener(view))
       .memoryCachePolicy(CachePolicy.ENABLED)
       .diskCachePolicy(diskCacheEnabled)
       .placeholder(blurHashDrawable ?: circleProgressDrawable)
       .transformations(view.transformations)
-      .crossfade(view.crossfade)
+      .crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
       .error(blurHashDrawable)
       .size(view.resize ?: Size.ORIGINAL)
       .build()
@@ -180,57 +135,42 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "fadeDuration")
   fun setCrossfade(view: TurboImageView, crossfade: Int?) {
-    if (crossfade != null) {
-      view.crossfade = crossfade
-    }
+    view.crossfade = crossfade
   }
 
   @ReactProp(name = "borderRadius")
   fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
-    borderRadius?.let {
-      val borderRadii = PixelUtil.toPixelFromDIP(borderRadius.toFloat())
-      val roundedCornersTransformation = RoundedCornersTransformation(borderRadii)
-      view.transformations.add(roundedCornersTransformation)
-    }
+    view.borderRadius = borderRadius
   }
 
   @ReactProp(name = "rounded")
   fun setRounded(view: TurboImageView, rounded: Boolean?) {
-    rounded?.let {
-      val circleCropTransformation = CircleCropTransformation()
-      view.transformations.add(circleCropTransformation)
-    }
+    view.rounded = rounded
   }
 
   @ReactProp(name = "blur")
   fun setBlur(view: TurboImageView, blur: Int?) {
-    blur?.let {
-      val blurTransformation = BlurTransformation(view.context, blur.toFloat())
-      view.transformations.add(blurTransformation)
-    }
+    view.blur = blur
   }
 
   @ReactProp(name = "monochrome")
   fun setMonochrome(view: TurboImageView, monochrome: Int?) {
-    monochrome?.let {
-      val monochromeTransformation = MonochromeTransformation(monochrome)
-      view.transformations.add(monochromeTransformation)
-    }
+    view.monochrome = monochrome
   }
 
   @ReactProp(name = "resize")
   fun setResize(view: TurboImageView, resize: Int?) {
     resize?.let {
-      view.resize = Size(resize, Dimension.Undefined)
+      view.resize = Size(
+        PixelUtil.toPixelFromDIP(resize.toFloat()).toInt(),
+        Dimension.Undefined
+      )
     }
   }
 
   @ReactProp(name = "tint")
   fun setTint(view: TurboImageView, tint: Int?) {
-    tint?.let {
-      val tintTransformation = ColorFilterTransformation(tint)
-      view.transformations.add(tintTransformation)
-    }
+    view.tint = tint
   }
 
   private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
