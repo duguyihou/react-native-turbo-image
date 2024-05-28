@@ -16,10 +16,6 @@ import coil.request.Disposable
 import coil.request.ImageRequest
 import coil.size.Dimension
 import coil.size.Size
-import coil.transform.CircleCropTransformation
-import coil.transform.RoundedCornersTransformation
-import com.commit451.coiltransformations.BlurTransformation
-import com.commit451.coiltransformations.ColorFilterTransformation
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
@@ -146,34 +142,28 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "borderRadius")
   fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
     borderRadius?.let {
-      val borderRadii = PixelUtil.toPixelFromDIP(borderRadius.toFloat())
-      val roundedCornersTransformation = RoundedCornersTransformation(borderRadii)
-      view.transformations.add(roundedCornersTransformation)
+      view.borderRadius = PixelUtil.toPixelFromDIP(borderRadius.toFloat())
     }
   }
 
   @ReactProp(name = "rounded")
   fun setRounded(view: TurboImageView, rounded: Boolean?) {
     rounded?.let {
-      val circleCropTransformation = CircleCropTransformation()
-      view.transformations.add(circleCropTransformation)
+      view.rounded = it
     }
   }
 
   @ReactProp(name = "blur")
   fun setBlur(view: TurboImageView, blur: Int?) {
+
     blur?.let {
-      val blurTransformation = BlurTransformation(view.context, blur.toFloat())
-      view.transformations.add(blurTransformation)
+      view.blur = it.toFloat()
     }
   }
 
   @ReactProp(name = "monochrome")
   fun setMonochrome(view: TurboImageView, monochrome: Int?) {
-    monochrome?.let {
-      val monochromeTransformation = MonochromeTransformation(monochrome)
-      view.transformations.add(monochromeTransformation)
-    }
+    view.monochrome = monochrome
   }
 
   @ReactProp(name = "resize")
@@ -188,10 +178,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "tint")
   fun setTint(view: TurboImageView, tint: Int?) {
-    tint?.let {
-      val tintTransformation = ColorFilterTransformation(tint)
-      view.transformations.add(tintTransformation)
-    }
+    view.tint = tint
   }
 
   private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
