@@ -60,7 +60,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
 
-    setImageLoader(ImageLoader.Builder(view.context).apply {
+    ImageLoader.Builder(view.context).apply {
       respectCacheHeaders(view.cachePolicy == "urlCache")
       components {
         add(SvgDecoder.Factory())
@@ -70,7 +70,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           add(GifDecoder.Factory())
         }
       }
-    }.build())
+    }.build().apply { setImageLoader(this) }
 
     val diskCacheEnabled =
       if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
