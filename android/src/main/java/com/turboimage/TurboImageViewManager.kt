@@ -11,6 +11,7 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.drawable.CrossfadeDrawable
 import coil.request.CachePolicy
 import coil.request.Disposable
 import coil.request.ImageRequest
@@ -82,7 +83,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       .diskCachePolicy(diskCacheEnabled)
       .placeholder(blurHashDrawable ?: circleProgressDrawable)
       .transformations(view.transformations)
-      .crossfade(view.crossfade)
+      .crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
       .error(blurHashDrawable)
       .size(view.resize ?: Size.ORIGINAL)
       .build()
@@ -134,31 +135,22 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "fadeDuration")
   fun setCrossfade(view: TurboImageView, crossfade: Int?) {
-    if (crossfade != null) {
-      view.crossfade = crossfade
-    }
+    view.crossfade = crossfade
   }
 
   @ReactProp(name = "borderRadius")
   fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
-    borderRadius?.let {
-      view.borderRadius = PixelUtil.toPixelFromDIP(borderRadius.toFloat())
-    }
+    view.borderRadius = borderRadius
   }
 
   @ReactProp(name = "rounded")
   fun setRounded(view: TurboImageView, rounded: Boolean?) {
-    rounded?.let {
-      view.rounded = it
-    }
+    view.rounded = rounded
   }
 
   @ReactProp(name = "blur")
   fun setBlur(view: TurboImageView, blur: Int?) {
-
-    blur?.let {
-      view.blur = it.toFloat()
-    }
+    view.blur = blur
   }
 
   @ReactProp(name = "monochrome")
