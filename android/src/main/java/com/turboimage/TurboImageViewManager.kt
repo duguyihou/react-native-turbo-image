@@ -5,7 +5,7 @@ import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
-import coil.Coil
+import coil.Coil.setImageLoader
 import coil.Coil.imageLoader
 import coil.ImageLoader
 import coil.decode.GifDecoder
@@ -59,17 +59,16 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     )
   }
 
-  override fun createViewInstance(reactConText: ThemedReactContext): TurboImageView {
-    return TurboImageView(reactConText)
+  override fun createViewInstance(reactContext: ThemedReactContext): TurboImageView {
+    return TurboImageView(reactContext)
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
 
-    // TODO: refactor it
-    val imageLoader = ImageLoader.Builder(view.context)
-      .respectCacheHeaders(view.cachePolicy == "urlCache")
-      .components {
+    setImageLoader(ImageLoader.Builder(view.context).apply {
+      respectCacheHeaders(view.cachePolicy == "urlCache")
+      components {
         add(SvgDecoder.Factory())
         if (SDK_INT >= 28) {
           add(ImageDecoderDecoder.Factory())
@@ -77,8 +76,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           add(GifDecoder.Factory())
         }
       }
-      .build()
-    Coil.setImageLoader(imageLoader)
+    }.build())
 
     val diskCacheEnabled =
       if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
@@ -221,7 +219,10 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "resize")
   fun setResize(view: TurboImageView, resize: Int?) {
     resize?.let {
-      view.resize = Size(resize, Dimension.Undefined)
+      view.resize = Size(
+        PixelUtil.toPixelFromDIP(resize.toFloat()).toInt(),
+        Dimension.Undefined
+      )
     }
   }
 
