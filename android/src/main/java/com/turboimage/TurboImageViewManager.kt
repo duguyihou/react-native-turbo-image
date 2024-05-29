@@ -1,12 +1,10 @@
 package com.turboimage
 
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
-import coil.Coil.setImageLoader
 import coil.Coil.imageLoader
+import coil.Coil.setImageLoader
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
@@ -26,7 +24,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private var disposable: Disposable? = null
   private var circleProgressDrawable: CircularProgressDrawable? = null
-  private var blurHashDrawable: Drawable? = null
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
@@ -72,19 +69,20 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       }
     }.build().apply { setImageLoader(this) }
 
-    val diskCacheEnabled =
-      if (view.cachePolicy != "memory") CachePolicy.ENABLED else CachePolicy.DISABLED
-
     val request = ImageRequest.Builder(view.context)
       .data(view.src)
       .target(view)
       .listener(TurboImageListener(view))
-      .memoryCachePolicy(CachePolicy.ENABLED)
-      .diskCachePolicy(diskCacheEnabled)
-      .placeholder(blurHashDrawable ?: circleProgressDrawable)
+      .diskCachePolicy(
+        if (view.cachePolicy != "memory")
+          CachePolicy.ENABLED
+        else
+          CachePolicy.DISABLED
+      )
+      .placeholder(view.blurHashDrawable ?: circleProgressDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
-      .error(blurHashDrawable)
+      .error(view.blurHashDrawable)
       .size(view.resize ?: Size.ORIGINAL)
       .build()
 
@@ -105,9 +103,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "blurhash")
   fun setBlurHash(view: TurboImageView, blurhash: String?) {
-    blurhash?.let {
-      blurHashDrawable = drawBlurHash(view, it)
-    }
+    view.blurHash = blurhash
   }
 
   @ReactProp(name = "cachePolicy")
@@ -171,11 +167,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "tint")
   fun setTint(view: TurboImageView, tint: Int?) {
     view.tint = tint
-  }
-
-  private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
-    val bitmap = BlurHashDecoder.decode(blurHash, 8, 8)
-    return BitmapDrawable(view.context.resources, bitmap)
   }
 
   companion object {
