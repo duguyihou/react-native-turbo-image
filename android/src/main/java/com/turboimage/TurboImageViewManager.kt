@@ -23,7 +23,6 @@ import com.facebook.react.uimanager.annotations.ReactProp
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
   private var disposable: Disposable? = null
-  private var circleProgressDrawable: CircularProgressDrawable? = null
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
@@ -79,7 +78,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         else
           CachePolicy.DISABLED
       )
-      .placeholder(view.blurHashDrawable ?: circleProgressDrawable)
+      .placeholder(view.blurHashDrawable ?: view.circleProgressDrawable)
       .transformations(view.transformations)
       .crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
       .error(view.blurHashDrawable)
@@ -118,15 +117,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "indicator")
   fun setIndicator(view: TurboImageView, indicator: String?) {
-    circleProgressDrawable = if (indicator == "medium") {
-      CircularProgressDrawable(view.context).apply {
-        setStyle(CircularProgressDrawable.DEFAULT)
-      }
-    } else {
-      CircularProgressDrawable(view.context).apply {
-        setStyle(CircularProgressDrawable.LARGE)
-      }
-    }
+    view.indicator = indicator
   }
 
   @ReactProp(name = "fadeDuration")

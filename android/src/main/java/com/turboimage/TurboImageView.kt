@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.appcompat.widget.AppCompatImageView
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import coil.size.Size
 import coil.transform.CircleCropTransformation
 import coil.transform.RoundedCornersTransformation
@@ -21,6 +22,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var cachePolicy: String? = "memory"
   var crossfade: Int? = null
   var blurHash: String? = null
+  var indicator: String? = null
 
   var resize: Size? = null
   var borderRadius: Int? = null
@@ -31,7 +33,27 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
 
   val blurHashDrawable: Drawable?
     get() {
-     return blurHash?.let { drawBlurHash(this, it) }
+      return blurHash?.let {
+        drawBlurHash(this, it)
+      }
+    }
+
+  val circleProgressDrawable: CircularProgressDrawable?
+    get() {
+      indicator?.let {
+        when (it) {
+          "medium" -> return CircularProgressDrawable(context).apply {
+            setStyle(CircularProgressDrawable.DEFAULT)
+          }
+
+          "large" -> return CircularProgressDrawable(context).apply {
+            setStyle(CircularProgressDrawable.LARGE)
+          }
+
+          else -> return null
+        }
+      }
+      return null
     }
 
   val transformations: MutableList<Transformation>
