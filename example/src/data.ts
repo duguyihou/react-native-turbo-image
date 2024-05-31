@@ -31,7 +31,7 @@ export const routesData = [
   {
     title: 'Other Formats',
     data: [
-      { name: 'SVG', destination: RouteName.SVG },
+      { name: 'SVG (Experimental)', destination: RouteName.SVG },
       { name: 'Gif', destination: RouteName.Gif },
     ],
   },
