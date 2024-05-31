@@ -10,47 +10,47 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		MlkFsHuPe6+d+5PKliUqaSlaYs8=
+		nsJf0jE+/ncNYnnIqQmC7n6RKuA=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.abi.json</key>
 		<data>
-		+EAM0i/Xw2yV4uT9cTexRb/cpiA=
+		MEG94G6JH0dX+KN0qz3JRrafsT8=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.private.swiftinterface</key>
 		<data>
-		4hP6rZD82LsLe1hWEsSHLyh4Dvg=
+		OTSRY59EMhqAVv/BLU5u3TNEkV4=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.swiftdoc</key>
 		<data>
-		MFAhTXUQU+0aUdu2hhBYnmiBugo=
+		4pgeYULfK3R7tS9uy2oVrLuFXQs=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.swiftinterface</key>
 		<data>
-		4hP6rZD82LsLe1hWEsSHLyh4Dvg=
+		OTSRY59EMhqAVv/BLU5u3TNEkV4=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.swiftmodule</key>
 		<data>
-		KNfVyNomEWblpLmlFSAe1+pFkoI=
+		CESu7XkvsdqZb4gP4PmgByj8daw=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.abi.json</key>
 		<data>
-		+EAM0i/Xw2yV4uT9cTexRb/cpiA=
+		MEG94G6JH0dX+KN0qz3JRrafsT8=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.private.swiftinterface</key>
 		<data>
-		V5HzImPr/U9abou79wUVv5DTRyE=
+		PSJFnkznhNwnADvivgJz72LEg0I=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.swiftdoc</key>
 		<data>
-		BctJ+iaMwzLjqs2CTYPdkzgbkq0=
+		mZGefaA2teSUWIfjkDhl0/PmuFs=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.swiftinterface</key>
 		<data>
-		V5HzImPr/U9abou79wUVv5DTRyE=
+		PSJFnkznhNwnADvivgJz72LEg0I=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.swiftmodule</key>
 		<data>
-		t9klbykNCbAAJUZJjheLvFli2iA=
+		Hy8MhMitgws/EnDa+mIeiBci9CA=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -66,70 +66,70 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			YIND+8NjUEGcbagW07luIHAX0/Y/K1JvDQYfxqc4IwI=
+			7MwsUS+0k72WS4efagWYgb/UdmdGzxFWTmJJ68MJGTI=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			BUCtGzQf0ZHHZXA6DAuPk4hkiwnUOvFatJtxLNV89y0=
+			/U81kGKT0SnIIO8rmj7WXoGBVV75GHF2AQnt/3zdupY=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			FD+bR7k0SbjZvrn8n7Cr3D2Ac9H3B+Tvioeyx11EUaw=
+			Nn3Avy2T/wgr6EgH+kxnJ41i293zntbSHDX9TrdAJRo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			BUCtGzQf0ZHHZXA6DAuPk4hkiwnUOvFatJtxLNV89y0=
+			/U81kGKT0SnIIO8rmj7WXoGBVV75GHF2AQnt/3zdupY=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-tvos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			wX5UoGzRh23WL1hw+7nL0NAaM9pGdYhQnM5x1zbULvw=
+			2KiJQm0mhJ/8GR1K5P4N39qwWZNmuZafzex0I8U9nYA=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			YIND+8NjUEGcbagW07luIHAX0/Y/K1JvDQYfxqc4IwI=
+			7MwsUS+0k72WS4efagWYgb/UdmdGzxFWTmJJ68MJGTI=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			76YN+NMOZsJ65R1STm+HYaj14rceNeqaKxq6y9AsFSQ=
+			MQBmavHKOt9sdybOU0uQQCnq5K/ruuG69q+bIJrOLXo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			ITNJPTzwWMprMbZXlfjrmIoUJAf/l7QOnawEG96GXvc=
+			E7AwXDUv5BN/jlw4yMlHy+98ydD/C9XNaAh5+X2Hnws=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			76YN+NMOZsJ65R1STm+HYaj14rceNeqaKxq6y9AsFSQ=
+			MQBmavHKOt9sdybOU0uQQCnq5K/ruuG69q+bIJrOLXo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-tvos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			BpOCT42EVnfrrWd85nD7hWqJekbdeXGoX4ix5UF+clg=
+			wMhC/q7Ku3o+4CKITpp4l+mzJoaJ8EQw74qOemVm4Ig=
 			</data>
 		</dict>
 	</dict>

@@ -10,67 +10,67 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		vmQM7x7/gFnmm/EnFA1RKp5ev5Q=
+		DWjTrpsCYdIMr+MdV2pmn3ztqNs=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.abi.json</key>
 		<data>
-		TsgdHe7NdpJe5/4na7auseEUxmE=
+		UXJtLJ8s63LWmSOhf39+KuNMrw0=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.private.swiftinterface</key>
 		<data>
-		slcl6a9Ke4TogM81ujxjb2CDJ/A=
+		SqmAgYIytS9sTPkkq8SxHpCTDcA=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.swiftdoc</key>
 		<data>
-		sdNtPN0c4aJrJW22CtqJly96dyc=
+		CcsRGI9aO4FqbafkEgaLq6FlMM4=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.swiftinterface</key>
 		<data>
-		slcl6a9Ke4TogM81ujxjb2CDJ/A=
+		SqmAgYIytS9sTPkkq8SxHpCTDcA=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.swiftmodule</key>
 		<data>
-		DXwk3qurVF5P673lxV/67SASDlg=
+		IGXJFKIL/D4Dp0vzTDbYQme3MkI=
 		</data>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.abi.json</key>
 		<data>
-		TsgdHe7NdpJe5/4na7auseEUxmE=
+		UXJtLJ8s63LWmSOhf39+KuNMrw0=
 		</data>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.private.swiftinterface</key>
 		<data>
-		NniQGS63/maYHgwcAISsLM4HQNM=
+		a6VlIsYlkCn6QcB0iZ7zgdI9Y+A=
 		</data>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.swiftdoc</key>
 		<data>
-		eivOGmG7JPNVaE6uvIpA8A3Li/w=
+		6ZjMrI5uPtXaJBYIiwk543gf9t4=
 		</data>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.swiftinterface</key>
 		<data>
-		NniQGS63/maYHgwcAISsLM4HQNM=
+		a6VlIsYlkCn6QcB0iZ7zgdI9Y+A=
 		</data>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.swiftmodule</key>
 		<data>
-		66IUVMbRc06NmsSotyVjQPmDR7A=
+		7t/JH1xYJTyaVJcbO4KwZhF/ptA=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.abi.json</key>
 		<data>
-		TsgdHe7NdpJe5/4na7auseEUxmE=
+		UXJtLJ8s63LWmSOhf39+KuNMrw0=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.private.swiftinterface</key>
 		<data>
-		Bnpg4TlXqRCYAoEP0OqP4/h/iQI=
+		erkxhehFKxRMHCRQucv0Qfr6C38=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.swiftdoc</key>
 		<data>
-		zS+Disa0hDHmGv9zhETVMB2PFWE=
+		G4+5zDM0xQyXorp8O9HSUDkCIyM=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.swiftinterface</key>
 		<data>
-		Bnpg4TlXqRCYAoEP0OqP4/h/iQI=
+		erkxhehFKxRMHCRQucv0Qfr6C38=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.swiftmodule</key>
 		<data>
-		3vHcp56lCBkmHEvgc6B/O8S9om0=
+		7rvD8iEuyqv+DUxZrQmbdOCAOXo=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -86,105 +86,105 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			GTyvoeupK+rC+R6qu4eEe1WsfheKEWmtuR5pigbEfH8=
+			c9TsMDApgj0LG1ev8vBR5aIVgSYnjMngR2uyZiSdJ6g=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			CIm5ovhgguFWfqM6MkmObpRKgSbd4I4fPDzyEDbLFRo=
+			IFRt9nvMEYzyYTYdkdeGeR2h/P1xNTgbMHvcfzS7gNk=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Bu1ut85GnTVoPlrc2jb61WNmkkDsrLTJiWFK4/lEB3k=
+			jWRKt2C+9WAUpeaOOcK/daP8b8CvK3nXtx30yqDlRtM=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			CIm5ovhgguFWfqM6MkmObpRKgSbd4I4fPDzyEDbLFRo=
+			IFRt9nvMEYzyYTYdkdeGeR2h/P1xNTgbMHvcfzS7gNk=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-watchos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			AisbB6pNt2LrSZMDZ+W36IPZScLlsrukzExvFo9BXO4=
+			6gp0qB5gvafrKAaKojWn7gJF0eW0/pJ9DntlmAJJGpg=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			GTyvoeupK+rC+R6qu4eEe1WsfheKEWmtuR5pigbEfH8=
+			c9TsMDApgj0LG1ev8vBR5aIVgSYnjMngR2uyZiSdJ6g=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			eOftVueh3EeEs77fKZeR/LlhpCIyv3P3DGHxcw78IJA=
+			HkTCRc9WussHbz8o7D2y7wqFsSApt6zUL0qQ+4MmD2U=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Va8rgapDgcRRKyaBGMZjPEiq3HCGT/En12931VVcU3w=
+			3I6VpztGnpRFZN5P1J7IoVs6upEN25B/ItAYJ+k7hQw=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			eOftVueh3EeEs77fKZeR/LlhpCIyv3P3DGHxcw78IJA=
+			HkTCRc9WussHbz8o7D2y7wqFsSApt6zUL0qQ+4MmD2U=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/i386-apple-watchos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			DxIkxH27h2x6YbxuvKH4fCR/IQeMzFFUdB7TcoHUhuM=
+			+OpavYbK0RXsS1nTJEvxEq7G9vEdZK+0XPxfJ958sSY=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			GTyvoeupK+rC+R6qu4eEe1WsfheKEWmtuR5pigbEfH8=
+			c9TsMDApgj0LG1ev8vBR5aIVgSYnjMngR2uyZiSdJ6g=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8AOOCDJX/I0mqyYKUaPBHIkW/vfLKj6mMEtDT+emZ7k=
+			we56pNNKCqzHIOBRjL0lmHFypqblQdZM806Xwh16Ves=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			xml/iInZNx8uhafob7Vl1sm/p9o02Lr5g2EnkLUs9hM=
+			HvlLk+pLcp76OfElMy84wwUbS3kikk8TVUZwwiorfk4=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8AOOCDJX/I0mqyYKUaPBHIkW/vfLKj6mMEtDT+emZ7k=
+			we56pNNKCqzHIOBRjL0lmHFypqblQdZM806Xwh16Ves=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-watchos-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			R6lbfCLfKoAtp2WVQi65DJ437B8xEmKUhODW1IuY7uI=
+			mYQV0IwtHZ70NZAFHsL/jFdlFrvCzjLgLh/SRts7X/A=
 			</data>
 		</dict>
 	</dict>

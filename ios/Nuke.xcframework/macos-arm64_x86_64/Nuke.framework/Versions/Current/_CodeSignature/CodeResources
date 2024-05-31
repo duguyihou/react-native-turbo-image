@@ -6,7 +6,7 @@
 	<dict>
 		<key>Resources/Info.plist</key>
 		<data>
-		fmwn/bFqbXtQOhlzaEvTbYZNcU8=
+		ngeXEosWCnv1OCd2tI+Uyi+hbno=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -22,77 +22,77 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			sPzMwRt5kr36T872BTXPxFM/3pwqjIw1HBavl7iniio=
+			eBK1KdDCWdo9nPAy2n7GICPdmeQzddgyeu+/LHqwX1E=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-macos.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			/SW+LbLZjlX+6BxHQEtpVXThKk9YQXERrO9CCnFqtjs=
+			BCnO7vgd9gJs2o1E55IYczwPrtxW3hB0npfp4T/hWHo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-macos.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			tlVt8TCner89qKjtUNEu5irENBnNr/SCxSYAT36IvPY=
+			OQ8pGC+M1yGFX8OAo5GG+vOxmap6j00dWudwLcjvC94=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-macos.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			/SW+LbLZjlX+6BxHQEtpVXThKk9YQXERrO9CCnFqtjs=
+			BCnO7vgd9gJs2o1E55IYczwPrtxW3hB0npfp4T/hWHo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-macos.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			05J28dNZXAa7fjTFfYOZ8q0Ovtea7O0V7y/ZywEiQ6M=
+			Q0zNW2CPZLiwU+REQFXQQ3FaF2sCP7iT7LgZ0v2Xq2g=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-macos.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			sPzMwRt5kr36T872BTXPxFM/3pwqjIw1HBavl7iniio=
+			eBK1KdDCWdo9nPAy2n7GICPdmeQzddgyeu+/LHqwX1E=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-macos.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			3grnbLXVuiJLKRGggBe+wuyBHfoFR6XkoBYvrB/H7YI=
+			tjeD06b0MgxqykSzHlZ0jiM5bAOhad/QrqprLdS8nJA=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-macos.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			HsC98KKAm/i1fV66WNJk7aJ/k8buoJsvUUER4VykOdM=
+			yvzgvzBe/NLqihqOP5pL5tSroyjUtUrVJRhS+6/WvsU=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-macos.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			3grnbLXVuiJLKRGggBe+wuyBHfoFR6XkoBYvrB/H7YI=
+			tjeD06b0MgxqykSzHlZ0jiM5bAOhad/QrqprLdS8nJA=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-macos.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			vdCbAT0m9X7QXlyggYsUTNpQMVytg/fNJmKgwu8O5hU=
+			6yixfYZBnS0i8u3hIq3s1WnWYu+st/iI1LiL0FIb47c=
 			</data>
 		</dict>
 		<key>Resources/Info.plist</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			9SPL8X9cBYnooB1h5BJWO5JV63ziSCvDV4QhvFFgGZM=
+			kxoEQC4nj3TWu8AMUb6tQnrrkXMdDQO/iVUjyU0NlSY=
 			</data>
 		</dict>
 	</dict>

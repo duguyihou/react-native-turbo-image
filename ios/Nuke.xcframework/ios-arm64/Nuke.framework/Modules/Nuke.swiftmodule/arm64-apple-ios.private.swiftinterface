@@ -129,8 +129,8 @@ final public class ImagePipeline : @unchecked Swift.Sendable {
   public init(configuration: Nuke.ImagePipeline.Configuration = Configuration(), delegate: (any Nuke.ImagePipelineDelegate)? = nil)
   convenience public init(delegate: (any Nuke.ImagePipelineDelegate)? = nil, _ configure: (inout Nuke.ImagePipeline.Configuration) -> Swift.Void)
   final public func invalidate()
-  final public func imageTask(with url: Foundation.URL) -> Nuke.AsyncImageTask
-  final public func imageTask(with request: Nuke.ImageRequest) -> Nuke.AsyncImageTask
+  final public func imageTask(with url: Foundation.URL) -> Nuke.ImageTask
+  final public func imageTask(with request: Nuke.ImageRequest) -> Nuke.ImageTask
   #if compiler(>=5.3) && $AsyncAwait
   final public func image(for url: Foundation.URL) async throws -> Nuke.PlatformImage
   #endif
@@ -138,11 +138,6 @@ final public class ImagePipeline : @unchecked Swift.Sendable {
   final public func image(for request: Nuke.ImageRequest) async throws -> Nuke.PlatformImage
   #endif
   #if compiler(>=5.3) && $AsyncAwait
-  @discardableResult
-  final public func data(for url: Foundation.URL) async throws -> (Foundation.Data, Foundation.URLResponse?)
-  #endif
-  #if compiler(>=5.3) && $AsyncAwait
-  @discardableResult
   final public func data(for request: Nuke.ImageRequest) async throws -> (Foundation.Data, Foundation.URLResponse?)
   #endif
   @discardableResult
@@ -152,13 +147,19 @@ final public class ImagePipeline : @unchecked Swift.Sendable {
   @discardableResult
   final public func loadImage(with request: Nuke.ImageRequest, queue: Dispatch.DispatchQueue? = nil, progress: ((_ response: Nuke.ImageResponse?, _ completed: Swift.Int64, _ total: Swift.Int64) -> Swift.Void)?, completion: @escaping (_ result: Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
   @discardableResult
-  final public func loadData(with url: Foundation.URL, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
-  @discardableResult
   final public func loadData(with request: Nuke.ImageRequest, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
   @discardableResult
-  final public func loadData(with request: Nuke.ImageRequest, queue: Dispatch.DispatchQueue? = nil, progress: ((_ completed: Swift.Int64, _ total: Swift.Int64) -> Swift.Void)?, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  final public func loadData(with request: Nuke.ImageRequest, queue: Dispatch.DispatchQueue? = nil, progress progressHandler: ((_ completed: Swift.Int64, _ total: Swift.Int64) -> Swift.Void)?, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
   final public func imagePublisher(with url: Foundation.URL) -> Combine.AnyPublisher<Nuke.ImageResponse, Nuke.ImagePipeline.Error>
   final public func imagePublisher(with request: Nuke.ImageRequest) -> Combine.AnyPublisher<Nuke.ImageResponse, Nuke.ImagePipeline.Error>
+  @available(*, deprecated, message: "Please the variant variant that accepts `ImageRequest` as a parameter")
+  @discardableResult
+  final public func loadData(with url: Foundation.URL, completion: @escaping (Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> Swift.Void) -> Nuke.ImageTask
+  #if compiler(>=5.3) && $AsyncAwait
+  @available(*, deprecated, message: "Please the variant that accepts `ImageRequest` as a parameter")
+  @discardableResult
+  final public func data(for url: Foundation.URL) async throws -> (Foundation.Data, Foundation.URLResponse?)
+  #endif
 }
 final public class DataLoader : Nuke.DataLoading, @unchecked Swift.Sendable {
   final public let session: Foundation.URLSession
@@ -360,6 +361,7 @@ public protocol ImagePipelineDelegate : AnyObject, Swift.Sendable {
   func shouldDecompress(response: Nuke.ImageResponse, for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Swift.Bool
   func decompress(response: Nuke.ImageResponse, request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Nuke.ImageResponse
   func imageTaskCreated(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  func imageTask(_ task: Nuke.ImageTask, didReceiveEvent event: Nuke.ImageTask.Event, pipeline: Nuke.ImagePipeline)
   func imageTaskDidStart(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
   func imageTask(_ task: Nuke.ImageTask, didUpdateProgress progress: Nuke.ImageTask.Progress, pipeline: Nuke.ImagePipeline)
   func imageTask(_ task: Nuke.ImageTask, didReceivePreview response: Nuke.ImageResponse, pipeline: Nuke.ImagePipeline)
@@ -377,6 +379,7 @@ extension Nuke.ImagePipelineDelegate {
   public func shouldDecompress(response: Nuke.ImageResponse, for request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Swift.Bool
   public func decompress(response: Nuke.ImageResponse, request: Nuke.ImageRequest, pipeline: Nuke.ImagePipeline) -> Nuke.ImageResponse
   public func imageTaskCreated(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
+  public func imageTask(_ task: Nuke.ImageTask, didReceiveEvent event: Nuke.ImageTask.Event, pipeline: Nuke.ImagePipeline)
   public func imageTaskDidStart(_ task: Nuke.ImageTask, pipeline: Nuke.ImagePipeline)
   public func imageTask(_ task: Nuke.ImageTask, didUpdateProgress progress: Nuke.ImageTask.Progress, pipeline: Nuke.ImagePipeline)
   public func imageTask(_ task: Nuke.ImageTask, didReceivePreview response: Nuke.ImageResponse, pipeline: Nuke.ImagePipeline)
@@ -445,26 +448,6 @@ extension Nuke.ImageProcessors {
       get
     }
   }
-}
-@_hasMissingDesignatedInitializers final public class AsyncImageTask : Swift.Sendable {
-  final public var priority: Nuke.ImageRequest.Priority {
-    get
-    set
-  }
-  #if compiler(>=5.3) && $EffectfulProp
-  final public var image: Nuke.PlatformImage {
-    get async throws
-  }
-  #endif
-  #if compiler(>=5.3) && $EffectfulProp
-  final public var response: Nuke.ImageResponse {
-    get async throws
-  }
-  #endif
-  final public let previews: _Concurrency.AsyncStream<Nuke.ImageResponse>
-  final public let progress: _Concurrency.AsyncStream<Nuke.ImageTask.Progress>
-  final public func cancel()
-  @objc deinit
 }
 extension Nuke.ImageProcessors {
   public struct GaussianBlur : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
@@ -751,7 +734,10 @@ extension Nuke.ImagePipeline {
     public var isResumableDataEnabled: Swift.Bool
     public var isLocalResourcesSupportEnabled: Swift.Bool
     public var callbackQueue: Dispatch.DispatchQueue
-    public static var isSignpostLoggingEnabled: Swift.Bool
+    public static var isSignpostLoggingEnabled: Swift.Bool {
+      get
+      set
+    }
     public var dataLoadingQueue: Foundation.OperationQueue
     @available(*, deprecated, message: "The pipeline now performs cache lookup on the internal queue, reducing the amount of context switching")
     public var dataCachingQueue: Foundation.OperationQueue
@@ -787,7 +773,7 @@ extension Nuke.ImagePipeline {
     get
     set
   }
-  final public var progress: Nuke.ImageTask.Progress {
+  final public var currentProgress: Nuke.ImageTask.Progress {
     get
   }
   public struct Progress : Swift.Hashable, Swift.Sendable {
@@ -816,6 +802,31 @@ extension Nuke.ImagePipeline {
       get
     }
   }
+  #if compiler(>=5.3) && $EffectfulProp
+  final public var image: Nuke.PlatformImage {
+    get async throws
+  }
+  #endif
+  #if compiler(>=5.3) && $EffectfulProp
+  final public var response: Nuke.ImageResponse {
+    get async throws
+  }
+  #endif
+  final public var progress: _Concurrency.AsyncStream<Nuke.ImageTask.Progress> {
+    get
+  }
+  final public var previews: _Concurrency.AsyncStream<Nuke.ImageResponse> {
+    get
+  }
+  final public var events: _Concurrency.AsyncStream<Nuke.ImageTask.Event> {
+    get
+  }
+  public enum Event : Swift.Sendable {
+    case progress(Nuke.ImageTask.Progress)
+    case preview(Nuke.ImageResponse)
+    case cancelled
+    case finished(Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>)
+  }
   @objc deinit
   final public func cancel()
   final public func hash(into hasher: inout Swift.Hasher)
@@ -827,6 +838,8 @@ extension Nuke.ImagePipeline {
     get
   }
 }
+@available(*, deprecated, renamed: "ImageTask", message: "Async/Await support was added directly to the existing `ImageTask` type")
+public typealias AsyncImageTask = Nuke.ImageTask
 extension Nuke.ImageProcessors {
   public struct Circle : Nuke.ImageProcessing, Swift.Hashable, Swift.CustomStringConvertible {
     public init(border: Nuke.ImageProcessingOptions.Border? = nil)
@@ -882,7 +895,10 @@ extension Nuke.ImageProcessors {
     public init(_ filter: CoreImage.CIFilter, identifier: Swift.String)
     public func process(_ image: Nuke.PlatformImage) -> Nuke.PlatformImage?
     public func process(_ container: Nuke.ImageContainer, context: Nuke.ImageProcessingContext) throws -> Nuke.ImageContainer
-    public static var context: CoreImage.CIContext
+    public static var context: CoreImage.CIContext {
+      get
+      set
+    }
     public static func apply(filter: CoreImage.CIFilter, to image: Nuke.PlatformImage) throws -> Nuke.PlatformImage
     public var description: Swift.String {
       get
