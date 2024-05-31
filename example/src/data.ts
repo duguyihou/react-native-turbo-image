@@ -14,7 +14,7 @@ export const routesData = [
       { name: 'MemoryCache', destination: RouteName.MemoryCache },
       { name: 'UrlCache', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
-      { name: 'Prefetch', destination: RouteName.Prefetch },
+      { name: 'Prefetch (WIP)', destination: RouteName.Prefetch },
     ],
   },
   {
@@ -31,7 +31,7 @@ export const routesData = [
   {
     title: 'Other Formats',
     data: [
-      { name: 'SVG', destination: RouteName.SVG },
+      { name: 'SVG (Experimental)', destination: RouteName.SVG },
       { name: 'Gif', destination: RouteName.Gif },
     ],
   },

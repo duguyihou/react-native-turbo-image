@@ -90,10 +90,10 @@ dependencies {
   //noinspection GradleDynamicVersion
   implementation "com.facebook.react:react-native:+"
   implementation 'androidx.lifecycle:lifecycle-process:2.6.1'
-  implementation "io.coil-kt:coil:2.4.0"
-  implementation "io.coil-kt:coil-gif:2.4.0"
-  implementation "io.coil-kt:coil-video:2.4.0"
-  implementation "io.coil-kt:coil-svg:2.4.0"
+  implementation "io.coil-kt:coil:2.6.0"
+  implementation "io.coil-kt:coil-gif:2.6.0"
+  implementation "io.coil-kt:coil-video:2.6.0"
+  implementation "io.coil-kt:coil-svg:2.6.0"
   implementation "com.github.Commit451.coil-transformations:transformations:2.0.2"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }

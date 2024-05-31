@@ -2,7 +2,6 @@ package com.turboimage
 
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
-import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import coil.Coil.imageLoader
 import coil.Coil.setImageLoader
 import coil.ImageLoader
