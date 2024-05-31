@@ -10,47 +10,47 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		9KvqkLtiwfIKzq2iPVGXH8iWwiU=
+		7f/2HZWGwYpt5PX52u1bNaNCeAE=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.abi.json</key>
 		<data>
-		+EAM0i/Xw2yV4uT9cTexRb/cpiA=
+		MEG94G6JH0dX+KN0qz3JRrafsT8=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.private.swiftinterface</key>
 		<data>
-		c36ISBAMXRK645CrGrv3jvJG9yw=
+		km7qXNOmFmu6LZrgcC3RwhT/vzs=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.swiftdoc</key>
 		<data>
-		cs74en0KiChXKUp0iC6uhXhc0Xc=
+		x9nvvssk0svKYIstPZntOfy6o4Y=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.swiftinterface</key>
 		<data>
-		c36ISBAMXRK645CrGrv3jvJG9yw=
+		km7qXNOmFmu6LZrgcC3RwhT/vzs=
 		</data>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.swiftmodule</key>
 		<data>
-		AT1O5ztncviHv2mrqmEvECDEtHo=
+		a+VCUPhYgD2UnzU0F7WQya1OBGY=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.abi.json</key>
 		<data>
-		+EAM0i/Xw2yV4uT9cTexRb/cpiA=
+		MEG94G6JH0dX+KN0qz3JRrafsT8=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.private.swiftinterface</key>
 		<data>
-		l0pbvuVUML52ijbBFeJMt1I3Kb0=
+		rk8kDGbVFn246HhTE7MnE9s+Ieo=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.swiftdoc</key>
 		<data>
-		DeJW04N/QD7gTtxBdAto62tgnNQ=
+		qsMCP7WRwQCZBNkbAn0WoZvIYR4=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.swiftinterface</key>
 		<data>
-		l0pbvuVUML52ijbBFeJMt1I3Kb0=
+		rk8kDGbVFn246HhTE7MnE9s+Ieo=
 		</data>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.swiftmodule</key>
 		<data>
-		eBrJPXR+mBjITqqsfP5hrolaH24=
+		/kn8oLvbEmRpReILB+C+al28ptg=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -66,70 +66,70 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			YIND+8NjUEGcbagW07luIHAX0/Y/K1JvDQYfxqc4IwI=
+			7MwsUS+0k72WS4efagWYgb/UdmdGzxFWTmJJ68MJGTI=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8g/tFvquFkk6k17DH6CDHnyebI2V/xtrVaBhxlu77To=
+			TRX6bGn7e9UVoaR2nzbe10qGpVfdqQBUrk2UFBqNOdo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			VTPBHFXrgncIpfG0DOCFSMAj46LYGTTg2v6c9fyxqIQ=
+			lDN83L2YHOu0myTRt29DS89OYyhrNCevVeO9BETcXYU=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			8g/tFvquFkk6k17DH6CDHnyebI2V/xtrVaBhxlu77To=
+			TRX6bGn7e9UVoaR2nzbe10qGpVfdqQBUrk2UFBqNOdo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/arm64-apple-ios-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			UjhVKqJyxF57R/e2WX3ojFUz0QnNr06haNiPzDJW7CM=
+			+xfjiaaEyTBe7cOOkfpX6UTaAoNqKLwh2zxpMbOd6m0=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.abi.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			YIND+8NjUEGcbagW07luIHAX0/Y/K1JvDQYfxqc4IwI=
+			7MwsUS+0k72WS4efagWYgb/UdmdGzxFWTmJJ68MJGTI=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.private.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			45qiIfYmxZU6yBv5piwbqVreKDe/vehvszjyDeMDoaQ=
+			/wovddjczUVM4FBuUa60q19uMSZTHclkRYbnpmM5PLc=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.swiftdoc</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WggRf7cdwABJh1ElJAVG+xEwGhKjrsRdrHoZTZnKjz0=
+			krT2946M6tLzAIAUujk50I9z48SSndK/OU7AR+4c6jo=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.swiftinterface</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			45qiIfYmxZU6yBv5piwbqVreKDe/vehvszjyDeMDoaQ=
+			/wovddjczUVM4FBuUa60q19uMSZTHclkRYbnpmM5PLc=
 			</data>
 		</dict>
 		<key>Modules/Nuke.swiftmodule/x86_64-apple-ios-simulator.swiftmodule</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			UIMtq+kXj3+SXoBhGA0DVfqs2n5Brv6wsopWQcEl8SQ=
+			QTYnet2AuOWniWKptFq1IXAYWKK9P2YXlJrsM7guU+M=
 			</data>
 		</dict>
 	</dict>

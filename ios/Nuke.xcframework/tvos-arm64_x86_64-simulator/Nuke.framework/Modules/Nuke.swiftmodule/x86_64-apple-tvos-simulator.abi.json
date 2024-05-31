@@ -1408,8 +1408,8 @@
       },
       {
         "kind": "Import",
-        "name": "UIKit.UIImage",
-        "printedName": "UIKit.UIImage",
+        "name": "UIKit",
+        "printedName": "UIKit",
         "declKind": "Import",
         "moduleName": "Nuke"
       },
@@ -3402,9 +3402,9 @@
             "children": [
               {
                 "kind": "TypeNominal",
-                "name": "AsyncImageTask",
-                "printedName": "Nuke.AsyncImageTask",
-                "usr": "s:4Nuke14AsyncImageTaskC"
+                "name": "ImageTask",
+                "printedName": "Nuke.ImageTask",
+                "usr": "s:4Nuke9ImageTaskC"
               },
               {
                 "kind": "TypeNominal",
@@ -3414,8 +3414,8 @@
               }
             ],
             "declKind": "Func",
-            "usr": "s:4Nuke13ImagePipelineC9imageTask4withAA05AsyncbE0C10Foundation3URLV_tF",
-            "mangledName": "$s4Nuke13ImagePipelineC9imageTask4withAA05AsyncbE0C10Foundation3URLV_tF",
+            "usr": "s:4Nuke13ImagePipelineC9imageTask4withAA0bE0C10Foundation3URLV_tF",
+            "mangledName": "$s4Nuke13ImagePipelineC9imageTask4withAA0bE0C10Foundation3URLV_tF",
             "moduleName": "Nuke",
             "declAttributes": [
               "Final",
@@ -3431,9 +3431,9 @@
             "children": [
               {
                 "kind": "TypeNominal",
-                "name": "AsyncImageTask",
-                "printedName": "Nuke.AsyncImageTask",
-                "usr": "s:4Nuke14AsyncImageTaskC"
+                "name": "ImageTask",
+                "printedName": "Nuke.ImageTask",
+                "usr": "s:4Nuke9ImageTaskC"
               },
               {
                 "kind": "TypeNominal",
@@ -3443,8 +3443,8 @@
               }
             ],
             "declKind": "Func",
-            "usr": "s:4Nuke13ImagePipelineC9imageTask4withAA05AsyncbE0CAA0B7RequestV_tF",
-            "mangledName": "$s4Nuke13ImagePipelineC9imageTask4withAA05AsyncbE0CAA0B7RequestV_tF",
+            "usr": "s:4Nuke13ImagePipelineC9imageTask4withAA0bE0CAA0B7RequestV_tF",
+            "mangledName": "$s4Nuke13ImagePipelineC9imageTask4withAA0bE0CAA0B7RequestV_tF",
             "moduleName": "Nuke",
             "declAttributes": [
               "Final",
@@ -3547,58 +3547,6 @@
               },
               {
                 "kind": "TypeNominal",
-                "name": "URL",
-                "printedName": "Foundation.URL",
-                "usr": "s:10Foundation3URLV"
-              }
-            ],
-            "declKind": "Func",
-            "usr": "s:4Nuke13ImagePipelineC4data3for10Foundation4DataV_So13NSURLResponseCSgtAF3URLV_tYaKF",
-            "mangledName": "$s4Nuke13ImagePipelineC4data3for10Foundation4DataV_So13NSURLResponseCSgtAF3URLV_tYaKF",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "AccessControl",
-              "DiscardableResult",
-              "RawDocComment"
-            ],
-            "throwing": true,
-            "funcSelfKind": "NonMutating"
-          },
-          {
-            "kind": "Function",
-            "name": "data",
-            "printedName": "data(for:)",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "Tuple",
-                "printedName": "(Foundation.Data, Foundation.URLResponse?)",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Data",
-                    "printedName": "Foundation.Data",
-                    "usr": "s:10Foundation4DataV"
-                  },
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Optional",
-                    "printedName": "Foundation.URLResponse?",
-                    "children": [
-                      {
-                        "kind": "TypeNominal",
-                        "name": "URLResponse",
-                        "printedName": "Foundation.URLResponse",
-                        "usr": "c:objc(cs)NSURLResponse"
-                      }
-                    ],
-                    "usr": "s:Sq"
-                  }
-                ]
-              },
-              {
-                "kind": "TypeNominal",
                 "name": "ImageRequest",
                 "printedName": "Nuke.ImageRequest",
                 "usr": "s:4Nuke12ImageRequestV"
@@ -3611,7 +3559,6 @@
             "declAttributes": [
               "Final",
               "AccessControl",
-              "DiscardableResult",
               "RawDocComment"
             ],
             "throwing": true,
@@ -3862,89 +3809,6 @@
             "declKind": "Func",
             "usr": "s:4Nuke13ImagePipelineC04loadB04with5queue8progress10completionAA0B4TaskCAA0B7RequestV_So012OS_dispatch_F0CSgyAA0B8ResponseVSg_s5Int64VATtcSgys6ResultOyAqC5ErrorOGctF",
             "mangledName": "$s4Nuke13ImagePipelineC04loadB04with5queue8progress10completionAA0B4TaskCAA0B7RequestV_So012OS_dispatch_F0CSgyAA0B8ResponseVSg_s5Int64VATtcSgys6ResultOyAqC5ErrorOGctF",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "AccessControl",
-              "DiscardableResult",
-              "RawDocComment"
-            ],
-            "funcSelfKind": "NonMutating"
-          },
-          {
-            "kind": "Function",
-            "name": "loadData",
-            "printedName": "loadData(with:completion:)",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "ImageTask",
-                "printedName": "Nuke.ImageTask",
-                "usr": "s:4Nuke9ImageTaskC"
-              },
-              {
-                "kind": "TypeNominal",
-                "name": "URL",
-                "printedName": "Foundation.URL",
-                "usr": "s:10Foundation3URLV"
-              },
-              {
-                "kind": "TypeFunc",
-                "name": "Function",
-                "printedName": "(Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> ()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Void",
-                    "printedName": "()"
-                  },
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Result",
-                    "printedName": "Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>",
-                    "children": [
-                      {
-                        "kind": "TypeNominal",
-                        "name": "Tuple",
-                        "printedName": "(data: Foundation.Data, response: Foundation.URLResponse?)",
-                        "children": [
-                          {
-                            "kind": "TypeNominal",
-                            "name": "Data",
-                            "printedName": "Foundation.Data",
-                            "usr": "s:10Foundation4DataV"
-                          },
-                          {
-                            "kind": "TypeNominal",
-                            "name": "Optional",
-                            "printedName": "Foundation.URLResponse?",
-                            "children": [
-                              {
-                                "kind": "TypeNominal",
-                                "name": "URLResponse",
-                                "printedName": "Foundation.URLResponse",
-                                "usr": "c:objc(cs)NSURLResponse"
-                              }
-                            ],
-                            "usr": "s:Sq"
-                          }
-                        ]
-                      },
-                      {
-                        "kind": "TypeNominal",
-                        "name": "Error",
-                        "printedName": "Nuke.ImagePipeline.Error",
-                        "usr": "s:4Nuke13ImagePipelineC5ErrorO"
-                      }
-                    ],
-                    "usr": "s:s6ResultO"
-                  }
-                ]
-              }
-            ],
-            "declKind": "Func",
-            "usr": "s:4Nuke13ImagePipelineC8loadData4with10completionAA0B4TaskC10Foundation3URLV_ys6ResultOyAI0E0V4data_So13NSURLResponseCSg8responsetAC5ErrorOGctF",
-            "mangledName": "$s4Nuke13ImagePipelineC8loadData4with10completionAA0B4TaskC10Foundation3URLV_ys6ResultOyAI0E0V4data_So13NSURLResponseCSg8responsetAC5ErrorOGctF",
             "moduleName": "Nuke",
             "declAttributes": [
               "Final",
@@ -4258,6 +4122,145 @@
               "AccessControl",
               "RawDocComment"
             ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "loadData",
+            "printedName": "loadData(with:completion:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ImageTask",
+                "printedName": "Nuke.ImageTask",
+                "usr": "s:4Nuke9ImageTaskC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URL",
+                "printedName": "Foundation.URL",
+                "usr": "s:10Foundation3URLV"
+              },
+              {
+                "kind": "TypeFunc",
+                "name": "Function",
+                "printedName": "(Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>) -> ()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Void",
+                    "printedName": "()"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Result",
+                    "printedName": "Swift.Result<(data: Foundation.Data, response: Foundation.URLResponse?), Nuke.ImagePipeline.Error>",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Tuple",
+                        "printedName": "(data: Foundation.Data, response: Foundation.URLResponse?)",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Data",
+                            "printedName": "Foundation.Data",
+                            "usr": "s:10Foundation4DataV"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Optional",
+                            "printedName": "Foundation.URLResponse?",
+                            "children": [
+                              {
+                                "kind": "TypeNominal",
+                                "name": "URLResponse",
+                                "printedName": "Foundation.URLResponse",
+                                "usr": "c:objc(cs)NSURLResponse"
+                              }
+                            ],
+                            "usr": "s:Sq"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Error",
+                        "printedName": "Nuke.ImagePipeline.Error",
+                        "usr": "s:4Nuke13ImagePipelineC5ErrorO"
+                      }
+                    ],
+                    "usr": "s:s6ResultO"
+                  }
+                ]
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:4Nuke13ImagePipelineC8loadData4with10completionAA0B4TaskC10Foundation3URLV_ys6ResultOyAI0E0V4data_So13NSURLResponseCSg8responsetAC5ErrorOGctF",
+            "mangledName": "$s4Nuke13ImagePipelineC8loadData4with10completionAA0B4TaskC10Foundation3URLV_ys6ResultOyAI0E0V4data_So13NSURLResponseCSg8responsetAC5ErrorOGctF",
+            "moduleName": "Nuke",
+            "deprecated": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "DiscardableResult",
+              "Available",
+              "RawDocComment"
+            ],
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "data",
+            "printedName": "data(for:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Tuple",
+                "printedName": "(Foundation.Data, Foundation.URLResponse?)",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Data",
+                    "printedName": "Foundation.Data",
+                    "usr": "s:10Foundation4DataV"
+                  },
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Optional",
+                    "printedName": "Foundation.URLResponse?",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "URLResponse",
+                        "printedName": "Foundation.URLResponse",
+                        "usr": "c:objc(cs)NSURLResponse"
+                      }
+                    ],
+                    "usr": "s:Sq"
+                  }
+                ]
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "URL",
+                "printedName": "Foundation.URL",
+                "usr": "s:10Foundation3URLV"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:4Nuke13ImagePipelineC4data3for10Foundation4DataV_So13NSURLResponseCSgtAF3URLV_tYaKF",
+            "mangledName": "$s4Nuke13ImagePipelineC4data3for10Foundation4DataV_So13NSURLResponseCSgtAF3URLV_tYaKF",
+            "moduleName": "Nuke",
+            "deprecated": true,
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "DiscardableResult",
+              "Available",
+              "RawDocComment"
+            ],
+            "throwing": true,
             "funcSelfKind": "NonMutating"
           },
           {
@@ -7293,12 +7296,9 @@
                 "moduleName": "Nuke",
                 "static": true,
                 "declAttributes": [
-                  "HasInitialValue",
-                  "HasStorage",
                   "AccessControl",
                   "RawDocComment"
                 ],
-                "hasStorage": true,
                 "accessors": [
                   {
                     "kind": "Accessor",
@@ -7317,7 +7317,6 @@
                     "mangledName": "$s4Nuke13ImagePipelineC13ConfigurationV24isSignpostLoggingEnabledSbvgZ",
                     "moduleName": "Nuke",
                     "static": true,
-                    "implicit": true,
                     "accessorKind": "get"
                   },
                   {
@@ -7342,7 +7341,6 @@
                     "mangledName": "$s4Nuke13ImagePipelineC13ConfigurationV24isSignpostLoggingEnabledSbvsZ",
                     "moduleName": "Nuke",
                     "static": true,
-                    "implicit": true,
                     "accessorKind": "set"
                   },
                   {
@@ -12290,6 +12288,48 @@
           },
           {
             "kind": "Function",
+            "name": "imageTask",
+            "printedName": "imageTask(_:didReceiveEvent:pipeline:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "ImageTask",
+                "printedName": "Nuke.ImageTask",
+                "usr": "s:4Nuke9ImageTaskC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Event",
+                "printedName": "Nuke.ImageTask.Event",
+                "usr": "s:4Nuke9ImageTaskC5EventO"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "ImagePipeline",
+                "printedName": "Nuke.ImagePipeline",
+                "usr": "s:4Nuke13ImagePipelineC"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:4Nuke21ImagePipelineDelegateP9imageTask_15didReceiveEvent8pipelineyAA0bF0C_AH0I0OAA0bC0CtF",
+            "mangledName": "$s4Nuke21ImagePipelineDelegateP9imageTask_15didReceiveEvent8pipelineyAA0bF0C_AH0I0OAA0bC0CtF",
+            "moduleName": "Nuke",
+            "genericSig": "<τ_0_0 where τ_0_0 : Nuke.ImagePipelineDelegate>",
+            "sugared_genericSig": "<Self where Self : Nuke.ImagePipelineDelegate>",
+            "protocolReq": true,
+            "declAttributes": [
+              "RawDocComment"
+            ],
+            "reqNewWitnessTableEntry": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
             "name": "imageTaskDidStart",
             "printedName": "imageTaskDidStart(_:pipeline:)",
             "children": [
@@ -12939,6 +12979,47 @@
             "declKind": "Func",
             "usr": "s:4Nuke21ImagePipelineDelegatePAAE16imageTaskCreated_8pipelineyAA0bF0C_AA0bC0CtF",
             "mangledName": "$s4Nuke21ImagePipelineDelegatePAAE16imageTaskCreated_8pipelineyAA0bF0C_AA0bC0CtF",
+            "moduleName": "Nuke",
+            "genericSig": "<τ_0_0 where τ_0_0 : Nuke.ImagePipelineDelegate>",
+            "sugared_genericSig": "<Self where Self : Nuke.ImagePipelineDelegate>",
+            "declAttributes": [
+              "AccessControl"
+            ],
+            "isFromExtension": true,
+            "funcSelfKind": "NonMutating"
+          },
+          {
+            "kind": "Function",
+            "name": "imageTask",
+            "printedName": "imageTask(_:didReceiveEvent:pipeline:)",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "Void",
+                "printedName": "()"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "ImageTask",
+                "printedName": "Nuke.ImageTask",
+                "usr": "s:4Nuke9ImageTaskC"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "Event",
+                "printedName": "Nuke.ImageTask.Event",
+                "usr": "s:4Nuke9ImageTaskC5EventO"
+              },
+              {
+                "kind": "TypeNominal",
+                "name": "ImagePipeline",
+                "printedName": "Nuke.ImagePipeline",
+                "usr": "s:4Nuke13ImagePipelineC"
+              }
+            ],
+            "declKind": "Func",
+            "usr": "s:4Nuke21ImagePipelineDelegatePAAE9imageTask_15didReceiveEvent8pipelineyAA0bF0C_AH0I0OAA0bC0CtF",
+            "mangledName": "$s4Nuke21ImagePipelineDelegatePAAE9imageTask_15didReceiveEvent8pipelineyAA0bF0C_AH0I0OAA0bC0CtF",
             "moduleName": "Nuke",
             "genericSig": "<τ_0_0 where τ_0_0 : Nuke.ImagePipelineDelegate>",
             "sugared_genericSig": "<Self where Self : Nuke.ImagePipelineDelegate>",
@@ -13699,385 +13780,6 @@
         "printedName": "UIKit",
         "declKind": "Import",
         "moduleName": "Nuke"
-      },
-      {
-        "kind": "Import",
-        "name": "Foundation",
-        "printedName": "Foundation",
-        "declKind": "Import",
-        "moduleName": "Nuke",
-        "declAttributes": [
-          "RawDocComment"
-        ]
-      },
-      {
-        "kind": "Import",
-        "name": "UIKit",
-        "printedName": "UIKit",
-        "declKind": "Import",
-        "moduleName": "Nuke"
-      },
-      {
-        "kind": "TypeDecl",
-        "name": "AsyncImageTask",
-        "printedName": "AsyncImageTask",
-        "children": [
-          {
-            "kind": "Var",
-            "name": "priority",
-            "printedName": "priority",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "Priority",
-                "printedName": "Nuke.ImageRequest.Priority",
-                "usr": "s:4Nuke12ImageRequestV8PriorityO"
-              }
-            ],
-            "declKind": "Var",
-            "usr": "s:4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvp",
-            "mangledName": "$s4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvp",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "AccessControl",
-              "RawDocComment"
-            ],
-            "accessors": [
-              {
-                "kind": "Accessor",
-                "name": "Get",
-                "printedName": "Get()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Priority",
-                    "printedName": "Nuke.ImageRequest.Priority",
-                    "usr": "s:4Nuke12ImageRequestV8PriorityO"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvg",
-                "mangledName": "$s4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvg",
-                "moduleName": "Nuke",
-                "declAttributes": [
-                  "Final"
-                ],
-                "accessorKind": "get"
-              },
-              {
-                "kind": "Accessor",
-                "name": "Set",
-                "printedName": "Set()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Void",
-                    "printedName": "()"
-                  },
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Priority",
-                    "printedName": "Nuke.ImageRequest.Priority",
-                    "usr": "s:4Nuke12ImageRequestV8PriorityO"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvs",
-                "mangledName": "$s4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvs",
-                "moduleName": "Nuke",
-                "declAttributes": [
-                  "Final"
-                ],
-                "accessorKind": "set"
-              },
-              {
-                "kind": "Accessor",
-                "name": "Modify",
-                "printedName": "Modify()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Void",
-                    "printedName": "()"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvM",
-                "mangledName": "$s4Nuke14AsyncImageTaskC8priorityAA0C7RequestV8PriorityOvM",
-                "moduleName": "Nuke",
-                "implicit": true,
-                "declAttributes": [
-                  "Final"
-                ],
-                "accessorKind": "_modify"
-              }
-            ]
-          },
-          {
-            "kind": "Var",
-            "name": "image",
-            "printedName": "image",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "UIImage",
-                "printedName": "UIKit.UIImage",
-                "usr": "c:objc(cs)UIImage"
-              }
-            ],
-            "declKind": "Var",
-            "usr": "s:4Nuke14AsyncImageTaskC5imageSo7UIImageCvp",
-            "mangledName": "$s4Nuke14AsyncImageTaskC5imageSo7UIImageCvp",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "AccessControl",
-              "RawDocComment"
-            ],
-            "accessors": [
-              {
-                "kind": "Accessor",
-                "name": "Get",
-                "printedName": "Get()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "UIImage",
-                    "printedName": "UIKit.UIImage",
-                    "usr": "c:objc(cs)UIImage"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC5imageSo7UIImageCvg",
-                "mangledName": "$s4Nuke14AsyncImageTaskC5imageSo7UIImageCvg",
-                "moduleName": "Nuke",
-                "declAttributes": [
-                  "Final"
-                ],
-                "throwing": true,
-                "accessorKind": "get"
-              }
-            ]
-          },
-          {
-            "kind": "Var",
-            "name": "response",
-            "printedName": "response",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "ImageResponse",
-                "printedName": "Nuke.ImageResponse",
-                "usr": "s:4Nuke13ImageResponseV"
-              }
-            ],
-            "declKind": "Var",
-            "usr": "s:4Nuke14AsyncImageTaskC8responseAA0C8ResponseVvp",
-            "mangledName": "$s4Nuke14AsyncImageTaskC8responseAA0C8ResponseVvp",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "AccessControl",
-              "RawDocComment"
-            ],
-            "accessors": [
-              {
-                "kind": "Accessor",
-                "name": "Get",
-                "printedName": "Get()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "ImageResponse",
-                    "printedName": "Nuke.ImageResponse",
-                    "usr": "s:4Nuke13ImageResponseV"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC8responseAA0C8ResponseVvg",
-                "mangledName": "$s4Nuke14AsyncImageTaskC8responseAA0C8ResponseVvg",
-                "moduleName": "Nuke",
-                "declAttributes": [
-                  "Final"
-                ],
-                "throwing": true,
-                "accessorKind": "get"
-              }
-            ]
-          },
-          {
-            "kind": "Var",
-            "name": "previews",
-            "printedName": "previews",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "AsyncStream",
-                "printedName": "_Concurrency.AsyncStream<Nuke.ImageResponse>",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "ImageResponse",
-                    "printedName": "Nuke.ImageResponse",
-                    "usr": "s:4Nuke13ImageResponseV"
-                  }
-                ],
-                "usr": "s:ScS"
-              }
-            ],
-            "declKind": "Var",
-            "usr": "s:4Nuke14AsyncImageTaskC8previewsScSyAA0C8ResponseVGvp",
-            "mangledName": "$s4Nuke14AsyncImageTaskC8previewsScSyAA0C8ResponseVGvp",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "HasStorage",
-              "AccessControl",
-              "RawDocComment"
-            ],
-            "isLet": true,
-            "hasStorage": true,
-            "accessors": [
-              {
-                "kind": "Accessor",
-                "name": "Get",
-                "printedName": "Get()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "AsyncStream",
-                    "printedName": "_Concurrency.AsyncStream<Nuke.ImageResponse>",
-                    "children": [
-                      {
-                        "kind": "TypeNominal",
-                        "name": "ImageResponse",
-                        "printedName": "Nuke.ImageResponse",
-                        "usr": "s:4Nuke13ImageResponseV"
-                      }
-                    ],
-                    "usr": "s:ScS"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC8previewsScSyAA0C8ResponseVGvg",
-                "mangledName": "$s4Nuke14AsyncImageTaskC8previewsScSyAA0C8ResponseVGvg",
-                "moduleName": "Nuke",
-                "implicit": true,
-                "declAttributes": [
-                  "Final"
-                ],
-                "accessorKind": "get"
-              }
-            ]
-          },
-          {
-            "kind": "Var",
-            "name": "progress",
-            "printedName": "progress",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "AsyncStream",
-                "printedName": "_Concurrency.AsyncStream<Nuke.ImageTask.Progress>",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "Progress",
-                    "printedName": "Nuke.ImageTask.Progress",
-                    "usr": "s:4Nuke9ImageTaskC8ProgressV"
-                  }
-                ],
-                "usr": "s:ScS"
-              }
-            ],
-            "declKind": "Var",
-            "usr": "s:4Nuke14AsyncImageTaskC8progressScSyAA0cD0C8ProgressVGvp",
-            "mangledName": "$s4Nuke14AsyncImageTaskC8progressScSyAA0cD0C8ProgressVGvp",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "HasStorage",
-              "AccessControl",
-              "RawDocComment"
-            ],
-            "isLet": true,
-            "hasStorage": true,
-            "accessors": [
-              {
-                "kind": "Accessor",
-                "name": "Get",
-                "printedName": "Get()",
-                "children": [
-                  {
-                    "kind": "TypeNominal",
-                    "name": "AsyncStream",
-                    "printedName": "_Concurrency.AsyncStream<Nuke.ImageTask.Progress>",
-                    "children": [
-                      {
-                        "kind": "TypeNominal",
-                        "name": "Progress",
-                        "printedName": "Nuke.ImageTask.Progress",
-                        "usr": "s:4Nuke9ImageTaskC8ProgressV"
-                      }
-                    ],
-                    "usr": "s:ScS"
-                  }
-                ],
-                "declKind": "Accessor",
-                "usr": "s:4Nuke14AsyncImageTaskC8progressScSyAA0cD0C8ProgressVGvg",
-                "mangledName": "$s4Nuke14AsyncImageTaskC8progressScSyAA0cD0C8ProgressVGvg",
-                "moduleName": "Nuke",
-                "implicit": true,
-                "declAttributes": [
-                  "Final"
-                ],
-                "accessorKind": "get"
-              }
-            ]
-          },
-          {
-            "kind": "Function",
-            "name": "cancel",
-            "printedName": "cancel()",
-            "children": [
-              {
-                "kind": "TypeNominal",
-                "name": "Void",
-                "printedName": "()"
-              }
-            ],
-            "declKind": "Func",
-            "usr": "s:4Nuke14AsyncImageTaskC6cancelyyF",
-            "mangledName": "$s4Nuke14AsyncImageTaskC6cancelyyF",
-            "moduleName": "Nuke",
-            "declAttributes": [
-              "Final",
-              "AccessControl",
-              "RawDocComment"
-            ],
-            "funcSelfKind": "NonMutating"
-          }
-        ],
-        "declKind": "Class",
-        "usr": "s:4Nuke14AsyncImageTaskC",
-        "mangledName": "$s4Nuke14AsyncImageTaskC",
-        "moduleName": "Nuke",
-        "declAttributes": [
-          "Final",
-          "AccessControl",
-          "RawDocComment"
-        ],
-        "hasMissingDesignatedInitializers": true,
-        "conformances": [
-          {
-            "kind": "Conformance",
-            "name": "Sendable",
-            "printedName": "Sendable",
-            "usr": "s:s8SendableP",
-            "mangledName": "$ss8SendableP"
-          }
-        ]
       },
       {
         "kind": "Import",
@@ -18265,12 +17967,9 @@
                 "moduleName": "Nuke",
                 "static": true,
                 "declAttributes": [
-                  "HasInitialValue",
-                  "HasStorage",
                   "AccessControl",
                   "RawDocComment"
                 ],
-                "hasStorage": true,
                 "accessors": [
                   {
                     "kind": "Accessor",
@@ -18289,7 +17988,6 @@
                     "mangledName": "$s4Nuke15ImageProcessorsO04CoreB6FilterV7contextSo9CIContextCvgZ",
                     "moduleName": "Nuke",
                     "static": true,
-                    "implicit": true,
                     "accessorKind": "get"
                   },
                   {
@@ -18314,7 +18012,6 @@
                     "mangledName": "$s4Nuke15ImageProcessorsO04CoreB6FilterV7contextSo9CIContextCvsZ",
                     "moduleName": "Nuke",
                     "static": true,
-                    "implicit": true,
                     "accessorKind": "set"
                   },
                   {
@@ -23211,6 +22908,20 @@
         ]
       },
       {
+        "kind": "Import",
+        "name": "Combine",
+        "printedName": "Combine",
+        "declKind": "Import",
+        "moduleName": "Nuke"
+      },
+      {
+        "kind": "Import",
+        "name": "UIKit",
+        "printedName": "UIKit",
+        "declKind": "Import",
+        "moduleName": "Nuke"
+      },
+      {
         "kind": "TypeDecl",
         "name": "ImageTask",
         "printedName": "ImageTask",
@@ -23407,8 +23118,8 @@
           },
           {
             "kind": "Var",
-            "name": "progress",
-            "printedName": "progress",
+            "name": "currentProgress",
+            "printedName": "currentProgress",
             "children": [
               {
                 "kind": "TypeNominal",
@@ -23418,12 +23129,11 @@
               }
             ],
             "declKind": "Var",
-            "usr": "s:4Nuke9ImageTaskC8progressAC8ProgressVvp",
-            "mangledName": "$s4Nuke9ImageTaskC8progressAC8ProgressVvp",
+            "usr": "s:4Nuke9ImageTaskC15currentProgressAC0E0Vvp",
+            "mangledName": "$s4Nuke9ImageTaskC15currentProgressAC0E0Vvp",
             "moduleName": "Nuke",
             "declAttributes": [
               "Final",
-              "SetterAccess",
               "AccessControl",
               "RawDocComment"
             ],
@@ -23441,8 +23151,8 @@
                   }
                 ],
                 "declKind": "Accessor",
-                "usr": "s:4Nuke9ImageTaskC8progressAC8ProgressVvg",
-                "mangledName": "$s4Nuke9ImageTaskC8progressAC8ProgressVvg",
+                "usr": "s:4Nuke9ImageTaskC15currentProgressAC0E0Vvg",
+                "mangledName": "$s4Nuke9ImageTaskC15currentProgressAC0E0Vvg",
                 "moduleName": "Nuke",
                 "declAttributes": [
                   "Final"
@@ -24039,6 +23749,518 @@
                 "printedName": "Hashable",
                 "usr": "s:SH",
                 "mangledName": "$sSH"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "image",
+            "printedName": "image",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "UIImage",
+                "printedName": "UIKit.UIImage",
+                "usr": "c:objc(cs)UIImage"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:4Nuke9ImageTaskC5imageSo7UIImageCvp",
+            "mangledName": "$s4Nuke9ImageTaskC5imageSo7UIImageCvp",
+            "moduleName": "Nuke",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "UIImage",
+                    "printedName": "UIKit.UIImage",
+                    "usr": "c:objc(cs)UIImage"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:4Nuke9ImageTaskC5imageSo7UIImageCvg",
+                "mangledName": "$s4Nuke9ImageTaskC5imageSo7UIImageCvg",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "Final"
+                ],
+                "throwing": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "response",
+            "printedName": "response",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "ImageResponse",
+                "printedName": "Nuke.ImageResponse",
+                "usr": "s:4Nuke13ImageResponseV"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:4Nuke9ImageTaskC8responseAA0B8ResponseVvp",
+            "mangledName": "$s4Nuke9ImageTaskC8responseAA0B8ResponseVvp",
+            "moduleName": "Nuke",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "ImageResponse",
+                    "printedName": "Nuke.ImageResponse",
+                    "usr": "s:4Nuke13ImageResponseV"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:4Nuke9ImageTaskC8responseAA0B8ResponseVvg",
+                "mangledName": "$s4Nuke9ImageTaskC8responseAA0B8ResponseVvg",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "Final"
+                ],
+                "throwing": true,
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "progress",
+            "printedName": "progress",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "AsyncStream",
+                "printedName": "_Concurrency.AsyncStream<Nuke.ImageTask.Progress>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Progress",
+                    "printedName": "Nuke.ImageTask.Progress",
+                    "usr": "s:4Nuke9ImageTaskC8ProgressV"
+                  }
+                ],
+                "usr": "s:ScS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:4Nuke9ImageTaskC8progressScSyAC8ProgressVGvp",
+            "mangledName": "$s4Nuke9ImageTaskC8progressScSyAC8ProgressVGvp",
+            "moduleName": "Nuke",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "AsyncStream",
+                    "printedName": "_Concurrency.AsyncStream<Nuke.ImageTask.Progress>",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Progress",
+                        "printedName": "Nuke.ImageTask.Progress",
+                        "usr": "s:4Nuke9ImageTaskC8ProgressV"
+                      }
+                    ],
+                    "usr": "s:ScS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:4Nuke9ImageTaskC8progressScSyAC8ProgressVGvg",
+                "mangledName": "$s4Nuke9ImageTaskC8progressScSyAC8ProgressVGvg",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "previews",
+            "printedName": "previews",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "AsyncStream",
+                "printedName": "_Concurrency.AsyncStream<Nuke.ImageResponse>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "ImageResponse",
+                    "printedName": "Nuke.ImageResponse",
+                    "usr": "s:4Nuke13ImageResponseV"
+                  }
+                ],
+                "usr": "s:ScS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:4Nuke9ImageTaskC8previewsScSyAA0B8ResponseVGvp",
+            "mangledName": "$s4Nuke9ImageTaskC8previewsScSyAA0B8ResponseVGvp",
+            "moduleName": "Nuke",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "AsyncStream",
+                    "printedName": "_Concurrency.AsyncStream<Nuke.ImageResponse>",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "ImageResponse",
+                        "printedName": "Nuke.ImageResponse",
+                        "usr": "s:4Nuke13ImageResponseV"
+                      }
+                    ],
+                    "usr": "s:ScS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:4Nuke9ImageTaskC8previewsScSyAA0B8ResponseVGvg",
+                "mangledName": "$s4Nuke9ImageTaskC8previewsScSyAA0B8ResponseVGvg",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "Var",
+            "name": "events",
+            "printedName": "events",
+            "children": [
+              {
+                "kind": "TypeNominal",
+                "name": "AsyncStream",
+                "printedName": "_Concurrency.AsyncStream<Nuke.ImageTask.Event>",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "Event",
+                    "printedName": "Nuke.ImageTask.Event",
+                    "usr": "s:4Nuke9ImageTaskC5EventO"
+                  }
+                ],
+                "usr": "s:ScS"
+              }
+            ],
+            "declKind": "Var",
+            "usr": "s:4Nuke9ImageTaskC6eventsScSyAC5EventOGvp",
+            "mangledName": "$s4Nuke9ImageTaskC6eventsScSyAC5EventOGvp",
+            "moduleName": "Nuke",
+            "declAttributes": [
+              "Final",
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "accessors": [
+              {
+                "kind": "Accessor",
+                "name": "Get",
+                "printedName": "Get()",
+                "children": [
+                  {
+                    "kind": "TypeNominal",
+                    "name": "AsyncStream",
+                    "printedName": "_Concurrency.AsyncStream<Nuke.ImageTask.Event>",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Event",
+                        "printedName": "Nuke.ImageTask.Event",
+                        "usr": "s:4Nuke9ImageTaskC5EventO"
+                      }
+                    ],
+                    "usr": "s:ScS"
+                  }
+                ],
+                "declKind": "Accessor",
+                "usr": "s:4Nuke9ImageTaskC6eventsScSyAC5EventOGvg",
+                "mangledName": "$s4Nuke9ImageTaskC6eventsScSyAC5EventOGvg",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "Final"
+                ],
+                "accessorKind": "get"
+              }
+            ]
+          },
+          {
+            "kind": "TypeDecl",
+            "name": "Event",
+            "printedName": "Event",
+            "children": [
+              {
+                "kind": "Var",
+                "name": "progress",
+                "printedName": "progress",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Nuke.ImageTask.Event.Type) -> (Nuke.ImageTask.Progress) -> Nuke.ImageTask.Event",
+                    "children": [
+                      {
+                        "kind": "TypeFunc",
+                        "name": "Function",
+                        "printedName": "(Nuke.ImageTask.Progress) -> Nuke.ImageTask.Event",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Progress",
+                            "printedName": "Nuke.ImageTask.Progress",
+                            "usr": "s:4Nuke9ImageTaskC8ProgressV"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Metatype",
+                        "printedName": "Nuke.ImageTask.Event.Type",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "declKind": "EnumElement",
+                "usr": "s:4Nuke9ImageTaskC5EventO8progressyAeC8ProgressVcAEmF",
+                "mangledName": "$s4Nuke9ImageTaskC5EventO8progressyAeC8ProgressVcAEmF",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "RawDocComment"
+                ]
+              },
+              {
+                "kind": "Var",
+                "name": "preview",
+                "printedName": "preview",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Nuke.ImageTask.Event.Type) -> (Nuke.ImageResponse) -> Nuke.ImageTask.Event",
+                    "children": [
+                      {
+                        "kind": "TypeFunc",
+                        "name": "Function",
+                        "printedName": "(Nuke.ImageResponse) -> Nuke.ImageTask.Event",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "ImageResponse",
+                            "printedName": "Nuke.ImageResponse",
+                            "usr": "s:4Nuke13ImageResponseV"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Metatype",
+                        "printedName": "Nuke.ImageTask.Event.Type",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "declKind": "EnumElement",
+                "usr": "s:4Nuke9ImageTaskC5EventO7previewyAeA0B8ResponseVcAEmF",
+                "mangledName": "$s4Nuke9ImageTaskC5EventO7previewyAeA0B8ResponseVcAEmF",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "RawDocComment"
+                ]
+              },
+              {
+                "kind": "Var",
+                "name": "cancelled",
+                "printedName": "cancelled",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Nuke.ImageTask.Event.Type) -> Nuke.ImageTask.Event",
+                    "children": [
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Event",
+                        "printedName": "Nuke.ImageTask.Event",
+                        "usr": "s:4Nuke9ImageTaskC5EventO"
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Metatype",
+                        "printedName": "Nuke.ImageTask.Event.Type",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "declKind": "EnumElement",
+                "usr": "s:4Nuke9ImageTaskC5EventO9cancelledyA2EmF",
+                "mangledName": "$s4Nuke9ImageTaskC5EventO9cancelledyA2EmF",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "RawDocComment"
+                ]
+              },
+              {
+                "kind": "Var",
+                "name": "finished",
+                "printedName": "finished",
+                "children": [
+                  {
+                    "kind": "TypeFunc",
+                    "name": "Function",
+                    "printedName": "(Nuke.ImageTask.Event.Type) -> (Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>) -> Nuke.ImageTask.Event",
+                    "children": [
+                      {
+                        "kind": "TypeFunc",
+                        "name": "Function",
+                        "printedName": "(Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>) -> Nuke.ImageTask.Event",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          },
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Result",
+                            "printedName": "Swift.Result<Nuke.ImageResponse, Nuke.ImagePipeline.Error>",
+                            "children": [
+                              {
+                                "kind": "TypeNominal",
+                                "name": "ImageResponse",
+                                "printedName": "Nuke.ImageResponse",
+                                "usr": "s:4Nuke13ImageResponseV"
+                              },
+                              {
+                                "kind": "TypeNominal",
+                                "name": "Error",
+                                "printedName": "Nuke.ImagePipeline.Error",
+                                "usr": "s:4Nuke13ImagePipelineC5ErrorO"
+                              }
+                            ],
+                            "usr": "s:s6ResultO"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "TypeNominal",
+                        "name": "Metatype",
+                        "printedName": "Nuke.ImageTask.Event.Type",
+                        "children": [
+                          {
+                            "kind": "TypeNominal",
+                            "name": "Event",
+                            "printedName": "Nuke.ImageTask.Event",
+                            "usr": "s:4Nuke9ImageTaskC5EventO"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "declKind": "EnumElement",
+                "usr": "s:4Nuke9ImageTaskC5EventO8finishedyAEs6ResultOyAA0B8ResponseVAA0B8PipelineC5ErrorOGcAEmF",
+                "mangledName": "$s4Nuke9ImageTaskC5EventO8finishedyAEs6ResultOyAA0B8ResponseVAA0B8PipelineC5ErrorOGcAEmF",
+                "moduleName": "Nuke",
+                "declAttributes": [
+                  "RawDocComment"
+                ]
+              }
+            ],
+            "declKind": "Enum",
+            "usr": "s:4Nuke9ImageTaskC5EventO",
+            "mangledName": "$s4Nuke9ImageTaskC5EventO",
+            "moduleName": "Nuke",
+            "declAttributes": [
+              "AccessControl",
+              "RawDocComment"
+            ],
+            "conformances": [
+              {
+                "kind": "Conformance",
+                "name": "Sendable",
+                "printedName": "Sendable",
+                "usr": "s:s8SendableP",
+                "mangledName": "$ss8SendableP"
               }
             ]
           },
@@ -26164,14 +26386,14 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Log.swift",
       "kind": "StringLiteral",
-      "offset": 917,
+      "offset": 979,
       "length": 36,
       "value": "\"com.github.kean.Nuke.ImagePipeline\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Log.swift",
       "kind": "StringLiteral",
-      "offset": 965,
+      "offset": 1027,
       "length": 15,
       "value": "\"Image Loading\""
     },
@@ -26183,30 +26405,44 @@
       "value": "0.8"
     },
     {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Encoding\/ImageEncoders+ImageIO.swift",
+      "kind": "Dictionary",
+      "offset": 1032,
+      "length": 3,
+      "value": "[]"
+    },
+    {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "StringLiteral",
-      "offset": 1395,
+      "offset": 1389,
       "length": 36,
       "value": "\"com.github.kean.Nuke.ImagePipeline\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 1486,
+      "offset": 1480,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "IntegerLiteral",
-      "offset": 1704,
+      "offset": 1698,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 13560,
+      "offset": 7679,
+      "length": 5,
+      "value": "false"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
+      "kind": "BooleanLiteral",
+      "offset": 11659,
       "length": 5,
       "value": "false"
     },
@@ -26456,28 +26692,28 @@
       "value": "\"com.github\/kean\/nuke\/scan-number\""
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineCache.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Cache.swift",
       "kind": "IntegerLiteral",
       "offset": 9407,
       "length": 1,
       "value": "1"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineCache.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Cache.swift",
       "kind": "IntegerLiteral",
       "offset": 9412,
       "length": 1,
       "value": "0"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineCache.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Cache.swift",
       "kind": "IntegerLiteral",
       "offset": 9465,
       "length": 1,
       "value": "1"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineCache.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Cache.swift",
       "kind": "IntegerLiteral",
       "offset": 9470,
       "length": 1,
@@ -26493,16 +26729,16 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageDecompression.swift",
       "kind": "BooleanLiteral",
-      "offset": 767,
+      "offset": 366,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageDecompression.swift",
       "kind": "IntegerLiteral",
-      "offset": 979,
+      "offset": 578,
       "length": 1,
-      "value": "0"
+      "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
@@ -26514,7 +26750,7 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Caching\/Cache.swift",
       "kind": "IntegerLiteral",
-      "offset": 2679,
+      "offset": 2725,
       "length": 1,
       "value": "0"
     },
@@ -27079,151 +27315,144 @@
       "value": "\"public.mov\""
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 2292,
       "length": 5,
       "value": "false"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 2401,
       "length": 4,
       "value": "true"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 3765,
       "length": 4,
       "value": "true"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 4136,
       "length": 4,
       "value": "true"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 4577,
       "length": 5,
       "value": "false"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 4865,
       "length": 4,
       "value": "true"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 5219,
       "length": 4,
       "value": "true"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
       "offset": 5442,
       "length": 4,
       "value": "true"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
-      "offset": 6087,
+      "offset": 6288,
       "length": 5,
       "value": "false"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
-      "offset": 6143,
+      "offset": 6345,
       "length": 5,
       "value": "false"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
-      "offset": 6189,
+      "offset": 6391,
       "length": 5,
       "value": "false"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 6382,
+      "offset": 6584,
       "length": 1,
       "value": "6"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 6643,
+      "offset": 6845,
       "length": 1,
       "value": "2"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 6800,
+      "offset": 7002,
       "length": 1,
       "value": "1"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 6957,
+      "offset": 7159,
       "length": 1,
       "value": "1"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 7118,
+      "offset": 7320,
       "length": 1,
       "value": "2"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 7285,
+      "offset": 7487,
       "length": 1,
       "value": "2"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipelineConfiguration.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "StringLiteral",
-      "offset": 8908,
+      "offset": 9110,
       "length": 32,
       "value": "\"com.github.kean.Nuke.DataCache\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 1554,
+      "offset": 10915,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 1564,
+      "offset": 10925,
       "length": 1,
       "value": "0"
-    },
-    {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageTask.swift",
-      "kind": "BooleanLiteral",
-      "offset": 2806,
-      "length": 5,
-      "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/RateLimiter.swift",
@@ -27270,23 +27499,23 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "BooleanLiteral",
-      "offset": 3056,
+      "offset": 3211,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors+CoreImage.swift",
       "kind": "Dictionary",
-      "offset": 3144,
+      "offset": 3300,
       "length": 3,
       "value": "[]"
     },
     {
-      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/ImagePipelineTask.swift",
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncPipelineTask.swift",
       "kind": "StringLiteral",
       "offset": 264,
       "length": 17,
-      "value": "\"Nuke.ImagePipelineTask\""
+      "value": "\"Nuke.AsyncPipelineTask\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Prefetching\/ImagePrefetcher.swift",
