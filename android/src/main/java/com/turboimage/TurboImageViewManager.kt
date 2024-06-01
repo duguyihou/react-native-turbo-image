@@ -2,16 +2,15 @@ package com.turboimage
 
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
-import coil.Coil.imageLoader
 import coil.Coil.setImageLoader
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
+import coil.dispose
 import coil.drawable.CrossfadeDrawable
+import coil.load
 import coil.request.CachePolicy
-import coil.request.Disposable
-import coil.request.ImageRequest
 import coil.size.Dimension
 import coil.size.Size
 import com.facebook.react.uimanager.PixelUtil
@@ -21,7 +20,6 @@ import com.facebook.react.uimanager.annotations.ReactProp
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
-  private var disposable: Disposable? = null
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
@@ -67,31 +65,25 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       }
     }.build().apply { setImageLoader(this) }
 
-    val request = ImageRequest.Builder(view.context)
-      .data(view.src)
-      .target(view)
-      .listener(TurboImageListener(view))
-      .diskCachePolicy(
+    view.load(view.src) {
+      listener(TurboImageListener(view))
+      diskCachePolicy(
         if (view.cachePolicy != "memory")
           CachePolicy.ENABLED
         else
           CachePolicy.DISABLED
       )
-      .placeholder(view.blurHashDrawable ?: view.circleProgressDrawable)
-      .transformations(view.transformations)
-      .crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
-      .error(view.blurHashDrawable)
-      .size(view.resize ?: Size.ORIGINAL)
-      .build()
-
-    disposable = imageLoader(view.context).enqueue(request)
+      placeholder(view.blurHashDrawable ?: view.circleProgressDrawable)
+      transformations(view.transformations)
+      crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
+      error(view.blurHashDrawable)
+      size(view.resize ?: Size.ORIGINAL)
+    }
   }
 
   override fun onDropViewInstance(view: TurboImageView) {
     super.onDropViewInstance(view)
-    disposable?.let {
-      if (!it.isDisposed) it.dispose()
-    }
+    view.dispose()
   }
 
   @ReactProp(name = "src")
