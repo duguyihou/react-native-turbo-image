@@ -137,7 +137,7 @@ The function to call when the request is completed
 
 ## Methods
 
-### `prefetch: (sources: string[]) => Promise<void>` (WIP)
+### `prefetch: (sources: string[]) => Promise<void>` (iOS wip)
 
 ```ts
 TurboImage.prefetch([
