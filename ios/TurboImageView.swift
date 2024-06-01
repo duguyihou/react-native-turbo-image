@@ -18,12 +18,7 @@ final class TurboImageView : UIView {
   private var processors: [ImageProcessing] {
     return composeProcessors()
   }
-  private var isSVG: Bool {
-    return src?.hasSuffix(".svg") == true
-  }
-  private var isGif: Bool {
-    return src?.hasSuffix(".gif") == true
-  }
+
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -104,6 +99,10 @@ final class TurboImageView : UIView {
       }
     }
   }
+
+  @objc var isSVG: Bool = false
+
+  @objc var isGif: Bool = false
 
   override init(frame: CGRect) {
     super.init(frame: frame)
