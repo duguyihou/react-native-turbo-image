@@ -70,10 +70,10 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var fadeDuration: NSNumber = 0.3 {
+  @objc var fadeDuration: NSNumber = 300 {
     didSet {
       lazyImageView.transition =
-        .fadeIn(duration: fadeDuration.doubleValue)
+        .fadeIn(duration: fadeDuration.doubleValue / 1000)
     }
   }
 
