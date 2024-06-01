@@ -111,6 +111,14 @@ Scales an image to the given width preserving aspect ratio
 
 The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders.
 
+### `isSVG?: boolean`
+
+determines if use SVG decoder
+
+### `isGif?: boolean`
+
+determines if use Gif decoder
+
 ### `onStart?: (result: NativeSyntheticEvent<TaskState>) => void`
 
 The function to call when the image is fetching
