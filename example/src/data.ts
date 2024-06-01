@@ -14,7 +14,7 @@ export const routesData = [
       { name: 'MemoryCache', destination: RouteName.MemoryCache },
       { name: 'UrlCache', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
-      { name: 'Prefetch (WIP)', destination: RouteName.Prefetch },
+      { name: 'Prefetch (iOS WIP)', destination: RouteName.Prefetch },
     ],
   },
   {

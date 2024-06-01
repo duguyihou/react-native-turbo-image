@@ -37,7 +37,7 @@ const RightButton = () => {
   const handleClear = () => {
     Alert.alert('Clear Cache', 'memory / urlCache / dataCache', [
       {
-        text: 'Prefetch (wip)',
+        text: 'Prefetch',
         onPress: async () => {
           return await TurboImage.prefetch(prefetchData);
         },
