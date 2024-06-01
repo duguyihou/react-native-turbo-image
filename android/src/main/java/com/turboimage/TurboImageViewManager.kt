@@ -2,8 +2,6 @@ package com.turboimage
 
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
-import coil.Coil.setImageLoader
-import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
@@ -53,18 +51,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
 
-    ImageLoader.Builder(view.context).apply {
-      respectCacheHeaders(view.cachePolicy == "urlCache")
-      components {
-        add(SvgDecoder.Factory())
-        if (SDK_INT >= 28) {
-          add(ImageDecoderDecoder.Factory())
-        } else {
-          add(GifDecoder.Factory())
-        }
-      }
-    }.build().apply { setImageLoader(this) }
-
     view.load(view.src) {
       listener(TurboImageListener(view))
       diskCachePolicy(
@@ -73,6 +59,20 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         else
           CachePolicy.DISABLED
       )
+      view.isSVG?.let {
+        decoderFactory { result, options, _ ->
+          SvgDecoder(result.source, options)
+        }
+      }
+      view.isGif?.let {
+        decoderFactory { result, options, _ ->
+          if (SDK_INT >= 28) {
+            ImageDecoderDecoder(result.source, options)
+          } else {
+            GifDecoder(result.source, options)
+          }
+        }
+      }
       placeholder(view.blurHashDrawable ?: view.circleProgressDrawable)
       transformations(view.transformations)
       crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
@@ -149,6 +149,16 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "tint")
   fun setTint(view: TurboImageView, tint: Int?) {
     view.tint = tint
+  }
+
+  @ReactProp(name = "isSVG")
+  fun setIsSVG(view: TurboImageView, isSVG: Boolean?) {
+    view.isSVG = isSVG
+  }
+
+  @ReactProp(name = "isGif")
+  fun setIsGif(view: TurboImageView, isGif: Boolean?) {
+    view.isGif = isGif
   }
 
   companion object {

@@ -8,7 +8,7 @@ const GifScreen = () => {
     <FlatList
       data={gifData}
       renderItem={({ item }) => (
-        <Card size={300} src={item.url} indicator="large" />
+        <Card size={300} src={item.url} indicator="large" isGif={item.isGif} />
       )}
       keyExtractor={(item) => item.url}
     />

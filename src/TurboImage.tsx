@@ -28,6 +28,8 @@ const TurboImage = (props: TurboImageProps) => {
     monochrome,
     resize,
     tint,
+    isSVG,
+    isGif,
     onStart,
     onSuccess,
     onFailure,
@@ -48,6 +50,8 @@ const TurboImage = (props: TurboImageProps) => {
       monochrome={processColor(monochrome)}
       resize={resize}
       tint={processColor(tint)}
+      isSVG={isSVG}
+      isGif={isGif}
       onStart={onStart}
       onSuccess={onSuccess}
       onFailure={onFailure}
