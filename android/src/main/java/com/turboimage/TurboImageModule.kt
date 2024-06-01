@@ -2,6 +2,7 @@ package com.turboimage
 
 import coil.Coil
 import coil.annotation.ExperimentalCoilApi
+import coil.imageLoader
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.facebook.react.bridge.*
@@ -15,13 +16,12 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   @ReactMethod
   fun prefetch(sources: ReadableArray, promise: Promise) {
     sources.toArrayList().forEach { src ->
-      val imageLoader = Coil.imageLoader(context)
       val request = ImageRequest.Builder(context)
         .data(src.toString())
         .diskCachePolicy(CachePolicy.ENABLED)
         .memoryCachePolicy(CachePolicy.ENABLED)
         .build()
-      imageLoader.enqueue(request)
+      context.imageLoader.enqueue(request)
     }
     promise.resolve("Success")
   }
