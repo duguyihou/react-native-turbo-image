@@ -14,14 +14,14 @@ export const routesData = [
       { name: 'MemoryCache', destination: RouteName.MemoryCache },
       { name: 'UrlCache', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
-      { name: 'Prefetch (iOS WIP)', destination: RouteName.Prefetch },
+      { name: 'Prefetch', destination: RouteName.Prefetch },
     ],
   },
   {
-    title: 'Callback',
+    title: 'Events',
     data: [
-      { name: 'Success', destination: RouteName.Success },
-      { name: 'Failure', destination: RouteName.Failure },
+      { name: 'Start -> Completion(Success)', destination: RouteName.Success },
+      { name: 'Start -> Completion(Failure)', destination: RouteName.Failure },
     ],
   },
   {

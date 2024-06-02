@@ -12,9 +12,9 @@ Performant React Native image component. Powered by [Nuke](https://github.com/ke
 ## Features
 
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
-- Image Processing & Decompression (borderRadius, rounded, blur, monochrome, tint and resize)
+- Image Processing & Decompression
 - Written in TypeScript, Swift and Kotlin
-- Support SVG and Gif
+- Support SVG(Experimental) and Gif
 
 ## Installation
 
@@ -137,7 +137,7 @@ The function to call when the request is completed
 
 ## Methods
 
-### `prefetch: (sources: string[]) => Promise<void>` (iOS wip)
+### `prefetch: (sources: string[]) => Promise<void>`
 
 ```ts
 TurboImage.prefetch([

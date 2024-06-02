@@ -3,6 +3,8 @@ import Nuke
 @objc(TurboImageViewManager)
 class TurboImageViewManager: RCTViewManager {
 
+  private let prefetcher = ImagePrefetcher()
+
   override func view() -> (TurboImageView) {
     return TurboImageView()
   }
@@ -18,8 +20,7 @@ extension TurboImageViewManager {
   func prefetch(_ sources: [String],
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
-    let prefetcher = ImagePrefetcher()
-    let urls =  sources.map { url in URL(string: url )}.compactMap{ $0 }
+    let urls = sources.map { url in URL(string: url )}.compactMap{ $0 }
     prefetcher.startPrefetching(with: urls)
     resolve("Success")
   }
