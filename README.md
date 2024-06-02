@@ -14,7 +14,7 @@ Performant React Native image component. Powered by [Nuke](https://github.com/ke
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
 - Image Processing & Decompression (borderRadius, rounded, blur, monochrome, tint and resize)
 - Written in TypeScript, Swift and Kotlin
-- Support SVG and Gif
+- Support SVG(Experimental) and Gif
 
 ## Installation
 
