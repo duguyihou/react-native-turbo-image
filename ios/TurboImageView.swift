@@ -56,11 +56,17 @@ final class TurboImageView : UIView {
     }
   }
   
-  @objc var indicator = "medium" {
+  @objc var indicator: NSDictionary? {
     didSet {
-      let indicatorView = indicator == "medium"
-      ?  UIActivityIndicatorView(style: .medium)
-      : UIActivityIndicatorView(style: .large)
+      guard let indicator else { return }
+      let style = indicator.value(forKey: "style") as? String
+      let indicatorView = style == "large"
+      ?  UIActivityIndicatorView(style: .large)
+      : UIActivityIndicatorView(style: .medium)
+      if let color = indicator.value(forKey: "color") as? UIColor {
+        print("🐵 --- color \(color)")
+        indicatorView.color = color
+      }
       lazyImageView.placeholderView = indicatorView
     }
   }

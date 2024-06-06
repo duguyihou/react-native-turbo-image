@@ -11,7 +11,10 @@ const SVGScreen = () => {
             key={url}
             src={url}
             size={300}
-            indicator="large"
+            indicator={{
+              style: 'large',
+              color: 'red',
+            }}
             isSVG={isSVG}
           />
         );
