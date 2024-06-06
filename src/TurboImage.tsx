@@ -17,10 +17,10 @@ const NativeImage = requireNativeComponent<Props>(ComponentName);
 
 const TurboImage = (props: TurboImageProps) => {
   const {
-    blurhash,
     cachePolicy,
     resizeMode,
     indicator,
+    placeholder,
     fadeDuration,
     borderRadius,
     rounded,
@@ -39,10 +39,10 @@ const TurboImage = (props: TurboImageProps) => {
   return (
     <NativeImage
       {...restProps}
-      blurhash={blurhash}
       cachePolicy={cachePolicy}
       resizeMode={resizeMode}
       indicator={indicator}
+      placeholder={placeholder}
       fadeDuration={fadeDuration}
       borderRadius={borderRadius}
       rounded={rounded}

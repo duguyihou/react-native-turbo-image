@@ -14,7 +14,7 @@ const TurboImageScreen = () => {
       <TurboImage
         src={item.url}
         style={styles.card}
-        blurhash={item.blurhash}
+        placeholder={{ blurhash: item.blurhash }}
         resize={size}
       />
     );

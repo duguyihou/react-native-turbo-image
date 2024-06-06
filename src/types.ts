@@ -14,6 +14,10 @@ export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
 
 type State = 'running' | 'cancelled' | 'completed';
 
+export type Placeholder = {
+  blurhash: string;
+};
+
 export type TaskState = {
   state: State;
 };
@@ -33,7 +37,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   style: StyleProp<ImageStyle>;
   resizeMode?: ResizeMode;
   indicator?: Indicator;
-  blurhash?: string;
+  placeholder?: Partial<Placeholder>;
   showPlaceholderOnFailure?: boolean;
   fadeDuration?: number;
   borderRadius?: number;

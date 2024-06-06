@@ -11,7 +11,7 @@ const UrlCacheScreen = () => {
           <Card
             key={url}
             src={url}
-            blurhash={blurhash}
+            placeholder={{ blurhash }}
             cachePolicy={cachePolicy as CachePolicy}
             size={300}
           />

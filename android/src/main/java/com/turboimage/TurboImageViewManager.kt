@@ -11,6 +11,7 @@ import coil.load
 import coil.request.CachePolicy
 import coil.size.Dimension
 import coil.size.Size
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
@@ -91,9 +92,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.src = src
   }
 
-  @ReactProp(name = "blurhash")
-  fun setBlurHash(view: TurboImageView, blurhash: String?) {
-    view.blurHash = blurhash
+  @ReactProp(name = "placeholder")
+  fun setPlaceholder(view: TurboImageView, placeholder: ReadableMap?) {
+    view.blurHash = placeholder?.getString("blurhash")
   }
 
   @ReactProp(name = "cachePolicy")

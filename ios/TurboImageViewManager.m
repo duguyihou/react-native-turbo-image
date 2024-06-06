@@ -6,13 +6,13 @@
 
 RCT_EXPORT_VIEW_PROPERTY(src, NSString)
 
-RCT_EXPORT_VIEW_PROPERTY(blurhash, NSString)
-
 RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(resizeMode, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(indicator, NSString)
+
+RCT_EXPORT_VIEW_PROPERTY(placeholder, NSDictionary)
 
 RCT_EXPORT_VIEW_PROPERTY(showPlaceholderOnFailure, BOOL)
 
