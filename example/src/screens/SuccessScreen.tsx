@@ -36,7 +36,10 @@ const SuccessScreen = () => {
         onStart={handleStart}
         onSuccess={handleSuccess}
         onCompletion={handleCompletion}
-        blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
+        placeholder={{
+          blurhash: 'UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU',
+        }}
+        // blurhash="UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU"
       />
 
       {start && <Text>Start at {Date()}</Text>}
