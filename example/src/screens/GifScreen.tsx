@@ -11,7 +11,7 @@ const GifScreen = () => {
         <Card
           size={300}
           src={item.url}
-          indicator={{ style: 'large', color: 'white' }}
+          indicator={{ style: 'large' }}
           isGif={item.isGif}
         />
       )}
