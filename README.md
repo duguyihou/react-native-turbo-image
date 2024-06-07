@@ -34,7 +34,7 @@ import TurboImage from 'react-native-turbo-image';
 <TurboImage
   src={url}
   style={{ width: 200, height: 200 }}
-  cachePolicy="dataCache"
+  cachePolicy="urlCache"
   blurhash="UCHx4#R3Si.8I^M{NGkCZLRkRPIA~qNGxtj["
 />;
 ```
@@ -71,12 +71,21 @@ The resize mode of the image, default value `contain`
 - `stretch`
 - `center`
 
-### `indicator?: enum`
+### `indicator`
 
-show the indicator when loading, default value `medium`. It does not work with `blurhash`
+show the indicator when loading,
 
-- `medium`
-- `large`
+- `style?`: `medium` or `large`, default value `medium`.
+
+- `color?`: number / ColorValue
+
+```ts
+indicator={{
+            style: 'large',
+            color: 'red',
+          }}
+```
+
 
 ### `showPlaceholderOnFailure?: boolean`
 
