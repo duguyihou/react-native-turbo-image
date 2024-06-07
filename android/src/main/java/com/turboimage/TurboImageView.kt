@@ -22,7 +22,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var cachePolicy: String? = "memory"
   var crossfade: Int? = null
   var blurHash: String? = null
-  var indicator: String? = null
+  var indicator: HashMap<String, Any> = hashMapOf()
 
   var resize: Size? = null
   var borderRadius: Int? = null
@@ -43,20 +43,21 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
 
   val circleProgressDrawable: CircularProgressDrawable?
     get() {
-      indicator?.let {
-        when (it) {
+      indicator.let {
+        when (it["style"]) {
           "medium" -> return CircularProgressDrawable(context).apply {
             setStyle(CircularProgressDrawable.DEFAULT)
+            it["color"]?.let { color -> setColorSchemeColors(color as Int) }
           }
 
           "large" -> return CircularProgressDrawable(context).apply {
             setStyle(CircularProgressDrawable.LARGE)
+            it["color"]?.let { color -> setColorSchemeColors(color as Int) }
           }
 
           else -> return null
         }
       }
-      return null
     }
 
   val transformations: MutableList<Transformation>

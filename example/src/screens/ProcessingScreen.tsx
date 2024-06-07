@@ -12,7 +12,15 @@ const ProcessingScreen = () => {
       data={processingData}
       numColumns={2}
       renderItem={({ item: { url, resize, ...props } }) => (
-        <Card {...props} src={url} size={resize ?? size} indicator="large" />
+        <Card
+          {...props}
+          src={url}
+          size={resize ?? size}
+          indicator={{
+            style: 'large',
+            color: 'red',
+          }}
+        />
       )}
       keyExtractor={(item) => item.title}
     />

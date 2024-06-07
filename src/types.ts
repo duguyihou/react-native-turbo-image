@@ -7,7 +7,11 @@ import type {
   NativeSyntheticEvent,
 } from 'react-native';
 
-export type Indicator = 'large' | 'medium';
+export type IndicatorStyle = 'large' | 'medium';
+export type Indicator = Partial<{
+  style: IndicatorStyle;
+  color: number | ColorValue;
+}>;
 export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
 export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';

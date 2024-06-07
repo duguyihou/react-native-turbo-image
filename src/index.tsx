@@ -5,6 +5,8 @@ export type {
   Failure,
   TaskState,
   ResizeMode,
+  Indicator,
+  IndicatorStyle,
   TurboImageProps,
 } from './types';
 export default TurboImage;

@@ -8,7 +8,7 @@ const PrefetchScreen = () => {
     <FlatList
       data={prefetchData}
       renderItem={({ item }) => (
-        <Card size={300} src={item} indicator="large" />
+        <Card size={300} src={item} indicator={{ style: 'large' }} />
       )}
       keyExtractor={(item) => item}
     />

@@ -108,8 +108,17 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   }
 
   @ReactProp(name = "indicator")
-  fun setIndicator(view: TurboImageView, indicator: String?) {
-    view.indicator = indicator
+  fun setIndicator(view: TurboImageView, indicator: ReadableMap?) {
+    indicator?.let {
+      if (it.hasKey("style")) {
+        view.indicator["style"] = it.getString("style") ?: "medium"
+      } else {
+        view.indicator["style"] = "medium"
+      }
+      if (it.hasKey("color")) {
+        view.indicator["color"] = it.getInt("color")
+      }
+    }
   }
 
   @ReactProp(name = "fadeDuration")

@@ -5,12 +5,17 @@ import {
   type ProcessedColorValue,
   processColor,
 } from 'react-native';
-import type { TurboImageApi, TurboImageProps } from './types';
+import type { IndicatorStyle, TurboImageApi, TurboImageProps } from './types';
 
 const { TurboImageViewManager } = NativeModules;
 const ComponentName = 'TurboImageView';
-interface Props extends Omit<TurboImageProps, 'monochrome' | 'tint'> {
+interface Props
+  extends Omit<TurboImageProps, 'monochrome' | 'tint' | 'indicator'> {
   monochrome?: ProcessedColorValue | null;
+  indicator?: Partial<{
+    style: IndicatorStyle;
+    color: ProcessedColorValue | null;
+  }>;
   tint?: ProcessedColorValue | null;
 }
 const NativeImage = requireNativeComponent<Props>(ComponentName);
@@ -41,7 +46,10 @@ const TurboImage = (props: TurboImageProps) => {
       {...restProps}
       cachePolicy={cachePolicy}
       resizeMode={resizeMode}
-      indicator={indicator}
+      indicator={{
+        style: indicator?.style,
+        color: processColor(indicator?.color),
+      }}
       placeholder={placeholder}
       fadeDuration={fadeDuration}
       borderRadius={borderRadius}
