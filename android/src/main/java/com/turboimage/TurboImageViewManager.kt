@@ -74,10 +74,10 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           }
         }
       }
-      placeholder(view.blurHashDrawable ?: view.circleProgressDrawable)
+      placeholder(view.blurhashDrawable ?: view.circleProgressDrawable)
       transformations(view.transformations)
       crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
-      error(view.blurHashDrawable)
+      error(view.blurhashDrawable)
       size(view.resize ?: Size.ORIGINAL)
     }
   }
@@ -94,7 +94,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   @ReactProp(name = "placeholder")
   fun setPlaceholder(view: TurboImageView, placeholder: ReadableMap?) {
-    view.blurHash = placeholder?.getString("blurhash")
+    view.blurhash = placeholder?.getString("blurhash")
   }
 
   @ReactProp(name = "cachePolicy")

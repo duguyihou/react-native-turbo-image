@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.appcompat.widget.AppCompatImageView
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import coil.size.Size
 import coil.transform.CircleCropTransformation
@@ -21,7 +22,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var src: String? = null
   var cachePolicy: String? = "memory"
   var crossfade: Int? = null
-  var blurHash: String? = null
+  var blurhash: String? = null
   var indicator: HashMap<String, Any> = hashMapOf()
 
   var resize: Size? = null
@@ -34,10 +35,13 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var isSVG: Boolean? = null
   var isGif: Boolean? = null
 
-  val blurHashDrawable: Drawable?
+  val blurhashDrawable: Drawable?
     get() {
-      return blurHash?.let {
-        drawBlurHash(this, it)
+      return blurhash?.let {
+        borderRadius?.let { radii ->
+         return drawRoundedBlurhash(this, it, radii)
+        }
+        drawBlurhash(this, it)
       }
     }
 
@@ -88,8 +92,20 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
       return list
     }
 
-  private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
-    val bitmap = BlurHashDecoder.decode(blurHash, 8, 8)
+  private fun drawBlurhash(view: TurboImageView, blurhash: String): Drawable {
+    val bitmap = BlurHashDecoder.decode(blurhash, 8, 8)
     return BitmapDrawable(view.context.resources, bitmap)
+  }
+
+  private fun drawRoundedBlurhash(
+    view: TurboImageView,
+    blurhash: String,
+    borderRadius: Int
+  ): Drawable {
+    val bitmap = BlurHashDecoder.decode(blurhash, 8, 8)
+    return RoundedBitmapDrawableFactory.create(view.context.resources, bitmap).apply {
+//      cornerRadius = PixelUtil.toPixelFromDIP(borderRadius.toFloat() / 60)
+      cornerRadius = borderRadius.toFloat()
+    }
   }
 }
