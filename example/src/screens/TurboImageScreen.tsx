@@ -16,6 +16,7 @@ const TurboImageScreen = () => {
         style={styles.card}
         placeholder={{ blurhash: item.blurhash }}
         resize={size}
+        borderRadius={20}
       />
     );
   };
