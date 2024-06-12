@@ -41,15 +41,20 @@ const TurboImage = (props: TurboImageProps) => {
     onCompletion,
     ...restProps
   } = props;
+
+  const processedIndicator =
+    indicator && Object.keys(indicator).length !== 0
+      ? {
+          style: indicator?.style,
+          color: processColor(indicator?.color),
+        }
+      : undefined;
   return (
     <NativeImage
       {...restProps}
       cachePolicy={cachePolicy}
       resizeMode={resizeMode}
-      indicator={{
-        style: indicator?.style,
-        color: processColor(indicator?.color),
-      }}
+      indicator={processedIndicator}
       placeholder={placeholder}
       fadeDuration={fadeDuration}
       borderRadius={borderRadius}
