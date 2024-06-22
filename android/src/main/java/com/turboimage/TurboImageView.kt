@@ -7,11 +7,9 @@ import androidx.appcompat.widget.AppCompatImageView
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import coil.size.Size
 import coil.transform.CircleCropTransformation
-import coil.transform.RoundedCornersTransformation
 import coil.transform.Transformation
 import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.ColorFilterTransformation
-import com.facebook.react.uimanager.PixelUtil
 
 import com.facebook.react.uimanager.ThemedReactContext
 
@@ -21,11 +19,10 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var src: String? = null
   var cachePolicy: String? = "memory"
   var crossfade: Int? = null
-  var blurHash: String? = null
+  var blurhash: String? = null
   var indicator: HashMap<String, Any> = hashMapOf()
 
   var resize: Size? = null
-  var borderRadius: Int? = null
   var rounded: Boolean? = null
   var blur: Int? = null
   var monochrome: Int? = null
@@ -34,10 +31,10 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var isSVG: Boolean? = null
   var isGif: Boolean? = null
 
-  val blurHashDrawable: Drawable?
+  val blurhashDrawable: Drawable?
     get() {
-      return blurHash?.let {
-        drawBlurHash(this, it)
+      return blurhash?.let {
+        drawBlurhash(this, it)
       }
     }
 
@@ -64,11 +61,6 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
     get() {
       val list = mutableListOf<Transformation>()
 
-      borderRadius?.let {
-        val radii = PixelUtil.toPixelFromDIP(it.toFloat())
-        list.add(RoundedCornersTransformation(radii))
-      }
-
       rounded?.let {
         list.add(CircleCropTransformation())
       }
@@ -88,8 +80,8 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
       return list
     }
 
-  private fun drawBlurHash(view: TurboImageView, blurHash: String): Drawable {
-    val bitmap = BlurHashDecoder.decode(blurHash, 8, 8)
+  private fun drawBlurhash(view: TurboImageView, blurhash: String): Drawable {
+    val bitmap = BlurHashDecoder.decode(blurhash, 8, 8)
     return BitmapDrawable(view.context.resources, bitmap)
   }
 }
