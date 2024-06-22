@@ -8,6 +8,7 @@ export type HomeStackParamList = {
   Home: undefined;
   TurboImage: undefined;
   Image: undefined;
+  Placeholder: undefined;
   MemoryCache: undefined;
   UrlCache: undefined;
   DataCache: undefined;
@@ -33,6 +34,7 @@ export enum RouteName {
   Home = 'Home',
   TurboImage = 'TurboImage',
   Image = 'Image',
+  Placeholder = 'Placeholder',
   MemoryCache = 'MemoryCache',
   UrlCache = 'UrlCache',
   DataCache = 'DataCache',

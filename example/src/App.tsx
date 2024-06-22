@@ -14,6 +14,7 @@ import DataCacheScreen from './screens/DataCacheScreen';
 import SVGScreen from './screens/SVGScreen';
 import GifScreen from './screens/GifScreen';
 import PrefetchScreen from './screens/PrefetchScreen';
+import PlaceholderScreen from './screens/PlaceholderScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -28,6 +29,12 @@ function App() {
             component={TurboImageScreen}
           />
           <Stack.Screen name={RouteName.Image} component={ImageScreen} />
+        </Stack.Group>
+        <Stack.Group>
+          <Stack.Screen
+            name={RouteName.Placeholder}
+            component={PlaceholderScreen}
+          />
         </Stack.Group>
         <Stack.Group>
           <Stack.Screen
