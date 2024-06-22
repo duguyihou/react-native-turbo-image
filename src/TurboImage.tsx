@@ -51,8 +51,14 @@ const TurboImage = (props: TurboImageProps) => {
           color: processColor(indicator?.color),
         }
       : undefined;
+
   return (
-    <View style={[styles.imageContainer, { borderRadius }]}>
+    <View
+      style={[
+        styles.imageContainer,
+        { borderRadius: rounded ? 9999999 : borderRadius },
+      ]}
+    >
       <NativeImage
         {...restProps}
         cachePolicy={cachePolicy}
