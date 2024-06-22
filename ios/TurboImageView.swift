@@ -155,6 +155,15 @@ fileprivate extension TurboImageView {
         }
       }
     }
+
+    if let thumbhash = placeholder.value(forKey: "thumbhash") as? String {
+      DispatchQueue.global(qos: .userInteractive).async {
+        let image = UIImage(thumbhash: thumbhash)
+        DispatchQueue.main.async { [self] in
+          lazyImageView.placeholderImage = image
+        }
+      }
+    }
   }
 }
 // MARK: - other formats
