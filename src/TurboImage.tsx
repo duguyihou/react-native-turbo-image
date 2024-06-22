@@ -44,6 +44,10 @@ const TurboImage = (props: TurboImageProps) => {
     ...restProps
   } = props;
 
+  if (placeholder && Object.keys(placeholder).length > 1) {
+    throw new Error('Choose one hash string, either thumbhash or blurhash');
+  }
+
   const processedIndicator =
     indicator && Object.keys(indicator).length !== 0
       ? {
