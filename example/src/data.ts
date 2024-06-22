@@ -9,6 +9,12 @@ export const routesData = [
     ],
   },
   {
+    title: 'Placeholder',
+    data: [
+      { name: 'thumbhash + blurhash', destination: RouteName.Placeholder },
+    ],
+  },
+  {
     title: 'Cache',
     data: [
       { name: 'MemoryCache', destination: RouteName.MemoryCache },
@@ -525,6 +531,23 @@ export const prefetchData = [
   'https://placedog.net/300/300?id=124',
   'https://placedog.net/300/300?id=125',
   'https://placedog.net/300/300?id=126',
+];
+
+export const placeholderData = [
+  {
+    title: 'thumbhash',
+    url: 'https://placedog.net/300/300?id=127',
+    placeholder: {
+      thumbhash: 'XDkKFwKgVndpiIikloh4Z4iGp/HMDKYI',
+    },
+  },
+  {
+    title: 'blurhash',
+    url: 'https://placedog.net/300/300?id=127',
+    placeholder: {
+      blurhash: 'KBHKzp00_N_19F-V00_2D%',
+    },
+  },
 ];
 export const memoryCacheData = [
   {

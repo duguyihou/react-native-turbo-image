@@ -68,7 +68,29 @@ final class TurboImageView : UIView {
     }
   }
 
-  @objc var placeholder: NSDictionary?
+  @objc var placeholder: NSDictionary? {
+    didSet {
+      guard let placeholder else { return }
+
+      if let blurhash = placeholder.value(forKey: "blurhash") as? String {
+        DispatchQueue.global(qos: .userInteractive).async { [self] in
+          let image = UIImage(blurHash: blurhash)
+          DispatchQueue.main.async { [self] in
+            lazyImageView.placeholderImage = image
+          }
+        }
+      }
+
+      if let thumbhash = placeholder.value(forKey: "thumbhash") as? String {
+        DispatchQueue.global(qos: .userInteractive).async {
+          let image = UIImage(thumbhash: thumbhash)
+          DispatchQueue.main.async { [self] in
+            lazyImageView.placeholderImage = image
+          }
+        }
+      }
+    }
+  }
 
   @objc var fadeDuration: NSNumber = 300 {
     didSet {
@@ -124,8 +146,6 @@ final class TurboImageView : UIView {
       handleGif()
     }
 
-    handlePlaceholder()
-
     registerObservers()
     lazyImageView.processors = processors
   }
@@ -142,21 +162,6 @@ final class TurboImageView : UIView {
   }
 }
 
-// MARK: - placeholder
-fileprivate extension TurboImageView {
-  func handlePlaceholder() {
-    guard let placeholder else { return }
-
-    if let blurhash = placeholder.value(forKey: "blurhash") as? String {
-      DispatchQueue.global(qos: .userInteractive).async { [self] in
-        let image = UIImage(blurHash: blurhash)
-        DispatchQueue.main.async { [self] in
-          lazyImageView.placeholderImage = image
-        }
-      }
-    }
-  }
-}
 // MARK: - other formats
 fileprivate extension TurboImageView {
 

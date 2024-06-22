@@ -74,7 +74,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           }
         }
       }
-      placeholder(view.blurhashDrawable ?: view.circleProgressDrawable)
+      placeholder(
+        view.thumbhashDrawable
+          ?: view.blurhashDrawable
+          ?: view.circleProgressDrawable
+      )
       transformations(view.transformations)
       crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
       error(view.blurhashDrawable)
@@ -95,6 +99,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "placeholder")
   fun setPlaceholder(view: TurboImageView, placeholder: ReadableMap?) {
     view.blurhash = placeholder?.getString("blurhash")
+    view.thumbhash = placeholder?.getString("thumbhash")
   }
 
   @ReactProp(name = "cachePolicy")
