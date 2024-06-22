@@ -35,9 +35,6 @@ import TurboImage from 'react-native-turbo-image';
   src={url}
   style={{ width: 200, height: 200 }}
   cachePolicy="urlCache"
-  placeholder={
-    blurhash: "UCHx4#R3Si.8I^M{NGkCZLRkRPIA~qNGxtj["
-  }
 />;
 ```
 
