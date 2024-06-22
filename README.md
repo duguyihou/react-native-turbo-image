@@ -57,10 +57,10 @@ type Placeholder = {
 };
 ```
 
-show placeholder while loading.
+show placeholder while loading, either `thumbhash` or `blurhash`
 
-- [blurhash](https://blurha.sh/)
 - [thumbhash](https://evanw.github.io/thumbhash/)
+- [blurhash](https://blurha.sh/)
 
 ### `cachePolicy?: enum`
 
