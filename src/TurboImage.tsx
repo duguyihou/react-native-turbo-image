@@ -4,6 +4,8 @@ import {
   NativeModules,
   type ProcessedColorValue,
   processColor,
+  View,
+  StyleSheet,
 } from 'react-native';
 import type { IndicatorStyle, TurboImageApi, TurboImageProps } from './types';
 
@@ -50,28 +52,35 @@ const TurboImage = (props: TurboImageProps) => {
         }
       : undefined;
   return (
-    <NativeImage
-      {...restProps}
-      cachePolicy={cachePolicy}
-      resizeMode={resizeMode}
-      indicator={processedIndicator}
-      placeholder={placeholder}
-      fadeDuration={fadeDuration}
-      borderRadius={borderRadius}
-      rounded={rounded}
-      blur={blur}
-      monochrome={processColor(monochrome)}
-      resize={resize}
-      tint={processColor(tint)}
-      isSVG={isSVG}
-      isGif={isGif}
-      onStart={onStart}
-      onSuccess={onSuccess}
-      onFailure={onFailure}
-      onCompletion={onCompletion}
-    />
+    <View style={[styles.imageContainer, { borderRadius }]}>
+      <NativeImage
+        {...restProps}
+        cachePolicy={cachePolicy}
+        resizeMode={resizeMode}
+        indicator={processedIndicator}
+        placeholder={placeholder}
+        fadeDuration={fadeDuration}
+        rounded={rounded}
+        blur={blur}
+        monochrome={processColor(monochrome)}
+        resize={resize}
+        tint={processColor(tint)}
+        isSVG={isSVG}
+        isGif={isGif}
+        onStart={onStart}
+        onSuccess={onSuccess}
+        onFailure={onFailure}
+        onCompletion={onCompletion}
+      />
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  imageContainer: {
+    overflow: 'hidden',
+  },
+});
 
 TurboImage.prefetch = async (sources: string[]) => {
   return await TurboImageViewManager.prefetch(sources);

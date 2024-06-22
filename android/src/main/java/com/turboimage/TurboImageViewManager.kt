@@ -126,11 +126,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.crossfade = crossfade
   }
 
-  @ReactProp(name = "borderRadius")
-  fun setBorderRadius(view: TurboImageView, borderRadius: Int?) {
-    view.borderRadius = borderRadius
-  }
-
   @ReactProp(name = "rounded")
   fun setRounded(view: TurboImageView, rounded: Boolean?) {
     view.rounded = rounded

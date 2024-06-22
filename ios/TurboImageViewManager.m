@@ -18,8 +18,6 @@ RCT_EXPORT_VIEW_PROPERTY(showPlaceholderOnFailure, BOOL)
 
 RCT_EXPORT_VIEW_PROPERTY(fadeDuration, NSNumber)
 
-RCT_EXPORT_VIEW_PROPERTY(borderRadius, NSNumber)
-
 RCT_EXPORT_VIEW_PROPERTY(rounded, BOOL)
 
 RCT_EXPORT_VIEW_PROPERTY(blur, NSNumber)

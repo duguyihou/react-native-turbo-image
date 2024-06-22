@@ -41,8 +41,6 @@ final class TurboImageView : UIView {
 
   @objc var blur: NSNumber?
 
-  @objc var borderRadius: NSNumber?
-
   @objc var monochrome: UIColor!
 
   @objc var resize: NSNumber?
@@ -152,12 +150,6 @@ fileprivate extension TurboImageView {
     if let blurhash = placeholder.value(forKey: "blurhash") as? String {
       DispatchQueue.global(qos: .userInteractive).async { [self] in
         let image = UIImage(blurHash: blurhash)
-        if let borderRadius = borderRadius as? CGFloat {
-          DispatchQueue.main.async { [self] in
-            lazyImageView.placeholderImage = image?.with(borderRadius / 3)
-          }
-          return
-        }
         DispatchQueue.main.async { [self] in
           lazyImageView.placeholderImage = image
         }
@@ -206,11 +198,7 @@ fileprivate extension TurboImageView {
       initialProcessors.append(
         ImageProcessors.Resize(width: resize.doubleValue))
     }
-    if let borderRadius {
-      let radius = CGFloat(truncating: borderRadius)
-      initialProcessors.append(
-        ImageProcessors.RoundedCorners(radius: radius))
-    }
+
     if rounded {
       initialProcessors.append(
         ImageProcessors.Circle())
