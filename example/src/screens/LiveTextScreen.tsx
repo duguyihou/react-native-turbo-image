@@ -9,7 +9,7 @@ const LiveTextScreen = () => {
       data={liveTextData}
       renderItem={({ item }) => (
         <Card
-          size={300}
+          size={[300, 100]}
           src={item.url}
           indicator={{ style: 'large' }}
           enableLiveTextInteraction
