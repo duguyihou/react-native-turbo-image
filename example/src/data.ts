@@ -35,6 +35,10 @@ export const routesData = [
     data: [{ name: 'Processing', destination: RouteName.ImageProcessing }],
   },
   {
+    title: 'Live Text',
+    data: [{ name: 'iOS 16+ only', destination: RouteName.LiveText }],
+  },
+  {
     title: 'Other Formats',
     data: [
       { name: 'SVG (Experimental)', destination: RouteName.SVG },
@@ -549,6 +553,13 @@ export const placeholderData = [
     },
   },
 ];
+
+export const liveTextData = [
+  {
+    url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:b3psimnw5xxta2n4h5qzxu55/bafkreietuymak7njxkkr35ecjwlkhk3risz3zmfmvwak5hlji7agvdhcwm@jpeg',
+  },
+];
+
 export const memoryCacheData = [
   {
     title: 'memory',

@@ -15,6 +15,7 @@ import SVGScreen from './screens/SVGScreen';
 import GifScreen from './screens/GifScreen';
 import PrefetchScreen from './screens/PrefetchScreen';
 import PlaceholderScreen from './screens/PlaceholderScreen';
+import LiveTextScreen from './screens/LiveTextScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -56,6 +57,11 @@ function App() {
           name={RouteName.ImageProcessing}
           component={ProcessingScreen}
           options={{ title: 'Image Processing' }}
+        />
+        <Stack.Screen
+          name={RouteName.LiveText}
+          component={LiveTextScreen}
+          options={{ title: 'Live Text (iOS 16+ only)' }}
         />
         <Stack.Group>
           <Stack.Screen name={RouteName.SVG} component={SVGScreen} />
