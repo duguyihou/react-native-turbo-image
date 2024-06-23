@@ -128,6 +128,10 @@ Scales an image to the given width preserving aspect ratio
 
 The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders.
 
+### `enableLiveTextInteraction?: boolean` (iOS 16+ only)
+
+Enables Live Text interaction with the image.
+
 ### `isSVG?: boolean`
 
 determines if use SVG decoder
