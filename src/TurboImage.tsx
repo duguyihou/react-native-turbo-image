@@ -35,6 +35,7 @@ const TurboImage = (props: TurboImageProps) => {
     monochrome,
     resize,
     tint,
+    enableLiveTextInteraction,
     isSVG,
     isGif,
     onStart,
@@ -56,13 +57,13 @@ const TurboImage = (props: TurboImageProps) => {
         }
       : undefined;
 
+  const containerStyle = [
+    styles.imageContainer,
+    { borderRadius: rounded ? 9999999 : borderRadius },
+  ];
+
   return (
-    <View
-      style={[
-        styles.imageContainer,
-        { borderRadius: rounded ? 9999999 : borderRadius },
-      ]}
-    >
+    <View style={containerStyle}>
       <NativeImage
         {...restProps}
         cachePolicy={cachePolicy}
@@ -75,6 +76,7 @@ const TurboImage = (props: TurboImageProps) => {
         monochrome={processColor(monochrome)}
         resize={resize}
         tint={processColor(tint)}
+        enableLiveTextInteraction={enableLiveTextInteraction}
         isSVG={isSVG}
         isGif={isGif}
         onStart={onStart}

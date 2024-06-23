@@ -16,6 +16,7 @@ export type HomeStackParamList = {
   Success: undefined;
   Failure: undefined;
   ImageProcessing: undefined;
+  LiveText: undefined;
   SVG: undefined;
   Gif: undefined;
 };
@@ -42,6 +43,7 @@ export enum RouteName {
   Success = 'Success',
   Failure = 'Failure',
   ImageProcessing = 'ImageProcessing',
+  LiveText = 'LiveText',
   SVG = 'SVG',
   Gif = 'Gif',
 }
