@@ -556,7 +556,10 @@ export const placeholderData = [
 
 export const liveTextData = [
   {
-    url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:b3psimnw5xxta2n4h5qzxu55/bafkreietuymak7njxkkr35ecjwlkhk3risz3zmfmvwak5hlji7agvdhcwm@jpeg',
+    url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:ejihld4sywvvqwe67cdkn4jq/bafkreibcshvfvfi4suht32tcp4ds77y2yghtcig62byqyq3ot4abpsplhu@jpeg',
+  },
+  {
+    url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:lzlqyldh7nfc34pfffvd24ko/bafkreihimujh4kxa4gecniimqfnmdjnlajjek6pleh5tt5k4djhno3lzu4@jpeg',
   },
 ];
 
