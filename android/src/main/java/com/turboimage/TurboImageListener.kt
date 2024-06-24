@@ -3,51 +3,70 @@ package com.turboimage
 import coil.request.ErrorResult
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
-import com.facebook.react.bridge.WritableNativeMap
-import com.facebook.react.uimanager.events.RCTEventEmitter
+import com.facebook.react.uimanager.UIManagerHelper
+import com.turboimage.events.CompletionEvent
+import com.turboimage.events.FailureEvent
+import com.turboimage.events.StartEvent
+import com.turboimage.events.SuccessEvent
 
 class TurboImageListener(private val view: TurboImageView) : ImageRequest.Listener {
 
   override fun onStart(request: ImageRequest) {
     super.onStart(request)
-    val payload = WritableNativeMap().apply {
-      putString("state", "running")
-    }
+
     val reactContext = view.context as ReactContext
-    reactContext.getJSModule(RCTEventEmitter::class.java)
-      .receiveEvent(view.id, "onStart", payload)
+    UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+      val payload = Arguments.createMap().apply {
+        putString("state", "running")
+      }
+      val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+      it.dispatchEvent(StartEvent(surfaceId, view.id, payload))
+    }
   }
 
   override fun onSuccess(request: ImageRequest, result: SuccessResult) {
     super.onSuccess(request, result)
-    val successPayload = WritableNativeMap().apply {
-      putInt("width", result.drawable.intrinsicWidth)
-      putInt("height", result.drawable.intrinsicHeight)
-      putString("source", request.data.toString())
-    }
+
     val reactContext = view.context as ReactContext
-    reactContext.getJSModule(RCTEventEmitter::class.java)
-      .receiveEvent(view.id, "onSuccess", successPayload)
-    val completionPayload = WritableNativeMap().apply {
-      putString("state", "completed")
+    UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+      val payload = Arguments.createMap().apply {
+        putInt("width", result.drawable.intrinsicWidth)
+        putInt("height", result.drawable.intrinsicHeight)
+        putString("source", request.data.toString())
+      }
+      val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+      it.dispatchEvent(SuccessEvent(surfaceId, view.id, payload))
     }
-    reactContext.getJSModule(RCTEventEmitter::class.java)
-      .receiveEvent(view.id, "onCompletion", completionPayload)
+
+    UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+      val payload = Arguments.createMap().apply {
+        putString("state", "completed")
+      }
+      val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+      it.dispatchEvent(CompletionEvent(surfaceId, view.id, payload))
+    }
   }
 
   override fun onError(request: ImageRequest, result: ErrorResult) {
     super.onError(request, result)
-    val failurePayload = WritableNativeMap().apply {
-      putString("error", result.throwable.message)
-    }
+
     val reactContext = view.context as ReactContext
-    reactContext.getJSModule(RCTEventEmitter::class.java)
-      .receiveEvent(view.id, "onFailure", failurePayload)
-    val completionPayload = WritableNativeMap().apply {
-      putString("state", "completed")
+    UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+      val payload = Arguments.createMap().apply {
+        putString("error", result.throwable.message)
+      }
+      val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+      it.dispatchEvent(FailureEvent(surfaceId, view.id, payload))
     }
-    reactContext.getJSModule(RCTEventEmitter::class.java)
-      .receiveEvent(view.id, "onCompletion", completionPayload)
+
+    UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+      val payload = Arguments.createMap().apply {
+        putString("state", "completed")
+      }
+      val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+      it.dispatchEvent(CompletionEvent(surfaceId, view.id, payload))
+    }
   }
 }
