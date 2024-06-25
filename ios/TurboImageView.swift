@@ -20,6 +20,8 @@ final class TurboImageView : UIView {
     return composeProcessors()
   }
 
+  private var urlRequest: URLRequest?
+
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
@@ -27,11 +29,16 @@ final class TurboImageView : UIView {
 
   @objc var source: NSDictionary? {
     didSet {
-      guard let source else {
+      guard let uri = source?.value(forKey: "uri") as? String,
+            let url = URL(string: uri) else {
         onFailure?([
           Constants.error: "invalid source: \(String(describing: source))"
         ])
         return
+      }
+      urlRequest = URLRequest(url: url)
+      if let headers = source?.value(forKey: "headers") as? [String:String] {
+        urlRequest?.allHTTPHeaderFields = headers
       }
     }
   }
@@ -135,14 +142,10 @@ final class TurboImageView : UIView {
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
 
-    guard let uri = source?.value(forKey: "uri") as? String,
-          let url = URL(string: uri) else { return }
-    var request = URLRequest(url: url)
-    if let headers = source?.value(forKey: "headers") as? [String:String] {
-      request.allHTTPHeaderFields = headers
-    }
     defer {
-      lazyImageView.request = ImageRequest(urlRequest: request)
+      if let urlRequest {
+        lazyImageView.request = ImageRequest(urlRequest: urlRequest)
+      }
     }
 
     if isSVG {
