@@ -30,7 +30,9 @@ const SuccessScreen = () => {
   return (
     <View>
       <Card
-        src="https://placedog.net/300/300?id=121"
+        source={{
+          uri: 'https://placedog.net/300/300?id=121',
+        }}
         size={200}
         resize={200}
         onStart={handleStart}

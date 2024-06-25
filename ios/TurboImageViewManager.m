@@ -4,7 +4,7 @@
 
 #pragma mark - properties
 
-RCT_EXPORT_VIEW_PROPERTY(src, NSString)
+RCT_EXPORT_VIEW_PROPERTY(source, NSDictionary)
 
 RCT_EXPORT_VIEW_PROPERTY(cachePolicy, NSString)
 

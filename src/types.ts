@@ -7,6 +7,11 @@ import type {
   NativeSyntheticEvent,
 } from 'react-native';
 
+export type Source = {
+  uri: string;
+  headers?: HeadersInit_ | undefined;
+};
+
 export type IndicatorStyle = 'large' | 'medium';
 export type Indicator = Partial<{
   style: IndicatorStyle;
@@ -38,7 +43,7 @@ export type Failure = {
 };
 
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
-  src: string;
+  source: Source;
   style: StyleProp<ImageStyle>;
   resizeMode?: ResizeMode;
   indicator?: Indicator;

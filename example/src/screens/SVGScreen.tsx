@@ -9,7 +9,9 @@ const SVGScreen = () => {
         return (
           <Card
             key={url}
-            src={url}
+            source={{
+              uri: url,
+            }}
             size={300}
             indicator={{
               style: 'large',

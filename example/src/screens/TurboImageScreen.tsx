@@ -12,7 +12,9 @@ const TurboImageScreen = () => {
   }) => {
     return (
       <TurboImage
-        src={item.url}
+        source={{
+          uri: item.url,
+        }}
         style={styles.card}
         placeholder={{ blurhash: item.blurhash }}
         resize={size}
