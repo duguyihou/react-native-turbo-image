@@ -15,6 +15,32 @@ Pod::Spec.new do |s|
   s.source       = { :git => "https://github.com/duguyihou/react-native-turbo-image.git", :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
+  if ENV['USE_FRAMEWORKS']
+    exclude_source_file_name = [
+      'Nuke.xcframework/ios-arm64/Nuke.framework/Headers/*.h',
+      'Nuke.xcframework/ios-arm64_x86_64-simulator/Nuke.framework/Headers/*.h',
+      'Nuke.xcframework/macos-arm64_x86_64/Nuke.framework/Headers/*.h',
+      'Nuke.xcframework/macos-arm64_x86_64/Nuke.framework/Versions/*.h',
+      'Nuke.xcframework/macos-arm64_x86_64/Nuke.framework/Versions/Current/Headers/*.h',
+      'Nuke.xcframework/tvos-arm64/Nuke.framework/Headers/*.h',
+      'Nuke.xcframework/tvos-arm64_x86_64-simulator/Nuke.framework/Headers/*.h',
+      'Nuke.xcframework/watchos-arm64_arm64_32_armv7k/Nuke.framework/Headers/*.h',
+      'Nuke.xcframework/watchos-arm64_i386_x86_64-simulator/Nuke.framework/Headers/*.h',
+      'NukeUI.xcframework/ios-arm64/NukeUI.framework/Headers/*.h',
+      'NukeUI.xcframework/ios-arm64_x86_64-simulator/NukeUI.framework/Headers/*.h',
+      'NukeUI.xcframework/macos-arm64_x86_64/NukeUI.framework/Headers/*.h',
+      'NukeUI.xcframework/macos-arm64_x86_64/NukeUI.framework/Versions/*.h',
+      'NukeUI.xcframework/macos-arm64_x86_64/NukeUI.framework/Versions/Current/Headers/*.h',
+      'NukeUI.xcframework/tvos-arm64/NukeUI.framework/Headers/*.h',
+      'NukeUI.xcframework/tvos-arm64_x86_64-simulator/NukeUI.framework/Headers/*.h',
+      'NukeUI.xcframework/watchos-arm64_arm64_32_armv7k/NukeUI.framework/Headers/*.h',
+      'NukeUI.xcframework/watchos-arm64_i386_x86_64-simulator/NukeUI.framework/Headers/*.h'
+    ]
+
+    s.pod_target_xcconfig  = {
+      "EXCLUDED_SOURCE_FILE_NAMES" => exclude_source_file_name.join(" ")
+    }
+  end
   s.vendored_frameworks = "ios/*.{xcframework}"
   s.dependency "SwiftSVG"
   s.dependency "Gifu"
