@@ -66,6 +66,7 @@ const TurboImage = (props: TurboImageProps) => {
     { borderRadius: rounded ? 9999999 : borderRadius },
   ];
 
+  const needCheckAPNG = Utils.canBeAPNG(restProps.src);
   return (
     <View style={containerStyle}>
       <NativeImage

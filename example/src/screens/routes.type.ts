@@ -19,6 +19,7 @@ export type HomeStackParamList = {
   LiveText: undefined;
   SVG: undefined;
   Gif: undefined;
+  APNG: undefined;
 };
 
 export type HomeStackProps = NativeStackScreenProps<HomeStackParamList>;
@@ -46,4 +47,5 @@ export enum RouteName {
   LiveText = 'LiveText',
   SVG = 'SVG',
   Gif = 'Gif',
+  APNG = 'APNG',
 }
