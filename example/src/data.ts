@@ -39,9 +39,9 @@ export const routesData = [
     data: [{ name: 'iOS 16+ only', destination: RouteName.LiveText }],
   },
   {
-    title: 'Other Formats',
+    title: 'Other Formats(Experimental)',
     data: [
-      { name: 'SVG (Experimental)', destination: RouteName.SVG },
+      { name: 'SVG', destination: RouteName.SVG },
       { name: 'Gif', destination: RouteName.Gif },
       { name: 'APNG', destination: RouteName.APNG },
     ],
