@@ -177,17 +177,6 @@ final class TurboImageView : UIView {
 
 // MARK: - other formats
 fileprivate extension TurboImageView {
-    func checkIsAPNG(data: Data) -> Bool {
-        // Signature bytes for the acTL chunk in an APNG file
-        let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
-        
-        // Search for the acTL chunk signature in the data
-        if let _ = data.range(of: acTLSignature) {
-            return true // This is an APNG
-        } else {
-            return false // This is a standard PNG or another format
-        }
-    }
 
   func handleSvg() {
     ImageDecoderRegistry.shared.register { context in
@@ -216,50 +205,36 @@ fileprivate extension TurboImageView {
       return nil
     }
   }
-    func handleAPNG() {
-        ImageDecoderRegistry.shared.register { context in
-            
-            let apng = self.checkIsAPNG(data: context.data)
-            
-            if(apng){
-                return ImageDecoders.Empty()
-            }
-            return nil
-        }
-        lazyImageView.makeImageView = { container in
-            
-            // apng has same .png extention but have type nil
-            if(container.type == .png){
-                // let NukeUI handle png image by themself
-                return nil
-            }
-            let url = URL(string: self.src!)!
-            let view = APNGImageView(frame: .zero)
-            
-            ImagePipeline.shared.loadAPNGImage(with: url) { result in
-                switch result {
-                case .success(let data):
-                    do {
-                        let image = try APNGImage(data: data)
-                        view.image = image
-                        self.addSubview(view)
-                    } catch {
-                        print("APNGImageView", error)
-                        if let normalImage = error.apngError?.normalImage {
-                            view.staticImage = normalImage
-                            self.addSubview(view)
-                        }
-                        return
-                    }
-                    break;
-                case .failure(let error):
-                    print(error)
-                    break;
-                }
-            }
-            return view
-        }
+
+  func checkIsAPNG(data: Data) -> Bool {
+    // Signature bytes for the acTL chunk in an APNG file
+    let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
+
+    // Search for the acTL chunk signature in the data
+    if let _ = data.range(of: acTLSignature) {
+      return true // This is an APNG
+    } else {
+      return false // This is a standard PNG or another format
     }
+  }
+  func handleAPNG() {
+    ImageDecoderRegistry.shared.register { context in
+      self.checkIsAPNG(data: context.data)
+      ? ImageDecoders.Empty()
+      : nil
+    }
+    
+    lazyImageView.makeImageView = { container in
+
+      guard let data = container.data else { return nil }
+
+      let view = APNGImageView(frame: .zero)
+      let image = try? APNGImage(data: data, decodingOptions: .fullFirstPass)
+      view.image = image
+      return view
+    }
+  }
+
 }
 // MARK: - processors
 fileprivate extension TurboImageView {
@@ -381,18 +356,3 @@ extension TurboImageView {
   }
 }
 
-// Extend Nuke to handle APNG images
-extension ImagePipeline {
-    func loadAPNGImage(with url: URL, completion: @escaping (Result<Data, Error>) -> Void) {
-        // Use Nuke to load the data
-        let request = ImageRequest(url: url)
-        self.loadData(with: request) { result in
-            switch result {
-            case .success(let response):
-                completion(.success(response.data))
-            case .failure(let error):
-                completion(.failure(error))
-            }
-        }
-    }
-}
