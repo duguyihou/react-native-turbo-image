@@ -14,7 +14,7 @@ const APNGScreen = () => {
           src={item.url}
           indicator={{ style: 'large' }}
           isAPNG={item.isAPNG}
-          resizeMode="stretch"
+          cachePolicy="urlCache"
         />
       )}
       keyExtractor={(item) => item.url}

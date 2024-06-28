@@ -84,7 +84,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           else -> {}
         }
       }
-      view.isAPNG?.let {
+      if (view.isAPNG == true) {
         decoderFactory { result, _, _ ->
           APNGDecoder(result.source)
         }
