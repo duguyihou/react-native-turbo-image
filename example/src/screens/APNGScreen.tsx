@@ -9,10 +9,12 @@ const APNGScreen = () => {
       data={apngData}
       renderItem={({ item }) => (
         <Card
+          title={item.title}
           size={300}
           src={item.url}
           indicator={{ style: 'large' }}
           isAPNG={item.isAPNG}
+          resizeMode="stretch"
         />
       )}
       keyExtractor={(item) => item.url}

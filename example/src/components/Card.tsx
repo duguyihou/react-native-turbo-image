@@ -11,7 +11,6 @@ const Card = ({ title, size, ...props }: Props) => {
     <View style={styles.card}>
       <TurboImage
         {...props}
-        cachePolicy="urlCache"
         style={[
           styles.image,
           typeof size === 'number' && { width: size, height: size },

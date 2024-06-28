@@ -49,11 +49,6 @@ export const routesData = [
 ];
 export const listScreenData = [
   {
-    url: 'https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png',
-    blurhash: 'ULKKWp^+s,_300M{t7tR~XNHE2bI00xuWBRP',
-    isAPNG: true,
-  },
-  {
     url: 'https://placedog.net/300/300?id=1',
     blurhash: 'ULKKWp^+s,_300M{t7tR~XNHE2bI00xuWBRP',
   },
@@ -689,10 +684,12 @@ export const gifData = [
 
 export const apngData = [
   {
+    title: 'APNG',
     url: 'https://apng.onevcat.com/assets/elephant.png',
     isAPNG: true,
   },
   {
+    title: 'PNG',
     url: 'https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png',
     isAPNG: true,
   },
