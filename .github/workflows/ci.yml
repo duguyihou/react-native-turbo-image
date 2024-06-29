@@ -149,18 +149,6 @@ jobs:
         env:
           NO_FLIPPER: 1
 
-      - name: Install xcpretty
-        run: gem install xcpretty
-        
-      - name: Build App
-        run: "set -o pipefail && xcodebuild \
-          CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ \
-          -derivedDataPath build -UseModernBuildSystem=YES \
-          -workspace example.xcworkspace \
-          ONLY_ACTIVE_ARCH=NO \
-          -scheme example \
-          -sdk iphonesimulator \
-          -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 11 Pro' \
-          build \
-          CODE_SIGNING_ALLOWED=NO | xcpretty"      
+      - name: Build example for iOS
+        run: |
+          yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
