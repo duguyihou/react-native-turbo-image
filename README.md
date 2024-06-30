@@ -32,7 +32,7 @@ import TurboImage from 'react-native-turbo-image';
 // ...
 
 <TurboImage
-  src={url}
+  source={{ uri: item.url }}
   style={{ width: 200, height: 200 }}
   cachePolicy="urlCache"
 />;
@@ -40,9 +40,10 @@ import TurboImage from 'react-native-turbo-image';
 
 ## Props
 
-### `src: string`
+### `source: object`
 
-The URL of the image
+- `uri`: Remote url to load the image from.
+- `headers?`: Headers to load the image with. e.g. `{ Authorization: 'someAuthToken' }`
 
 ### `style: ImageStyle`
 
@@ -88,10 +89,7 @@ show the indicator when loading,
 - `color?`: number / ColorValue
 
 ```ts
-indicator={{
-            style: 'large',
-            color: 'red',
-          }}
+indicator={{ style: 'large', color: 'red' }}
 ```
 
 ### `showPlaceholderOnFailure?: boolean`
