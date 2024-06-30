@@ -130,13 +130,9 @@ The color is applied to every non-transparent pixel, causing the image’s shape
 
 Enables Live Text interaction with the image.
 
-### `isSVG?: boolean`
+### `format?: String`
 
-determines if use SVG decoder
-
-### `isGif?: boolean`
-
-determines if use Gif decoder
+Specify the format for special image, e.g. `svg` and `gif`. In general, TurboImage will determine the decoder automatically.
 
 ### `onStart?: (result: NativeSyntheticEvent<TaskState>) => void`
 

@@ -5,7 +5,7 @@ import Card from '../components/Card';
 const SVGScreen = () => {
   return (
     <>
-      {svgData.map(({ url, isSVG }) => {
+      {svgData.map(({ url }) => {
         return (
           <Card
             key={url}
@@ -17,7 +17,7 @@ const SVGScreen = () => {
               style: 'large',
               color: 'red',
             }}
-            isSVG={isSVG}
+            format="svg"
           />
         );
       })}

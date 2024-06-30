@@ -14,7 +14,7 @@ const GifScreen = () => {
             uri: item.url,
           }}
           indicator={{ style: 'large' }}
-          isGif={item.isGif}
+          format="gif"
         />
       )}
       keyExtractor={(item) => item.url}

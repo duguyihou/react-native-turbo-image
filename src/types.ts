@@ -21,6 +21,8 @@ export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
 export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
 
+export type Format = 'svg' | 'gif';
+
 type State = 'running' | 'cancelled' | 'completed';
 
 export type Placeholder = {
@@ -58,8 +60,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   tint?: number | ColorValue;
   cachePolicy?: CachePolicy;
   enableLiveTextInteraction?: boolean;
-  isSVG?: boolean;
-  isGif?: boolean;
+  format?: Format;
   onStart?: (result: NativeSyntheticEvent<TaskState>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;

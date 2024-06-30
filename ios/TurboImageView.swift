@@ -13,6 +13,8 @@ final class TurboImageView : UIView {
     static let width = "width"
     static let height = "height"
     static let source = "source"
+    static let svg = "svg"
+    static let gif = "gif"
   }
 
   private lazy var lazyImageView = LazyImageView()
@@ -122,9 +124,17 @@ final class TurboImageView : UIView {
 
   @objc var enableLiveTextInteraction: Bool = false
 
-  @objc var isSVG: Bool = false
-
-  @objc var isGif: Bool = false
+  @objc var format: NSString? {
+    didSet {
+      guard let format = format as? String else { return }
+      if format == Constants.svg {
+        handleSvg()
+      }
+      if format == Constants.gif {
+        handleGif()
+      }
+    }
+  }
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -146,14 +156,6 @@ final class TurboImageView : UIView {
       if let urlRequest {
         lazyImageView.request = ImageRequest(urlRequest: urlRequest)
       }
-    }
-
-    if isSVG {
-      handleSvg()
-    }
-
-    if isGif {
-      handleGif()
     }
 
     registerObservers()

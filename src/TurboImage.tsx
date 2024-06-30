@@ -41,8 +41,7 @@ const TurboImage = (props: TurboImageProps) => {
     resize,
     tint,
     enableLiveTextInteraction,
-    isSVG,
-    isGif,
+    format,
     onStart,
     onSuccess,
     onFailure,
@@ -82,8 +81,7 @@ const TurboImage = (props: TurboImageProps) => {
         resize={resize}
         tint={processColor(tint)}
         enableLiveTextInteraction={enableLiveTextInteraction}
-        isSVG={isSVG}
-        isGif={isGif}
+        format={format}
         onStart={onStart}
         onSuccess={onSuccess}
         onFailure={onFailure}
