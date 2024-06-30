@@ -33,8 +33,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var monochrome: Int? = null
   var tint: Int? = null
 
-  var isSVG: Boolean? = null
-  var isGif: Boolean? = null
+  var format: String? = null
 
   val blurhashDrawable: Drawable?
     get() {

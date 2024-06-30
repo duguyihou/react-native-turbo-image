@@ -2,6 +2,7 @@ import React from 'react';
 import { gifData } from '../data';
 import Card from '../components/Card';
 import { FlatList } from 'react-native';
+import type { Format } from 'react-native-turbo-image';
 
 const GifScreen = () => {
   return (
@@ -14,7 +15,7 @@ const GifScreen = () => {
             uri: item.url,
           }}
           indicator={{ style: 'large' }}
-          isGif={item.isGif}
+          format={item.format as Format}
         />
       )}
       keyExtractor={(item) => item.url}

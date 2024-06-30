@@ -62,18 +62,25 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         else
           CachePolicy.DISABLED
       )
-      view.isSVG?.let {
-        decoderFactory { result, options, _ ->
-          SvgDecoder(result.source, options)
-        }
-      }
-      view.isGif?.let {
-        decoderFactory { result, options, _ ->
-          if (SDK_INT >= 28) {
-            ImageDecoderDecoder(result.source, options)
-          } else {
-            GifDecoder(result.source, options)
+      view.format?.let {
+        when (it) {
+          "svg" -> {
+            decoderFactory { result, options, _ ->
+              SvgDecoder(result.source, options)
+            }
           }
+
+          "gif" -> {
+            decoderFactory { result, options, _ ->
+              if (SDK_INT >= 28) {
+                ImageDecoderDecoder(result.source, options)
+              } else {
+                GifDecoder(result.source, options)
+              }
+            }
+          }
+
+          else -> {}
         }
       }
       placeholder(
@@ -164,14 +171,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.tint = tint
   }
 
-  @ReactProp(name = "isSVG")
-  fun setIsSVG(view: TurboImageView, isSVG: Boolean?) {
-    view.isSVG = isSVG
-  }
-
-  @ReactProp(name = "isGif")
-  fun setIsGif(view: TurboImageView, isGif: Boolean?) {
-    view.isGif = isGif
+  @ReactProp(name = "format")
+  fun setFormat(view: TurboImageView, format: String?) {
+    view.format = format
   }
 
   companion object {

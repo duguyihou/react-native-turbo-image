@@ -2,6 +2,7 @@ import TurboImage from './TurboImage';
 export type {
   Source,
   CachePolicy,
+  Format,
   Success,
   Failure,
   TaskState,
