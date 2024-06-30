@@ -94,7 +94,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   }
 
   @ReactProp(name = "source")
-  fun setSrc(view: TurboImageView, source: ReadableMap) {
+  fun setSource(view: TurboImageView, source: ReadableMap) {
     view.uri = source.toHashMap()["uri"] as? String
     view.headers = source.toHashMap()["headers"] as? Headers
   }
