@@ -1,12 +1,11 @@
 import React from 'react';
 import { svgData } from '../data';
 import Card from '../components/Card';
-import type { Format } from 'react-native-turbo-image';
 
 const SVGScreen = () => {
   return (
     <>
-      {svgData.map(({ url, format }) => {
+      {svgData.map(({ url }) => {
         return (
           <Card
             key={url}
@@ -18,7 +17,7 @@ const SVGScreen = () => {
               style: 'large',
               color: 'red',
             }}
-            format={format as Format}
+            format="svg"
           />
         );
       })}
