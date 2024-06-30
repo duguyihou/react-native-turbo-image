@@ -10,7 +10,9 @@ const PlaceholderScreen = () => {
       renderItem={({ item }) => (
         <Card
           size={300}
-          src={item.url}
+          source={{
+            uri: item.url,
+          }}
           placeholder={item.placeholder}
           title={item.title}
         />

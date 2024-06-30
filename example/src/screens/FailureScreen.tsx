@@ -27,7 +27,9 @@ const FailureResultScreen = () => {
   return (
     <View>
       <Card
-        src="https://placedog.net/300/300?id=12100"
+        source={{
+          uri: 'https://placedog.net/300/300?id=12100',
+        }}
         size={200}
         placeholder={{ blurhash: 'UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU' }}
         onStart={handleStart}

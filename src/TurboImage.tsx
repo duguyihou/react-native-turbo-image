@@ -7,7 +7,12 @@ import {
   View,
   StyleSheet,
 } from 'react-native';
-import type { IndicatorStyle, TurboImageApi, TurboImageProps } from './types';
+import type {
+  IndicatorStyle,
+  Source,
+  TurboImageApi,
+  TurboImageProps,
+} from './types';
 
 const { TurboImageViewManager } = NativeModules;
 const ComponentName = 'TurboImageView';
@@ -94,7 +99,7 @@ const styles = StyleSheet.create({
   },
 });
 
-TurboImage.prefetch = async (sources: string[]) => {
+TurboImage.prefetch = async (sources: Source[]) => {
   return await TurboImageViewManager.prefetch(sources);
 };
 

@@ -14,7 +14,9 @@ const ProcessingScreen = () => {
       renderItem={({ item: { url, resize, ...props } }) => (
         <Card
           {...props}
-          src={url}
+          source={{
+            uri: url,
+          }}
           size={resize ?? size}
           indicator={{
             style: 'large',

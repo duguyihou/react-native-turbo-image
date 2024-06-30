@@ -16,6 +16,7 @@ import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
+import okhttp3.Headers
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
@@ -52,7 +53,8 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
 
-    view.load(view.src) {
+    view.load(view.uri) {
+      view.headers?.let { headers(it) }
       listener(TurboImageListener(view))
       diskCachePolicy(
         if (view.cachePolicy != "memory")
@@ -91,9 +93,10 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.dispose()
   }
 
-  @ReactProp(name = "src")
-  fun setSrc(view: TurboImageView, src: String) {
-    view.src = src
+  @ReactProp(name = "source")
+  fun setSource(view: TurboImageView, source: ReadableMap) {
+    view.uri = source.toHashMap()["uri"] as? String
+    view.headers = source.toHashMap()["headers"] as? Headers
   }
 
   @ReactProp(name = "placeholder")

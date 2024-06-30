@@ -10,7 +10,7 @@ const DataCacheScreen = () => {
         return (
           <Card
             key={url}
-            src={url}
+            source={{ uri: url }}
             placeholder={{ blurhash }}
             cachePolicy={cachePolicy as CachePolicy}
             size={300}

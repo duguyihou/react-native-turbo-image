@@ -14,11 +14,13 @@ import com.commit451.coiltransformations.BlurTransformation
 import com.commit451.coiltransformations.ColorFilterTransformation
 
 import com.facebook.react.uimanager.ThemedReactContext
+import okhttp3.Headers
 
 @SuppressLint("ViewConstructor")
 class TurboImageView(private val reactContext: ThemedReactContext) :
   AppCompatImageView(reactContext) {
-  var src: String? = null
+  var uri: String? = null
+  var headers: Headers? = null
   var cachePolicy: String? = "memory"
   var crossfade: Int? = null
   var blurhash: String? = null

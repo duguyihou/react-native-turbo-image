@@ -7,6 +7,7 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.facebook.react.bridge.*
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import okhttp3.Headers
 
 class TurboImageModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
@@ -15,13 +16,30 @@ class TurboImageModule(private val context: ReactApplicationContext) :
 
   @ReactMethod
   fun prefetch(sources: ReadableArray, promise: Promise) {
-    sources.toArrayList().forEach { src ->
-      val request = ImageRequest.Builder(context)
-        .data(src.toString())
-        .diskCachePolicy(CachePolicy.ENABLED)
-        .memoryCachePolicy(CachePolicy.ENABLED)
-        .build()
-      context.imageLoader.enqueue(request)
+    sources.toArrayList().forEach { source ->
+      val uri = (source as HashMap<*, *>)["uri"] as String
+      val headers = source["headers"] as? HashMap<*, *>
+
+      if (headers != null) {
+        val requestHeaders = Headers.Builder()
+        headers.map { (key, value) ->
+          requestHeaders.add(key as String, value as String)
+        }
+        val request = ImageRequest.Builder(context)
+          .headers(requestHeaders.build())
+          .data(uri)
+          .diskCachePolicy(CachePolicy.ENABLED)
+          .memoryCachePolicy(CachePolicy.ENABLED)
+          .build()
+        context.imageLoader.enqueue(request)
+      } else {
+        val request = ImageRequest.Builder(context)
+          .data(uri)
+          .diskCachePolicy(CachePolicy.ENABLED)
+          .memoryCachePolicy(CachePolicy.ENABLED)
+          .build()
+        context.imageLoader.enqueue(request)
+      }
     }
     promise.resolve("Success")
   }

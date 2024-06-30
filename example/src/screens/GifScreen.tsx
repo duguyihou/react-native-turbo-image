@@ -10,7 +10,9 @@ const GifScreen = () => {
       renderItem={({ item }) => (
         <Card
           size={300}
-          src={item.url}
+          source={{
+            uri: item.url,
+          }}
           indicator={{ style: 'large' }}
           isGif={item.isGif}
         />
