@@ -530,11 +530,24 @@ export const listScreenData = [
 ];
 
 export const prefetchData = [
-  { uri: 'https://placedog.net/300/300?id=122' },
-  { uri: 'https://placedog.net/300/300?id=123' },
-  { uri: 'https://placedog.net/300/300?id=124' },
-  { uri: 'https://placedog.net/300/300?id=125' },
-  { uri: 'https://placedog.net/300/300?id=126' },
+  {
+    uri: 'https://placedog.net/300/300?id=122',
+    headers: {
+      Authorization: 'someAuthToken',
+    },
+  },
+  {
+    uri: 'https://placedog.net/300/300?id=123',
+  },
+  {
+    uri: 'https://placedog.net/300/300?id=124',
+  },
+  {
+    uri: 'https://placedog.net/300/300?id=125',
+  },
+  {
+    uri: 'https://placedog.net/300/300?id=126',
+  },
 ];
 
 export const placeholderData = [
