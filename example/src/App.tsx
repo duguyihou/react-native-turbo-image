@@ -16,6 +16,7 @@ import GifScreen from './screens/GifScreen';
 import PrefetchScreen from './screens/PrefetchScreen';
 import PlaceholderScreen from './screens/PlaceholderScreen';
 import LiveTextScreen from './screens/LiveTextScreen';
+import APNGScreen from './screens/APNGScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -66,6 +67,7 @@ function App() {
         <Stack.Group>
           <Stack.Screen name={RouteName.SVG} component={SVGScreen} />
           <Stack.Screen name={RouteName.Gif} component={GifScreen} />
+          <Stack.Screen name={RouteName.APNG} component={APNGScreen} />
         </Stack.Group>
       </Stack.Navigator>
     </NavigationContainer>

@@ -17,6 +17,7 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
 import okhttp3.Headers
+import com.turboimage.decoder.APNGDecoder
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
@@ -80,9 +81,16 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
             }
           }
 
+          "apng" -> {
+            decoderFactory { result, _, _ ->
+              APNGDecoder(result.source)
+            }
+          }
+
           else -> {}
         }
       }
+
       placeholder(
         view.thumbhashDrawable
           ?: view.blurhashDrawable
@@ -175,6 +183,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setFormat(view: TurboImageView, format: String?) {
     view.format = format
   }
+
 
   companion object {
     private const val REACT_CLASS = "TurboImageView"

@@ -4,6 +4,7 @@ import SwiftSVG
 import VisionKit
 import Gifu
 import React
+import APNGKit
 
 final class TurboImageView : UIView {
 
@@ -15,6 +16,7 @@ final class TurboImageView : UIView {
     static let source = "source"
     static let svg = "svg"
     static let gif = "gif"
+    static let apng = "apng"
   }
 
   private lazy var lazyImageView = LazyImageView()
@@ -133,6 +135,9 @@ final class TurboImageView : UIView {
       if format == Constants.gif {
         handleGif()
       }
+      if format == Constants.apng {
+        handleAPNG()
+      }
     }
   }
 
@@ -204,6 +209,28 @@ fileprivate extension TurboImageView {
       return nil
     }
   }
+
+  func handleAPNG() {
+    ImageDecoderRegistry.shared.register { context in
+      // Signature bytes for the acTL chunk in an APNG file
+      let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
+      // Search for the acTL chunk signature in the data
+      if let _ = context.data.range(of: acTLSignature) {
+        return ImageDecoders.Empty()
+      } else {
+        return nil
+      }
+    }
+
+    lazyImageView.makeImageView = { container in
+      guard let data = container.data else { return nil }
+      let view = APNGImageView(frame: .zero)
+      let image = try? APNGImage(data: data, decodingOptions: .fullFirstPass)
+      view.image = image
+      return view
+    }
+  }
+
 }
 // MARK: - processors
 fileprivate extension TurboImageView {
@@ -324,3 +351,4 @@ extension TurboImageView {
     }
   }
 }
+

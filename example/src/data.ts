@@ -39,10 +39,11 @@ export const routesData = [
     data: [{ name: 'iOS 16+ only', destination: RouteName.LiveText }],
   },
   {
-    title: 'Other Formats',
+    title: 'Other Formats(Experimental)',
     data: [
-      { name: 'SVG (Experimental)', destination: RouteName.SVG },
+      { name: 'SVG', destination: RouteName.SVG },
       { name: 'Gif', destination: RouteName.Gif },
+      { name: 'APNG', destination: RouteName.APNG },
     ],
   },
 ];
@@ -678,5 +679,13 @@ export const gifData = [
   },
   {
     url: 'https://cloud.githubusercontent.com/assets/1567433/6505643/42eb3ee8-c2e8-11e4-8666-ac9c8e1dc9b5.gif',
+  },
+];
+
+export const apngData = [
+  {
+    title: 'APNG',
+    url: 'https://apng.onevcat.com/assets/elephant.png',
+    format: 'apng',
   },
 ];

@@ -21,7 +21,7 @@ export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
 export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
 
-export type Format = 'svg' | 'gif';
+export type Format = 'svg' | 'gif' | 'apng';
 
 type State = 'running' | 'cancelled' | 'completed';
 
