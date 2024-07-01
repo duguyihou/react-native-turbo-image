@@ -210,28 +210,20 @@ fileprivate extension TurboImageView {
     }
   }
 
-  func checkIsAPNG(data: Data) -> Bool {
-    // Signature bytes for the acTL chunk in an APNG file
-    let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
-
-    // Search for the acTL chunk signature in the data
-    if let _ = data.range(of: acTLSignature) {
-      return true // This is an APNG
-    } else {
-      return false // This is a standard PNG or another format
-    }
-  }
   func handleAPNG() {
     ImageDecoderRegistry.shared.register { context in
-      self.checkIsAPNG(data: context.data)
-      ? ImageDecoders.Empty()
-      : nil
+      // Signature bytes for the acTL chunk in an APNG file
+      let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
+      // Search for the acTL chunk signature in the data
+      if let _ = context.data.range(of: acTLSignature) {
+        return ImageDecoders.Empty()
+      } else {
+        return nil
+      }
     }
-    
+
     lazyImageView.makeImageView = { container in
-
       guard let data = container.data else { return nil }
-
       let view = APNGImageView(frame: .zero)
       let image = try? APNGImage(data: data, decodingOptions: .fullFirstPass)
       view.image = image
