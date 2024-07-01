@@ -16,6 +16,7 @@ final class TurboImageView : UIView {
     static let source = "source"
     static let svg = "svg"
     static let gif = "gif"
+    static let apng = "apng"
   }
 
   private lazy var lazyImageView = LazyImageView()
@@ -133,6 +134,9 @@ final class TurboImageView : UIView {
       }
       if format == Constants.gif {
         handleGif()
+      }
+      if format == Constants.apng {
+        handleAPNG()
       }
     }
   }

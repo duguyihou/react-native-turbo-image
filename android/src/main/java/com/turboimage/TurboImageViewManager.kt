@@ -80,13 +80,13 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
               }
             }
           }
+          "apng" -> {
+            decoderFactory { result, _, _ ->
+              APNGDecoder(result.source)
+            }
+          }
 
           else -> {}
-        }
-      }
-      if (view.isAPNG == true) {
-        decoderFactory { result, _, _ ->
-          APNGDecoder(result.source)
         }
       }
 
@@ -183,10 +183,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     view.format = format
   }
 
-  @ReactProp(name = "isAPNG")
-  fun setIsAPNG(view: TurboImageView, isAPNG: Boolean?) {
-    view.isAPNG = isAPNG
-  }
 
   companion object {
     private const val REACT_CLASS = "TurboImageView"

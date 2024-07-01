@@ -1279,7 +1279,7 @@ SPEC CHECKSUMS:
   React-logger: 3eb80a977f0d9669468ef641a5e1fabbc50a09ec
   React-Mapbuffer: 84ea43c6c6232049135b1550b8c60b2faac19fab
   react-native-safe-area-context: b97eb6f9e3b7f437806c2ce5983f479f8eb5de4b
-  react-native-turbo-image: 3dfc51ef02f1a244e9603ba97d3cb2ffdb7c4a68
+  react-native-turbo-image: f372f7dadfe49eede5d762d502b2ca4f0a5f4824
   React-nativeconfig: b4d4e9901d4cabb57be63053fd2aa6086eb3c85f
   React-NativeModulesApple: cd26e56d56350e123da0c1e3e4c76cb58a05e1ee
   React-perflogger: 5f49905de275bac07ac7ea7f575a70611fa988f2
@@ -1307,4 +1307,4 @@ SPEC CHECKSUMS:
 
 PODFILE CHECKSUM: f1b8a84c531fb9bbe7f9dab47124e3d4de7513db
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.14.3
