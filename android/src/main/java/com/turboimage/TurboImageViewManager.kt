@@ -80,6 +80,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
               }
             }
           }
+
           "apng" -> {
             decoderFactory { result, _, _ ->
               APNGDecoder(result.source)
