@@ -11,11 +11,9 @@ const APNGScreen = () => {
         <Card
           title={item.title}
           size={300}
-          source={{
-            uri: item.url,
-          }}
+          source={{ uri: item.url }}
           indicator={{ style: 'large' }}
-          format={'apng'}
+          format="apng"
         />
       )}
       keyExtractor={(item) => item.url}
