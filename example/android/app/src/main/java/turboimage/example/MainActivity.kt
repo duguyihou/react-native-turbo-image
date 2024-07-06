@@ -1,4 +1,4 @@
-package com.turboimageexample
+package turboimage.example
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
