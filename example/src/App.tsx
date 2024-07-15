@@ -11,6 +11,7 @@ import ImageScreen from './screens/ImageScreen';
 import MemoryCacheScreen from './screens/MemoryCacheScreen';
 import UrlCacheScreen from './screens/UrlCacheScreen';
 import DataCacheScreen from './screens/DataCacheScreen';
+import LocalAssetScreen from './screens/LocalAssetScreen';
 import SVGScreen from './screens/SVGScreen';
 import GifScreen from './screens/GifScreen';
 import PrefetchScreen from './screens/PrefetchScreen';
@@ -47,6 +48,10 @@ function App() {
           <Stack.Screen
             name={RouteName.DataCache}
             component={DataCacheScreen}
+          />
+          <Stack.Screen
+            name={RouteName.LocalAsset}
+            component={LocalAssetScreen}
           />
           <Stack.Screen name={RouteName.Prefetch} component={PrefetchScreen} />
         </Stack.Group>

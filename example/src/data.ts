@@ -20,6 +20,7 @@ export const routesData = [
       { name: 'MemoryCache', destination: RouteName.MemoryCache },
       { name: 'UrlCache', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
+      { name: 'LocalAsset', destination: RouteName.LocalAsset },
       { name: 'Prefetch', destination: RouteName.Prefetch },
     ],
   },
@@ -599,6 +600,13 @@ export const dataCacheData = [
     url: 'https://placedog.net/300/300?id=236',
     blurhash: 'UELDlXjFE3^*00x^M|M{ve9Y%1Ri~VIVV@-p',
     cachePolicy: 'dataCache',
+  },
+];
+
+export const localAssetData = [
+  {
+    title: 'localAsset',
+    url: 'https://placedog.net/300/300?id=236',
   },
 ];
 
