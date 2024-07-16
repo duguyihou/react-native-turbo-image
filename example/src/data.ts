@@ -603,13 +603,6 @@ export const dataCacheData = [
   },
 ];
 
-export const localAssetData = [
-  {
-    title: 'localAsset',
-    url: 'https://placedog.net/300/300?id=236',
-  },
-];
-
 export const processingData = [
   {
     title: 'Original',
