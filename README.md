@@ -7,17 +7,17 @@
 
 # react-native-turbo-image
 
-Performant React Native image component. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
+Performant image Component for React Native. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
 
 ## Features
 
+- Support New Architecture. see the [example](https://github.com/duguyihou/APPLibTest)
+- Support authorization headers
+- Support thumbhash and blurhash for placeholder
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
-- Image Processing & Decompression
+- Prefetch, cleanMemoryCache and cleanDiskCache
 - Written in TypeScript, Swift and Kotlin
-- Support special formats
-  - SVG
-  - Gif
-  - APNG
+- Support special formats (SVG, Gif, APNG)
 
 ## Installation
 
@@ -32,18 +32,37 @@ cd ios && pod install
 ```ts
 import TurboImage from 'react-native-turbo-image';
 
-// ...
+// remote image
 
 <TurboImage
-  source={{ uri: item.url }}
-  style={{ width: 200, height: 200 }}
+  source={{ uri: "https://placedog.net/300/300?id=1" }}
+  style={{ width: 300, height: 300 }}
   cachePolicy="urlCache"
 />;
+
+// local asset
+
+<TurboImage
+  source={require('../../assets/local.png')}
+  style={{ width: 300, height: 300 }}
+/>;
+
 ```
 
 ## Props
 
-### `source: object`
+### `source: object | number`
+
+#### local asset
+
+```ts
+<TurboImage
+  source={require('../../assets/local.png')}
+  style={{ width: 300, height: 300 }}
+/>;
+```
+
+#### remote image
 
 - `uri`: Remote url to load the image from.
 - `headers?`: Headers to load the image with. e.g. `{ Authorization: 'someAuthToken' }`
@@ -83,7 +102,7 @@ The resize mode of the image, default value `contain`
 - `stretch`
 - `center`
 
-### `indicator`
+### `indicator?: object`
 
 show the indicator when loading,
 
@@ -135,7 +154,7 @@ Enables Live Text interaction with the image.
 
 ### `format?: String`
 
-Specify the format for special image, e.g. `svg` and `gif`. In general, TurboImage will determine the decoder automatically.
+Specify the format for special image, e.g. `svg`, `gif` and `apng`. In general, TurboImage will determine the decoder automatically.
 
 ### `onStart?: (result: NativeSyntheticEvent<TaskState>) => void`
 
