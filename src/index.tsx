@@ -1,5 +1,7 @@
 import TurboImage from './TurboImage';
 export type {
+  LocalSource,
+  RemoteSource,
   Source,
   CachePolicy,
   Format,

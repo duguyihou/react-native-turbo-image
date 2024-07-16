@@ -12,6 +12,7 @@ export type HomeStackParamList = {
   MemoryCache: undefined;
   UrlCache: undefined;
   DataCache: undefined;
+  LocalAsset: undefined;
   Prefetch: undefined;
   Success: undefined;
   Failure: undefined;
@@ -40,6 +41,7 @@ export enum RouteName {
   MemoryCache = 'MemoryCache',
   UrlCache = 'UrlCache',
   DataCache = 'DataCache',
+  LocalAsset = 'LocalAsset',
   Prefetch = 'Prefetch',
   Success = 'Success',
   Failure = 'Failure',
