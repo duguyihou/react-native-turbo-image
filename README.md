@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/list.gif" width="200" />
-  <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/process.gif" width="200" />
+  <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/ios.gif" width="200" />
+   <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/android.gif" width="200" />
   
   > You can find more examples in [example folder](https://github.com/duguyihou/react-native-turbo-image/tree/main/example)
 </div>
