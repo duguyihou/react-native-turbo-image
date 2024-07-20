@@ -97,7 +97,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           ?: view.circleProgressDrawable
       )
       transformations(view.transformations)
-      crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
+      crossfade(view.crossfade ?: 0)
       error(view.blurhashDrawable)
       size(view.resize ?: Size.ORIGINAL)
     }
