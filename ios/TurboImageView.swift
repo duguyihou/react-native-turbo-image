@@ -102,7 +102,7 @@ final class TurboImageView : UIView {
     }
   }
   
-  @objc var fadeDuration: NSNumber?
+  @objc var fadeDuration: NSNumber = 300
   
   @objc var cachePolicy = "memory" {
     didSet {
@@ -158,13 +158,14 @@ final class TurboImageView : UIView {
       }
     }
     
-    registerObservers()
-    if fadeDuration == 0 {
+    if placeholder != nil {
       lazyImageView.transition = .none
     } else {
       lazyImageView.transition =
-        .fadeIn(duration: (fadeDuration?.doubleValue ?? 0) / 1000)
+        .fadeIn(duration: (fadeDuration.doubleValue) / 1000)
     }
+    
+    registerObservers()
     lazyImageView.processors = processors
   }
   

@@ -53,6 +53,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
+    val defaultCrossfade = if (view.thumbhashDrawable != null || view.blurhashDrawable != null) {
+      0
+    } else {
+      CrossfadeDrawable.DEFAULT_DURATION
+    }
 
     view.load(view.uri) {
       view.headers?.let { headers(it) }
@@ -97,7 +102,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           ?: view.circleProgressDrawable
       )
       transformations(view.transformations)
-      crossfade(view.crossfade ?: 0)
+      crossfade(view.crossfade ?: defaultCrossfade)
       error(view.blurhashDrawable)
       size(view.resize ?: Size.ORIGINAL)
     }
