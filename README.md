@@ -120,7 +120,9 @@ Show the blur placeholder image in the case of a failure.
 
 ### `fadeDuration?: number`
 
-The transition duration of the image. default value: 300(iOS) / 100(Android)
+The transition duration of the image. default value: 300 milliseconds(iOS) / 100(Android) milliseconds
+
+> note: To avoid flicking, it will be set to 0 when a placeholder is provided.
 
 ### `borderRadius?: number`
 
