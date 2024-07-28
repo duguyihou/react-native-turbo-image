@@ -61,6 +61,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
     view.load(view.uri) {
       view.headers?.let { headers(it) }
+      view.allowHardware?.let { allowHardware(it) }
       listener(TurboImageListener(view))
       diskCachePolicy(
         if (view.cachePolicy != "memory")
@@ -182,6 +183,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "tint")
   fun setTint(view: TurboImageView, tint: Int?) {
     view.tint = tint
+  }
+
+  @ReactProp(name = "allowHardware")
+  fun setAllowHardware(view: TurboImageView, allowHardware: Boolean?) {
+    view.allowHardware = allowHardware
   }
 
   @ReactProp(name = "format")

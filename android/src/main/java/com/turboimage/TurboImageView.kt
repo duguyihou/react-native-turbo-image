@@ -32,6 +32,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var blur: Int? = null
   var monochrome: Int? = null
   var tint: Int? = null
+  var allowHardware: Boolean? = null
 
   var format: String? = null
 

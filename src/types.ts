@@ -65,6 +65,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   tint?: number | ColorValue;
   cachePolicy?: CachePolicy;
   enableLiveTextInteraction?: boolean;
+  allowHardware?: boolean;
   format?: Format;
   onStart?: (result: NativeSyntheticEvent<TaskState>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
