@@ -43,6 +43,7 @@ const TurboImage = (props: TurboImageProps) => {
     resize,
     tint,
     enableLiveTextInteraction,
+    allowHardware,
     format,
     onStart,
     onSuccess,
@@ -91,6 +92,7 @@ const TurboImage = (props: TurboImageProps) => {
         resize={resize}
         tint={processColor(tint)}
         enableLiveTextInteraction={enableLiveTextInteraction}
+        allowHardware={allowHardware}
         format={format}
         onStart={onStart}
         onSuccess={onSuccess}

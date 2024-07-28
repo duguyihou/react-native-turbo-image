@@ -153,6 +153,10 @@ The color is applied to every non-transparent pixel, causing the image’s shape
 
 Enables Live Text interaction with the image.
 
+### `allowHardware?: boolean` (Android only)
+
+Setting this to false this will reduce performance on API 26 and above. Only disable this if necessary. [Coil's docs](https://coil-kt.github.io/coil/recipes/#shared-element-transitions)
+
 ### `format?: String`
 
 Specify the format for special image, e.g. `svg`, `gif` and `apng`. In general, TurboImage will determine the decoder automatically.
