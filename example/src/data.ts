@@ -614,17 +614,10 @@ export const processingData = [
     resize: 150,
   },
   {
-    title: 'Rounded Corners',
-    url: 'https://placedog.net/300/300?id=238',
-    resize: 150,
-    borderRadius: 12,
-  },
-  {
     title: 'Monochrome',
     url: 'https://placedog.net/300/300?id=238',
     resize: 150,
     monochrome: 'white',
-    borderRadius: 12,
   },
   {
     title: 'Circle',

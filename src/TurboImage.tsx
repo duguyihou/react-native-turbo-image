@@ -31,12 +31,12 @@ const NativeImage = requireNativeComponent<Props>(ComponentName);
 const TurboImage = (props: TurboImageProps) => {
   const {
     source,
+    style,
     cachePolicy,
     resizeMode,
     indicator,
     placeholder,
     fadeDuration,
-    borderRadius,
     rounded,
     blur,
     monochrome,
@@ -51,7 +51,6 @@ const TurboImage = (props: TurboImageProps) => {
     onCompletion,
     ...restProps
   } = props;
-
   if (placeholder && Object.keys(placeholder).length > 1) {
     throw new Error('Choose one hash string, either thumbhash or blurhash');
   }
@@ -71,15 +70,17 @@ const TurboImage = (props: TurboImageProps) => {
         }
       : undefined;
 
-  const containerStyle = [
-    styles.imageContainer,
-    { borderRadius: rounded ? 9999999 : borderRadius },
-  ];
-
   return (
-    <View style={containerStyle}>
+    <View
+      style={[
+        styles.imageContainer,
+        style,
+        rounded && { borderRadius: 9999999 },
+      ]}
+    >
       <NativeImage
         {...restProps}
+        style={StyleSheet.absoluteFill}
         source={resolvedSource}
         cachePolicy={cachePolicy}
         resizeMode={resizeMode}

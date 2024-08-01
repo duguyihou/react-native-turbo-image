@@ -17,7 +17,7 @@ const ProcessingScreen = () => {
           source={{
             uri: url,
           }}
-          size={resize ?? size}
+          style={{ width: resize ?? size, height: resize ?? size }}
           indicator={{
             style: 'large',
             color: 'red',

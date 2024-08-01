@@ -18,7 +18,6 @@ const TurboImageScreen = () => {
         style={styles.card}
         placeholder={{ blurhash: item.blurhash }}
         resize={size}
-        borderRadius={20}
       />
     );
   };
@@ -44,5 +43,6 @@ const styles = StyleSheet.create({
     width: size,
     height: size,
     margin: 1,
+    borderRadius: 20,
   },
 });

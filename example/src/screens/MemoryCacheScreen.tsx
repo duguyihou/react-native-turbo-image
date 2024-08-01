@@ -15,7 +15,7 @@ const MemoryCacheScreen = () => {
             }}
             placeholder={{ blurhash }}
             cachePolicy={cachePolicy as CachePolicy}
-            size={300}
+            style={{ width: 300, height: 300 }}
           />
         );
       })}

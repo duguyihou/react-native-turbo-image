@@ -33,7 +33,7 @@ const SuccessScreen = () => {
         source={{
           uri: 'https://placedog.net/300/300?id=121',
         }}
-        size={200}
+        style={{ width: 200, height: 200 }}
         resize={200}
         onStart={handleStart}
         onSuccess={handleSuccess}

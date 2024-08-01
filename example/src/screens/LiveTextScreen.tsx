@@ -9,7 +9,7 @@ const LiveTextScreen = () => {
       data={liveTextData}
       renderItem={({ item }) => (
         <Card
-          size={[300, 100]}
+          style={{ width: 300, height: 100 }}
           source={{
             uri: item.url,
           }}
