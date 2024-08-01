@@ -123,10 +123,6 @@ The transition duration of the image. default value: 300 milliseconds(iOS) / 100
 
 > note: To avoid flicking, it will be set to 0 when a placeholder is provided.
 
-### `borderRadius?: number`
-
-The border radius added to the image
-
 ### `rounded?: boolean`
 
 Round the image into a circle
