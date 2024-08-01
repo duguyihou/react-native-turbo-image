@@ -2,21 +2,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import React from 'react';
 import TurboImage, { type TurboImageProps } from 'react-native-turbo-image';
 
-interface Props extends Omit<TurboImageProps, 'style'> {
-  size: number | number[];
+interface Props extends TurboImageProps {
   title?: string;
 }
-const Card = ({ title, size, ...props }: Props) => {
+const Card = ({ title, style, ...props }: Props) => {
   return (
     <View style={styles.card}>
-      <TurboImage
-        {...props}
-        style={[
-          styles.image,
-          typeof size === 'number' && { width: size, height: size },
-          Array.isArray(size) && { width: size[0], height: size[1] },
-        ]}
-      />
+      <TurboImage {...props} style={[styles.image, style]} />
       {title && <Text style={styles.title}>{title}</Text>}
     </View>
   );
