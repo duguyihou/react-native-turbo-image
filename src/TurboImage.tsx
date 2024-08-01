@@ -71,7 +71,13 @@ const TurboImage = (props: TurboImageProps) => {
       : undefined;
 
   return (
-    <View style={[styles.imageContainer, style]}>
+    <View
+      style={[
+        styles.imageContainer,
+        style,
+        rounded && { borderRadius: 9999999 },
+      ]}
+    >
       <NativeImage
         {...restProps}
         style={StyleSheet.absoluteFill}

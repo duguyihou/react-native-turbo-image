@@ -57,7 +57,6 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   placeholder?: Partial<Placeholder>;
   showPlaceholderOnFailure?: boolean;
   fadeDuration?: number;
-  borderRadius?: number;
   rounded?: boolean;
   blur?: number;
   monochrome?: number | ColorValue;

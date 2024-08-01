@@ -30,7 +30,7 @@ const FailureResultScreen = () => {
         source={{
           uri: 'https://placedog.net/300/300?id=12100',
         }}
-        size={200}
+        style={{ width: 200, height: 200 }}
         placeholder={{ blurhash: 'UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU' }}
         onStart={handleStart}
         onFailure={handleFailure}

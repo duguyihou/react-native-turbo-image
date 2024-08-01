@@ -10,7 +10,7 @@ const APNGScreen = () => {
       renderItem={({ item }) => (
         <Card
           title={item.title}
-          size={300}
+          style={{ width: 300, height: 300 }}
           source={{ uri: item.url }}
           indicator={{ style: 'large' }}
           format="apng"
