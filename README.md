@@ -52,21 +52,23 @@ import TurboImage from 'react-native-turbo-image';
 
 ### `source`
 
- - **remote image**
+- **remote image**
 
-    Type: `object`
-    - `uri`: Remote url to load the image from.
-    - `headers?`: Headers to load the image with. e.g. `{ Authorization: 'someAuthToken' }`
+  Type: `object`
+
+  - `uri`: Remote url to load the image from.
+  - `headers?`: Headers to load the image with. e.g. `{ Authorization: 'someAuthToken' }`
 
 - **local asset**
 
-    Type: `number`, opaque type returned by something like require('./image.jpg')
+  Type: `number`, opaque type returned by something like `require('./image.jpg')`
 
 ### `style`
 
 Type: `ImageStyle`
 
 ### `placeholder`
+
 - Type: `object`
 - show placeholder while loading, either `thumbhash` or `blurhash`
 
@@ -94,51 +96,60 @@ type Placeholder = {
 
 Type: `object`
 
-  - `style?`: `medium` or `large`, default value `medium`.
+- `style?`: `medium` or `large`, default value `medium`.
 
-  - `color?`: number / ColorValue
+- `color?`: number / ColorValue
 
 ### `showPlaceholderOnFailure`
+
 - Type: `boolean`
 - Show the blur placeholder image in the case of a failure.
 
 ### `fadeDuration`
 
 - Type: `number`
-- The transition duration of the image. default value: 300 milliseconds(iOS) / 100(Android) milliseconds 
-> note: To avoid flicking, it will be set to 0 when a placeholder is provided.
+- The transition duration of the image. default value: 300 milliseconds(iOS) / 100(Android) milliseconds
+  > note: To avoid flicking, it will be set to 0 when a placeholder is provided.
 
 ### `rounded`
+
 - Type: `boolean`
-Round the image into a circle
+  Round the image into a circle
 
 ### `blur`
+
 - Type: `number`
 - The blur radius of the blur filter added to the image
 
 ### `monochrome`
+
 - Type: `number / ColorValue`
 - The color applied to the image.
 
 > note: For iOS and Android Q+, it works with any color. For Android Q-, it only supports grayscale.
 
 ### `resize`
+
 - Type: `number`
 - Scales an image to the given width preserving aspect ratio
 
 ### `tint`
+
 - Type: `number / ColorValue`
 - The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders.
 
 ### `enableLiveTextInteraction` (iOS 16+ only)
+
 - Type: `boolean`
 - Enables Live Text interaction with the image.
 
 ### `allowHardware` (Android only)
+
 - Type: `boolean`
 - Setting this to false this will reduce performance on API 26 and above. Only disable this if necessary. [Coil's docs](https://coil-kt.github.io/coil/recipes/#shared-element-transitions)
 
 ### `format`
+
 - Type: `string`
 - Specify the format for special image, e.g. `svg`, `gif` and `apng`. In general, TurboImage will determine the decoder automatically.
 
@@ -160,19 +171,19 @@ The function to call when the request is completed
 
 ## Methods
 
-### `prefetch: (sources: string[]) => Promise<void>`
+### `prefetch`
 
 ```ts
 TurboImage.prefetch([URLs]);
 ```
 
-### `clearMemoryCache: () => Promise<void>`
+### `clearMemoryCache`
 
 ```ts
 await TurboImage.clearMemoryCache();
 ```
 
-### `clearDiskCache: () => Promise<void>`
+### `clearDiskCache`
 
 ```ts
 await TurboImage.clearDiskCache();
