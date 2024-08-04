@@ -44,7 +44,7 @@ import TurboImage from 'react-native-turbo-image';
 <TurboImage
   source={require('../../assets/local.png')}
   style={{ width: 300, height: 300 }}
-/>;****
+/>;
 
 ```
 
