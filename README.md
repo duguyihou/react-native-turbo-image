@@ -44,130 +44,35 @@ import TurboImage from 'react-native-turbo-image';
 <TurboImage
   source={require('../../assets/local.png')}
   style={{ width: 300, height: 300 }}
-/>;
+/>;****
 
 ```
 
-## Props
+## Paramaters
 
-### `source`
+| Parameter                   | Type                           | Description                                                                                                                                                                                              | Default                 |
+| --------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `source`                    | `Object`&nbsp;or&nbsp;`number` | (**Required**) Can be an object containing a `uri` string for remote image or local asset using `require`.                                                                                               | -                       |
+| `style`                     | `ImageStyle`                   | Styles to be applied to the image.                                                                                                                                                                       | -                       |
+| `placeholder`               | `object`                       | show placeholder while loading, either `thumbhash` or `blurhash`                                                                                                                                         | -                       |
+| `cachePolicy`               | `string`                       | `memory`: LRU memory cache for processed images. `dataCache`: aggressive LRU disk cache `urlCache`: HTTP disk cache, respect cache-control                                                               | memory                  |
+| `resizeMode`                | `String`                       | Resize the image with one of the options: `contain`&nbsp;`cover`&nbsp;`stretch`&nbsp;`center`                                                                                                            | contain                 |
+| `indicator`                 | `object`                       | `style`: `medium`(default) or `large`.&nbsp; `color`: `number / ColorValue`                                                                                                                              | -                       |
+| `fadeDuration`              | `number`                       | The transition duration of the image. Note: To avoid flicking, it will be set to 0 when a placeholder is provided                                                                                        | 300(iOS) / 100(Android) |
+| `resize`                    | `number`                       | Scales an image to the given width preserving aspect ratio                                                                                                                                               | -                       |
+| `blur`                      | `number`                       | The blur radius of the blur filter added to the image                                                                                                                                                    | -                       |
+| `monochrome`                | `number / ColorValue`          | The color applied to the image. note: For iOS and Android Q+, it works with any color. For Android Q-, it only supports grayscale                                                                        | -                       |
+| `tint`                      | `number / ColorValue`          | The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders                                                           | -                       |
+| `showPlaceholderOnFailure`  | `boolean`                      | Show the blur placeholder image in the case of a failure                                                                                                                                                 | false                   |
+| `rounded`                   | `boolean`                      | Round the image into a circle                                                                                                                                                                            | false                   |
+| `enableLiveTextInteraction` | `boolean`                      | Enables Live Text interaction with the image (iOS 16+ only)                                                                                                                                              | false                   |
+| `allowHardware`             | `boolean`                      | Setting this to false this will reduce performance on API 26 and above. Only disable this if necessary. [Coil's docs](https://coil-kt.github.io/coil/recipes/#shared-element-transitions) (Android only) | false                   |
+| `format`                    | `string`                       | Specify the format for special image, e.g. `svg`, `gif` and `apng`. In general, TurboImage will determine the decoder automatically.                                                                     | -                       |
+| `onStart`                   | `Function`                     | The function to call when the image is fetching.                                                                                                                                                         | -                       |
+| `onSuccess`                 | `Function`                     | The function to call when the image is successfully loaded                                                                                                                                               | -                       |
+| `onFailure`                 | `Function`                     | The function to call when the request failed                                                                                                                                                             | -                       |
+| `onCompletion`              | `Function`                     | The function to call when the request is completed                                                                                                                                                       | -                       |
 
-- **remote image**
-
-  Type: `object`
-
-  - `uri`: Remote url to load the image from.
-  - `headers?`: Headers to load the image with. e.g. `{ Authorization: 'someAuthToken' }`
-
-- **local asset**
-
-  Type: `number`, opaque type returned by something like `require('./image.jpg')`
-
-### `style`
-
-Type: `ImageStyle`
-
-### `placeholder`
-
-- Type: `object`
-- show placeholder while loading, either `thumbhash` or `blurhash`
-
-```ts
-type Placeholder = {
-  blurhash: string;
-  thumbhash: string;
-};
-```
-
-### `cachePolicy`
-
-- `memory`: LRU memory cache for processed images. set by default
-- `dataCache`: aggressive LRU disk cache
-- `urlCache`: HTTP disk cache, respect cache-control
-
-### `resizeMode`
-
-- `contain` (default)
-- `cover`
-- `stretch`
-- `center`
-
-### `indicator`
-
-Type: `object`
-
-- `style?`: `medium` or `large`, default value `medium`.
-
-- `color?`: number / ColorValue
-
-### `showPlaceholderOnFailure`
-
-- Type: `boolean`
-- Show the blur placeholder image in the case of a failure.
-
-### `fadeDuration`
-
-- Type: `number`
-- The transition duration of the image. default value: 300 milliseconds(iOS) / 100(Android) milliseconds
-  > note: To avoid flicking, it will be set to 0 when a placeholder is provided.
-
-### `rounded`
-
-- Type: `boolean`
-  Round the image into a circle
-
-### `blur`
-
-- Type: `number`
-- The blur radius of the blur filter added to the image
-
-### `monochrome`
-
-- Type: `number / ColorValue`
-- The color applied to the image.
-
-> note: For iOS and Android Q+, it works with any color. For Android Q-, it only supports grayscale.
-
-### `resize`
-
-- Type: `number`
-- Scales an image to the given width preserving aspect ratio
-
-### `tint`
-
-- Type: `number / ColorValue`
-- The color is applied to every non-transparent pixel, causing the image’s shape to adopt that color. This effect is not applied to placeholders.
-
-### `enableLiveTextInteraction` (iOS 16+ only)
-
-- Type: `boolean`
-- Enables Live Text interaction with the image.
-
-### `allowHardware` (Android only)
-
-- Type: `boolean`
-- Setting this to false this will reduce performance on API 26 and above. Only disable this if necessary. [Coil's docs](https://coil-kt.github.io/coil/recipes/#shared-element-transitions)
-
-### `format`
-
-- Type: `string`
-- Specify the format for special image, e.g. `svg`, `gif` and `apng`. In general, TurboImage will determine the decoder automatically.
-
-### `onStart`
-
-The function to call when the image is fetching
-
-### `onSuccess`
-
-The function to call when the image is successfully loaded
-
-### `onFailure`
-
-The function to call when the request failed
-
-### `onCompletion`
-
-The function to call when the request is completed
 
 ## Methods
 
