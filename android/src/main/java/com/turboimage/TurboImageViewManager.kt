@@ -120,17 +120,19 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "source")
   fun setSource(view: TurboImageView, source: ReadableMap) {
     val uri = source.toHashMap()["uri"] as? String
-    val resId = ResourceDrawableIdHelper.getInstance().getResourceDrawableId(view.context, uri)
-
-//    view.uri = source.toHashMap()["uri"] as? String
-    val url = Uri.Builder()
-      .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-      .authority(view.context.resources.getResourcePackageName(resId))
-      .appendPath(view.context.resources.getResourceTypeName(resId))
-      .appendPath(view.context.resources.getResourceEntryName(resId))
-      .build()
-    view.uri = url.toString()
-    view.headers = source.toHashMap()["headers"] as? Headers
+    if (source.hasKey("__packager_asset") && uri?.startsWith("http") == false) {
+      val resId = ResourceDrawableIdHelper.getInstance().getResourceDrawableId(view.context, uri)
+      val url = Uri.Builder()
+        .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+        .authority(view.context.resources.getResourcePackageName(resId))
+        .appendPath(view.context.resources.getResourceTypeName(resId))
+        .appendPath(view.context.resources.getResourceEntryName(resId))
+        .build()
+      view.uri = url.toString()
+    } else {
+      view.uri = uri
+      view.headers = source.toHashMap()["headers"] as? Headers
+    }
   }
 
   @ReactProp(name = "placeholder")
