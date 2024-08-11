@@ -7048,13 +7048,12 @@
                 "usr": "s:4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvp",
                 "mangledName": "$s4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvp",
                 "moduleName": "Nuke",
+                "deprecated": true,
                 "declAttributes": [
-                  "HasInitialValue",
-                  "HasStorage",
                   "AccessControl",
+                  "Available",
                   "RawDocComment"
                 ],
-                "hasStorage": true,
                 "accessors": [
                   {
                     "kind": "Accessor",
@@ -7072,7 +7071,6 @@
                     "usr": "s:4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvg",
                     "mangledName": "$s4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvg",
                     "moduleName": "Nuke",
-                    "implicit": true,
                     "accessorKind": "get"
                   },
                   {
@@ -7096,7 +7094,6 @@
                     "usr": "s:4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvs",
                     "mangledName": "$s4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvs",
                     "moduleName": "Nuke",
-                    "implicit": true,
                     "accessorKind": "set"
                   },
                   {
@@ -7114,7 +7111,11 @@
                     "usr": "s:4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvM",
                     "mangledName": "$s4Nuke13ImagePipelineC13ConfigurationV13callbackQueueSo17OS_dispatch_queueCvM",
                     "moduleName": "Nuke",
+                    "deprecated": true,
                     "implicit": true,
+                    "declAttributes": [
+                      "Available"
+                    ],
                     "accessorKind": "_modify"
                   }
                 ]
@@ -8557,8 +8558,8 @@
               }
             ],
             "declKind": "Constructor",
-            "usr": "s:4Nuke10DataLoaderC13configuration8validateACSo25NSURLSessionConfigurationC_s5Error_pSgSo13NSURLResponseCctcfc",
-            "mangledName": "$s4Nuke10DataLoaderC13configuration8validateACSo25NSURLSessionConfigurationC_s5Error_pSgSo13NSURLResponseCctcfc",
+            "usr": "s:4Nuke10DataLoaderC13configuration8validateACSo25NSURLSessionConfigurationC_s5Error_pSgSo13NSURLResponseCYbctcfc",
+            "mangledName": "$s4Nuke10DataLoaderC13configuration8validateACSo25NSURLSessionConfigurationC_s5Error_pSgSo13NSURLResponseCYbctcfc",
             "moduleName": "Nuke",
             "declAttributes": [
               "AccessControl",
@@ -8640,13 +8641,14 @@
               }
             ],
             "declKind": "Func",
-            "usr": "s:4Nuke10DataLoaderC8validate8responses5Error_pSgSo13NSURLResponseC_tFZ",
-            "mangledName": "$s4Nuke10DataLoaderC8validate8responses5Error_pSgSo13NSURLResponseC_tFZ",
+            "usr": "s:4Nuke10DataLoaderC8validate8responses5Error_pSgSo13NSURLResponseC_tYbFZ",
+            "mangledName": "$s4Nuke10DataLoaderC8validate8responses5Error_pSgSo13NSURLResponseC_tYbFZ",
             "moduleName": "Nuke",
             "static": true,
             "declAttributes": [
               "Final",
               "AccessControl",
+              "Sendable",
               "RawDocComment"
             ],
             "funcSelfKind": "NonMutating"
@@ -21657,7 +21659,10 @@
         "name": "Combine",
         "printedName": "Combine",
         "declKind": "Import",
-        "moduleName": "Nuke"
+        "moduleName": "Nuke",
+        "declAttributes": [
+          "Preconcurrency"
+        ]
       },
       {
         "kind": "Import",
@@ -24717,8 +24722,8 @@
               }
             ],
             "declKind": "Var",
-            "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyycSgvp",
-            "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyycSgvp",
+            "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvp",
+            "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvp",
             "moduleName": "Nuke",
             "declAttributes": [
               "HasInitialValue",
@@ -24761,8 +24766,8 @@
                   }
                 ],
                 "declKind": "Accessor",
-                "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyycSgvg",
-                "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyycSgvg",
+                "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvg",
+                "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvg",
                 "moduleName": "Nuke",
                 "implicit": true,
                 "declAttributes": [
@@ -24807,8 +24812,8 @@
                   }
                 ],
                 "declKind": "Accessor",
-                "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyycSgvs",
-                "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyycSgvs",
+                "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvs",
+                "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvs",
                 "moduleName": "Nuke",
                 "implicit": true,
                 "declAttributes": [
@@ -24828,8 +24833,8 @@
                   }
                 ],
                 "declKind": "Accessor",
-                "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyycSgvM",
-                "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyycSgvM",
+                "usr": "s:4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvM",
+                "mangledName": "$s4Nuke15ImagePrefetcherC11didCompleteyyYbScMYccSgvM",
                 "moduleName": "Nuke",
                 "implicit": true,
                 "declAttributes": [
@@ -25159,51 +25164,58 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 7679,
+      "offset": 7518,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline.swift",
       "kind": "BooleanLiteral",
-      "offset": 11659,
+      "offset": 12400,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Loading\/DataLoader.swift",
       "kind": "BooleanLiteral",
-      "offset": 453,
+      "offset": 450,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Loading\/DataLoader.swift",
       "kind": "StringLiteral",
-      "offset": 2881,
+      "offset": 2912,
       "length": 28,
       "value": "\"com.github.kean.Nuke.Cache\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Loading\/DataLoader.swift",
       "kind": "IntegerLiteral",
-      "offset": 3481,
+      "offset": 3512,
       "length": 3,
       "value": "150"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Loading\/DataLoader.swift",
       "kind": "IntegerLiteral",
-      "offset": 3487,
+      "offset": 3518,
       "length": 7,
       "value": "1048576"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Loading\/DataLoader.swift",
       "kind": "IntegerLiteral",
-      "offset": 3701,
+      "offset": 3732,
       "length": 1,
       "value": "0"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Loading\/DataLoader.swift",
+      "kind": "StringLiteral",
+      "offset": 4968,
+      "length": 11,
+      "value": "\"Nuke._DataLoader\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/AsyncTask.swift",
@@ -25362,21 +25374,21 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Operation.swift",
       "kind": "BooleanLiteral",
-      "offset": 1161,
+      "offset": 1182,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Operation.swift",
       "kind": "BooleanLiteral",
-      "offset": 1197,
+      "offset": 1218,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Operation.swift",
       "kind": "BooleanLiteral",
-      "offset": 1236,
+      "offset": 1257,
       "length": 5,
       "value": "false"
     },
@@ -25460,7 +25472,7 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageDecompression.swift",
       "kind": "IntegerLiteral",
-      "offset": 578,
+      "offset": 656,
       "length": 1,
       "value": "1"
     },
@@ -25603,6 +25615,13 @@
       "offset": 2003,
       "length": 4,
       "value": "true"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Internal\/Graphics.swift",
+      "kind": "FloatLiteral",
+      "offset": 13018,
+      "length": 3,
+      "value": "1.0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Processing\/ImageProcessors.swift",
@@ -25901,42 +25920,42 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 14016,
+      "offset": 13970,
       "length": 28,
       "value": "\"github.com\/kean\/nuke\/scale\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "StringLiteral",
-      "offset": 14503,
+      "offset": 14457,
       "length": 32,
       "value": "\"github.com\/kean\/nuke\/thumbnail\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 15625,
+      "offset": 15579,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 15920,
+      "offset": 15874,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 16122,
+      "offset": 16076,
       "length": 4,
       "value": "true"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageRequest.swift",
       "kind": "BooleanLiteral",
-      "offset": 16279,
+      "offset": 16233,
       "length": 4,
       "value": "true"
     },
@@ -25949,22 +25968,29 @@
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
+      "kind": "FloatLiteral",
+      "offset": 1008,
+      "length": 3,
+      "value": "1.0"
+    },
+    {
+      "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4338,
+      "offset": 4453,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4379,
+      "offset": 4494,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Decoding\/ImageDecoders+Default.swift",
       "kind": "IntegerLiteral",
-      "offset": 4458,
+      "offset": 4573,
       "length": 2,
       "value": "-1"
     },
@@ -26083,84 +26109,84 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
-      "offset": 6288,
+      "offset": 6533,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
-      "offset": 6345,
+      "offset": 6590,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "BooleanLiteral",
-      "offset": 6391,
+      "offset": 6636,
       "length": 5,
       "value": "false"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 6584,
+      "offset": 6829,
       "length": 1,
       "value": "6"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 6845,
+      "offset": 7090,
       "length": 1,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 7002,
+      "offset": 7247,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 7159,
+      "offset": 7404,
       "length": 1,
       "value": "1"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 7320,
+      "offset": 7565,
       "length": 1,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "IntegerLiteral",
-      "offset": 7487,
+      "offset": 7732,
       "length": 1,
       "value": "2"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Pipeline\/ImagePipeline+Configuration.swift",
       "kind": "StringLiteral",
-      "offset": 9110,
+      "offset": 9355,
       "length": 32,
       "value": "\"com.github.kean.Nuke.DataCache\""
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 10915,
+      "offset": 10941,
       "length": 1,
       "value": "0"
     },
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/ImageTask.swift",
       "kind": "IntegerLiteral",
-      "offset": 10925,
+      "offset": 10951,
       "length": 1,
       "value": "0"
     },
@@ -26188,7 +26214,7 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Tasks\/TaskFetchOriginalData.swift",
       "kind": "IntegerLiteral",
-      "offset": 438,
+      "offset": 459,
       "length": 1,
       "value": "0"
     },
@@ -26223,7 +26249,7 @@
     {
       "filePath": "\/Users\/kean\/Developer\/Nuke\/Sources\/Nuke\/Prefetching\/ImagePrefetcher.swift",
       "kind": "IntegerLiteral",
-      "offset": 2815,
+      "offset": 2836,
       "length": 1,
       "value": "2"
     }

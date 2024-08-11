@@ -169,11 +169,15 @@ final public class DataLoader : Nuke.DataLoading, @unchecked Swift.Sendable {
     set
   }
   @objc deinit
-  public init(configuration: Foundation.URLSessionConfiguration = DataLoader.defaultConfiguration, validate: @escaping (Foundation.URLResponse) -> (any Swift.Error)? = DataLoader.validate)
+  #if compiler(>=5.3) && $Sendable
+  public init(configuration: Foundation.URLSessionConfiguration = DataLoader.defaultConfiguration, validate: @escaping @Sendable (Foundation.URLResponse) -> (any Swift.Error)? = DataLoader.validate)
+  #endif
   public static var defaultConfiguration: Foundation.URLSessionConfiguration {
     get
   }
-  public static func validate(response: Foundation.URLResponse) -> (any Swift.Error)?
+  #if compiler(>=5.3) && $Sendable
+  @Sendable public static func validate(response: Foundation.URLResponse) -> (any Swift.Error)?
+  #endif
   public static let sharedUrlCache: Foundation.URLCache
   final public func loadData(with request: Foundation.URLRequest, didReceiveData: @escaping (Foundation.Data, Foundation.URLResponse) -> Swift.Void, completion: @escaping ((any Swift.Error)?) -> Swift.Void) -> any Nuke.Cancellable
   public enum Error : Swift.Error, Swift.CustomStringConvertible {
@@ -733,7 +737,11 @@ extension Nuke.ImagePipeline {
     public var isStoringPreviewsInMemoryCache: Swift.Bool
     public var isResumableDataEnabled: Swift.Bool
     public var isLocalResourcesSupportEnabled: Swift.Bool
-    public var callbackQueue: Dispatch.DispatchQueue
+    @available(*, deprecated, message: "`ImagePipeline` no longer supports changing the callback queue")
+    public var callbackQueue: Dispatch.DispatchQueue {
+      get
+      set
+    }
     public static var isSignpostLoggingEnabled: Swift.Bool {
       get
       set
@@ -903,7 +911,7 @@ extension Nuke.ImageProcessors {
     public var description: Swift.String {
       get
     }
-    public enum Error : Swift.Error, Swift.CustomStringConvertible {
+    public enum Error : Swift.Error, Swift.CustomStringConvertible, @unchecked Swift.Sendable {
       case failedToCreateFilter(name: Swift.String, parameters: [Swift.String : Any])
       case inputImageIsEmpty(inputImage: Nuke.PlatformImage)
       case failedToApplyFilter(filter: CoreImage.CIFilter)
@@ -932,7 +940,7 @@ final public class ImagePrefetcher : @unchecked Swift.Sendable {
       get
     }
   }
-  final public var didComplete: (() -> Swift.Void)?
+  final public var didComplete: (@_Concurrency.MainActor @Sendable () -> Swift.Void)?
   public init(pipeline: Nuke.ImagePipeline = ImagePipeline.shared, destination: Nuke.ImagePrefetcher.Destination = .memoryCache, maxConcurrentRequestCount: Swift.Int = 2)
   @objc deinit
   final public func startPrefetching(with urls: [Foundation.URL])

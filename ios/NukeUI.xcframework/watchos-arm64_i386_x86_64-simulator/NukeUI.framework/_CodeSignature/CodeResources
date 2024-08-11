@@ -10,7 +10,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		BZyDHVsWcqoGImlYPpgbCrolrc4=
+		CybCgu5llIp9+pyw9dDDqCeGUzE=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-watchos-simulator.abi.json</key>
 		<data>
@@ -30,7 +30,7 @@
 		</data>
 		<key>Modules/NukeUI.swiftmodule/arm64-apple-watchos-simulator.swiftmodule</key>
 		<data>
-		LhGKp9NGVRqARsNvAiGGDZhzVCw=
+		uIivC1TRQHf0EouKc2OprC3tOb8=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/i386-apple-watchos-simulator.abi.json</key>
 		<data>
@@ -50,7 +50,7 @@
 		</data>
 		<key>Modules/NukeUI.swiftmodule/i386-apple-watchos-simulator.swiftmodule</key>
 		<data>
-		cHifLbMZZPC69x17iypN2D6VUwM=
+		FQ/NH1u/9oUM2jyEg9B2elfS/Zc=
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-watchos-simulator.abi.json</key>
 		<data>
@@ -70,7 +70,7 @@
 		</data>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-watchos-simulator.swiftmodule</key>
 		<data>
-		BZlU4QmRBVzylV439bt9o/fiaGA=
+		bvEhZJVZpMSqIy6TeAaB6lhdvpM=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -114,7 +114,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			5GwP2Vmjy9IBDEyUbDpk/RcHUo01FhHFhOVW8Bz8TKI=
+			iTkANtikv8UoWXVa5bIniGSr8iNbmxSPYk1pYFbG86g=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/i386-apple-watchos-simulator.abi.json</key>
@@ -149,7 +149,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			OM070F3bhPHYfTtPMu9fevjkyIRoQHew07zgi9hX2+4=
+			DHsAAwlMnUdRXSwC6sN/FC37zxiDht6rSY4CC0pI18M=
 			</data>
 		</dict>
 		<key>Modules/NukeUI.swiftmodule/x86_64-apple-watchos-simulator.abi.json</key>
@@ -184,7 +184,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			b5NjehYgp+oCkQKvQN4grRmSTqEg2B+pEsPx3Ipcfpk=
+			pMouEVgFNu9/pb6fQu4g4AG6yNg+aafUOBS/b+wijFA=
 			</data>
 		</dict>
 	</dict>
