@@ -107,7 +107,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       )
       transformations(view.transformations)
       crossfade(view.crossfade ?: defaultCrossfade)
-      error(view.blurhashDrawable)
+      view.showPlaceholderOnFailure?.let {
+        error(view.thumbhashDrawable ?: view.blurhashDrawable)
+      }
       size(view.resize ?: Size.ORIGINAL)
     }
   }
@@ -139,6 +141,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setPlaceholder(view: TurboImageView, placeholder: ReadableMap?) {
     view.blurhash = placeholder?.getString("blurhash")
     view.thumbhash = placeholder?.getString("thumbhash")
+  }
+
+  @ReactProp(name = "showPlaceholderOnFailure")
+  fun setShowPlaceholderOnFailure(view: TurboImageView, showPlaceholderOnFailure: Boolean?) {
+    view.showPlaceholderOnFailure = showPlaceholderOnFailure
   }
 
   @ReactProp(name = "cachePolicy")

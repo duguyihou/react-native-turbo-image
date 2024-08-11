@@ -26,6 +26,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   var blurhash: String? = null
   var thumbhash: String? = null
   var indicator: HashMap<String, Any> = hashMapOf()
+  var showPlaceholderOnFailure: Boolean? = null
 
   var resize: Size? = null
   var rounded: Boolean? = null
