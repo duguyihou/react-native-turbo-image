@@ -35,7 +35,7 @@ const ListItem = ({
 
 const RightButton = () => {
   const handleClear = () => {
-    Alert.alert('Clear Cache', 'memory / urlCache / dataCache', [
+    Alert.alert('Clear Cache', 'memory / disk', [
       {
         text: 'Prefetch',
         onPress: async () => {

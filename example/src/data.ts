@@ -17,8 +17,7 @@ export const routesData = [
   {
     title: 'Cache',
     data: [
-      { name: 'MemoryCache', destination: RouteName.MemoryCache },
-      { name: 'UrlCache', destination: RouteName.UrlCache },
+      { name: 'UrlCache (default)', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
       { name: 'LocalAsset', destination: RouteName.LocalAsset },
       { name: 'Prefetch', destination: RouteName.Prefetch },
@@ -578,14 +577,6 @@ export const liveTextData = [
   },
 ];
 
-export const memoryCacheData = [
-  {
-    title: 'memory',
-    url: 'https://placedog.net/300/300?id=235',
-    blurhash: 'UCHx4#R3Si.8I^M{NGkCZLRkRPIA~qNGxtj[',
-    cachePolicy: 'memory',
-  },
-];
 export const urlCacheData = [
   {
     title: 'urlCache',

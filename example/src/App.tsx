@@ -8,7 +8,6 @@ import { type HomeStackParamList, RouteName } from './screens/routes.type';
 import SuccessScreen from './screens/SuccessScreen';
 import FailureScreen from './screens/FailureScreen';
 import ImageScreen from './screens/ImageScreen';
-import MemoryCacheScreen from './screens/MemoryCacheScreen';
 import UrlCacheScreen from './screens/UrlCacheScreen';
 import DataCacheScreen from './screens/DataCacheScreen';
 import LocalAssetScreen from './screens/LocalAssetScreen';
@@ -40,10 +39,6 @@ function App() {
           />
         </Stack.Group>
         <Stack.Group>
-          <Stack.Screen
-            name={RouteName.MemoryCache}
-            component={MemoryCacheScreen}
-          />
           <Stack.Screen name={RouteName.UrlCache} component={UrlCacheScreen} />
           <Stack.Screen
             name={RouteName.DataCache}

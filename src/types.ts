@@ -24,7 +24,7 @@ export type Indicator = Partial<{
 }>;
 export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
-export type CachePolicy = 'memory' | 'urlCache' | 'dataCache';
+export type CachePolicy = 'urlCache' | 'dataCache';
 
 export type Format = 'svg' | 'gif' | 'apng';
 
