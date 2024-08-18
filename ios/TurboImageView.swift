@@ -104,7 +104,7 @@ final class TurboImageView : UIView {
   
   @objc var fadeDuration: NSNumber = 300
   
-  @objc var cachePolicy = "memory" {
+  @objc var cachePolicy = "urlCache" {
     didSet {
       let pipeline = CachePolicy(rawValue: cachePolicy)?.pipeline
       lazyImageView.pipeline = pipeline ?? .shared
