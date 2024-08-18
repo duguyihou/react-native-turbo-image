@@ -11,35 +11,33 @@ import okhttp3.Headers
 
 class TurboImageModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
+  private val imageLoader = Coil.imageLoader(context)
 
   override fun getName(): String = REACT_CLASS
 
   @ReactMethod
   fun prefetch(sources: ReadableArray, promise: Promise) {
-    sources.toArrayList().forEach { source ->
+    val imageRequests = sources.toArrayList().map { source ->
       val uri = (source as HashMap<*, *>)["uri"] as String
       val headers = source["headers"] as? HashMap<*, *>
 
       if (headers != null) {
-        val requestHeaders = Headers.Builder()
+        val headersBuilder = Headers.Builder()
         headers.map { (key, value) ->
-          requestHeaders.add(key as String, value as String)
+          headersBuilder.add(key as String, value as String)
         }
-        val request = ImageRequest.Builder(context)
-          .headers(requestHeaders.build())
+        ImageRequest.Builder(context)
+          .headers(headersBuilder.build())
           .data(uri)
-          .diskCachePolicy(CachePolicy.ENABLED)
-          .memoryCachePolicy(CachePolicy.ENABLED)
           .build()
-        context.imageLoader.enqueue(request)
       } else {
-        val request = ImageRequest.Builder(context)
+        ImageRequest.Builder(context)
           .data(uri)
-          .diskCachePolicy(CachePolicy.ENABLED)
-          .memoryCachePolicy(CachePolicy.ENABLED)
           .build()
-        context.imageLoader.enqueue(request)
       }
+    }
+    imageRequests.forEach { imageRequest ->
+      imageLoader.enqueue(imageRequest)
     }
     promise.resolve("Success")
   }
