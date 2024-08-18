@@ -26,7 +26,7 @@ extension TurboImageViewManager {
       guard let uri = $0["uri"] as? String,
             let url = URL(string: uri)
       else { return nil }
-      
+
       var urlRequest = URLRequest(url: url)
       if let headers = $0["headers"] as? [String: String] {
         urlRequest.allHTTPHeaderFields = headers
@@ -35,6 +35,26 @@ extension TurboImageViewManager {
     }.compactMap{ $0 }
 
     prefetcher.startPrefetching(with: imageRequests)
+    resolve("Success")
+  }
+
+  @objc
+  func dispose(_ sources: [Source],
+               resolve: @escaping RCTPromiseResolveBlock,
+               reject: @escaping RCTPromiseRejectBlock) {
+    let imageRequests: [ImageRequest] = sources.map {
+      guard let uri = $0["uri"] as? String,
+            let url = URL(string: uri)
+      else { return nil }
+
+      var urlRequest = URLRequest(url: url)
+      if let headers = $0["headers"] as? [String: String] {
+        urlRequest.allHTTPHeaderFields = headers
+      }
+      return ImageRequest(urlRequest: urlRequest)
+    }.compactMap{ $0 }
+
+    prefetcher.stopPrefetching(with: imageRequests)
     resolve("Success")
   }
 
