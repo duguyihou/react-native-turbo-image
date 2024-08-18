@@ -34,7 +34,7 @@ extension TurboImageViewManager {
       return ImageRequest(urlRequest: urlRequest)
     }.compactMap{ $0 }
 
-    prefetcher._startPrefetching(with: imageRequests)
+    prefetcher.startPrefetching(with: imageRequests)
     resolve("Success")
   }
 
