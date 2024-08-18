@@ -2,8 +2,6 @@ package com.turboimage
 
 import coil.Coil
 import coil.annotation.ExperimentalCoilApi
-import coil.imageLoader
-import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.facebook.react.bridge.*
 import com.facebook.react.bridge.ReactContextBaseJavaModule
