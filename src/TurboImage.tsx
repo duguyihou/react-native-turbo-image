@@ -114,6 +114,10 @@ TurboImage.prefetch = async (sources: Source[]) => {
   return await TurboImageViewManager.prefetch(sources);
 };
 
+TurboImage.dispose = async (sources: Source[]) => {
+  return await TurboImageViewManager.dispose(sources);
+};
+
 TurboImage.clearMemoryCache = async () => {
   return await TurboImageViewManager.clearMemoryCache();
 };

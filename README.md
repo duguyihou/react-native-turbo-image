@@ -79,7 +79,13 @@ import TurboImage from 'react-native-turbo-image';
 ### `prefetch`
 
 ```ts
-TurboImage.prefetch([URLs]);
+await TurboImage.prefetch([Source]);
+```
+
+### `dispose`
+
+```ts
+await TurboImage.dispose([Source]);
 ```
 
 ### `clearMemoryCache`

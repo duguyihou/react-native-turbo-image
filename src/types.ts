@@ -74,6 +74,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
 
 export type TurboImageApi = {
   prefetch: (sources: Source[]) => Promise<void>;
+  dispose: (sources: Source[]) => Promise<void>;
   clearMemoryCache: () => Promise<void>;
   clearDiskCache: () => Promise<void>;
 };
