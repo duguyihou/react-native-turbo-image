@@ -36,6 +36,7 @@ import TurboImage from 'react-native-turbo-image';
 <TurboImage
   source={{ uri: "https://placedog.net/300/300?id=1" }}
   style={{ width: 300, height: 300 }}
+  cachePolicy="dataCache"
 />;
 
 // local asset
