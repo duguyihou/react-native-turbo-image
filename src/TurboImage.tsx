@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import {
   requireNativeComponent,
   NativeModules,
@@ -28,81 +28,84 @@ interface Props
 }
 const NativeImage = requireNativeComponent<Props>(ComponentName);
 
-const TurboImage = (props: TurboImageProps) => {
-  const {
-    source,
-    style,
-    cachePolicy,
-    resizeMode,
-    indicator,
-    placeholder,
-    fadeDuration,
-    rounded,
-    blur,
-    monochrome,
-    resize,
-    tint,
-    enableLiveTextInteraction,
-    allowHardware,
-    format,
-    onStart,
-    onSuccess,
-    onFailure,
-    onCompletion,
-    ...restProps
-  } = props;
-  if (placeholder && Object.keys(placeholder).length > 1) {
-    throw new Error('Choose one hash string, either thumbhash or blurhash');
-  }
-
-  const resolvedSource = (() => {
-    if (typeof source === 'number') {
-      return Image.resolveAssetSource(source);
+const TurboImageView = forwardRef(
+  (props: TurboImageProps, ref: React.LegacyRef<View>) => {
+    const {
+      source,
+      style,
+      cachePolicy,
+      resizeMode,
+      indicator,
+      placeholder,
+      fadeDuration,
+      rounded,
+      blur,
+      monochrome,
+      resize,
+      tint,
+      enableLiveTextInteraction,
+      allowHardware,
+      format,
+      onStart,
+      onSuccess,
+      onFailure,
+      onCompletion,
+      ...restProps
+    } = props;
+    if (placeholder && Object.keys(placeholder).length > 1) {
+      throw new Error('Choose one hash string, either thumbhash or blurhash');
     }
-    return source;
-  })();
 
-  const processedIndicator =
-    indicator && Object.keys(indicator).length !== 0
-      ? {
-          style: indicator?.style,
-          color: processColor(indicator?.color),
-        }
-      : undefined;
+    const resolvedSource = (() => {
+      if (typeof source === 'number') {
+        return Image.resolveAssetSource(source);
+      }
+      return source;
+    })();
 
-  return (
-    <View
-      style={[
-        styles.imageContainer,
-        style,
-        rounded && { borderRadius: 9999999 },
-      ]}
-    >
-      <NativeImage
-        {...restProps}
-        style={StyleSheet.absoluteFill}
-        source={resolvedSource}
-        cachePolicy={cachePolicy}
-        resizeMode={resizeMode}
-        indicator={processedIndicator}
-        placeholder={placeholder}
-        fadeDuration={fadeDuration}
-        rounded={rounded}
-        blur={blur}
-        monochrome={processColor(monochrome)}
-        resize={resize}
-        tint={processColor(tint)}
-        enableLiveTextInteraction={enableLiveTextInteraction}
-        allowHardware={allowHardware}
-        format={format}
-        onStart={onStart}
-        onSuccess={onSuccess}
-        onFailure={onFailure}
-        onCompletion={onCompletion}
-      />
-    </View>
-  );
-};
+    const processedIndicator =
+      indicator && Object.keys(indicator).length !== 0
+        ? {
+            style: indicator?.style,
+            color: processColor(indicator?.color),
+          }
+        : undefined;
+
+    return (
+      <View
+        style={[
+          styles.imageContainer,
+          style,
+          rounded && { borderRadius: 9999999 },
+        ]}
+        ref={ref}
+      >
+        <NativeImage
+          {...restProps}
+          style={StyleSheet.absoluteFill}
+          source={resolvedSource}
+          cachePolicy={cachePolicy}
+          resizeMode={resizeMode}
+          indicator={processedIndicator}
+          placeholder={placeholder}
+          fadeDuration={fadeDuration}
+          rounded={rounded}
+          blur={blur}
+          monochrome={processColor(monochrome)}
+          resize={resize}
+          tint={processColor(tint)}
+          enableLiveTextInteraction={enableLiveTextInteraction}
+          allowHardware={allowHardware}
+          format={format}
+          onStart={onStart}
+          onSuccess={onSuccess}
+          onFailure={onFailure}
+          onCompletion={onCompletion}
+        />
+      </View>
+    );
+  }
+);
 
 const styles = StyleSheet.create({
   imageContainer: {
@@ -110,19 +113,19 @@ const styles = StyleSheet.create({
   },
 });
 
-TurboImage.prefetch = async (sources: Source[]) => {
-  return await TurboImageViewManager.prefetch(sources);
-};
-
-TurboImage.dispose = async (sources: Source[]) => {
-  return await TurboImageViewManager.dispose(sources);
-};
-
-TurboImage.clearMemoryCache = async () => {
-  return await TurboImageViewManager.clearMemoryCache();
-};
-TurboImage.clearDiskCache = async () => {
-  return await TurboImageViewManager.clearDiskCache();
-};
+const TurboImage = Object.assign({}, TurboImageView, {
+  prefetch: async (sources: Source[]) => {
+    return await TurboImageViewManager.prefetch(sources);
+  },
+  dispose: async (sources: Source[]) => {
+    return await TurboImageViewManager.dispose(sources);
+  },
+  clearMemoryCache: async () => {
+    return await TurboImageViewManager.clearMemoryCache();
+  },
+  clearDiskCache: async () => {
+    return await TurboImageViewManager.clearDiskCache();
+  },
+});
 
 export default TurboImage as React.FC<TurboImageProps> & TurboImageApi;
