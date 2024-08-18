@@ -1,6 +1,6 @@
 {
   "name": "react-native-turbo-image",
-  "version": "1.12.2",
+  "version": "1.13.0",
   "description": "Performant image for React native",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
