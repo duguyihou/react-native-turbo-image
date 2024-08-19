@@ -48,9 +48,9 @@ import TurboImage from 'react-native-turbo-image';
 
 ```
 
-## Paramaters
+## Properties
 
-| Parameter                   | Type                           | Description                                                                                                                                                                                              | Default                 |
+| Name                        | Type                           | Description                                                                                                                                                                                              | Default                 |
 | --------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
 | `source`                    | `Object`&nbsp;or&nbsp;`number` | (**Required**) Can be an object containing a `uri` string for remote image or local asset using `require`.                                                                                               | -                       |
 | `style`                     | `ImageStyle`                   | Styles to be applied to the image.                                                                                                                                                                       | -                       |
