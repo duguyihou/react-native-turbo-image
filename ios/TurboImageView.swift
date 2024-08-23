@@ -186,9 +186,12 @@ fileprivate extension TurboImageView {
 
   func handleSvg() {
     ImageDecoderRegistry.shared.register { context in
-      context.urlResponse?.url?.absoluteString.contains(".svg") ?? false
-      ? ImageDecoders.Empty()
-      : nil
+      let svgTagEnd = "</svg>"
+      if let _ = context.data.range(of: Data(svgTagEnd.utf8), options: .backwards) {
+        return ImageDecoders.Empty()
+      } else {
+        return nil
+      }
     }
 
     lazyImageView.makeImageView = { container in
