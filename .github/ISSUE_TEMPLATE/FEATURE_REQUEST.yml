@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an idea for this project
+title: "feature "
+labels: [feature]
+body:
+  - type: textarea
+    attributes:
+      label: What feature or enhancement are you suggesting?
+      description: Explain what the feature or enhancement you're suggesting is, how it might improve TurboImage and what it's pros and cons are.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: What Platforms whould this feature/enhancement affect?
+      description: Select the platforms where this feature/enhancement should work on. Features/Enhancements that work on all platforms are more likely to be picked up than platform specifics.
+      multiple: true
+      options:
+        - iOS
+        - Android
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives/Workarounds
+      description: Explain if there are any alternatives/workarounds for the feature/enhancement.
+    validations:
+      required: true
