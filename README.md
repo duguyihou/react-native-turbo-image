@@ -16,7 +16,7 @@ Performant image Component for React Native. Powered by [Nuke](https://github.co
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
 - Prefetch, cleanMemoryCache and cleanDiskCache
 - Written in TypeScript, Swift and Kotlin
-- Support special formats (SVG, Gif, APNG)
+- Support special formats for remote urls (SVG, Gif, APNG)
 
 ## Installation
 
@@ -55,7 +55,7 @@ import TurboImage from 'react-native-turbo-image';
 | `source`                    | `Object`&nbsp;or&nbsp;`number` | (**Required**) Can be an object containing a `uri` string for remote image or local asset using `require`.                                                                                               | -                       |
 | `style`                     | `ImageStyle`                   | Styles to be applied to the image.                                                                                                                                                                       | -                       |
 | `placeholder`               | `object`                       | show placeholder while loading, either `thumbhash` or `blurhash`                                                                                                                                         | -                       |
-| `cachePolicy`               | `string`                       |  `dataCache`: aggressive LRU disk cache `urlCache`: HTTP disk cache, respect cache-control                                                               | urlCache                  |
+| `cachePolicy`               | `string`                       | `dataCache`: aggressive LRU disk cache `urlCache`: HTTP disk cache, respect cache-control                                                                                                                | urlCache                |
 | `resizeMode`                | `String`                       | Resize the image with one of the options: `contain`&nbsp;`cover`&nbsp;`stretch`&nbsp;`center`                                                                                                            | contain                 |
 | `indicator`                 | `object`                       | `style`: `medium`(default) or `large`.&nbsp; `color`: `number / ColorValue`                                                                                                                              | -                       |
 | `fadeDuration`              | `number`                       | The transition duration of the image. Note: To avoid flicking, it will be set to 0 when a placeholder is provided                                                                                        | 300(iOS) / 100(Android) |
