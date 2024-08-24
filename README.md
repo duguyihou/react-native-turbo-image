@@ -32,9 +32,8 @@ cd ios && pod install
 import TurboImage from 'react-native-turbo-image';
 
 <TurboImage
-  source={{ uri: "https://placedog.net/300/300?id=1" }}
+  source={{ uri: "https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e" }}
   style={{ width: 300, height: 300 }}
-  cachePolicy="dataCache"
 />;
 
 ```
