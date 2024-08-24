@@ -6,7 +6,6 @@ import type {
 
 export type HomeStackParamList = {
   Home: undefined;
-  TurboImage: undefined;
   Image: undefined;
   Placeholder: undefined;
   UrlCache: undefined;
@@ -33,7 +32,6 @@ export type HomeRouteType<K extends keyof HomeStackParamList> = RouteProp<
 export enum RouteName {
   HomeStack = 'HomeStack',
   Home = 'Home',
-  TurboImage = 'TurboImage',
   Image = 'Image',
   Placeholder = 'Placeholder',
   UrlCache = 'UrlCache',
