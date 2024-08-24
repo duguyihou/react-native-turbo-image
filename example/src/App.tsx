@@ -1,6 +1,5 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import TurboImageScreen from './screens/TurboImageScreen';
 import ProcessingScreen from './screens/ProcessingScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/HomeScreen';
@@ -10,7 +9,6 @@ import FailureScreen from './screens/FailureScreen';
 import ImageScreen from './screens/ImageScreen';
 import UrlCacheScreen from './screens/UrlCacheScreen';
 import DataCacheScreen from './screens/DataCacheScreen';
-import LocalAssetScreen from './screens/LocalAssetScreen';
 import SVGScreen from './screens/SVGScreen';
 import GifScreen from './screens/GifScreen';
 import PrefetchScreen from './screens/PrefetchScreen';
@@ -26,11 +24,12 @@ function App() {
       <Stack.Navigator>
         <Stack.Screen name={RouteName.Home} component={HomeScreen} />
         <Stack.Group>
-          <Stack.Screen
-            name={RouteName.TurboImage}
-            component={TurboImageScreen}
-          />
           <Stack.Screen name={RouteName.Image} component={ImageScreen} />
+          <Stack.Screen name={RouteName.UrlCache} component={UrlCacheScreen} />
+          <Stack.Screen
+            name={RouteName.DataCache}
+            component={DataCacheScreen}
+          />
         </Stack.Group>
         <Stack.Group>
           <Stack.Screen
@@ -39,15 +38,6 @@ function App() {
           />
         </Stack.Group>
         <Stack.Group>
-          <Stack.Screen name={RouteName.UrlCache} component={UrlCacheScreen} />
-          <Stack.Screen
-            name={RouteName.DataCache}
-            component={DataCacheScreen}
-          />
-          <Stack.Screen
-            name={RouteName.LocalAsset}
-            component={LocalAssetScreen}
-          />
           <Stack.Screen name={RouteName.Prefetch} component={PrefetchScreen} />
         </Stack.Group>
         <Stack.Group>

@@ -6,7 +6,6 @@ import {
   processColor,
   View,
   StyleSheet,
-  Image,
 } from 'react-native';
 import type {
   IndicatorStyle,
@@ -56,13 +55,6 @@ const TurboImageView = forwardRef(
       throw new Error('Choose one hash string, either thumbhash or blurhash');
     }
 
-    const resolvedSource = (() => {
-      if (typeof source === 'number') {
-        return Image.resolveAssetSource(source);
-      }
-      return source;
-    })();
-
     const processedIndicator =
       indicator && Object.keys(indicator).length !== 0
         ? {
@@ -83,7 +75,7 @@ const TurboImageView = forwardRef(
         <NativeImage
           {...restProps}
           style={StyleSheet.absoluteFill}
-          source={resolvedSource}
+          source={source}
           cachePolicy={cachePolicy}
           resizeMode={resizeMode}
           indicator={processedIndicator}
