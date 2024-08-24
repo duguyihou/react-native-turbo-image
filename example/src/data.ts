@@ -19,7 +19,6 @@ export const routesData = [
     data: [
       { name: 'UrlCache (default)', destination: RouteName.UrlCache },
       { name: 'DataCache', destination: RouteName.DataCache },
-      { name: 'LocalAsset', destination: RouteName.LocalAsset },
       { name: 'Prefetch', destination: RouteName.Prefetch },
     ],
   },
