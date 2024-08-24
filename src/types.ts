@@ -5,17 +5,12 @@ import type {
   ImageStyle,
   ColorValue,
   NativeSyntheticEvent,
-  ImageRequireSource,
 } from 'react-native';
 
-export type LocalSource = ImageRequireSource;
-
-export type RemoteSource = {
+export type Source = {
   uri: string;
   headers?: HeadersInit_ | undefined;
 };
-
-export type Source = LocalSource | RemoteSource;
 
 export type IndicatorStyle = 'large' | 'medium';
 export type Indicator = Partial<{
