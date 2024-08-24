@@ -1,18 +1,17 @@
 import React from 'react';
 import { dataCacheData } from '../data';
 import Card from '../components/Card';
-import type { CachePolicy } from 'react-native-turbo-image';
 
 const DataCacheScreen = () => {
   return (
     <>
-      {dataCacheData.map(({ url, blurhash, cachePolicy }) => {
+      {dataCacheData.map(({ uri, blurhash }) => {
         return (
           <Card
-            key={url}
-            source={{ uri: url }}
+            key={uri}
+            source={{ uri }}
             placeholder={{ blurhash }}
-            cachePolicy={cachePolicy as CachePolicy}
+            cachePolicy="dataCache"
             style={{ width: 300, height: 300 }}
           />
         );

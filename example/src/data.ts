@@ -579,17 +579,15 @@ export const liveTextData = [
 export const urlCacheData = [
   {
     title: 'urlCache',
-    url: 'https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e',
+    uri: 'https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e',
     blurhash: 'UiL;8D-;%Mxut7WCt7f6~qS5RjRijuazM|WB',
-    cachePolicy: 'urlCache',
   },
 ];
 export const dataCacheData = [
   {
     title: 'dataCache',
-    url: 'https://placedog.net/300/300?id=236',
+    uri: 'https://placedog.net/300/300?id=236',
     blurhash: 'UELDlXjFE3^*00x^M|M{ve9Y%1Ri~VIVV@-p',
-    cachePolicy: 'dataCache',
   },
 ];
 
