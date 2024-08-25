@@ -28,6 +28,7 @@ type State = 'running' | 'cancelled' | 'completed';
 export type Placeholder = {
   blurhash: string;
   thumbhash: string;
+  memoryCacheKey: string;
 };
 
 export type TaskState = {

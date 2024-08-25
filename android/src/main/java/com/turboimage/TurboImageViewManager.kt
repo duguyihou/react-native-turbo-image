@@ -94,6 +94,9 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       placeholder(
         view.thumbhashDrawable ?: view.blurhashDrawable ?: view.circleProgressDrawable
       )
+      view.memoryCacheKey?.let {
+        placeholderMemoryCacheKey(it)
+      }
       transformations(view.transformations)
       crossfade(view.crossfade ?: defaultCrossfade)
       view.showPlaceholderOnFailure?.let {
@@ -119,6 +122,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setPlaceholder(view: TurboImageView, placeholder: ReadableMap?) {
     view.blurhash = placeholder?.getString("blurhash")
     view.thumbhash = placeholder?.getString("thumbhash")
+    view.memoryCacheKey = placeholder?.getString("memoryCacheKey")
   }
 
   @ReactProp(name = "showPlaceholderOnFailure")
