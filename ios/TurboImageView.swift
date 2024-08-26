@@ -99,6 +99,12 @@ final class TurboImageView : UIView {
           }
         }
       }
+
+      if let memoryCacheKey = placeholder.value(forKey: "memoryCacheKey") as? String {
+        let request = ImageRequest(url: URL(string: memoryCacheKey))
+        let memoryCachedImage = ImagePipeline.shared.cache.cachedImage(for: request, caches: .memory)?.image
+        lazyImageView.placeholderImage = memoryCachedImage
+      }
     }
   }
 

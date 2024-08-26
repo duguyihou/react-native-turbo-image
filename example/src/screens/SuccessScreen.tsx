@@ -41,7 +41,7 @@ const SuccessScreen = () => {
     });
   };
   return (
-    <View>
+    <View style={styles.container}>
       <Card
         source={{
           uri: 'https://placedog.net/100/100?id=121',
@@ -61,8 +61,8 @@ const SuccessScreen = () => {
       {information?.height && <Text>height: {information?.height}</Text>}
       {information?.source && <Text>source: {information?.source}</Text>}
       {completion && <Text>Complete at {Date()}</Text>}
-      <Pressable onPress={navigateToDetailScreen}>
-        <Text style={styles.button}>Go to detail</Text>
+      <Pressable style={styles.button} onPress={navigateToDetailScreen}>
+        <Text style={styles.text}>Go to detail</Text>
       </Pressable>
     </View>
   );
@@ -71,11 +71,23 @@ const SuccessScreen = () => {
 export default SuccessScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    height: '100%',
+    width: '100%',
+    alignItems: 'center',
+  },
   button: {
-    padding: 20,
-    fontSize: 20,
+    marginHorizontal: 10,
+    padding: 10,
     backgroundColor: 'black',
+    borderRadius: 50,
     color: 'white',
+    position: 'absolute',
+    bottom: 50,
+  },
+  text: {
+    fontSize: 20,
     textAlign: 'center',
+    color: 'white',
   },
 });

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import React from 'react';
 import TurboImage from 'react-native-turbo-image';
 import { useRoute } from '@react-navigation/native';
@@ -8,6 +8,12 @@ const DetailScreen = () => {
   const {
     params: { memoryCacheKey },
   } = useRoute<HomeRouteType<RouteName.Detail>>();
+
+  const handlePress = () => {
+    Linking.openURL(
+      'https://coil-kt.github.io/coil/recipes/#using-a-memory-cache-key-as-a-placeholder'
+    );
+  };
   return (
     <View style={styles.container}>
       <TurboImage
@@ -16,9 +22,11 @@ const DetailScreen = () => {
         style={styles.image}
       />
       <Text style={styles.text}>
-        reference to
-        https://coil-kt.github.io/coil/recipes/#using-a-memory-cache-key-as-a-placeholder
+        use the image which is cached in memory as placholder
       </Text>
+      <Pressable onPress={handlePress}>
+        <Text style={styles.link}>reference</Text>
+      </Pressable>
     </View>
   );
 };
@@ -36,5 +44,9 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 18,
+  },
+  link: {
+    fontSize: 18,
+    color: 'blue',
   },
 });
