@@ -52,7 +52,7 @@ const TurboImageView = forwardRef(
       ...restProps
     } = props;
     if (placeholder && Object.keys(placeholder).length > 1) {
-      throw new Error('Choose one hash string, either thumbhash or blurhash');
+      throw new Error('Choose only one placeholder');
     }
 
     const processedIndicator =

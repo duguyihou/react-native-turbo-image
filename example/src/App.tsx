@@ -15,6 +15,7 @@ import PrefetchScreen from './screens/PrefetchScreen';
 import PlaceholderScreen from './screens/PlaceholderScreen';
 import LiveTextScreen from './screens/LiveTextScreen';
 import APNGScreen from './screens/APNGScreen';
+import DetailScreen from './screens/DetailScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -43,6 +44,7 @@ function App() {
         <Stack.Group>
           <Stack.Screen name={RouteName.Success} component={SuccessScreen} />
           <Stack.Screen name={RouteName.Failure} component={FailureScreen} />
+          <Stack.Screen name={RouteName.Detail} component={DetailScreen} />
         </Stack.Group>
         <Stack.Screen
           name={RouteName.ImageProcessing}
