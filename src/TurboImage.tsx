@@ -6,6 +6,7 @@ import {
   processColor,
   View,
   StyleSheet,
+  Image,
 } from 'react-native';
 import type {
   IndicatorStyle,
@@ -55,6 +56,13 @@ const TurboImageView = forwardRef(
       throw new Error('Choose only one placeholder');
     }
 
+    const resolvedSource = (() => {
+      if (typeof source === 'number') {
+        return Image.resolveAssetSource(source);
+      }
+      return source;
+    })();
+
     const processedIndicator =
       indicator && Object.keys(indicator).length !== 0
         ? {
@@ -75,7 +83,7 @@ const TurboImageView = forwardRef(
         <NativeImage
           {...restProps}
           style={StyleSheet.absoluteFill}
-          source={source}
+          source={resolvedSource}
           cachePolicy={cachePolicy}
           resizeMode={resizeMode}
           indicator={processedIndicator}

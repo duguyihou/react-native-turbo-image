@@ -1,5 +1,7 @@
 package com.turboimage
 
+import android.content.ContentResolver
+import android.net.Uri
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
 import coil.Coil
@@ -9,6 +11,7 @@ import coil.decode.SvgDecoder
 import coil.dispose
 import coil.drawable.CrossfadeDrawable
 import coil.load
+import coil.request.CachePolicy
 import coil.size.Dimension
 import coil.size.Size
 import com.facebook.react.bridge.ReadableMap
@@ -16,6 +19,7 @@ import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.annotations.ReactProp
+import com.facebook.react.views.imagehelper.ResourceDrawableIdHelper
 import okhttp3.Headers
 import com.turboimage.decoder.APNGDecoder
 
@@ -114,8 +118,17 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   @ReactProp(name = "source")
   fun setSource(view: TurboImageView, source: ReadableMap) {
     val uri = source.toHashMap()["uri"] as? String
-    view.uri = uri
-    view.headers = source.toHashMap()["headers"] as? Headers
+    if (source.hasKey("__packager_asset") && uri?.startsWith("http") == false) {
+      val resId = ResourceDrawableIdHelper.getInstance().getResourceDrawableId(view.context, uri)
+      val url = Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+        .authority(view.context.resources.getResourcePackageName(resId))
+        .appendPath(view.context.resources.getResourceTypeName(resId))
+        .appendPath(view.context.resources.getResourceEntryName(resId)).build()
+      view.uri = url.toString()
+    } else {
+      view.uri = uri
+      view.headers = source.toHashMap()["headers"] as? Headers
+    }
   }
 
   @ReactProp(name = "placeholder")
