@@ -24,7 +24,7 @@ final class TurboImageView : UIView {
     return composeProcessors()
   }
 
-  private var urlRequest: URLRequest?
+  private var imageRequest: ImageRequest?
 
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
@@ -40,9 +40,14 @@ final class TurboImageView : UIView {
         ])
         return
       }
-      urlRequest = URLRequest(url: url)
+      var urlRequest = URLRequest(url: url)
       if let headers = source?.value(forKey: "headers") as? [String:String] {
-        urlRequest?.allHTTPHeaderFields = headers
+        urlRequest.allHTTPHeaderFields = headers
+      }
+      if let cacheKey = source?.value(forKey: "cacheKey") as? String {
+        imageRequest = ImageRequest(urlRequest: urlRequest, userInfo: [.imageIdKey: cacheKey])
+      } else {
+        imageRequest = ImageRequest(urlRequest: urlRequest)
       }
     }
   }
@@ -159,8 +164,8 @@ final class TurboImageView : UIView {
     super.didSetProps(changedProps)
 
     defer {
-      if let urlRequest {
-        lazyImageView.request = ImageRequest(urlRequest: urlRequest)
+      if let imageRequest {
+        lazyImageView.request = imageRequest
       }
     }
 

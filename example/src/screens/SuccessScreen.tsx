@@ -47,10 +47,10 @@ const SuccessScreen = () => {
           uri: 'https://placedog.net/100/100?id=121',
         }}
         style={{ width: 100, height: 100 }}
+        cachePolicy="dataCache"
         onStart={handleStart}
         onSuccess={handleSuccess}
         onCompletion={handleCompletion}
-        onFailure={({ nativeEvent }) => console.log(nativeEvent.error)}
         placeholder={{
           blurhash: 'UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU',
         }}
