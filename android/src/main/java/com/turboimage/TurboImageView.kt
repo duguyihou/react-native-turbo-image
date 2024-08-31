@@ -21,6 +21,7 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
   AppCompatImageView(reactContext) {
   var uri: String? = null
   var headers: Headers? = null
+  var cacheKey: String? = null
   var cachePolicy: String? = "urlCache"
   var crossfade: Int? = null
   var blurhash: String? = null

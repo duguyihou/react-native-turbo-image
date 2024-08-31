@@ -10,6 +10,7 @@ import type {
 export type Source = {
   uri: string;
   headers?: HeadersInit_ | undefined;
+  cacheKey?: String | undefined;
 };
 
 export type IndicatorStyle = 'large' | 'medium';

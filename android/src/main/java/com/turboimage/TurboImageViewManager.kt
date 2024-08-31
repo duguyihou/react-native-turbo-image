@@ -61,6 +61,10 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
     view.load(view.uri, imageLoader) {
       view.headers?.let { headers(it) }
+      view.cacheKey?.let {
+        memoryCacheKey(it)
+        diskCacheKey(it)
+      }
       view.allowHardware?.let { allowHardware(it) }
       listener(TurboImageListener(view))
       view.format?.let {
@@ -116,6 +120,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
     val uri = source.toHashMap()["uri"] as? String
     view.uri = uri
     view.headers = source.toHashMap()["headers"] as? Headers
+    view.cacheKey = source.toHashMap()["cacheKey"] as? String
   }
 
   @ReactProp(name = "placeholder")
