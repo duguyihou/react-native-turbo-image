@@ -12,7 +12,7 @@ Performant image Component for React Native. Powered by [Nuke](https://github.co
 
 - Support New Architecture. see the [example](https://github.com/duguyihou/APPLibTest)
 - Support authorization headers
-- Support thumbhash and blurhash for placeholder
+- Support thumbhash, blurhash and memoryCacheKey for placeholder
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
 - Prefetch, dispose, cleanMemoryCache and cleanDiskCache
 - Written in TypeScript, Swift and Kotlin
@@ -42,10 +42,10 @@ import TurboImage from 'react-native-turbo-image';
 
 | Name                        | Type                  | Description                                                                                                                                                                                              | Default                 |
 | --------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `source`                    | `Source`              | (**Required**) an object containing a `uri` string                                                                                                                                                       | -                       |
+| `source`                    | [`Source`](https://github.com/duguyihou/react-native-turbo-image?tab=readme-ov-file#source)              | (**Required**) an object containing a `uri` string                                                                                                                                                       | -                       |
 | `style`                     | `ImageStyle`          | Styles to be applied to the image.                                                                                                                                                                       | -                       |
-| `placeholder`               | `Placeholder`         | show placeholder while loading                                                                                                                                                                           | -                       |
-| `cachePolicy`               | `string`              | `dataCache`: aggressive LRU disk cache `urlCache`: HTTP disk cache, respect cache-control                                                                                                                | urlCache                |
+| `placeholder`               | [`Placeholder`](https://github.com/duguyihou/react-native-turbo-image?tab=readme-ov-file#placeholder)         | show placeholder while loading                                                                                                                                                                           | -                       |
+| `cachePolicy`               | [`CachePolicy`](https://github.com/duguyihou/react-native-turbo-image?tab=readme-ov-file#cachepolicy)              | Determines how to cache the image                                                                                                                | urlCache                |
 | `resizeMode`                | `String`              | Resize the image with one of the options: `contain`&nbsp;`cover`&nbsp;`stretch`&nbsp;`center`                                                                                                            | contain                 |
 | `indicator`                 | `object`              | `style`: `medium`(default) or `large`.&nbsp; `color`: `number / ColorValue`                                                                                                                              | -                       |
 | `fadeDuration`              | `number`              | The transition duration of the image. Note: To avoid flicking, it will be set to 0 when a placeholder is provided                                                                                        | 300(iOS) / 100(Android) |
