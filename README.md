@@ -42,9 +42,9 @@ import TurboImage from 'react-native-turbo-image';
 
 | Name                        | Type                  | Description                                                                                                                                                                                              | Default                 |
 | --------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `source`                    | `Object`              | (**Required**) an object containing a `uri` string                                                                                                                                                       | -                       |
+| `source`                    | `Source`              | (**Required**) an object containing a `uri` string                                                                                                                                                       | -                       |
 | `style`                     | `ImageStyle`          | Styles to be applied to the image.                                                                                                                                                                       | -                       |
-| `placeholder`               | `object`              | show placeholder while loading, either `thumbhash` or `blurhash`                                                                                                                                         | -                       |
+| `placeholder`               | `Placeholder`         | show placeholder while loading                                                                                                                                                                           | -                       |
 | `cachePolicy`               | `string`              | `dataCache`: aggressive LRU disk cache `urlCache`: HTTP disk cache, respect cache-control                                                                                                                | urlCache                |
 | `resizeMode`                | `String`              | Resize the image with one of the options: `contain`&nbsp;`cover`&nbsp;`stretch`&nbsp;`center`                                                                                                            | contain                 |
 | `indicator`                 | `object`              | `style`: `medium`(default) or `large`.&nbsp; `color`: `number / ColorValue`                                                                                                                              | -                       |
@@ -89,6 +89,32 @@ await TurboImage.clearMemoryCache();
 ```ts
 await TurboImage.clearDiskCache();
 ```
+
+## Types
+
+### Source
+
+| Name       | Type                     | Description                                                                                                       |
+| ---------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `uri`      | `string`                 | the url of the image                                                                                              |
+| `headers`  | `Record<string, string>` | An object representing the HTTP headers to send along with the request for a remote image                         |
+| `cacheKey` | `string`                 | The cache key used to query and store this specific image. If not provided, the uri is used also as the cache key |
+
+### Placeholder
+
+| Name             | Type     | Description                                                                                                                                                                       |
+| ---------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `thumbhash`      | `string` | A string used to generate the image placeholder. For more information, see [thumbhash](https://evanw.github.io/thumbhash/)                                                        |
+| `blurhash`       | `string` | A string used to generate the image placeholder. For more information, see [woltapp/blurhash](https://github.com/woltapp/blurhash).                                               |
+| `memoryCacheKey` | `string` | Using the key of previous request as placeholder. For more information, see [Memory Cache Key](https://coil-kt.github.io/coil/recipes/#using-a-memory-cache-key-as-a-placeholder) |
+
+### CachePolicy
+
+| Name        | Type     | Description                                                                                                                                    |
+| ----------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `urlCache`  | `string` | Allows the server to manage caching precisely through cache-control HTTP headers. You can determine which images to cache and caching duration |
+| `dataCache` | `string` | Ignores [HTTP cache control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)                                           |
+
 
 ## Contributing
 
