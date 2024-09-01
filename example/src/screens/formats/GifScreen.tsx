@@ -1,19 +1,20 @@
 import React from 'react';
-import { apngData } from '../data';
-import Card from '../components/Card';
+import { gifData } from '../../data';
+import Card from '../../components/Card';
 import { FlatList } from 'react-native';
 
-const APNGScreen = () => {
+const GifScreen = () => {
   return (
     <FlatList
-      data={apngData}
+      data={gifData}
       renderItem={({ item }) => (
         <Card
-          title={item.title}
           style={{ width: 300, height: 300 }}
-          source={{ uri: item.url }}
+          source={{
+            uri: item.url,
+          }}
           indicator={{ style: 'large' }}
-          format="apng"
+          format="gif"
         />
       )}
       keyExtractor={(item) => item.url}
@@ -21,4 +22,4 @@ const APNGScreen = () => {
   );
 };
 
-export default APNGScreen;
+export default GifScreen;

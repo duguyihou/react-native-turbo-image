@@ -15,7 +15,9 @@ export const routesData = [
   {
     title: 'Placeholder',
     data: [
-      { name: 'thumbhash + blurhash', destination: RouteName.Placeholder },
+      { name: 'thumbhash', destination: RouteName.Thumbhash },
+      { name: 'blurhash', destination: RouteName.Blurhash },
+      { name: 'memoryCacheKey', destination: RouteName.MemoryCacheKeyPrevious },
     ],
   },
   {
@@ -46,7 +48,7 @@ export const routesData = [
     ],
   },
 ];
-export const listScreenData = [
+export const dataCachelistData = [
   {
     url: 'https://placedog.net/300/300?id=1',
     blurhash: 'ULKKWp^+s,_300M{t7tR~XNHE2bI00xuWBRP',
@@ -770,44 +772,12 @@ export const prefetchData = [
   },
 ];
 
-export const placeholderData = [
-  {
-    title: 'thumbhash',
-    url: 'https://placedog.net/300/300?id=127',
-    placeholder: {
-      thumbhash: 'XDkKFwKgVndpiIikloh4Z4iGp/HMDKYI',
-    },
-  },
-  {
-    title: 'blurhash',
-    url: 'https://placedog.net/300/300?id=127',
-    placeholder: {
-      blurhash: 'KBHKzp00_N_19F-V00_2D%',
-    },
-  },
-];
-
 export const liveTextData = [
   {
     url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:ejihld4sywvvqwe67cdkn4jq/bafkreibcshvfvfi4suht32tcp4ds77y2yghtcig62byqyq3ot4abpsplhu@jpeg',
   },
   {
     url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:lzlqyldh7nfc34pfffvd24ko/bafkreihimujh4kxa4gecniimqfnmdjnlajjek6pleh5tt5k4djhno3lzu4@jpeg',
-  },
-];
-
-export const urlCacheData = [
-  {
-    title: 'urlCache',
-    uri: 'https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e',
-    blurhash: 'UiL;8D-;%Mxut7WCt7f6~qS5RjRijuazM|WB',
-  },
-];
-export const dataCacheData = [
-  {
-    title: 'dataCache',
-    uri: 'https://placedog.net/300/300?id=236',
-    blurhash: 'UELDlXjFE3^*00x^M|M{ve9Y%1Ri~VIVV@-p',
   },
 ];
 
