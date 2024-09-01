@@ -43,10 +43,7 @@ const LeftButton = () => {
       {
         text: 'Prefetch with urlCache',
         onPress: async () => {
-          return await TurboImage.prefetch(
-            prefetchWithUrlCacheData,
-            'urlCache'
-          );
+          return await TurboImage.prefetch(prefetchWithUrlCacheData);
         },
         style: 'default',
       },

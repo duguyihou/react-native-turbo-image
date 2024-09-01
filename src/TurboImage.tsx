@@ -107,7 +107,10 @@ const styles = StyleSheet.create({
 });
 
 const TurboImage = Object.assign({}, TurboImageView, {
-  prefetch: async (sources: Source[], cachePolicy: CachePolicy) => {
+  prefetch: async (
+    sources: Source[],
+    cachePolicy: CachePolicy = 'urlCache'
+  ) => {
     return await TurboImageViewManager.prefetch(sources, cachePolicy);
   },
   dispose: async (sources: Source[]) => {
