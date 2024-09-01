@@ -13,7 +13,11 @@ import {
   type HomeStackParamList,
 } from './routes.type';
 import TurboImage from 'react-native-turbo-image';
-import { prefetchData, routesData } from '../data';
+import {
+  PrefetchWithDataCacheData,
+  prefetchWithUrlCacheData,
+  routesData,
+} from '../data';
 
 const ListItem = ({
   name,
@@ -37,9 +41,22 @@ const RightButton = () => {
   const handleClear = () => {
     Alert.alert('Clear Cache', 'memory / disk', [
       {
-        text: 'Prefetch',
+        text: 'Prefetch with urlCache',
         onPress: async () => {
-          return await TurboImage.prefetch(prefetchData);
+          return await TurboImage.prefetch(
+            prefetchWithUrlCacheData,
+            'urlCache'
+          );
+        },
+        style: 'default',
+      },
+      {
+        text: 'Prefetch with dataCache',
+        onPress: async () => {
+          return await TurboImage.prefetch(
+            PrefetchWithDataCacheData,
+            'dataCache'
+          );
         },
         style: 'default',
       },
@@ -48,12 +65,14 @@ const RightButton = () => {
         onPress: async () => {
           return await TurboImage.clearMemoryCache();
         },
+        style: 'default',
       },
       {
         text: 'Clear Disk Cache',
         onPress: async () => {
           return await TurboImage.clearDiskCache();
         },
+        style: 'default',
       },
       {
         text: 'Cancel',

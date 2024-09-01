@@ -11,13 +11,14 @@ import UrlCacheScreen from './screens/list/UrlCacheScreen';
 import DataCacheScreen from './screens/list/DataCacheScreen';
 import SVGScreen from './screens/formats/SVGScreen';
 import GifScreen from './screens/formats/GifScreen';
-import PrefetchScreen from './screens/PrefetchScreen';
+import PrefetchWithDataCacheScreen from './screens/prefetch/PrefetchWithDataCacheScreen';
 import ThumbhashScreen from './screens/placeholder/ThumbhashScreen';
 import BlurhashScreen from './screens/placeholder/BlurhashScreen';
 import LiveTextScreen from './screens/LiveTextScreen';
 import APNGScreen from './screens/formats/APNGScreen';
 import MemoryCacheKeyScreen from './screens/placeholder/MemoryCacheKeyScreen';
 import MemoryCacheKeyPreviousScreen from './screens/placeholder/MemoryCacheKeyPreviousScreen';
+import PrefetchWithUrlCacheScreen from './screens/prefetch/PrefetchWithUrlCacheScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -50,7 +51,14 @@ function App() {
           />
         </Stack.Group>
         <Stack.Group>
-          <Stack.Screen name={RouteName.Prefetch} component={PrefetchScreen} />
+          <Stack.Screen
+            name={RouteName.PrefetchWithUrlCache}
+            component={PrefetchWithUrlCacheScreen}
+          />
+          <Stack.Screen
+            name={RouteName.PrefetchWithDataCache}
+            component={PrefetchWithDataCacheScreen}
+          />
         </Stack.Group>
         <Stack.Group>
           <Stack.Screen name={RouteName.Success} component={SuccessScreen} />

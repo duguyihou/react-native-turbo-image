@@ -21,8 +21,17 @@ export const routesData = [
     ],
   },
   {
-    title: 'Cache',
-    data: [{ name: 'Prefetch', destination: RouteName.Prefetch }],
+    title: 'Prefetch',
+    data: [
+      {
+        name: 'PrefetchWithUrlCache',
+        destination: RouteName.PrefetchWithUrlCache,
+      },
+      {
+        name: 'PrefetchWithDataCache',
+        destination: RouteName.PrefetchWithDataCache,
+      },
+    ],
   },
   {
     title: 'Events',
@@ -751,7 +760,7 @@ export const urlCacheListData = [
   },
 ];
 
-export const prefetchData = [
+export const PrefetchWithDataCacheData = [
   {
     uri: 'https://placedog.net/300/300?id=122',
     headers: {
@@ -769,6 +778,24 @@ export const prefetchData = [
   },
   {
     uri: 'https://placedog.net/300/300?id=126',
+  },
+];
+
+export const prefetchWithUrlCacheData = [
+  {
+    uri: 'https://picsum.photos/id/10/300/300',
+  },
+  {
+    uri: 'https://picsum.photos/id/11/300/300',
+  },
+  {
+    uri: 'https://picsum.photos/id/12/300/300',
+  },
+  {
+    uri: 'https://picsum.photos/id/13/300/300',
+  },
+  {
+    uri: 'https://picsum.photos/id/14/300/300',
   },
 ];
 

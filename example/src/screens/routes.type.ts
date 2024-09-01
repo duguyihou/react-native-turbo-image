@@ -13,7 +13,8 @@ export type HomeStackParamList = {
   MemoryCacheKey: { memoryCacheKey: string };
   UrlCache: undefined;
   DataCache: undefined;
-  Prefetch: undefined;
+  PrefetchWithUrlCache: undefined;
+  PrefetchWithDataCache: undefined;
   Success: undefined;
   Failure: undefined;
   ImageProcessing: undefined;
@@ -21,7 +22,6 @@ export type HomeStackParamList = {
   SVG: undefined;
   Gif: undefined;
   APNG: undefined;
-  // Detail: { memoryCacheKey: string };
 };
 
 export type HomeStackProps = NativeStackScreenProps<HomeStackParamList>;
@@ -43,7 +43,8 @@ export enum RouteName {
   MemoryCacheKey = 'MemoryCacheKey',
   UrlCache = 'UrlCache',
   DataCache = 'DataCache',
-  Prefetch = 'Prefetch',
+  PrefetchWithUrlCache = 'PrefetchWithUrlCache',
+  PrefetchWithDataCache = 'PrefetchWithDataCache',
   Success = 'Success',
   Failure = 'Failure',
   ImageProcessing = 'ImageProcessing',
