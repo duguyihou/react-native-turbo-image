@@ -1,25 +1,31 @@
 import { Dimensions, FlatList, StyleSheet } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 import React from 'react';
-import { urlCacheListData } from '../data';
+import { dataCachelistData } from '../../data';
 
 const size = Dimensions.get('window').width / 3 - 2;
-const UrlCacheScreen = () => {
-  const renderItem = ({ item }: { item: { uri: string } }) => {
+const DataCacheScreen = () => {
+  const renderItem = ({
+    item,
+  }: {
+    item: { url: string; blurhash: string };
+  }) => {
     return (
       <TurboImage
         source={{
-          uri: item.uri,
+          uri: item.url,
         }}
         style={styles.card}
-        resizeMode="cover"
+        placeholder={{ blurhash: item.blurhash }}
+        resize={size}
+        cachePolicy="dataCache"
       />
     );
   };
   return (
     <FlatList
-      keyExtractor={(item) => item.uri}
-      data={urlCacheListData}
+      keyExtractor={(item) => item.url}
+      data={dataCachelistData}
       numColumns={3}
       getItemLayout={(_, index) => ({
         length: size,
@@ -31,7 +37,7 @@ const UrlCacheScreen = () => {
   );
 };
 
-export default UrlCacheScreen;
+export default DataCacheScreen;
 
 const styles = StyleSheet.create({
   card: {

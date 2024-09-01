@@ -1,6 +1,6 @@
 import { Dimensions, FlatList, Image, StyleSheet } from 'react-native';
 import React from 'react';
-import { listScreenData } from '../data';
+import { dataCachelistData } from '../../data';
 
 const size = Dimensions.get('window').width / 3 - 2;
 const ImageScreen = () => {
@@ -14,7 +14,7 @@ const ImageScreen = () => {
   return (
     <FlatList
       keyExtractor={(item) => item.url}
-      data={listScreenData}
+      data={dataCachelistData}
       numColumns={3}
       getItemLayout={(_, index) => ({
         length: size,

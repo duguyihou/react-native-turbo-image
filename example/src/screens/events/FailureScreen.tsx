@@ -1,6 +1,6 @@
 import { Text, View, type NativeSyntheticEvent } from 'react-native';
 import React, { useState } from 'react';
-import Card from '../components/Card';
+import Card from '../../components/Card';
 import type { Failure, TaskState } from 'react-native-turbo-image';
 
 type Information = {

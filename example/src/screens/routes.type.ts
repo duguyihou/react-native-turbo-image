@@ -7,7 +7,10 @@ import type {
 export type HomeStackParamList = {
   Home: undefined;
   Image: undefined;
-  Placeholder: undefined;
+  Thumbhash: undefined;
+  Blurhash: undefined;
+  MemoryCacheKeyPrevious: undefined;
+  MemoryCacheKey: { memoryCacheKey: string };
   UrlCache: undefined;
   DataCache: undefined;
   Prefetch: undefined;
@@ -18,7 +21,7 @@ export type HomeStackParamList = {
   SVG: undefined;
   Gif: undefined;
   APNG: undefined;
-  Detail: { memoryCacheKey: string };
+  // Detail: { memoryCacheKey: string };
 };
 
 export type HomeStackProps = NativeStackScreenProps<HomeStackParamList>;
@@ -34,7 +37,10 @@ export enum RouteName {
   HomeStack = 'HomeStack',
   Home = 'Home',
   Image = 'Image',
-  Placeholder = 'Placeholder',
+  Thumbhash = 'Thumbhash',
+  Blurhash = 'Blurhash',
+  MemoryCacheKeyPrevious = 'MemoryCacheKeyPrevious',
+  MemoryCacheKey = 'MemoryCacheKey',
   UrlCache = 'UrlCache',
   DataCache = 'DataCache',
   Prefetch = 'Prefetch',
@@ -45,5 +51,4 @@ export enum RouteName {
   SVG = 'SVG',
   Gif = 'Gif',
   APNG = 'APNG',
-  Detail = 'Detail',
 }
