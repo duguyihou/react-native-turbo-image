@@ -108,6 +108,22 @@ await TurboImage.clearDiskCache();
 | `blurhash`       | `string` | A string used to generate the image placeholder. For more information, see [woltapp/blurhash](https://github.com/woltapp/blurhash).                                               |
 | `memoryCacheKey` | `string` | Using the key of previous request as placeholder. For more information, see [Memory Cache Key](https://coil-kt.github.io/coil/recipes/#using-a-memory-cache-key-as-a-placeholder) |
 
+
+| thumbhash | blurhash | memoryCacheKey |
+| ---- | ---- | ---- |
+| <video src="https://github.com/user-attachments/assets/8f0f8c7c-3521-46d9-8a9b-12f65dc9691e" width="150" /> |  <video src="https://github.com/user-attachments/assets/5b43b8f7-81e4-4e7c-9c60-18ecaee3b502" width="150" /> | <video src="https://github.com/user-attachments/assets/267c855f-6cff-4033-8591-5bd420fc8d48" width="150" />
+
+
+
+
+
+
+
+
+
+
+
+
 ### CachePolicy
 
 | Name        | Type     | Description                                                                                                                                    |
