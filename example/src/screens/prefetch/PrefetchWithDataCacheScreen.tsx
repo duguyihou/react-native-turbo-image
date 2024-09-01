@@ -1,5 +1,5 @@
 import React from 'react';
-import { PrefetchWithDataCacheData } from '../../data';
+import { PrefetchWithDataCacheData } from './data';
 import Card from '../../components/Card';
 import { FlatList, StyleSheet } from 'react-native';
 

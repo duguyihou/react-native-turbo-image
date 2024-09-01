@@ -1,5 +1,5 @@
 import React from 'react';
-import { gifData } from '../../data';
+import { gifData } from './data';
 import Card from '../../components/Card';
 import { FlatList } from 'react-native';
 

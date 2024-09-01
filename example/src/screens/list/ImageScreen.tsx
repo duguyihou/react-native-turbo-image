@@ -1,6 +1,6 @@
 import { Dimensions, FlatList, Image, StyleSheet } from 'react-native';
 import React from 'react';
-import { dataCachelistData } from '../../data';
+import { dataCachelistData } from './data';
 
 const size = Dimensions.get('window').width / 3 - 2;
 const ImageScreen = () => {

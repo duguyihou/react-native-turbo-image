@@ -13,11 +13,11 @@ import {
   type HomeStackParamList,
 } from './routes.type';
 import TurboImage from 'react-native-turbo-image';
+import { routesData } from '../data';
 import {
   PrefetchWithDataCacheData,
   prefetchWithUrlCacheData,
-  routesData,
-} from '../data';
+} from './prefetch/data';
 
 const ListItem = ({
   name,
@@ -37,9 +37,9 @@ const ListItem = ({
   );
 };
 
-const RightButton = () => {
-  const handleClear = () => {
-    Alert.alert('Clear Cache', 'memory / disk', [
+const LeftButton = () => {
+  const handlePrefetch = () => {
+    Alert.alert('prefetch', '', [
       {
         text: 'Prefetch with urlCache',
         onPress: async () => {
@@ -61,6 +61,18 @@ const RightButton = () => {
         style: 'default',
       },
       {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
+  };
+  return <Button title="Prefetch" onPress={handlePrefetch} />;
+};
+
+const RightButton = () => {
+  const handleClear = () => {
+    Alert.alert('Clear Cache', 'memory / disk', [
+      {
         text: 'Clear Memory Cache',
         onPress: async () => {
           return await TurboImage.clearMemoryCache();
@@ -80,13 +92,14 @@ const RightButton = () => {
       },
     ]);
   };
-  return <Button title="Configuration" onPress={handleClear} />;
+  return <Button title="Clear" onPress={handleClear} />;
 };
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeStackNavigationProps>();
   useLayoutEffect(() =>
     navigation.setOptions({
+      headerLeft: LeftButton,
       headerRight: RightButton,
     })
   );

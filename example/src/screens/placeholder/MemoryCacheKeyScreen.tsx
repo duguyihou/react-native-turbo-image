@@ -20,6 +20,7 @@ const MemoryCacheKeyScreen = () => {
         source={{ uri: 'https://placedog.net/400/400?id=127' }}
         placeholder={{ memoryCacheKey }}
         style={styles.image}
+        cachePolicy="dataCache"
       />
       <Text style={styles.text}>
         use the image which is cached in memory as placholder

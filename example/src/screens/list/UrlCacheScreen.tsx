@@ -1,7 +1,7 @@
 import { Dimensions, FlatList, StyleSheet } from 'react-native';
 import TurboImage from 'react-native-turbo-image';
 import React from 'react';
-import { urlCacheListData } from '../../data';
+import { urlCacheListData } from './data';
 
 const size = Dimensions.get('window').width / 3 - 2;
 const UrlCacheScreen = () => {

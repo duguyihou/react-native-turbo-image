@@ -1,5 +1,5 @@
 import React from 'react';
-import { svgData } from '../../data';
+import { svgData } from './data';
 import Card from '../../components/Card';
 
 const SVGScreen = () => {
