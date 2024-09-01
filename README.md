@@ -109,9 +109,9 @@ await TurboImage.clearDiskCache();
 | `memoryCacheKey` | `string` | Using the key of previous request as placeholder. For more information, see [Memory Cache Key](https://coil-kt.github.io/coil/recipes/#using-a-memory-cache-key-as-a-placeholder) |
 
 
-| thumbhash                                                                                                   | blurhash                                                                                                    | memoryCacheKey                                                                                              |
-| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| <video src="https://github.com/user-attachments/assets/8f0f8c7c-3521-46d9-8a9b-12f65dc9691e" width="150" /> | <video src="https://github.com/user-attachments/assets/5b43b8f7-81e4-4e7c-9c60-18ecaee3b502" width="150" /> | <video src="https://github.com/user-attachments/assets/74422431-5fd6-483e-b140-685327503692" width="150" /> |
+| thumbhash                                                                                                              | blurhash                                                                                                              | memoryCacheKey                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/thumbhash.gif" width="150" /> | <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/blurhash.gif" width="150" /> | <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/memoryCacheKey.gif" width="150" /> |
 
 
 ### CachePolicy
