@@ -13,7 +13,11 @@ import {
   type HomeStackParamList,
 } from './routes.type';
 import TurboImage from 'react-native-turbo-image';
-import { prefetchData, routesData } from '../data';
+import { routesData } from '../data';
+import {
+  PrefetchWithDataCacheData,
+  prefetchWithUrlCacheData,
+} from './prefetch/data';
 
 const ListItem = ({
   name,
@@ -33,27 +37,25 @@ const ListItem = ({
   );
 };
 
-const RightButton = () => {
-  const handleClear = () => {
-    Alert.alert('Clear Cache', 'memory / disk', [
+const LeftButton = () => {
+  const handlePrefetch = () => {
+    Alert.alert('prefetch', '', [
       {
-        text: 'Prefetch',
+        text: 'Prefetch with urlCache',
         onPress: async () => {
-          return await TurboImage.prefetch(prefetchData);
+          return await TurboImage.prefetch(prefetchWithUrlCacheData);
         },
         style: 'default',
       },
       {
-        text: 'Clear Memory Cache',
+        text: 'Prefetch with dataCache',
         onPress: async () => {
-          return await TurboImage.clearMemoryCache();
+          return await TurboImage.prefetch(
+            PrefetchWithDataCacheData,
+            'dataCache'
+          );
         },
-      },
-      {
-        text: 'Clear Disk Cache',
-        onPress: async () => {
-          return await TurboImage.clearDiskCache();
-        },
+        style: 'default',
       },
       {
         text: 'Cancel',
@@ -61,13 +63,40 @@ const RightButton = () => {
       },
     ]);
   };
-  return <Button title="Configuration" onPress={handleClear} />;
+  return <Button title="Prefetch" onPress={handlePrefetch} />;
+};
+
+const RightButton = () => {
+  const handleClear = () => {
+    Alert.alert('Clear Cache', 'memory / disk', [
+      {
+        text: 'Clear Memory Cache',
+        onPress: async () => {
+          return await TurboImage.clearMemoryCache();
+        },
+        style: 'default',
+      },
+      {
+        text: 'Clear Disk Cache',
+        onPress: async () => {
+          return await TurboImage.clearDiskCache();
+        },
+        style: 'default',
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
+  };
+  return <Button title="Clear" onPress={handleClear} />;
 };
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeStackNavigationProps>();
   useLayoutEffect(() =>
     navigation.setOptions({
+      headerLeft: LeftButton,
       headerRight: RightButton,
     })
   );

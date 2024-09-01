@@ -22,6 +22,7 @@ const ProcessingScreen = () => {
             style: 'large',
             color: 'red',
           }}
+          cachePolicy="dataCache"
         />
       )}
       keyExtractor={(item) => item.title}

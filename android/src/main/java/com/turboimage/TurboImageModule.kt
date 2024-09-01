@@ -1,6 +1,7 @@
 package com.turboimage
 
 import coil.Coil
+import coil.ImageLoader
 import coil.annotation.ExperimentalCoilApi
 import coil.request.ImageRequest
 import com.facebook.react.bridge.*
@@ -9,12 +10,12 @@ import okhttp3.Headers
 
 class TurboImageModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
-  private val imageLoader = Coil.imageLoader(context)
+    private var imageLoader: ImageLoader? = null
 
   override fun getName(): String = REACT_CLASS
 
   @ReactMethod
-  fun prefetch(sources: ReadableArray, promise: Promise) {
+  fun prefetch(sources: ReadableArray, cachePolicy: String, promise: Promise) {
     val imageRequests = sources.toArrayList().map { source ->
       val uri = (source as HashMap<*, *>)["uri"] as String
       val headers = source["headers"] as? HashMap<*, *>
@@ -34,8 +35,11 @@ class TurboImageModule(private val context: ReactApplicationContext) :
           .build()
       }
     }
+    imageLoader = Coil.imageLoader(context).newBuilder()
+      .respectCacheHeaders(cachePolicy == "urlCache")
+      .build()
     imageRequests.forEach { imageRequest ->
-      imageLoader.enqueue(imageRequest)
+      imageLoader?.enqueue(imageRequest)
     }
     promise.resolve("Success")
   }
@@ -62,7 +66,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       }
     }
     imageRequests.forEach { imageRequest ->
-      imageLoader.enqueue(imageRequest).dispose()
+      imageLoader?.enqueue(imageRequest)?.dispose()
     }
     promise.resolve("Success")
   }
