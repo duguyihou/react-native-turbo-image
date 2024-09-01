@@ -111,17 +111,7 @@ await TurboImage.clearDiskCache();
 
 | thumbhash                                                                                                   | blurhash                                                                                                    | memoryCacheKey                                                                                              |
 | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| <video src="https://github.com/user-attachments/assets/8f0f8c7c-3521-46d9-8a9b-12f65dc9691e" width="150" /> | <video src="https://github.com/user-attachments/assets/5b43b8f7-81e4-4e7c-9c60-18ecaee3b502" width="150" /> | <video src="https://github.com/user-attachments/assets/267c855f-6cff-4033-8591-5bd420fc8d48" width="150" /> |
-
-
-
-
-
-
-
-
-
-
+| <video src="https://github.com/user-attachments/assets/8f0f8c7c-3521-46d9-8a9b-12f65dc9691e" width="150" /> | <video src="https://github.com/user-attachments/assets/5b43b8f7-81e4-4e7c-9c60-18ecaee3b502" width="150" /> | <video src="https://github.com/user-attachments/assets/74422431-5fd6-483e-b140-685327503692" width="150" /> |
 
 
 ### CachePolicy
