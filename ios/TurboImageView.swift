@@ -163,6 +163,25 @@ final class TurboImageView : UIView {
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
 
+    if changedProps.contains("source") {
+      loadImage()
+    }
+  }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    if window == nil {
+      lazyImageView.cancel()
+    }
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+}
+
+fileprivate extension TurboImageView {
+  func loadImage() {
     defer {
       if let imageRequest {
         lazyImageView.request = imageRequest
@@ -178,17 +197,6 @@ final class TurboImageView : UIView {
 
     registerObservers()
     lazyImageView.processors = processors
-  }
-
-  override func didMoveToWindow() {
-    super.didMoveToWindow()
-    if window == nil {
-      lazyImageView.cancel()
-    }
-  }
-
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
   }
 }
 
@@ -293,7 +301,7 @@ fileprivate extension TurboImageView {
   }
 }
 
-// MARK: - callback handler
+// MARK: - events
 fileprivate extension TurboImageView {
 
   func registerObservers() {
@@ -329,7 +337,7 @@ fileprivate extension TurboImageView {
     let payload = [
       Constants.width: response.image.size.width,
       Constants.height: response.image.size.height,
-      Constants.state: response.request.url?.absoluteString ?? ""
+      Constants.source: response.request.url?.absoluteString ?? ""
     ] as [String : Any]
 
     onSuccess?(payload)
@@ -349,8 +357,9 @@ fileprivate extension TurboImageView {
 
 }
 
-extension TurboImageView {
-  private func handleLiveTextInteraction() {
+// MARK: - live text
+fileprivate extension TurboImageView {
+  func handleLiveTextInteraction() {
     guard #available(iOS 16.0, *), ImageAnalyzer.isSupported, let image = lazyImageView.imageView.image else { return }
 
     let interaction = ImageAnalysisInteraction()
