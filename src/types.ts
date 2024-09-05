@@ -13,6 +13,7 @@ export type LocalSource = ImageRequireSource;
 export type RemoteSource = {
   uri: string;
   headers?: HeadersInit_ | undefined;
+  cacheKey?: String | undefined;
 };
 
 export type Source = LocalSource | RemoteSource;
@@ -74,7 +75,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
 }
 
 export type TurboImageApi = {
-  prefetch: (sources: Source[]) => Promise<void>;
+  prefetch: (sources: Source[], cachePolicy?: CachePolicy) => Promise<void>;
   dispose: (sources: Source[]) => Promise<void>;
   clearMemoryCache: () => Promise<void>;
   clearDiskCache: () => Promise<void>;

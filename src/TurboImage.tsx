@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import type {
+  CachePolicy,
   IndicatorStyle,
   Source,
   TurboImageApi,
@@ -114,8 +115,11 @@ const styles = StyleSheet.create({
 });
 
 const TurboImage = Object.assign({}, TurboImageView, {
-  prefetch: async (sources: Source[]) => {
-    return await TurboImageViewManager.prefetch(sources);
+  prefetch: async (
+    sources: Source[],
+    cachePolicy: CachePolicy = 'urlCache'
+  ) => {
+    return await TurboImageViewManager.prefetch(sources, cachePolicy);
   },
   dispose: async (sources: Source[]) => {
     return await TurboImageViewManager.dispose(sources);

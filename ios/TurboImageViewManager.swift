@@ -3,7 +3,7 @@ import Nuke
 @objc(TurboImageViewManager)
 class TurboImageViewManager: RCTViewManager {
 
-  private let prefetcher = ImagePrefetcher()
+  private var prefetcher: ImagePrefetcher?
 
   override func view() -> (TurboImageView) {
     return TurboImageView()
@@ -20,6 +20,7 @@ extension TurboImageViewManager {
 
   @objc
   func prefetch(_ sources: [Source],
+                with cachePolicy: String,
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
     let imageRequests: [ImageRequest] = sources.map {
@@ -33,8 +34,12 @@ extension TurboImageViewManager {
       }
       return ImageRequest(urlRequest: urlRequest)
     }.compactMap{ $0 }
-
-    prefetcher.startPrefetching(with: imageRequests)
+    if(cachePolicy == "dataCache") {
+      prefetcher = ImagePrefetcher(pipeline: ImagePipeline(configuration: .withDataCache))
+    } else {
+      prefetcher = ImagePrefetcher()
+    }
+    prefetcher?.startPrefetching(with: imageRequests)
     resolve("Success")
   }
 
@@ -54,7 +59,7 @@ extension TurboImageViewManager {
       return ImageRequest(urlRequest: urlRequest)
     }.compactMap{ $0 }
 
-    prefetcher.stopPrefetching(with: imageRequests)
+    prefetcher?.stopPrefetching(with: imageRequests)
     resolve("Success")
   }
 

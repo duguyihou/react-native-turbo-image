@@ -2,12 +2,12 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import React from 'react';
 import TurboImage from 'react-native-turbo-image';
 import { useRoute } from '@react-navigation/native';
-import type { HomeRouteType, RouteName } from './routes.type';
+import type { HomeRouteType, RouteName } from '../routes.type';
 
 const DetailScreen = () => {
   const {
     params: { memoryCacheKey },
-  } = useRoute<HomeRouteType<RouteName.Detail>>();
+  } = useRoute<HomeRouteType<RouteName.MemoryCacheKey>>();
 
   const handlePress = () => {
     Linking.openURL(
@@ -17,7 +17,7 @@ const DetailScreen = () => {
   return (
     <View style={styles.container}>
       <TurboImage
-        source={{ uri: 'https://placedog.net/400/400?id=121' }}
+        source={{ uri: 'https://placedog.net/400/400?id=127' }}
         placeholder={{ memoryCacheKey }}
         style={styles.image}
       />
@@ -43,10 +43,10 @@ const styles = StyleSheet.create({
     height: 400,
   },
   text: {
-    fontSize: 18,
+    fontSize: 20,
   },
   link: {
-    fontSize: 18,
+    fontSize: 20,
     color: 'blue',
   },
 });

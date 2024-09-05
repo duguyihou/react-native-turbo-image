@@ -6,13 +6,15 @@ import type {
 
 export type HomeStackParamList = {
   Home: undefined;
-  TurboImage: undefined;
   Image: undefined;
-  Placeholder: undefined;
+  Thumbhash: undefined;
+  Blurhash: undefined;
+  MemoryCacheKeyPrevious: undefined;
+  MemoryCacheKey: { memoryCacheKey: string };
   UrlCache: undefined;
   DataCache: undefined;
-  LocalAsset: undefined;
-  Prefetch: undefined;
+  PrefetchWithUrlCache: undefined;
+  PrefetchWithDataCache: undefined;
   Success: undefined;
   Failure: undefined;
   ImageProcessing: undefined;
@@ -20,7 +22,6 @@ export type HomeStackParamList = {
   SVG: undefined;
   Gif: undefined;
   APNG: undefined;
-  Detail: { memoryCacheKey: string };
 };
 
 export type HomeStackProps = NativeStackScreenProps<HomeStackParamList>;
@@ -35,13 +36,15 @@ export type HomeRouteType<K extends keyof HomeStackParamList> = RouteProp<
 export enum RouteName {
   HomeStack = 'HomeStack',
   Home = 'Home',
-  TurboImage = 'TurboImage',
   Image = 'Image',
-  Placeholder = 'Placeholder',
+  Thumbhash = 'Thumbhash',
+  Blurhash = 'Blurhash',
+  MemoryCacheKeyPrevious = 'MemoryCacheKeyPrevious',
+  MemoryCacheKey = 'MemoryCacheKey',
   UrlCache = 'UrlCache',
   DataCache = 'DataCache',
-  LocalAsset = 'LocalAsset',
-  Prefetch = 'Prefetch',
+  PrefetchWithUrlCache = 'PrefetchWithUrlCache',
+  PrefetchWithDataCache = 'PrefetchWithDataCache',
   Success = 'Success',
   Failure = 'Failure',
   ImageProcessing = 'ImageProcessing',
@@ -49,5 +52,4 @@ export enum RouteName {
   SVG = 'SVG',
   Gif = 'Gif',
   APNG = 'APNG',
-  Detail = 'Detail',
 }
