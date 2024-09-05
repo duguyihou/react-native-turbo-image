@@ -14,9 +14,9 @@ Performant image Component for React Native. Powered by [Nuke](https://github.co
 - Support authorization headers
 - Support thumbhash, blurhash and memoryCacheKey for placeholder
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
-- Prefetch, cleanMemoryCache and cleanDiskCache
+- Prefetch, dispose, cleanMemoryCache and cleanDiskCache
 - Written in TypeScript, Swift and Kotlin
-- Support special formats for remote urls (SVG, Gif, APNG)
+- Support special formats (SVG, Gif, APNG)
 
 ## Installation
 
@@ -31,18 +31,8 @@ cd ios && pod install
 ```ts
 import TurboImage from 'react-native-turbo-image';
 
-// remote image
-
 <TurboImage
-  source={{ uri: "https://placedog.net/300/300?id=1" }}
-  style={{ width: 300, height: 300 }}
-  cachePolicy="dataCache"
-/>;
-
-// local asset
-
-<TurboImage
-  source={require('../../assets/local.png')}
+  source={{ uri: "https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e" }}
   style={{ width: 300, height: 300 }}
 />;
 
