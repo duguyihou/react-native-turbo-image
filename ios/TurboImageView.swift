@@ -163,7 +163,16 @@ final class TurboImageView : UIView {
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
 
-    if changedProps.contains("source") {
+    if placeholder != nil {
+      lazyImageView.transition = .none
+    } else {
+      lazyImageView.transition =
+        .fadeIn(duration: (fadeDuration.doubleValue) / 1000)
+    }
+    lazyImageView.processors = processors
+
+    if !Set(["source", "resize", "blur","monochrome", "tint"])
+      .intersection(changedProps).isEmpty {
       loadImage()
     }
   }
@@ -182,21 +191,10 @@ final class TurboImageView : UIView {
 
 fileprivate extension TurboImageView {
   func loadImage() {
-    defer {
-      if let imageRequest {
-        lazyImageView.request = imageRequest
-      }
-    }
-
-    if placeholder != nil {
-      lazyImageView.transition = .none
-    } else {
-      lazyImageView.transition =
-        .fadeIn(duration: (fadeDuration.doubleValue) / 1000)
-    }
-
     registerObservers()
-    lazyImageView.processors = processors
+    if let imageRequest {
+      lazyImageView.request = imageRequest
+    }
   }
 }
 
@@ -282,7 +280,7 @@ fileprivate extension TurboImageView {
         "inputIntensity": 1,
         "inputColor": CIColor(color: monochrome)
       ] as [String : Any]
-      let identifier = "turboImage.monochrome"
+      let identifier = "turboImage.monochrome.\(monochrome)"
       initialProcessors.append(
         ImageProcessors.CoreImageFilter(name: name,
                                         parameters: parameters,
@@ -291,7 +289,7 @@ fileprivate extension TurboImageView {
 
     if let tint {
       let tintProcessor = ImageProcessors
-        .Anonymous(id: "turboImage.tint") { image in
+        .Anonymous(id: "turboImage.tint.\(tint)") { image in
           image.withTintColor(tint)
         }
       initialProcessors.append(tintProcessor)
