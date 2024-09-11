@@ -40,7 +40,9 @@ extension TurboImageViewManager {
       prefetcher = ImagePrefetcher()
     }
     prefetcher?.startPrefetching(with: imageRequests)
-    resolve("Success")
+    prefetcher?.didComplete = {
+      resolve(true)
+    }
   }
 
   @objc
@@ -69,7 +71,7 @@ extension TurboImageViewManager {
     ImageCache.shared.removeAll()
     resolve("Success")
   }
-
+  
   @objc
   func clearDiskCache(_ resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
