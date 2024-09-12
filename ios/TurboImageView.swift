@@ -226,6 +226,7 @@ fileprivate extension TurboImageView {
       if container.type == .gif,
          let data = container.data {
         let view = GIFImageView()
+        view.contentMode = ResizeMode(rawValue: self.resizeMode)?.contentMode ?? .scaleToFill
         view.animate(withGIFData: data)
         return view
       }
