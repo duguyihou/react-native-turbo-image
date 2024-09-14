@@ -25,6 +25,7 @@ final class TurboImageView : UIView {
   }
 
   private var imageRequest: ImageRequest?
+  private var needReload: Bool = false
 
   @objc var onStart: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
@@ -173,7 +174,7 @@ final class TurboImageView : UIView {
 
     if !Set(["source", "resize", "blur","monochrome", "tint"])
       .intersection(changedProps).isEmpty {
-      loadImage()
+      needReload = true
     }
   }
 
@@ -181,6 +182,9 @@ final class TurboImageView : UIView {
     super.didMoveToWindow()
     if window == nil {
       lazyImageView.cancel()
+    }
+    if needReload {
+      reloadImage()
     }
   }
 
@@ -190,11 +194,12 @@ final class TurboImageView : UIView {
 }
 
 fileprivate extension TurboImageView {
-  func loadImage() {
+  func reloadImage() {
     registerObservers()
     if let imageRequest {
       lazyImageView.request = imageRequest
     }
+    needReload = false
   }
 }
 
