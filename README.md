@@ -4,9 +4,9 @@
   > You can find more examples in [example folder](https://github.com/duguyihou/react-native-turbo-image/tree/main/example)
 </div>
 
-# react-native-turbo-image
+# TurboImage
 
-Performant image Component for React Native. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
+Performant image component for React Native. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
 
 ## Features
 
@@ -128,4 +128,4 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 
 ## License
 
-MIT
+TurboImage is released under the [MIT](https://github.com/duguyihou/react-native-turbo-image?tab=MIT-1-ov-file) license. Some of the dependencies are licensed differently, with the Apache-2.0 license, for example.
