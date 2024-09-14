@@ -1,1 +1,5 @@
 blank_issues_enabled: false
+contact_links:
+  - name: Question
+    url: https://github.com/duguyihou/react-native-turbo-image/discussions
+    about: Please ask usage questions in Github Discussions or Stack Overflow - not in Issues.
