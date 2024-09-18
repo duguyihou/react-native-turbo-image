@@ -119,7 +119,12 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   fun setSource(view: TurboImageView, source: ReadableMap) {
     val uri = source.toHashMap()["uri"] as? String
     view.uri = uri
-    view.headers = source.toHashMap()["headers"] as? Headers
+    val headers = source.toHashMap()["headers"] as? HashMap<*, *>
+    val headersBuilder = Headers.Builder()
+    headers?.map { (key, value) ->
+      headersBuilder.add(key as String, value as String)
+    }
+    view.headers = headersBuilder.build()
     view.cacheKey = source.toHashMap()["cacheKey"] as? String
   }
 
