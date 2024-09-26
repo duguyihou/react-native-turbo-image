@@ -22,6 +22,13 @@ const MemoryCacheKeyScreen = () => {
         style={styles.image}
         cachePolicy="dataCache"
       />
+      <TurboImage
+        source={{ uri: 'https://placedog.net/400/400?id=127000' }}
+        showPlaceholderOnFailure
+        placeholder={{ memoryCacheKey }}
+        style={styles.image}
+        cachePolicy="dataCache"
+      />
       <Text style={styles.text}>
         use the image which is cached in memory as placholder
       </Text>
@@ -40,8 +47,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   image: {
-    width: 400,
-    height: 400,
+    width: 300,
+    height: 300,
   },
   text: {
     fontSize: 20,
