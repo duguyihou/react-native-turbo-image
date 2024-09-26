@@ -7,13 +7,13 @@ const ImageScreen = () => {
   const renderItem = ({
     item,
   }: {
-    item: { url: string; blurhash: string };
+    item: { uri: string; blurhash: string };
   }) => {
-    return <Image src={item.url} style={styles.card} />;
+    return <Image src={item.uri} style={styles.card} />;
   };
   return (
     <FlatList
-      keyExtractor={(item) => item.url}
+      keyExtractor={(item) => item.uri}
       data={dataCachelistData}
       numColumns={3}
       getItemLayout={(_, index) => ({

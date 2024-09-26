@@ -5,8 +5,8 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import React, { useState } from 'react';
-import Card from '../../components/Card';
 import type { Success, TaskState } from 'react-native-turbo-image';
+import TurboImage from 'react-native-turbo-image';
 
 type Information = {
   width: number;
@@ -34,7 +34,7 @@ const SuccessScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Card
+      <TurboImage
         source={{
           uri: 'https://placedog.net/300/300?id=121',
         }}

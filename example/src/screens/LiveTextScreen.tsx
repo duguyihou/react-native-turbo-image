@@ -1,25 +1,33 @@
 import React from 'react';
 import { liveTextData } from '../data';
-import Card from '../components/Card';
-import { FlatList } from 'react-native';
+import { FlatList, StyleSheet } from 'react-native';
+import TurboImage from 'react-native-turbo-image';
 
 const LiveTextScreen = () => {
   return (
     <FlatList
       data={liveTextData}
       renderItem={({ item }) => (
-        <Card
-          style={{ width: 300, height: 100 }}
+        <TurboImage
+          style={styles.image}
           source={{
-            uri: item.url,
+            uri: item.uri,
           }}
           indicator={{ style: 'large' }}
           enableLiveTextInteraction
         />
       )}
-      keyExtractor={(item) => item.url}
+      keyExtractor={(item) => item.uri}
     />
   );
 };
 
 export default LiveTextScreen;
+
+const styles = StyleSheet.create({
+  image: {
+    width: 300,
+    height: 100,
+    alignSelf: 'center',
+  },
+});

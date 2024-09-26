@@ -1,14 +1,14 @@
 import React from 'react';
 import { prefetchWithUrlCacheData } from './data';
-import Card from '../../components/Card';
 import { FlatList, StyleSheet } from 'react-native';
+import TurboImage from 'react-native-turbo-image';
 
 const PrefetchWithUrlCacheScreen = () => {
   return (
     <FlatList
       data={prefetchWithUrlCacheData}
       renderItem={({ item }) => (
-        <Card
+        <TurboImage
           style={styles.image}
           source={item}
           indicator={{ style: 'large' }}
@@ -26,5 +26,7 @@ const styles = StyleSheet.create({
   image: {
     width: 360,
     height: 241,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
 });

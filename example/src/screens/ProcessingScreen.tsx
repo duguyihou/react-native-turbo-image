@@ -11,12 +11,10 @@ const ProcessingScreen = () => {
       contentContainerStyle={styles.container}
       data={processingData}
       numColumns={2}
-      renderItem={({ item: { url, resize, ...props } }) => (
+      renderItem={({ item: { uri, resize, ...props } }) => (
         <Card
           {...props}
-          source={{
-            uri: url,
-          }}
+          source={{ uri }}
           style={{ width: resize ?? size, height: resize ?? size }}
           indicator={{
             style: 'large',

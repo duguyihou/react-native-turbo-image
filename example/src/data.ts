@@ -60,45 +60,45 @@ export const routesData = [
 
 export const liveTextData = [
   {
-    url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:ejihld4sywvvqwe67cdkn4jq/bafkreibcshvfvfi4suht32tcp4ds77y2yghtcig62byqyq3ot4abpsplhu@jpeg',
+    uri: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:ejihld4sywvvqwe67cdkn4jq/bafkreibcshvfvfi4suht32tcp4ds77y2yghtcig62byqyq3ot4abpsplhu@jpeg',
   },
   {
-    url: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:lzlqyldh7nfc34pfffvd24ko/bafkreihimujh4kxa4gecniimqfnmdjnlajjek6pleh5tt5k4djhno3lzu4@jpeg',
+    uri: 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:lzlqyldh7nfc34pfffvd24ko/bafkreihimujh4kxa4gecniimqfnmdjnlajjek6pleh5tt5k4djhno3lzu4@jpeg',
   },
 ];
 
 export const processingData = [
   {
     title: 'Original',
-    url: 'https://placedog.net/300/300?id=238',
+    uri: 'https://placedog.net/300/300?id=238',
   },
   {
     title: 'Resize',
-    url: 'https://placedog.net/300/300?id=238',
+    uri: 'https://placedog.net/300/300?id=238',
     resize: 150,
   },
   {
     title: 'Monochrome',
-    url: 'https://placedog.net/300/300?id=238',
+    uri: 'https://placedog.net/300/300?id=238',
     resize: 150,
     monochrome: 'white',
   },
   {
     title: 'Circle',
-    url: 'https://placedog.net/300/300?id=238',
+    uri: 'https://placedog.net/300/300?id=238',
     resize: 150,
     rounded: true,
   },
   {
     title: 'Blur',
-    url: 'https://placedog.net/300/300?id=238',
+    uri: 'https://placedog.net/300/300?id=238',
     resize: 150,
     blur: 5,
     rounded: true,
   },
   {
     title: 'Tint',
-    url: 'https://placedog.net/300/300?id=238',
+    uri: 'https://placedog.net/300/300?id=238',
     resize: 100,
     blur: 5,
     rounded: true,

@@ -8,12 +8,12 @@ const DataCacheScreen = () => {
   const renderItem = ({
     item,
   }: {
-    item: { url: string; blurhash: string };
+    item: { uri: string; blurhash: string };
   }) => {
     return (
       <TurboImage
         source={{
-          uri: item.url,
+          uri: item.uri,
         }}
         style={styles.card}
         placeholder={{ blurhash: item.blurhash }}
@@ -24,7 +24,7 @@ const DataCacheScreen = () => {
   };
   return (
     <FlatList
-      keyExtractor={(item) => item.url}
+      keyExtractor={(item) => item.uri}
       data={dataCachelistData}
       numColumns={3}
       getItemLayout={(_, index) => ({
