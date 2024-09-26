@@ -30,7 +30,7 @@ const FailureResultScreen = () => {
   };
 
   return (
-    <View>
+    <View style={styles.container}>
       <TurboImage
         source={{
           uri: 'https://placedog.net/300/300?id=12100',
@@ -52,6 +52,11 @@ const FailureResultScreen = () => {
 export default FailureResultScreen;
 
 const styles = StyleSheet.create({
+  container: {
+    height: '100%',
+    width: '100%',
+    alignItems: 'center',
+  },
   image: {
     width: 200,
     height: 200,
