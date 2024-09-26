@@ -15,6 +15,17 @@ const ThumbhashScreen = () => {
           thumbhash: 'XDkKFwKgVndpiIikloh4Z4iGp/HMDKYI',
         }}
       />
+      <TurboImage
+        style={styles.image}
+        source={{
+          uri: 'https://placedog.net/300/300?id=127000',
+        }}
+        showPlaceholderOnFailure
+        cachePolicy="dataCache"
+        placeholder={{
+          thumbhash: 'XDkKFwKgVndpiIikloh4Z4iGp/HMDKYI',
+        }}
+      />
     </View>
   );
 };
@@ -29,5 +40,6 @@ const styles = StyleSheet.create({
   image: {
     width: 300,
     height: 300,
+    marginBottom: 10,
   },
 });

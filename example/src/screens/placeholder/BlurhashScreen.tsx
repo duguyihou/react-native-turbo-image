@@ -15,6 +15,17 @@ const BlurhashScreen = () => {
           blurhash: 'KBHKzp00_N_19F-V00_2D%',
         }}
       />
+      <TurboImage
+        style={styles.image}
+        source={{
+          uri: 'https://placedog.net/300/300?id=127000',
+        }}
+        showPlaceholderOnFailure
+        cachePolicy="dataCache"
+        placeholder={{
+          blurhash: 'KBHKzp00_N_19F-V00_2D%',
+        }}
+      />
     </View>
   );
 };
@@ -29,5 +40,6 @@ const styles = StyleSheet.create({
   image: {
     width: 300,
     height: 300,
+    marginBottom: 10,
   },
 });
