@@ -1,18 +1,17 @@
 import React from 'react';
 import { svgData } from './data';
-import Card from '../../components/Card';
+import { StyleSheet, View } from 'react-native';
+import TurboImage from 'react-native-turbo-image';
 
 const SVGScreen = () => {
   return (
-    <>
-      {svgData.map(({ url }) => {
+    <View>
+      {svgData.map(({ uri }) => {
         return (
-          <Card
-            key={url}
-            source={{
-              uri: url,
-            }}
-            style={{ width: 190, height: 60 }}
+          <TurboImage
+            key={uri}
+            source={{ uri }}
+            style={styles.image}
             indicator={{
               style: 'large',
               color: 'red',
@@ -21,8 +20,16 @@ const SVGScreen = () => {
           />
         );
       })}
-    </>
+    </View>
   );
 };
 
 export default SVGScreen;
+
+const styles = StyleSheet.create({
+  image: {
+    width: 190,
+    height: 60,
+    alignSelf: 'center',
+  },
+});

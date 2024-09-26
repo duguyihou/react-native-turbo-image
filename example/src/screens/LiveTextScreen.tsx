@@ -11,13 +11,13 @@ const LiveTextScreen = () => {
         <TurboImage
           style={styles.image}
           source={{
-            uri: item.url,
+            uri: item.uri,
           }}
           indicator={{ style: 'large' }}
           enableLiveTextInteraction
         />
       )}
-      keyExtractor={(item) => item.url}
+      keyExtractor={(item) => item.uri}
     />
   );
 };

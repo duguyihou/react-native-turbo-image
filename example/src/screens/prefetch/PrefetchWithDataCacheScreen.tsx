@@ -1,14 +1,14 @@
 import React from 'react';
 import { PrefetchWithDataCacheData } from './data';
-import Card from '../../components/Card';
 import { FlatList, StyleSheet } from 'react-native';
+import TurboImage from 'react-native-turbo-image';
 
 const PrefetchWithDataCacheScreen = () => {
   return (
     <FlatList
       data={PrefetchWithDataCacheData}
       renderItem={({ item }) => (
-        <Card
+        <TurboImage
           style={styles.image}
           source={item}
           indicator={{ style: 'large' }}

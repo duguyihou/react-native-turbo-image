@@ -1,7 +1,12 @@
-import { Text, View, type NativeSyntheticEvent } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  type NativeSyntheticEvent,
+} from 'react-native';
 import React, { useState } from 'react';
-import Card from '../../components/Card';
 import type { Failure, TaskState } from 'react-native-turbo-image';
+import TurboImage from 'react-native-turbo-image';
 
 type Information = {
   error: string;
@@ -26,11 +31,11 @@ const FailureResultScreen = () => {
 
   return (
     <View>
-      <Card
+      <TurboImage
         source={{
           uri: 'https://placedog.net/300/300?id=12100',
         }}
-        style={{ width: 200, height: 200 }}
+        style={styles.image}
         placeholder={{ blurhash: 'UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU' }}
         onStart={handleStart}
         onFailure={handleFailure}
@@ -45,3 +50,11 @@ const FailureResultScreen = () => {
 };
 
 export default FailureResultScreen;
+
+const styles = StyleSheet.create({
+  image: {
+    width: 200,
+    height: 200,
+    alignSelf: 'center',
+  },
+});
