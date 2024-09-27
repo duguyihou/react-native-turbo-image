@@ -37,6 +37,7 @@ const TurboImageView = forwardRef(
       resizeMode,
       indicator,
       placeholder,
+      showPlaceholderOnFailure,
       fadeDuration,
       rounded,
       blur,
@@ -52,8 +53,14 @@ const TurboImageView = forwardRef(
       onCompletion,
       ...restProps
     } = props;
-    if (placeholder && Object.keys(placeholder).length > 1) {
+    if (placeholder && Object.keys(placeholder).length !== 1) {
       throw new Error('Choose only one placeholder');
+    }
+
+    if (showPlaceholderOnFailure && !placeholder) {
+      throw new Error(
+        'A placeholder is required since showPlaceholderOnFailure is true'
+      );
     }
 
     const processedIndicator =
@@ -81,6 +88,7 @@ const TurboImageView = forwardRef(
           resizeMode={resizeMode ?? 'contain'}
           indicator={processedIndicator}
           placeholder={placeholder}
+          showPlaceholderOnFailure={showPlaceholderOnFailure}
           fadeDuration={fadeDuration}
           rounded={rounded}
           blur={blur}

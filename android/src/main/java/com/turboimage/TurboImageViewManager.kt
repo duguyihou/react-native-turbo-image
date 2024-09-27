@@ -1,5 +1,6 @@
 package com.turboimage
 
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build.VERSION.SDK_INT
 import android.widget.ImageView.ScaleType
 import coil.Coil
@@ -9,6 +10,7 @@ import coil.decode.SvgDecoder
 import coil.dispose
 import coil.drawable.CrossfadeDrawable
 import coil.load
+import coil.memory.MemoryCache
 import coil.size.Dimension
 import coil.size.Size
 import com.facebook.react.bridge.ReadableMap
@@ -104,7 +106,13 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       transformations(view.transformations)
       crossfade(view.crossfade ?: defaultCrossfade)
       view.showPlaceholderOnFailure?.let {
-        error(view.thumbhashDrawable ?: view.blurhashDrawable)
+        if (view.memoryCacheKey != null) {
+          imageLoader.memoryCache?.get(MemoryCache.Key(view.memoryCacheKey!!))?.let { value ->
+            error(BitmapDrawable(view.context.resources, value.bitmap))
+          }
+        } else {
+          error(view.thumbhashDrawable ?: view.blurhashDrawable)
+        }
       }
       size(view.resize ?: Size.ORIGINAL)
     }
