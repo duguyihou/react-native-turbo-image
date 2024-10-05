@@ -5,7 +5,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import React, { useState } from 'react';
-import type { Failure, TaskState } from 'react-native-turbo-image';
+import type { Failure, Start } from 'react-native-turbo-image';
 import TurboImage from 'react-native-turbo-image';
 
 type Information = {
@@ -19,13 +19,11 @@ const FailureResultScreen = () => {
     setInformation(nativeEvent);
   };
 
-  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<TaskState>) => {
+  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<Start>) => {
     setStart(nativeEvent.state === 'running');
   };
 
-  const handleCompletion = ({
-    nativeEvent,
-  }: NativeSyntheticEvent<TaskState>) => {
+  const handleCompletion = ({ nativeEvent }: NativeSyntheticEvent<Start>) => {
     setCompletion(nativeEvent.state === 'completed');
   };
 

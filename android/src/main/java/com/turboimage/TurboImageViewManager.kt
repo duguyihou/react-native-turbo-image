@@ -60,7 +60,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           val reactContext = view.context as ReactContext
           UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
             val payload = Arguments.createMap().apply {
-              putDouble("loaded", bytesRead.toDouble())
+              putDouble("completed", bytesRead.toDouble())
               putDouble("total", contentLength.toDouble())
             }
             val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
