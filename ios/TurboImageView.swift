@@ -11,6 +11,8 @@ final class TurboImageView : UIView {
   private struct Constants {
     static let error = "error"
     static let state = "state"
+    static let completed = "completed"
+    static let total = "total"
     static let width = "width"
     static let height = "height"
     static let source = "source"
@@ -28,6 +30,7 @@ final class TurboImageView : UIView {
   private var needReload: Bool = false
 
   @objc var onStart: RCTDirectEventBlock?
+  @objc var onProgress: RCTDirectEventBlock?
   @objc var onFailure: RCTDirectEventBlock?
   @objc var onSuccess: RCTDirectEventBlock?
   @objc var onCompletion: RCTDirectEventBlock?
@@ -313,6 +316,10 @@ fileprivate extension TurboImageView {
       self.onStartHandler(with: task)
     }
 
+    lazyImageView.onProgress = { progress in
+      self.onProgressHandler(with: progress)
+    }
+
     lazyImageView.onSuccess = { response in
       self.onSuccessHandler(with: response)
     }
@@ -335,6 +342,15 @@ fileprivate extension TurboImageView {
       Constants.state: "running"
     ]
     onStart?(payload)
+  }
+
+  func onProgressHandler(with progress: ImageTask.Progress) {
+    let payload = [
+      Constants.completed: progress.completed,
+      Constants.total: progress.total
+    ]
+    
+    onProgress?(payload)
   }
 
   func onSuccessHandler(with response: ImageResponse) {

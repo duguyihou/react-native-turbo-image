@@ -34,6 +34,8 @@ RCT_EXPORT_VIEW_PROPERTY(format, NSString)
 
 RCT_EXPORT_VIEW_PROPERTY(onStart, RCTDirectEventBlock)
 
+RCT_EXPORT_VIEW_PROPERTY(onProgress, RCTDirectEventBlock)
+
 RCT_EXPORT_VIEW_PROPERTY(onSuccess, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onFailure, RCTDirectEventBlock)
