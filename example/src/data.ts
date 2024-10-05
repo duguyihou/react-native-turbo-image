@@ -10,6 +10,10 @@ export const routesData = [
         destination: RouteName.UrlCache,
       },
       { name: 'TurboImage with DataCache', destination: RouteName.DataCache },
+      {
+        name: 'TurboImage with dynamaticUri',
+        destination: RouteName.DynamaticUri,
+      },
     ],
   },
   {
