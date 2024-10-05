@@ -1,7 +1,9 @@
 import Nuke
 import NukeUI
 import SwiftSVG
+#if !os(tvOS)
 import VisionKit
+#endif
 import Gifu
 import React
 import APNGKit
@@ -325,9 +327,11 @@ fileprivate extension TurboImageView {
     
     lazyImageView.onCompletion = { result in
       self.onCompletionHandler(with: result)
+#if !os(tvOS)
       if self.enableLiveTextInteraction {
         self.handleLiveTextInteraction()
       }
+#endif
     }
     
   }
