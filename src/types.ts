@@ -32,12 +32,16 @@ export type Placeholder = {
   memoryCacheKey: string;
 };
 
-export type TaskState = {
+type TaskState = {
   state: State;
 };
 
+export type Start = TaskState;
+
+export type Completion = TaskState;
+
 export type Progress = {
-  loaded: number;
+  completed: number;
   total: number;
 };
 
@@ -68,11 +72,11 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   enableLiveTextInteraction?: boolean;
   allowHardware?: boolean;
   format?: Format;
-  onStart?: (result: NativeSyntheticEvent<TaskState>) => void;
+  onStart?: (result: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onProgress?: (result: NativeSyntheticEvent<Progress>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
-  onCompletion?: (result: NativeSyntheticEvent<TaskState>) => void;
+  onCompletion?: (result: NativeSyntheticEvent<Completion>) => void;
 }
 
 export type TurboImageApi = {

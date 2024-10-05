@@ -5,7 +5,12 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import React, { useState } from 'react';
-import type { Progress, Success, TaskState } from 'react-native-turbo-image';
+import type {
+  Progress,
+  Success,
+  Start,
+  Completion,
+} from 'react-native-turbo-image';
 import TurboImage from 'react-native-turbo-image';
 
 type Information = {
@@ -23,19 +28,19 @@ const SuccessScreen = () => {
     setInformation(nativeEvent);
   };
 
-  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<TaskState>) => {
+  const handleStart = ({ nativeEvent }: NativeSyntheticEvent<Start>) => {
     setStart(nativeEvent.state === 'running');
   };
 
   const handleCompletion = ({
     nativeEvent,
-  }: NativeSyntheticEvent<TaskState>) => {
+  }: NativeSyntheticEvent<Completion>) => {
     setCompletion(nativeEvent.state === 'completed');
   };
 
   const handleProgress = ({ nativeEvent }: NativeSyntheticEvent<Progress>) => {
     const percentage = `${(
-      (100 * nativeEvent.loaded) /
+      (100 * nativeEvent.completed) /
       nativeEvent.total
     ).toFixed(2)}%`;
     setProgress((prev) => [...prev, percentage]);
