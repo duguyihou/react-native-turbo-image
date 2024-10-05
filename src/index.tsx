@@ -5,6 +5,7 @@ export type {
   Format,
   Success,
   Failure,
+  Progress,
   TaskState,
   ResizeMode,
   Indicator,

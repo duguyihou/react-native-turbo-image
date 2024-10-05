@@ -16,6 +16,7 @@ import coil.size.Size
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.common.MapBuilder
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
@@ -31,15 +32,18 @@ import okhttp3.OkHttpClient
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
 
+  override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any>? {
+    return MapBuilder.of(
+      "onProgress", MapBuilder.of("registrationName", "onProgress")
+    )
+  }
+
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
       "onStart" to mapOf(
         "phasedRegistrationNames" to mapOf(
           "bubbled" to "onStart"
         )
-      ),
-      "onProgress" to mapOf(
-        "phasedRegistrationNames" to "onProgress"
       ),
       "onSuccess" to mapOf(
         "phasedRegistrationNames" to mapOf(
@@ -77,7 +81,8 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
           val reactContext = view.context as ReactContext
           UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
             val payload = Arguments.createMap().apply {
-              putDouble("fraction", bytesRead.toDouble())
+              putDouble("loaded", bytesRead.toDouble())
+              putDouble("total", contentLength.toDouble())
             }
             val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
             it.dispatchEvent(ProgressEvent(surfaceId, view.id, payload))

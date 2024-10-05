@@ -37,7 +37,8 @@ export type TaskState = {
 };
 
 export type Progress = {
-  fraction: number;
+  loaded: number;
+  total: number;
 };
 
 export type Success = {
