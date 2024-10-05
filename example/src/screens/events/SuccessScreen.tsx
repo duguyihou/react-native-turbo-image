@@ -5,7 +5,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import React, { useState } from 'react';
-import type { Success, TaskState } from 'react-native-turbo-image';
+import type { Progress, Success, TaskState } from 'react-native-turbo-image';
 import TurboImage from 'react-native-turbo-image';
 
 type Information = {
@@ -15,6 +15,7 @@ type Information = {
 };
 const SuccessScreen = () => {
   const [start, setStart] = useState(false);
+  const [progress, setProgress] = useState<string[]>([]);
   const [completion, setCompletion] = useState(false);
 
   const [information, setInformation] = useState<Information | null>(null);
@@ -32,23 +33,33 @@ const SuccessScreen = () => {
     setCompletion(nativeEvent.state === 'completed');
   };
 
+  const handleProgress = ({ nativeEvent }: NativeSyntheticEvent<Progress>) => {
+    const percentage = `${(
+      (100 * nativeEvent.loaded) /
+      nativeEvent.total
+    ).toFixed(2)}%`;
+    setProgress((prev) => [...prev, percentage]);
+  };
+
   return (
     <View style={styles.container}>
       <TurboImage
         source={{
-          uri: 'https://placedog.net/300/300?id=121',
+          uri: 'https://picsum.photos/id/57/2000',
         }}
         style={styles.image}
         cachePolicy="dataCache"
         onStart={handleStart}
         onSuccess={handleSuccess}
         onCompletion={handleCompletion}
+        onProgress={handleProgress}
         placeholder={{
-          blurhash: 'UBIr4u9}00Rj?yEzxu%LIQ%1%6xt-ks,tAIU',
+          thumbhash: 'lOcNFwYGpmmNdIiJh4aHiId4aPwmlm8E',
         }}
       />
 
       {start && <Text>Start at {Date()}</Text>}
+      {progress.length > 0 && <Text>Progress: {progress}</Text>}
       {information?.width && <Text>width: {information?.width}</Text>}
       {information?.height && <Text>height: {information?.height}</Text>}
       {information?.source && <Text>source: {information?.source}</Text>}

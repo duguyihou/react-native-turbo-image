@@ -36,6 +36,11 @@ export type TaskState = {
   state: State;
 };
 
+export type Progress = {
+  loaded: number;
+  total: number;
+};
+
 export type Success = {
   width: number;
   height: number;
@@ -65,6 +70,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   format?: Format;
   onStart?: (result: NativeSyntheticEvent<TaskState>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
+  onProgress?: (result: NativeSyntheticEvent<Progress>) => void;
   onFailure?: (result: NativeSyntheticEvent<Failure>) => void;
   onCompletion?: (result: NativeSyntheticEvent<TaskState>) => void;
 }

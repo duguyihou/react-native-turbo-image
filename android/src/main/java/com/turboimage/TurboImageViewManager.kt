@@ -13,32 +13,49 @@ import coil.load
 import coil.memory.MemoryCache
 import coil.size.Dimension
 import coil.size.Size
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.common.MapBuilder
 import com.facebook.react.uimanager.PixelUtil
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
+import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.annotations.ReactProp
 import okhttp3.Headers
 import com.turboimage.decoder.APNGDecoder
+import com.turboimage.events.ProgressEvent
+import com.turboimage.events.interceptor.ProgressInterceptor
+import com.turboimage.events.interceptor.ProgressListener
+import okhttp3.OkHttpClient
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   override fun getName() = REACT_CLASS
 
+  override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any>? {
+    return MapBuilder.of(
+      "onProgress", MapBuilder.of("registrationName", "onProgress")
+    )
+  }
+
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
+      "onStart" to mapOf(
+        "phasedRegistrationNames" to mapOf(
+          "bubbled" to "onStart"
+        )
+      ),
+      "onSuccess" to mapOf(
+        "phasedRegistrationNames" to mapOf(
+          "bubbled" to "onSuccess"
+        )
+      ),
       "onFailure" to mapOf(
         "phasedRegistrationNames" to mapOf(
           "bubbled" to "onFailure"
         )
-      ), "onSuccess" to mapOf(
-        "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onSuccess"
-        )
-      ), "onStart" to mapOf(
-        "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onStart"
-        )
-      ), "onCompletion" to mapOf(
+      ),
+      "onCompletion" to mapOf(
         "phasedRegistrationNames" to mapOf(
           "bubbled" to "onCompletion"
         )
@@ -58,8 +75,26 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       CrossfadeDrawable.DEFAULT_DURATION
     }
 
+    val okHttpClient = OkHttpClient.Builder()
+      .addInterceptor(ProgressInterceptor(object : ProgressListener {
+        override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
+          val reactContext = view.context as ReactContext
+          UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+            val payload = Arguments.createMap().apply {
+              putDouble("loaded", bytesRead.toDouble())
+              putDouble("total", contentLength.toDouble())
+            }
+            val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+            it.dispatchEvent(ProgressEvent(surfaceId, view.id, payload))
+          }
+        }
+      }))
+      .build()
+
     val imageLoader = Coil.imageLoader(view.context).newBuilder()
-      .respectCacheHeaders(view.cachePolicy == "urlCache").build()
+      .respectCacheHeaders(view.cachePolicy == "urlCache")
+      .okHttpClient(okHttpClient)
+      .build()
 
     view.load(view.uri, imageLoader) {
       view.headers?.let { headers(it) }
