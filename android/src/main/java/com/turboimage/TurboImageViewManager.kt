@@ -34,32 +34,11 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
 
   override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any>? {
     return MapBuilder.of(
-      "onProgress", MapBuilder.of("registrationName", "onProgress")
-    )
-  }
-
-  override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
-    return mapOf(
-      "onStart" to mapOf(
-        "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onStart"
-        )
-      ),
-      "onSuccess" to mapOf(
-        "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onSuccess"
-        )
-      ),
-      "onFailure" to mapOf(
-        "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onFailure"
-        )
-      ),
-      "onCompletion" to mapOf(
-        "phasedRegistrationNames" to mapOf(
-          "bubbled" to "onCompletion"
-        )
-      )
+      "onStart", MapBuilder.of("registrationName", "onStart"),
+      "onProgress", MapBuilder.of("registrationName", "onProgress"),
+      "onSuccess", MapBuilder.of("registrationName", "onSuccess"),
+      "onFailure", MapBuilder.of("registrationName", "onFailure"),
+      "onCompletion", MapBuilder.of("registrationName", "onCompletion"),
     )
   }
 
