@@ -19,6 +19,7 @@ import APNGScreen from './screens/formats/APNGScreen';
 import MemoryCacheKeyScreen from './screens/placeholder/MemoryCacheKeyScreen';
 import MemoryCacheKeyPreviousScreen from './screens/placeholder/MemoryCacheKeyPreviousScreen';
 import PrefetchWithUrlCacheScreen from './screens/prefetch/PrefetchWithUrlCacheScreen';
+import DynamaticUriScreen from './screens/list/DynamaticUriScreen';
 
 const Stack = createNativeStackNavigator<HomeStackParamList>();
 
@@ -33,6 +34,10 @@ function App() {
           <Stack.Screen
             name={RouteName.DataCache}
             component={DataCacheScreen}
+          />
+          <Stack.Screen
+            name={RouteName.DynamaticUri}
+            component={DynamaticUriScreen}
           />
         </Stack.Group>
         <Stack.Group>
