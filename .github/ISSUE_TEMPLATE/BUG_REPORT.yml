@@ -46,7 +46,7 @@ body:
     attributes:
       label: TurboImage Version
       description: Which version of react-native-turbo-image are you using?
-      placeholder: ex. 1.14.0
+      placeholder: ex. 1.20.0
     validations:
       required: true
   - type: dropdown
@@ -54,7 +54,6 @@ body:
       label: Can you reproduce this issue in the TurboImage Example app?
       description: >
         Try to build the example app (`example/`) and see if the issue is reproduceable here.
-        **Note:** If you don't try this in the example app, I most likely won't help you with your issue.
       options:
         - Yes, I can reproduce the same issue in the Example app
         - No, I cannot reproduce the issue in the Example app
