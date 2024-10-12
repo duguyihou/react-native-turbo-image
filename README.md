@@ -1,12 +1,21 @@
 <div align="center">
+<h1>TurboImage</h1>
+Performant image component for React Native. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
+
+ <a href="https://www.npmjs.com/package/react-native-turbo-image">
+  <img src="https://img.shields.io/npm/v/react-native-turbo-image.svg" alt="package version" />
+</a>
+ <a href="https://www.npmjs.com/package/react-native-turbo-image">
+  <img src="https://img.shields.io/npm/dm/react-native-turbo-image" alt="npm downloads" />
+</a>
+</div>
+<div align="center">
   <img src="https://github.com/duguyihou/react-native-turbo-image/blob/main/example/assets/ios.gif" width="200" />
   
   > You can find more examples in [example folder](https://github.com/duguyihou/react-native-turbo-image/tree/main/example)
 </div>
 
-# TurboImage
 
-Performant image component for React Native. Powered by [Nuke](https://github.com/kean/Nuke) and [Coil](https://github.com/coil-kt/coil)
 
 ## Features
 
