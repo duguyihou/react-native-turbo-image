@@ -163,6 +163,14 @@ final class TurboImageView : UIView {
       lazyImageView.leadingAnchor.constraint(equalTo: leadingAnchor),
       lazyImageView.trailingAnchor.constraint(equalTo: trailingAnchor),
     ])
+    NotificationCenter.default.addObserver(self,
+                                           selector: #selector(cancelRequest),
+                                           name: UIScene.didEnterBackgroundNotification,
+                                           object: nil)
+    NotificationCenter.default.addObserver(self,
+                                           selector: #selector(reloadRequest),
+                                           name: UIScene.willEnterForegroundNotification,
+                                           object: nil)
   }
   
   override func didSetProps(_ changedProps: [String]!) {
@@ -200,6 +208,15 @@ fileprivate extension TurboImageView {
     if let imageRequest {
       lazyImageView.request = imageRequest
     }
+  }
+  
+  @objc func cancelRequest() {
+    lazyImageView.cancel()
+    lazyImageView.request = nil
+  }
+  
+  @objc func reloadRequest() {
+    reloadImage()
   }
 }
 
