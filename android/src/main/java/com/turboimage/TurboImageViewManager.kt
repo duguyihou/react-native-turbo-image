@@ -14,6 +14,7 @@ import coil.memory.MemoryCache
 import coil.size.Dimension
 import coil.size.Size
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.ReactContext
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.common.MapBuilder
@@ -29,9 +30,11 @@ import com.turboimage.events.interceptor.ProgressInterceptor
 import com.turboimage.events.interceptor.ProgressListener
 import okhttp3.OkHttpClient
 
-class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
+class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEventListener {
   override fun getName() = REACT_CLASS
 
+  private lateinit var imageView: TurboImageView
+  private var isInBackground = false
   override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any>? {
     return MapBuilder.of(
       "onStart", MapBuilder.of("registrationName", "onStart"),
@@ -43,11 +46,22 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
   }
 
   override fun createViewInstance(reactContext: ThemedReactContext): TurboImageView {
-    return TurboImageView(reactContext)
+    reactContext.addLifecycleEventListener(this)
+    imageView = TurboImageView(reactContext)
+    return imageView
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
+    reloadImage(view)
+  }
+
+  override fun onDropViewInstance(view: TurboImageView) {
+    super.onDropViewInstance(view)
+    view.dispose()
+  }
+
+  private fun reloadImage(view: TurboImageView) {
     val defaultCrossfade = if (view.thumbhashDrawable != null || view.blurhashDrawable != null) {
       0
     } else {
@@ -129,12 +143,8 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
         }
       }
       size(view.resize ?: Size.ORIGINAL)
-    }
-  }
 
-  override fun onDropViewInstance(view: TurboImageView) {
-    super.onDropViewInstance(view)
-    view.dispose()
+    }
   }
 
   @ReactProp(name = "source")
@@ -239,5 +249,20 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>() {
       "stretch" to ScaleType.FIT_XY,
       "center" to ScaleType.CENTER_INSIDE
     )
+  }
+
+  override fun onHostResume() {
+    if (isInBackground) {
+      reloadImage(imageView)
+    }
+  }
+
+  override fun onHostPause() {
+    imageView.dispose()
+    isInBackground = true
+  }
+
+  override fun onHostDestroy() {
+    imageView.dispose()
   }
 }
