@@ -40,7 +40,8 @@ import TurboImage from 'react-native-turbo-image';
 
 <TurboImage
   source={{ uri: "https://cloud.githubusercontent.com/assets/1567433/9781817/ecb16e82-57a0-11e5-9b43-6b4f52659997.jpg" }}
-  style={{ width: 300, height: 300 }}
+  cachePolicy="urlCache"
+  style={{ width: 240, height: 360 }}
 />;
 
 ```
