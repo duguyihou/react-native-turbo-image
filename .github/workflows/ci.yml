@@ -145,7 +145,7 @@ jobs:
         if: env.turbo_cache_hit != 1 && steps.cocoapods-cache.outputs.cache-hit != 'true'
         run: |
           cd example
-          bundle exec pod install --project-directory=ios
+          pod install --project-directory=ios
         env:
           NO_FLIPPER: 1
 
