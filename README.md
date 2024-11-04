@@ -39,7 +39,7 @@ cd ios && pod install
 import TurboImage from 'react-native-turbo-image';
 
 <TurboImage
-  source={{ uri: "https://github.com/duguyihou/react-native-turbo-image/assets/9347790/7955aa00-0b53-44d1-88bd-9b5e320db21e" }}
+  source={{ uri: "https://cloud.githubusercontent.com/assets/1567433/9781817/ecb16e82-57a0-11e5-9b43-6b4f52659997.jpg" }}
   style={{ width: 300, height: 300 }}
 />;
 
