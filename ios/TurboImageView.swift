@@ -136,7 +136,13 @@ final class TurboImageView : UIView {
   }
   
   @objc var enableLiveTextInteraction: Bool = false
-  
+
+  @objc var isProgressiveImageRenderingEnabled: Bool = true {
+    didSet {
+      lazyImageView.isProgressiveImageRenderingEnabled = isProgressiveImageRenderingEnabled
+    }
+  }
+
   @objc var format: NSString? {
     didSet {
       guard let format = format as? String else { return }
