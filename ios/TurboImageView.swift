@@ -218,10 +218,10 @@ fileprivate extension TurboImageView {
   
   @objc func cancelRequest() {
     lazyImageView.cancel()
-    lazyImageView.request = nil
   }
   
   @objc func reloadRequest() {
+    lazyImageView.reset()
     reloadImage()
   }
 }
