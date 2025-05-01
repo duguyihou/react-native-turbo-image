@@ -30,18 +30,17 @@ Performant image component for React Native. Powered by [Nuke](https://github.co
 
 >Disclaimer: Benchmark results are based on controlled testing environments and may vary in real-world applications depending on factors such as network conditions, device specifications, image sizes, and concurrent tasks.
 
-For example, loading 120 images in flatlist:
-With React native built-in image 🐢:
+For example, loading 120 images in flatlist. See the code in the example folder:
+
+With [React Native built-in image](https://github.com/duguyihou/react-native-turbo-image/blob/main/example/src/screens/list/ImageScreen.tsx) 🐢:
 ```
 took 15s
 ```
-code link: https://github.com/duguyihou/react-native-turbo-image/blob/main/example/src/screens/list/ImageScreen.tsx
 
-With react-native-turbo-image ⚡️:
+With [react-native-turbo-image](https://github.com/duguyihou/react-native-turbo-image/blob/main/example/src/screens/list/DataCacheScreen.tsx) ⚡️:
 ```
 took 2s
 ```
-code link: https://github.com/duguyihou/react-native-turbo-image/blob/main/example/src/screens/list/DataCacheScreen.tsx
 
 ## Installation
 
