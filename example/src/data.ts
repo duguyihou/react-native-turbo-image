@@ -5,6 +5,7 @@ export const routesData = [
     title: 'List',
     data: [
       { name: 'React Native Image', destination: RouteName.Image },
+      { name: 'Camera Roll', destination: RouteName.CameraRoll },
       {
         name: 'TurboImage with UrlCache (default)',
         destination: RouteName.UrlCache,
