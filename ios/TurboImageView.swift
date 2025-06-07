@@ -60,9 +60,9 @@ final class TurboImageView : UIView {
           id: assetId,
           data: { [weak self] in
             if let size = size {
-                return try await self?.loadImageData(from: assetId, size: size) ?? Data()
+                return try await self?.loadImageDataFromAsset(from: assetId, size: size) ?? Data()
             } else {
-                return try await self?.loadImageData(from: assetId) ?? Data()
+                return try await self?.loadImageDataFromAsset(from: assetId) ?? Data()
             }
           }
         )
@@ -424,7 +424,7 @@ fileprivate extension TurboImageView {
     onCompletion?([Constants.state: "completed"])
   }
 
-  private func loadImageData(from assetId: String, size: CGSize? = nil) async throws -> Data {
+  private func loadImageDataFromAsset(from assetId: String, size: CGSize? = nil) async throws -> Data {
     let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
     guard let asset = assets.firstObject else {
       throw NSError(domain: "TurboImageView", code: 404, userInfo: [NSLocalizedDescriptionKey: "Asset not found"])
