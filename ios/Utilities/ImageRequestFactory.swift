@@ -4,19 +4,19 @@ import Nuke
 enum ImageRequestFactory {
   static func createImageRequest(from source: [String: Any]) -> ImageRequest? {
     guard let uri = source["uri"] as? String else { return nil }
-    
+
     if uri.hasPrefix("ph://") {
       return createAssetImageRequest(uri: uri, source: source)
     } else if let url = URL(string: uri) {
       return createURLImageRequest(url: url, source: source)
     }
-    
+
     return nil
   }
-  
+
   private static func createAssetImageRequest(uri: String, source: [String: Any]) -> ImageRequest? {
     let assetId = String(uri.dropFirst("ph://".count))
-    
+
     let size: CGSize?
     if let sizeDict = source["size"] as? [String: CGFloat],
        let width = sizeDict["width"],
@@ -25,7 +25,7 @@ enum ImageRequestFactory {
     } else {
       size = nil
     }
-    
+
     return ImageRequest(
       id: assetId,
       data: { [] in
@@ -37,34 +37,34 @@ enum ImageRequestFactory {
       }
     )
   }
-  
+
   private static func createURLImageRequest(url: URL, source: [String: Any]) -> ImageRequest? {
     var urlRequest = URLRequest(url: url)
-    
+
     if let headers = source["headers"] as? [String: String] {
       urlRequest.allHTTPHeaderFields = headers
     }
-    
+
     if let cacheKey = source["cacheKey"] as? String {
       return ImageRequest(urlRequest: urlRequest, userInfo: [.imageIdKey: cacheKey])
     } else {
       return ImageRequest(urlRequest: urlRequest)
     }
   }
-  
-  
+
+
   private static func loadImageDataFromAsset(from assetId: String, size: CGSize? = nil) async throws -> Data {
     let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
     guard let asset = assets.firstObject else {
       throw NSError(domain: "TurboImageView", code: 404, userInfo: [NSLocalizedDescriptionKey: "Asset not found"])
     }
-    
+
     return try await withCheckedThrowingContinuation { continuation in
       let options = PHImageRequestOptions()
       options.version = .current
       options.deliveryMode = .highQualityFormat
       options.isNetworkAccessAllowed = true
-      
+
       if let size = size {
         // Request resized image
         PHImageManager.default().requestImage(
