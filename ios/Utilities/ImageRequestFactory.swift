@@ -5,6 +5,7 @@ enum ImageRequestFactory {
   static func createImageRequest(from source: [String: Any]) -> ImageRequest? {
     guard let uri = source["uri"] as? String else { return nil }
 
+
     if uri.hasPrefix("ph://") {
       return createAssetImageRequest(uri: uri, source: source)
     } else if let url = URL(string: uri) {
@@ -25,9 +26,11 @@ enum ImageRequestFactory {
     } else {
       size = nil
     }
-
-    return ImageRequest(
-      id: assetId,
+    
+    let cacheKey = source["cacheKey"] as? String
+    
+    var request = ImageRequest(
+      id: cacheKey ?? assetId,
       data: { [] in
         if let size = size {
           return try await loadImageDataFromAsset(from: assetId, size: size)
@@ -36,6 +39,12 @@ enum ImageRequestFactory {
         }
       }
     )
+    
+    if let cacheKey = cacheKey {
+      request.userInfo[.imageIdKey] = cacheKey
+    }
+    
+    return request
   }
 
   private static func createURLImageRequest(url: URL, source: [String: Any]) -> ImageRequest? {
