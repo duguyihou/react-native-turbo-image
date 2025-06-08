@@ -39,46 +39,15 @@ final class TurboImageView : UIView {
 
   @objc var source: NSDictionary? {
     didSet {
-      guard let uri = source?.value(forKey: "uri") as? String else {
-        onFailure?([Constants.error: "invalid source: \(String(describing: source))"])
+      guard let sourceDict = source as? [String: Any] else {
+        onFailure?([Constants.error: "invalid source: \(String(describing: source))"]) 
         return
       }
-
-      if uri.hasPrefix("ph://") {
-        // Handle Photos library asset
-        let assetId = String(uri.dropFirst("ph://".count))
-        let size: CGSize?
-        if let sizeDict = source?.value(forKey: "size") as? [String: CGFloat],
-           let width = sizeDict["width"],
-           let height = sizeDict["height"] {
-            size = CGSize(width: width, height: height)
-        } else {
-            size = nil
-        }
-
-        imageRequest = ImageRequest(
-          id: assetId,
-          data: { [weak self] in
-            if let size = size {
-                return try await self?.loadImageDataFromAsset(from: assetId, size: size) ?? Data()
-            } else {
-                return try await self?.loadImageDataFromAsset(from: assetId) ?? Data()
-            }
-          }
-        )
-      } else if let url = URL(string: uri) {
-        // Handle regular URL
-        var urlRequest = URLRequest(url: url)
-        if let headers = source?.value(forKey: "headers") as? [String: String] {
-          urlRequest.allHTTPHeaderFields = headers
-        }
-        if let cacheKey = source?.value(forKey: "cacheKey") as? String {
-          imageRequest = ImageRequest(urlRequest: urlRequest, userInfo: [.imageIdKey: cacheKey])
-        } else {
-          imageRequest = ImageRequest(urlRequest: urlRequest)
-        }
+      
+      if let request = ImageRequestFactory.createImageRequest(from: sourceDict) {
+        imageRequest = request
       } else {
-        onFailure?([Constants.error: "invalid source: \(String(describing: source))"])
+        onFailure?([Constants.error: "Failed to create image request from source: \(sourceDict)"]) 
         return
       }
     }
@@ -422,61 +391,6 @@ fileprivate extension TurboImageView {
 
   func onCompletionHandler(with result: Result<ImageResponse, any Error>) {
     onCompletion?([Constants.state: "completed"])
-  }
-
-  private func loadImageDataFromAsset(from assetId: String, size: CGSize? = nil) async throws -> Data {
-    let assets = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
-    guard let asset = assets.firstObject else {
-      throw NSError(domain: "TurboImageView", code: 404, userInfo: [NSLocalizedDescriptionKey: "Asset not found"])
-    }
-
-    return try await withCheckedThrowingContinuation { continuation in
-      let options = PHImageRequestOptions()
-      options.version = .current
-      options.deliveryMode = .highQualityFormat
-      options.isNetworkAccessAllowed = true
-
-      if let size = size {
-        // Request resized image
-        PHImageManager.default().requestImage(
-          for: asset,
-          targetSize: size,
-          contentMode: .aspectFit,
-          options: options
-        ) { (image, info) in
-          if let error = info?[PHImageErrorKey] as? Error {
-            continuation.resume(throwing: error)
-          } else if let image = image,
-                    let imageData = image.pngData() ?? image.jpegData(compressionQuality: 0.9) {
-            continuation.resume(returning: imageData)
-          } else {
-            continuation.resume(throwing: NSError(
-              domain: "TurboImageView",
-              code: 500,
-              userInfo: [NSLocalizedDescriptionKey: "Failed to load or convert image"]
-            ))
-          }
-        }
-      } else {
-        // Request full image data
-        PHImageManager.default().requestImageDataAndOrientation(
-          for: asset,
-          options: options
-        ) { (imageData, dataUTI, orientation, info) in
-          if let error = info?[PHImageErrorKey] as? Error {
-            continuation.resume(throwing: error)
-          } else if let imageData = imageData {
-            continuation.resume(returning: imageData)
-          } else {
-            continuation.resume(throwing: NSError(
-              domain: "TurboImageView",
-              code: 500,
-              userInfo: [NSLocalizedDescriptionKey: "Failed to load image data"]
-            ))
-          }
-        }
-      }
-    }
   }
 
 }

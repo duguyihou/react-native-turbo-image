@@ -85,7 +85,7 @@ const CameraRollScreen: React.FC = () => {
 
   const renderItem: ListRenderItem<PhotoIdentifier> = ({ item }) => (
     <TurboImage
-      source={{ uri: item.node.image.uri, size: { width: 400, height: 400 } }}
+      source={{ uri: item.node.image.uri, size: { width: 490, height: 490 } }}
       style={styles.image}
       resizeMode="cover"
     />
