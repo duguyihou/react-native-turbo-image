@@ -18,45 +18,105 @@ import type {
 import TurboImage from 'react-native-turbo-image';
 
 const CameraRollScreen: React.FC = () => {
-  const [photos, setPhotos] = useState<PhotoIdentifier[]>([]);
-  const [endCursor, setEndCursor] = useState<string>('M');
-  const [hasNextPage, setHasNextPage] = useState<boolean>(true);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isPermissionGranted, setIsPermissionGranted] = useState<
+    boolean | undefined
+  >(() =>
+    Platform.select({
+      android: undefined,
+      ios: true,
+    })
+  );
+  const [state, setState] = useState({
+    photos: [] as PhotoIdentifier[],
+    endCursor: 'M',
+    hasNextPage: true,
+    isLoading: false,
+  });
 
-  const loadPhotos = useCallback(async () => {
-    if (!hasNextPage || isLoading) return;
+  // Destructure only what's needed in the JSX
+  const { photos } = state;
+
+  const loadInitialPhotos = useCallback(async () => {
+    if (state.isLoading) return;
+    if (state.photos.length || state.hasNextPage === false) return;
+
+    setState((prev) => ({ ...prev, isLoading: true }));
+
+    const params: GetPhotosParams = {
+      first: 100,
+      assetType: 'Photos',
+      include: [
+        'filename',
+        'fileSize',
+        'location',
+        'imageSize',
+        'playableDuration',
+      ],
+    };
 
     try {
-      setIsLoading(true);
-      const params: GetPhotosParams = {
-        first: 100,
-        assetType: 'Photos',
-      };
-
-      if (endCursor !== 'M') {
-        params.after = endCursor;
-      }
-
       const result = await CameraRoll.getPhotos(params);
-
-      setPhotos((prevPhotos) => [...prevPhotos, ...result.edges]);
-      if (result.page_info.end_cursor) {
-        setEndCursor(result.page_info.end_cursor);
-      }
-      setHasNextPage(result.page_info.has_next_page);
+      setState((prev) => ({
+        ...prev,
+        photos: result.edges,
+        endCursor: result.page_info.end_cursor || prev.endCursor,
+        hasNextPage: result.page_info.has_next_page,
+        isLoading: false,
+      }));
     } catch (error) {
-      console.error('Error fetching photos:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching initial photos:', error);
+      setState((prev) => ({ ...prev, isLoading: false }));
     }
-  }, [endCursor, hasNextPage, isLoading]);
+  }, [state]);
+
+  const loadMorePhotos = useCallback(async () => {
+    if (!state.hasNextPage || state.isLoading) return;
+
+    setState((prev) => ({ ...prev, isLoading: true }));
+
+    const params: GetPhotosParams = {
+      first: 100,
+      assetType: 'Photos',
+      after: state.endCursor,
+      include: [
+        'filename',
+        'fileSize',
+        'location',
+        'imageSize',
+        'playableDuration',
+      ],
+    };
+
+    try {
+      const result = await CameraRoll.getPhotos(params);
+      setState((prev) => ({
+        ...prev,
+        photos: [...prev.photos, ...result.edges],
+        endCursor: result.page_info.end_cursor || prev.endCursor,
+        hasNextPage: result.page_info.has_next_page,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Error loading more photos:', error);
+      setState((prev) => ({ ...prev, isLoading: false }));
+    }
+  }, [state]);
 
   const requestAndroidPermission = useCallback(async () => {
     try {
       const permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES;
+
       if (!permission) {
-        console.warn('READ_MEDIA_IMAGES permission not found');
-        return;
+        console.warn('READ_MEDIA_IMAGES permission not found on this device');
+        setIsPermissionGranted(false);
+        return false;
+      }
+
+      const hasPermission = await PermissionsAndroid.check(permission);
+
+      if (hasPermission) {
+        setIsPermissionGranted(true);
+        return true;
       }
 
       const granted = await PermissionsAndroid.request(permission, {
@@ -67,21 +127,36 @@ const CameraRollScreen: React.FC = () => {
         buttonPositive: 'OK',
       });
 
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        loadPhotos();
-      }
+      const isGranted = granted === PermissionsAndroid.RESULTS.GRANTED;
+      setIsPermissionGranted(isGranted);
+      return isGranted;
     } catch (err) {
       console.warn('Error requesting permission:', err);
+      setIsPermissionGranted(false);
+      return false;
     }
-  }, [loadPhotos]);
+  }, []);
 
+  // Handle initial load based on permission state
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      requestAndroidPermission();
-    } else {
-      loadPhotos();
-    }
-  }, [requestAndroidPermission, loadPhotos]);
+    const loadPhotosIfPermitted = async () => {
+      if (Platform.OS === 'android') {
+        if (isPermissionGranted === undefined) {
+          // Initial state, request permission
+          await requestAndroidPermission();
+        } else if (isPermissionGranted) {
+          // Permission granted, load photos
+          loadInitialPhotos();
+        }
+        // If permission denied, do nothing
+      } else {
+        // On iOS, we can load photos directly
+        loadInitialPhotos();
+      }
+    };
+
+    loadPhotosIfPermitted();
+  }, [isPermissionGranted, requestAndroidPermission, loadInitialPhotos]);
 
   const renderItem: ListRenderItem<PhotoIdentifier> = ({ item }) => (
     <TurboImage
@@ -98,7 +173,7 @@ const CameraRollScreen: React.FC = () => {
         renderItem={renderItem}
         keyExtractor={(_, index) => index.toString()}
         numColumns={3}
-        onEndReached={loadPhotos}
+        onEndReached={loadMorePhotos}
         onEndReachedThreshold={0.5}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
