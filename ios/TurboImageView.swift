@@ -67,6 +67,7 @@ final class TurboImageView : UIView {
     didSet {
       let contentMode = ResizeMode(rawValue: resizeMode)?.contentMode
       lazyImageView.imageView.contentMode = contentMode ?? .scaleAspectFill
+      lazyImageView.placeholderView?.contentMode = contentMode ?? .scaleAspectFill
     }
   }
 
