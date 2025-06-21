@@ -8,9 +8,9 @@ import {
 } from 'react-native';
 import React, { useLayoutEffect } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import {
-  type HomeStackNavigationProps,
-  type HomeStackParamList,
+import type {
+  HomeStackNavigationProps,
+  HomeStackParamList,
 } from './routes.type';
 import TurboImage from 'react-native-turbo-image';
 import { routesData } from '../data';

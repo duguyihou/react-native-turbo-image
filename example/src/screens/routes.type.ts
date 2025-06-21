@@ -7,6 +7,7 @@ import type {
 export type HomeStackParamList = {
   Home: undefined;
   Image: undefined;
+  CameraRoll: undefined;
   DynamaticUri: undefined;
   Thumbhash: undefined;
   Blurhash: undefined;
@@ -38,6 +39,7 @@ export enum RouteName {
   HomeStack = 'HomeStack',
   Home = 'Home',
   Image = 'Image',
+  CameraRoll = 'CameraRoll',
   DynamaticUri = 'DynamaticUri',
   Thumbhash = 'Thumbhash',
   Blurhash = 'Blurhash',

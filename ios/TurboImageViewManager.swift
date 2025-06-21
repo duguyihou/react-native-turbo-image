@@ -1,4 +1,5 @@
 import Nuke
+import NukeUI
 
 @objc(TurboImageViewManager)
 class TurboImageViewManager: RCTViewManager {
@@ -23,17 +24,12 @@ extension TurboImageViewManager {
                 with cachePolicy: String,
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
-    let imageRequests: [ImageRequest] = sources.map {
-      guard let uri = $0["uri"] as? String,
-            let url = URL(string: uri)
-      else { return nil }
-
-      var urlRequest = URLRequest(url: url)
-      if let headers = $0["headers"] as? [String: String] {
-        urlRequest.allHTTPHeaderFields = headers
+    let imageRequests = sources.compactMap { source -> ImageRequest? in
+      guard let sourceDict = source as? [String: Any] else {
+        return nil
       }
-      return ImageRequest(urlRequest: urlRequest)
-    }.compactMap{ $0 }
+      return ImageRequestFactory.createImageRequest(from: sourceDict)
+    }
     if(cachePolicy == "dataCache") {
       prefetcher = ImagePrefetcher(pipeline: ImagePipeline(configuration: .withDataCache))
     } else {
@@ -49,17 +45,12 @@ extension TurboImageViewManager {
   func dispose(_ sources: [Source],
                resolve: @escaping RCTPromiseResolveBlock,
                reject: @escaping RCTPromiseRejectBlock) {
-    let imageRequests: [ImageRequest] = sources.map {
-      guard let uri = $0["uri"] as? String,
-            let url = URL(string: uri)
-      else { return nil }
-
-      var urlRequest = URLRequest(url: url)
-      if let headers = $0["headers"] as? [String: String] {
-        urlRequest.allHTTPHeaderFields = headers
+    let imageRequests = sources.compactMap { source -> ImageRequest? in
+      guard let sourceDict = source as? [String: Any] else {
+        return nil
       }
-      return ImageRequest(urlRequest: urlRequest)
-    }.compactMap{ $0 }
+      return ImageRequestFactory.createImageRequest(from: sourceDict)
+    }
 
     prefetcher?.stopPrefetching(with: imageRequests)
     resolve("Success")
