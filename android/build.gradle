@@ -96,6 +96,11 @@ dependencies {
   implementation "io.coil-kt:coil-svg:2.6.0"
   implementation "com.github.Commit451.coil-transformations:transformations:2.0.2"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-  implementation("com.linecorp:apng:1.12.0")
+  def kotlinMajorVersion = kotlin_version.tokenize('.')[0].toInteger()
+  if (kotlinMajorVersion >= 2) {
+    implementation("com.linecorp:apng:1.12.0")
+  } else {
+    implementation("com.linecorp:apng:1.11.0")
+  }
 }
 
