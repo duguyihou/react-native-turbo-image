@@ -1,7 +1,7 @@
 import Nuke
 import NukeUI
 import SwiftSVG
-#if !os(tvOS)
+#if !os(tvOS) && canImport(VisionKit)
 import VisionKit
 #endif
 import Gifu
@@ -29,6 +29,7 @@ final class TurboImageView : UIView {
   }
   
   private var imageRequest: ImageRequest?
+  private var requestInFlight: Bool = false
   
   @objc var onStart: RCTDirectEventBlock?
   @objc var onProgress: RCTDirectEventBlock?
@@ -137,13 +138,13 @@ final class TurboImageView : UIView {
   }
   
   @objc var enableLiveTextInteraction: Bool = false
-
+  
   @objc var isProgressiveImageRenderingEnabled: Bool = true {
     didSet {
       lazyImageView.isProgressiveImageRenderingEnabled = isProgressiveImageRenderingEnabled
     }
   }
-
+  
   @objc var format: NSString? {
     didSet {
       guard let format = format as? String else { return }
@@ -218,12 +219,16 @@ fileprivate extension TurboImageView {
   }
   
   @objc func cancelRequest() {
-    lazyImageView.cancel()
+    if requestInFlight {
+      lazyImageView.cancel()
+    }
   }
   
   @objc func reloadRequest() {
-    lazyImageView.reset()
-    reloadImage()
+    if requestInFlight {
+      lazyImageView.reset()
+      reloadImage()
+    }
   }
 }
 
@@ -334,6 +339,7 @@ fileprivate extension TurboImageView {
   
   func registerObservers() {
     lazyImageView.onStart = { task in
+      self.requestInFlight = true
       self.onStartHandler(with: task)
     }
     
@@ -342,6 +348,7 @@ fileprivate extension TurboImageView {
     }
     
     lazyImageView.onSuccess = { response in
+      self.requestInFlight = false
       self.onSuccessHandler(with: response)
     }
     
@@ -351,7 +358,7 @@ fileprivate extension TurboImageView {
     
     lazyImageView.onCompletion = { result in
       self.onCompletionHandler(with: result)
-#if !os(tvOS)
+#if !os(tvOS) && canImport(VisionKit)
       if self.enableLiveTextInteraction {
         self.handleLiveTextInteraction()
       }
