@@ -892,13 +892,12 @@ PODS:
     - React-debug
   - react-native-safe-area-context (4.9.0):
     - React-Core
-  - react-native-turbo-image (1.22.3):
+  - react-native-turbo-image (1.23.0):
     - APNGKit
     - Gifu
     - glog
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
-    - SwiftSVG
   - React-nativeconfig (0.73.6)
   - React-NativeModulesApple (0.73.6):
     - glog
@@ -1071,7 +1070,6 @@ PODS:
     - RCT-Folly (= 2022.05.16.00)
     - React-Core
   - SocketRocket (0.6.1)
-  - SwiftSVG (2.3.2)
   - Yoga (1.14.0)
 
 DEPENDENCIES:
@@ -1138,7 +1136,6 @@ SPEC REPOS:
     - Gifu
     - libevent
     - SocketRocket
-    - SwiftSVG
 
 EXTERNAL SOURCES:
   boost:
@@ -1279,7 +1276,7 @@ SPEC CHECKSUMS:
   React-logger: 55764cd993880c6f887505854581c9faf68feff2
   React-Mapbuffer: 15dfcfeb4428d8799cce75e7fe85b18b706029e0
   react-native-safe-area-context: 435f4c13ac75ceed6135382ee77d57d1a5b5b2d6
-  react-native-turbo-image: 4c50d3b743f87d02c0795b4c78bb3dc6f5de9550
+  react-native-turbo-image: 460a561a934738cc15a87dad8c0d1e3d76b90d5b
   React-nativeconfig: b4d4e9901d4cabb57be63053fd2aa6086eb3c85f
   React-NativeModulesApple: 541d64309a3037060cc416db5c8a63ee5884048e
   React-perflogger: 5f49905de275bac07ac7ea7f575a70611fa988f2
@@ -1302,7 +1299,6 @@ SPEC CHECKSUMS:
   ReactCommon: 2e5492a3e3a8e72d635c266405e49d12627e5bf0
   RNScreens: cedc9bffb599d0bcd57903ef2ce0eef1df5d1065
   SocketRocket: f32cd54efbe0f095c4d7594881e52619cfe80b17
-  SwiftSVG: ca7f64e403b8ea7ea8eba8c823b83ba4a059834c
   Yoga: 805bf71192903b20fc14babe48080582fee65a80
 
 PODFILE CHECKSUM: f1b8a84c531fb9bbe7f9dab47124e3d4de7513db
