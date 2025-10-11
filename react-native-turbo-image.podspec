@@ -42,7 +42,6 @@ Pod::Spec.new do |s|
     }
   end
   s.vendored_frameworks = "ios/*.{xcframework}"
-  s.dependency "SwiftSVG"
   s.dependency "Gifu"
   s.dependency "APNGKit"
 

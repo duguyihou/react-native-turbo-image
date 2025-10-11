@@ -1,6 +1,5 @@
 import Nuke
 import NukeUI
-import SwiftSVG
 #if !os(tvOS) && canImport(VisionKit)
 import VisionKit
 #endif
@@ -246,9 +245,10 @@ fileprivate extension TurboImageView {
     }
     
     lazyImageView.makeImageView = { container in
-      if let data = container.data {
-        let view = UIView(SVGData: data)
-        self.addSubview(view)
+      if let data = container.data,
+         let svg = SVG(data) {
+        let image = svg.image()
+        let view = UIImageView(image: image)
         return view
       }
       return nil
