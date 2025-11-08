@@ -29,6 +29,7 @@ import com.turboimage.events.ProgressEvent
 import com.turboimage.events.interceptor.ProgressInterceptor
 import com.turboimage.events.interceptor.ProgressListener
 import okhttp3.OkHttpClient
+import androidx.core.graphics.drawable.toDrawable
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEventListener {
   override fun getName() = REACT_CLASS
@@ -136,7 +137,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
       view.showPlaceholderOnFailure?.let {
         if (view.memoryCacheKey != null) {
           imageLoader.memoryCache?.get(MemoryCache.Key(view.memoryCacheKey!!))?.let { value ->
-            error(BitmapDrawable(view.context.resources, value.bitmap))
+            error(value.bitmap.toDrawable(view.context.resources))
           }
         } else {
           error(view.thumbhashDrawable ?: view.blurhashDrawable)
