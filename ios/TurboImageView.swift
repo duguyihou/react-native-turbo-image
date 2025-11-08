@@ -184,20 +184,6 @@ final class TurboImageView : UIView {
                                            object: nil)
   }
   
-  deinit {
-    NotificationCenter.default.removeObserver(self)
-    lazyImageView.cancel()
-    #if !os(tvOS) && canImport(VisionKit)
-    liveTextTask?.cancel()
-    #endif
-    lazyImageView.onStart = nil
-    lazyImageView.onProgress = nil
-    lazyImageView.onSuccess = nil
-    lazyImageView.onFailure = nil
-    lazyImageView.onCompletion = nil
-    lazyImageView.makeImageView = nil
-  }
-  
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
     
@@ -219,7 +205,15 @@ final class TurboImageView : UIView {
     super.didMoveToWindow()
     if window == nil {
       lazyImageView.cancel()
+      #if !os(tvOS) && canImport(VisionKit)
+      liveTextTask?.cancel()
+      liveTextTask = nil
+      #endif
     }
+  }
+  
+  deinit {
+    NotificationCenter.default.removeObserver(self)
   }
   
   required init?(coder: NSCoder) {
