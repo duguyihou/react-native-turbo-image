@@ -142,8 +142,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
           error(view.thumbhashDrawable ?: view.blurhashDrawable)
         }
       }
-      size(view.resize ?: Size.ORIGINAL)
-
+      view.resize?.let { size(it) }
     }
   }
 
