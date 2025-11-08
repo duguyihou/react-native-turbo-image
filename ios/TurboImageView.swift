@@ -7,6 +7,7 @@ import Gifu
 import React
 import APNGKit
 
+@MainActor
 final class TurboImageView : UIView {
   
   private struct Constants {
@@ -29,6 +30,9 @@ final class TurboImageView : UIView {
   
   private var imageRequest: ImageRequest?
   private var requestInFlight: Bool = false
+  #if !os(tvOS) && canImport(VisionKit)
+  private var liveTextTask: Task<Void, Never>?
+  #endif
   
   @objc var onStart: RCTDirectEventBlock?
   @objc var onProgress: RCTDirectEventBlock?
@@ -94,19 +98,19 @@ final class TurboImageView : UIView {
       guard let placeholder else { return }
       
       if let blurhash = placeholder.value(forKey: "blurhash") as? String {
-        DispatchQueue.global(qos: .userInteractive).async { [self] in
+        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
           let image = UIImage(blurHash: blurhash)
-          DispatchQueue.main.async { [self] in
-            lazyImageView.placeholderImage = image
+          DispatchQueue.main.async { [weak self] in
+            self?.lazyImageView.placeholderImage = image
           }
         }
       }
       
       if let thumbhash = placeholder.value(forKey: "thumbhash") as? String {
-        DispatchQueue.global(qos: .userInteractive).async {
+        DispatchQueue.global(qos: .userInteractive).async { [weak self] in
           let image = UIImage(thumbhash: thumbhash)
-          DispatchQueue.main.async { [self] in
-            lazyImageView.placeholderImage = image
+          DispatchQueue.main.async { [weak self] in
+            self?.lazyImageView.placeholderImage = image
           }
         }
       }
@@ -180,6 +184,20 @@ final class TurboImageView : UIView {
                                            object: nil)
   }
   
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+    lazyImageView.cancel()
+    #if !os(tvOS) && canImport(VisionKit)
+    liveTextTask?.cancel()
+    #endif
+    lazyImageView.onStart = nil
+    lazyImageView.onProgress = nil
+    lazyImageView.onSuccess = nil
+    lazyImageView.onFailure = nil
+    lazyImageView.onCompletion = nil
+    lazyImageView.makeImageView = nil
+  }
+  
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
     
@@ -235,13 +253,19 @@ fileprivate extension TurboImageView {
 fileprivate extension TurboImageView {
   
   func handleSvg() {
-    ImageDecoderRegistry.shared.register { context in
-      let svgTagEnd = "</svg>"
-      if let _ = context.data.range(of: Data(svgTagEnd.utf8), options: .backwards) {
-        return ImageDecoders.Empty()
-      } else {
-        return nil
+    struct Static {
+      static var didRegister = false
+    }
+    if !Static.didRegister {
+      ImageDecoderRegistry.shared.register { context in
+        let svgTagEnd = "</svg>"
+        if let _ = context.data.range(of: Data(svgTagEnd.utf8), options: .backwards) {
+          return ImageDecoders.Empty()
+        } else {
+          return nil
+        }
       }
+      Static.didRegister = true
     }
     
     lazyImageView.makeImageView = { container in
@@ -256,7 +280,8 @@ fileprivate extension TurboImageView {
   }
   
   func handleGif() {
-    lazyImageView.makeImageView = { container in
+    lazyImageView.makeImageView = { [weak self] container in
+      guard let self else { return nil }
       if container.type == .gif,
          let data = container.data {
         let view = GIFImageView()
@@ -269,15 +294,21 @@ fileprivate extension TurboImageView {
   }
   
   func handleAPNG() {
-    ImageDecoderRegistry.shared.register { context in
-      // Signature bytes for the acTL chunk in an APNG file
-      let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
-      // Search for the acTL chunk signature in the data
-      if let _ = context.data.range(of: acTLSignature) {
-        return ImageDecoders.Empty()
-      } else {
-        return nil
+    struct Static {
+      static var didRegister = false
+    }
+    if !Static.didRegister {
+      ImageDecoderRegistry.shared.register { context in
+        // Signature bytes for the acTL chunk in an APNG file
+        let acTLSignature = Data([0x61, 0x63, 0x54, 0x4C])
+        // Search for the acTL chunk signature in the data
+        if let _ = context.data.range(of: acTLSignature) {
+          return ImageDecoders.Empty()
+        } else {
+          return nil
+        }
       }
+      Static.didRegister = true
     }
     
     lazyImageView.makeImageView = { container in
@@ -338,25 +369,32 @@ fileprivate extension TurboImageView {
 fileprivate extension TurboImageView {
   
   func registerObservers() {
-    lazyImageView.onStart = { task in
+    lazyImageView.onStart = { [weak self] task in
+      guard let self else { return }
       self.requestInFlight = true
       self.onStartHandler(with: task)
     }
     
-    lazyImageView.onProgress = { progress in
+    lazyImageView.onProgress = { [weak self] progress in
+      guard let self else { return }
       self.onProgressHandler(with: progress)
     }
     
-    lazyImageView.onSuccess = { response in
+    lazyImageView.onSuccess = { [weak self] response in
+      guard let self else { return }
       self.requestInFlight = false
       self.onSuccessHandler(with: response)
     }
     
-    lazyImageView.onFailure = { error in
+    lazyImageView.onFailure = { [weak self] error in
+      guard let self else { return }
+      self.requestInFlight = false
       self.onFailureHandler(with: error)
     }
     
-    lazyImageView.onCompletion = { result in
+    lazyImageView.onCompletion = { [weak self] result in
+      guard let self else { return }
+      self.requestInFlight = false
       self.onCompletionHandler(with: result)
 #if !os(tvOS) && canImport(VisionKit)
       if self.enableLiveTextInteraction {
@@ -414,17 +452,25 @@ fileprivate extension TurboImageView {
     
     let interaction = ImageAnalysisInteraction()
     lazyImageView.imageView.addInteraction(interaction)
-    Task {
+    #if !os(tvOS)
+    liveTextTask?.cancel()
+    liveTextTask = Task { [weak self] in
+      guard let self else { return }
       let analyzer = ImageAnalyzer()
       let configuration = ImageAnalyzer.Configuration([
         .text,.machineReadableCode,.visualLookUp
       ])
       let analysis = try? await analyzer.analyze(image, configuration: configuration)
       if let analysis {
-        interaction.analysis = analysis
-        interaction.preferredInteractionTypes = .automatic
+        // Ensure imageView is still alive
+        await MainActor.run { [weak self] in
+          guard let self else { return }
+          interaction.analysis = analysis
+          interaction.preferredInteractionTypes = .automatic
+        }
       }
     }
+    #endif
   }
 }
 
