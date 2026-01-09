@@ -98,16 +98,35 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
 
   private fun drawThumbhash(view: TurboImageView, hash: String): Drawable {
     val image = ThumbHash.thumbHashToRGBA(Base64.decode(hash, Base64.DEFAULT))
-    val intArray = IntArray(image.width * image.height)
-    for (i in intArray.indices) {
-      val r = image.rgba[i * 4].toInt() and 0xFF
-      val g = image.rgba[i * 4 + 1].toInt() and 0xFF
-      val b = image.rgba[i * 4 + 2].toInt() and 0xFF
-      val a = image.rgba[i * 4 + 3].toInt() and 0xFF
-      intArray[i] =
-        ((a and 0xff) shl 24) or ((r and 0xff) shl 16) or ((g and 0xff) shl 8) or (b and 0xff)
+
+    // Guard against invalid dimensions
+    val width = maxOf(image.width, 1)
+    val height = maxOf(image.height, 1)
+
+    val pixelCount = width * height
+    val intArray = IntArray(pixelCount)
+
+    // Only read as many pixels as actually exist
+    val maxPixels = minOf(image.width * image.height, pixelCount)
+
+    for (i in 0 until maxPixels) {
+        val base = i * 4
+        val r = image.rgba[base].toInt() and 0xFF
+        val g = image.rgba[base + 1].toInt() and 0xFF
+        val b = image.rgba[base + 2].toInt() and 0xFF
+        val a = image.rgba[base + 3].toInt() and 0xFF
+
+        intArray[i] =
+            (a shl 24) or (r shl 16) or (g shl 8) or b
     }
-    val bitmap = Bitmap.createBitmap(intArray, image.width, image.height, Bitmap.Config.ARGB_8888)
+
+    val bitmap = Bitmap.createBitmap(
+        intArray,
+        width,
+        height,
+        Bitmap.Config.ARGB_8888
+    )
+
     return BitmapDrawable(view.context.resources, bitmap)
   }
 
