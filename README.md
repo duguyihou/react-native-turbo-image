@@ -28,7 +28,7 @@ Performant image component for React Native. Powered by [Nuke](https://github.co
 
 ## Benchmarks
 
->Disclaimer: Benchmark results are based on controlled testing environments and may vary in real-world applications depending on factors such as network conditions, device specifications, image sizes, and concurrent tasks.
+> Results may vary in real-world applications depending on factors such as network conditions, device specifications, image sizes, and concurrent tasks.
 
 For example, loading 120 images in flatlist. See the code in the example folder:
 
@@ -96,12 +96,6 @@ import TurboImage from 'react-native-turbo-image';
 
 ```ts
 await TurboImage.prefetch([Source]);
-```
-
-### `dispose`
-
-```ts
-await TurboImage.dispose([Source]);
 ```
 
 ### `clearMemoryCache`
