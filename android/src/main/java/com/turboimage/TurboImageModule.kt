@@ -60,33 +60,6 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun dispose(sources: ReadableArray, promise: Promise) {
-    val imageRequests = sources.toArrayList().map { source ->
-      val uri = (source as HashMap<*, *>)["uri"] as String
-      val headers = source["headers"] as? HashMap<*, *>
-
-      if (headers != null) {
-        val headersBuilder = Headers.Builder()
-        headers.map { (key, value) ->
-          headersBuilder.add(key as String, value as String)
-        }
-        ImageRequest.Builder(context)
-          .headers(headersBuilder.build())
-          .data(uri)
-          .build()
-      } else {
-        ImageRequest.Builder(context)
-          .data(uri)
-          .build()
-      }
-    }
-    imageRequests.forEach { imageRequest ->
-      imageLoader?.enqueue(imageRequest)?.dispose()
-    }
-    promise.resolve("Success")
-  }
-
-  @ReactMethod
   fun clearMemoryCache(promise: Promise) {
     Coil.imageLoader(context).memoryCache?.clear()
     promise.resolve("Success")
