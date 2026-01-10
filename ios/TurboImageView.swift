@@ -204,7 +204,6 @@ final class TurboImageView : UIView {
   override func didMoveToWindow() {
     super.didMoveToWindow()
     if window == nil {
-      lazyImageView.cancel()
       #if !os(tvOS) && canImport(VisionKit)
       liveTextTask?.cancel()
       liveTextTask = nil
