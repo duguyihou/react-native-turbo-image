@@ -3,7 +3,7 @@ import Nuke
 @objc(TurboImageViewManager)
 class TurboImageViewManager: RCTViewManager {
 
-  private var prefetcher: ImagePrefetcher?
+  private var prefetchers: [String: ImagePrefetcher] = [:]
 
   override func view() -> (TurboImageView) {
     return TurboImageView()
@@ -23,6 +23,7 @@ extension TurboImageViewManager {
                 with cachePolicy: String,
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
+    
     let imageRequests: [ImageRequest] = sources.map {
       guard let uri = $0["uri"] as? String,
             let url = URL(string: uri)
@@ -34,35 +35,20 @@ extension TurboImageViewManager {
       }
       return ImageRequest(urlRequest: urlRequest)
     }.compactMap{ $0 }
+    
+    let key = UUID().uuidString
+    var prefetcher: ImagePrefetcher?
     if(cachePolicy == "dataCache") {
       prefetcher = ImagePrefetcher(pipeline: ImagePipeline(configuration: .withDataCache))
     } else {
       prefetcher = ImagePrefetcher()
     }
+    prefetchers[key] = prefetcher
     prefetcher?.startPrefetching(with: imageRequests)
     prefetcher?.didComplete = {
       resolve(true)
+      self.prefetchers[key] = nil
     }
-  }
-
-  @objc
-  func dispose(_ sources: [Source],
-               resolve: @escaping RCTPromiseResolveBlock,
-               reject: @escaping RCTPromiseRejectBlock) {
-    let imageRequests: [ImageRequest] = sources.map {
-      guard let uri = $0["uri"] as? String,
-            let url = URL(string: uri)
-      else { return nil }
-
-      var urlRequest = URLRequest(url: url)
-      if let headers = $0["headers"] as? [String: String] {
-        urlRequest.allHTTPHeaderFields = headers
-      }
-      return ImageRequest(urlRequest: urlRequest)
-    }.compactMap{ $0 }
-
-    prefetcher?.stopPrefetching(with: imageRequests)
-    resolve("Success")
   }
 
   @objc
