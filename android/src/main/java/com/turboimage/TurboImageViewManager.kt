@@ -63,12 +63,6 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
   }
 
   private fun reloadImage(view: TurboImageView) {
-    val defaultCrossfade = if (view.thumbhashDrawable != null || view.blurhashDrawable != null) {
-      0
-    } else {
-      CrossfadeDrawable.DEFAULT_DURATION
-    }
-
     val okHttpClient = OkHttpClient.Builder()
       .addInterceptor(ProgressInterceptor(object : ProgressListener {
         override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
@@ -133,7 +127,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
         placeholderMemoryCacheKey(it)
       }
       transformations(view.transformations)
-      crossfade(view.crossfade ?: defaultCrossfade)
+      crossfade(view.crossfade ?: CrossfadeDrawable.DEFAULT_DURATION)
       view.showPlaceholderOnFailure?.let {
         if (view.memoryCacheKey != null) {
           imageLoader.memoryCache?.get(MemoryCache.Key(view.memoryCacheKey!!))?.let { value ->
