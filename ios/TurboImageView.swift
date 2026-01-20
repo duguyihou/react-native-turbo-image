@@ -187,7 +187,20 @@ final class TurboImageView : UIView {
   override func didSetProps(_ changedProps: [String]!) {
     super.didSetProps(changedProps)
     
-    lazyImageView.transition = .fadeIn(duration: (fadeDuration.doubleValue) / 1000)
+    let duration = fadeDuration.doubleValue / 1000
+    if duration > 0 && placeholder != nil {
+      lazyImageView.transition = .custom { view, _ in
+        view.imageView.alpha = 0
+        view.placeholderView?.isHidden = false
+        UIView.animate(withDuration: duration, animations: {
+          view.imageView.alpha = 1
+        }, completion: { _ in
+          view.placeholderView?.isHidden = true
+        })
+      }
+    } else {
+      lazyImageView.transition = .fadeIn(duration: duration)
+    }
     lazyImageView.processors = processors
     
     if !Set(["source", "resize", "blur","monochrome", "tint"])
