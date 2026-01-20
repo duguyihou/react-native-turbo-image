@@ -18,6 +18,24 @@ extension TurboImageViewManager {
 
   typealias Source = [String: Any]
 
+  private func parseRequestPriority(from priority: String?) -> ImageRequest.Priority {
+    guard let priority = priority else { return .normal }
+    switch priority {
+    case "veryLow":
+      return .veryLow
+    case "low":
+      return .low
+    case "normal":
+      return .normal
+    case "high":
+      return .high
+    case "veryHigh":
+      return .veryHigh
+    default:
+      return .normal
+    }
+  }
+
   @objc
   func prefetch(_ sources: [Source],
                 with cachePolicy: String,
@@ -33,7 +51,8 @@ extension TurboImageViewManager {
       if let headers = $0["headers"] as? [String: String] {
         urlRequest.allHTTPHeaderFields = headers
       }
-      return ImageRequest(urlRequest: urlRequest)
+      let priority = parseRequestPriority(from: $0["priority"] as? String)
+      return ImageRequest(urlRequest: urlRequest, priority: priority)
     }.compactMap{ $0 }
     
     let key = UUID().uuidString

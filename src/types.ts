@@ -7,10 +7,13 @@ import type {
   NativeSyntheticEvent,
 } from 'react-native';
 
+export type Priority = 'veryLow' | 'low' | 'normal' | 'high' | 'veryHigh';
+
 export type Source = {
   uri: string;
   headers?: HeadersInit_ | undefined;
   cacheKey?: String | undefined;
+  priority?: Priority;
 };
 
 export type IndicatorStyle = 'large' | 'medium';
@@ -23,8 +26,6 @@ export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 export type CachePolicy = 'urlCache' | 'dataCache';
 
 export type Format = 'svg' | 'gif' | 'apng';
-
-export type Priority = 'veryLow' | 'low' | 'normal' | 'high' | 'veryHigh';
 
 type State = 'running' | 'cancelled' | 'completed';
 
@@ -75,7 +76,6 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   isProgressiveImageRenderingEnabled?: boolean;
   allowHardware?: boolean;
   format?: Format;
-  priority?: Priority;
   onStart?: (result: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onProgress?: (result: NativeSyntheticEvent<Progress>) => void;

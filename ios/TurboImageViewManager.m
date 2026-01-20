@@ -34,8 +34,6 @@ RCT_EXPORT_VIEW_PROPERTY(isProgressiveImageRenderingEnabled, BOOL)
 
 RCT_EXPORT_VIEW_PROPERTY(format, NSString)
 
-RCT_EXPORT_VIEW_PROPERTY(priority, NSString)
-
 RCT_EXPORT_VIEW_PROPERTY(onStart, RCTDirectEventBlock)
 
 RCT_EXPORT_VIEW_PROPERTY(onProgress, RCTDirectEventBlock)
