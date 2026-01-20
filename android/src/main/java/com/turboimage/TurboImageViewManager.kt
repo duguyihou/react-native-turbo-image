@@ -23,6 +23,8 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.annotations.ReactProp
+import java.util.Collections
+import java.util.WeakHashMap
 import okhttp3.Headers
 import com.turboimage.decoder.APNGDecoder
 import com.turboimage.events.ProgressEvent
@@ -34,7 +36,8 @@ import androidx.core.graphics.drawable.toDrawable
 class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEventListener {
   override fun getName() = REACT_CLASS
 
-  private lateinit var imageView: TurboImageView
+  private val attachedViews =
+    Collections.newSetFromMap(WeakHashMap<TurboImageView, Boolean>())
   private var isInBackground = false
   override fun getExportedCustomDirectEventTypeConstants(): MutableMap<String, Any>? {
     return MapBuilder.of(
@@ -48,8 +51,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
 
   override fun createViewInstance(reactContext: ThemedReactContext): TurboImageView {
     reactContext.addLifecycleEventListener(this)
-    imageView = TurboImageView(reactContext)
-    return imageView
+    return TurboImageView(reactContext).also { attachedViews.add(it) }
   }
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
@@ -60,6 +62,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
   override fun onDropViewInstance(view: TurboImageView) {
     super.onDropViewInstance(view)
     view.dispose()
+    attachedViews.remove(view)
   }
 
   private fun reloadImage(view: TurboImageView) {
@@ -253,16 +256,18 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
 
   override fun onHostResume() {
     if (isInBackground) {
-      reloadImage(imageView)
+      attachedViews.toList().forEach { reloadImage(it) }
+      isInBackground = false
     }
   }
 
   override fun onHostPause() {
-    imageView.dispose()
+    attachedViews.toList().forEach { it.dispose() }
     isInBackground = true
   }
 
   override fun onHostDestroy() {
-    imageView.dispose()
+    attachedViews.toList().forEach { it.dispose() }
+    attachedViews.clear()
   }
 }
