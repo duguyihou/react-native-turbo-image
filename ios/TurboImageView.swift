@@ -54,9 +54,9 @@ final class TurboImageView : UIView {
         urlRequest.allHTTPHeaderFields = headers
       }
       if let cacheKey = source?.value(forKey: "cacheKey") as? String {
-        imageRequest = ImageRequest(urlRequest: urlRequest, userInfo: [.imageIdKey: cacheKey])
+        imageRequest = ImageRequest(urlRequest: urlRequest, priority: parseRequestPriority(), userInfo: [.imageIdKey: cacheKey])
       } else {
-        imageRequest = ImageRequest(urlRequest: urlRequest)
+        imageRequest = ImageRequest(urlRequest: urlRequest, priority: parseRequestPriority())
       }
     }
   }
@@ -161,6 +161,36 @@ final class TurboImageView : UIView {
         handleAPNG()
       }
     }
+  }
+
+  @objc var priority: NSString? {
+    didSet {
+      updateImageRequestPriority()
+    }
+  }
+
+  private func parseRequestPriority() -> ImageRequest.Priority {
+    guard let priority = priority as? String else { return .normal }
+    switch priority {
+    case "veryLow":
+      return .veryLow
+    case "low":
+      return .low
+    case "normal":
+      return .normal
+    case "high":
+      return .high
+    case "veryHigh":
+      return .veryHigh
+    default:
+      return .normal
+    }
+  }
+
+  private func updateImageRequestPriority() {
+    guard var request = imageRequest else { return }
+    request.priority = parseRequestPriority()
+    imageRequest = request
   }
   
   override init(frame: CGRect) {
@@ -466,4 +496,3 @@ fileprivate extension TurboImageView {
     #endif
   }
 }
-

@@ -24,6 +24,8 @@ export type CachePolicy = 'urlCache' | 'dataCache';
 
 export type Format = 'svg' | 'gif' | 'apng';
 
+export type Priority = 'veryLow' | 'low' | 'normal' | 'high' | 'veryHigh';
+
 type State = 'running' | 'cancelled' | 'completed';
 
 export type Placeholder = {
@@ -73,6 +75,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
   isProgressiveImageRenderingEnabled?: boolean;
   allowHardware?: boolean;
   format?: Format;
+  priority?: Priority;
   onStart?: (result: NativeSyntheticEvent<Start>) => void;
   onSuccess?: (result: NativeSyntheticEvent<Success>) => void;
   onProgress?: (result: NativeSyntheticEvent<Progress>) => void;
