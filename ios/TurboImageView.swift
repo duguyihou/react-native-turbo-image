@@ -185,6 +185,8 @@ final class TurboImageView : UIView {
   override init(frame: CGRect) {
     super.init(frame: frame)
     addSubview(lazyImageView)
+    // Clear the default NukeUI placeholder (has secondarySystemBackground color)
+    lazyImageView.placeholderView = nil
     layer.masksToBounds = true
     lazyImageView.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
