@@ -62,4 +62,3 @@ RCT_EXTERN_METHOD(clearDiskCache:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
 @end
-

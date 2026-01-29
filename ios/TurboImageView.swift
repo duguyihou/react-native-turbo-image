@@ -53,10 +53,11 @@ final class TurboImageView : UIView {
       if let headers = source?.value(forKey: "headers") as? [String:String] {
         urlRequest.allHTTPHeaderFields = headers
       }
+      let priority = parseRequestPriority(from: source?.value(forKey: "priority") as? String)
       if let cacheKey = source?.value(forKey: "cacheKey") as? String {
-        imageRequest = ImageRequest(urlRequest: urlRequest, userInfo: [.imageIdKey: cacheKey])
+        imageRequest = ImageRequest(urlRequest: urlRequest, priority: priority, userInfo: [.imageIdKey: cacheKey])
       } else {
-        imageRequest = ImageRequest(urlRequest: urlRequest)
+        imageRequest = ImageRequest(urlRequest: urlRequest, priority: priority)
       }
     }
   }
@@ -160,6 +161,24 @@ final class TurboImageView : UIView {
       if format == Constants.apng {
         handleAPNG()
       }
+    }
+  }
+
+  private func parseRequestPriority(from priority: String?) -> ImageRequest.Priority {
+    guard let priority = priority else { return .normal }
+    switch priority {
+    case "veryLow":
+      return .veryLow
+    case "low":
+      return .low
+    case "normal":
+      return .normal
+    case "high":
+      return .high
+    case "veryHigh":
+      return .veryHigh
+    default:
+      return .normal
     }
   }
   

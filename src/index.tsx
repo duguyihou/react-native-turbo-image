@@ -3,6 +3,7 @@ export type {
   Source,
   CachePolicy,
   Format,
+  Priority,
   Start,
   Progress,
   Success,

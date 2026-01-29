@@ -7,10 +7,13 @@ import type {
   NativeSyntheticEvent,
 } from 'react-native';
 
+export type Priority = 'veryLow' | 'low' | 'normal' | 'high' | 'veryHigh';
+
 export type Source = {
   uri: string;
   headers?: HeadersInit_ | undefined;
   cacheKey?: String | undefined;
+  priority?: Priority;
 };
 
 export type IndicatorStyle = 'large' | 'medium';
