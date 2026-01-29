@@ -443,11 +443,12 @@ fileprivate extension TurboImageView {
 // MARK: - live text
 fileprivate extension TurboImageView {
   func handleLiveTextInteraction() {
+    #if !os(tvOS)
     guard #available(iOS 16.0, *), ImageAnalyzer.isSupported, let image = lazyImageView.imageView.image else { return }
     
     let interaction = ImageAnalysisInteraction()
     lazyImageView.imageView.addInteraction(interaction)
-    #if !os(tvOS)
+    
     liveTextTask?.cancel()
     liveTextTask = Task { [weak self] in
       guard let self else { return }
