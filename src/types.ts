@@ -57,7 +57,7 @@ export type Failure = {
 
 export interface TurboImageProps extends AccessibilityProps, ViewProps {
   source: Source;
-  style: StyleProp<ImageStyle>;
+  style: StyleProp<ViewStyle>;
   resizeMode?: ResizeMode;
   indicator?: Indicator;
   placeholder?: Partial<Placeholder>;
