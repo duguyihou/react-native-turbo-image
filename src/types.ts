@@ -2,9 +2,9 @@ import type {
   AccessibilityProps,
   ViewProps,
   StyleProp,
-  ImageStyle,
   ColorValue,
   NativeSyntheticEvent,
+  ViewStyle,
 } from 'react-native';
 
 export type Source = {
