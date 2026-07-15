@@ -23,18 +23,8 @@ extension TurboImageViewManager {
                 with cachePolicy: String,
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
-    
-    let imageRequests: [ImageRequest] = sources.map {
-      guard let uri = $0["uri"] as? String,
-            let url = URL(string: uri)
-      else { return nil }
 
-      var urlRequest = URLRequest(url: url)
-      if let headers = $0["headers"] as? [String: String] {
-        urlRequest.allHTTPHeaderFields = headers
-      }
-      return ImageRequest(urlRequest: urlRequest)
-    }.compactMap{ $0 }
+    let imageRequests = imageRequests(from: sources)
     
     let key = UUID().uuidString
     var prefetcher: ImagePrefetcher?
@@ -52,17 +42,66 @@ extension TurboImageViewManager {
   }
 
   @objc
-  func clearMemoryCache(_ resolve: @escaping RCTPromiseResolveBlock,
+  func clearMemoryCache(_ sources: [Source]?,
+                        resolve: @escaping RCTPromiseResolveBlock,
                         reject: @escaping RCTPromiseRejectBlock) {
-    ImageCache.shared.removeAll()
+    guard let sources, !sources.isEmpty else {
+      ImageCache.shared.removeAll()
+      resolve("Success")
+      return
+    }
+    for request in imageRequests(from: sources) {
+      ImagePipeline.shared.cache.removeCachedImage(for: request, caches: [.memory])
+    }
     resolve("Success")
   }
-  
+
   @objc
-  func clearDiskCache(_ resolve: @escaping RCTPromiseResolveBlock,
+  func clearDiskCache(_ sources: [Source]?,
+                      resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
-    ImagePipeline(configuration: .withDataCache).cache.removeAll()
-    DataLoader.sharedUrlCache.removeAllCachedResponses()
+    guard let sources, !sources.isEmpty else {
+      ImagePipeline(configuration: .withDataCache).cache.removeAll()
+      DataLoader.sharedUrlCache.removeAllCachedResponses()
+      resolve("Success")
+      return
+    }
+    let dataCachePipeline = ImagePipeline(configuration: .withDataCache)
+    for source in sources {
+      guard let request = imageRequest(from: source) else { continue }
+      dataCachePipeline.cache.removeCachedData(for: request)
+      if let urlRequest = request.urlRequest {
+        DataLoader.sharedUrlCache.removeCachedResponse(for: urlRequest)
+      }
+    }
     resolve("Success")
+  }
+
+  private func imageRequests(from sources: [Source]) -> [ImageRequest] {
+    return sources.compactMap { imageRequest(from: $0) }
+  }
+
+  private func imageRequest(from source: Source) -> ImageRequest? {
+    guard let uri = source["uri"] as? String,
+          let url = URL(string: uri)
+    else { return nil }
+
+    var urlRequest = URLRequest(url: url)
+    if let headers = source["headers"] as? [String: String] {
+      urlRequest.allHTTPHeaderFields = headers
+    }
+
+    var processors: [ImageProcessing] = []
+    if let resize = source["resize"] as? NSNumber {
+      processors.append(ImageProcessors.Resize(width: resize.doubleValue))
+    }
+
+    var userInfo: [ImageRequest.UserInfoKey: Any] = [:]
+    if let cacheKey = source["cacheKey"] as? String {
+      userInfo[.imageIdKey] = cacheKey
+    }
+    return ImageRequest(urlRequest: urlRequest,
+                        processors: processors,
+                        userInfo: userInfo)
   }
 }

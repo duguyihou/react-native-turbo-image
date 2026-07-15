@@ -51,10 +51,12 @@ RCT_EXTERN_METHOD(prefetch:(NSArray *)sources
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(clearMemoryCache:(RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(clearMemoryCache:(NSArray *)sources
+                  resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(clearDiskCache:(RCTPromiseResolveBlock)resolve
+RCT_EXTERN_METHOD(clearDiskCache:(NSArray *)sources
+                  resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 
 @end

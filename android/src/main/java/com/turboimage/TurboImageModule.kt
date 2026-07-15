@@ -3,9 +3,13 @@ package com.turboimage
 import coil.Coil
 import coil.ImageLoader
 import coil.annotation.ExperimentalCoilApi
+import coil.memory.MemoryCache
 import coil.request.ImageRequest
+import coil.size.Dimension
+import coil.size.Size
 import com.facebook.react.bridge.*
 import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.uimanager.PixelUtil
 import okhttp3.Headers
 
 class TurboImageModule(private val context: ReactApplicationContext) :
@@ -27,29 +31,28 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     val imageRequests = sources.toArrayList().map { source ->
       val uri = (source as HashMap<*, *>)["uri"] as String
       val headers = source["headers"] as? HashMap<*, *>
+      val resize = source["resize"] as? Double
+
+      val builder = ImageRequest.Builder(context)
+        .data(uri)
+        .listener(
+          onSuccess = { _, _ -> handleRequestCount() },
+          onError = { _, _ -> handleRequestCount() }
+        )
 
       if (headers != null) {
         val headersBuilder = Headers.Builder()
         headers.map { (key, value) ->
           headersBuilder.add(key as String, value as String)
         }
-        ImageRequest.Builder(context)
-          .headers(headersBuilder.build())
-          .data(uri)
-          .listener(
-            onSuccess = { _, _ -> handleRequestCount() },
-            onError = { _, _ -> handleRequestCount() }
-          )
-          .build()
-      } else {
-        ImageRequest.Builder(context)
-          .data(uri)
-          .listener(
-            onSuccess = { _, _ -> handleRequestCount() },
-            onError = { _, _ -> handleRequestCount() }
-          )
-          .build()
+        builder.headers(headersBuilder.build())
       }
+
+      resize?.let {
+        builder.size(Size(PixelUtil.toPixelFromDIP(it.toFloat()).toInt(), Dimension.Undefined))
+      }
+
+      builder.build()
     }
     imageLoader = Coil.imageLoader(context).newBuilder()
       .respectCacheHeaders(cachePolicy == "urlCache")
@@ -60,15 +63,34 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun clearMemoryCache(promise: Promise) {
-    Coil.imageLoader(context).memoryCache?.clear()
+  fun clearMemoryCache(sources: ReadableArray?, promise: Promise) {
+    val memoryCache = Coil.imageLoader(context).memoryCache
+    if (sources == null || sources.size() == 0) {
+      memoryCache?.clear()
+      promise.resolve("Success")
+      return
+    }
+    sources.toArrayList().forEach { source ->
+      val uri = (source as HashMap<*, *>)["uri"] as String
+      val cacheKey = source["cacheKey"] as? String
+      memoryCache?.remove(MemoryCache.Key(cacheKey ?: uri))
+    }
     promise.resolve("Success")
   }
 
   @OptIn(ExperimentalCoilApi::class)
   @ReactMethod
-  fun clearDiskCache(promise: Promise) {
-    Coil.imageLoader(context).diskCache?.clear()
+  fun clearDiskCache(sources: ReadableArray?, promise: Promise) {
+    val diskCache = Coil.imageLoader(context).diskCache
+    if (sources == null || sources.size() == 0) {
+      diskCache?.clear()
+      promise.resolve("Success")
+      return
+    }
+    sources.toArrayList().forEach { source ->
+      val uri = (source as HashMap<*, *>)["uri"] as String
+      diskCache?.remove(uri)
+    }
     promise.resolve("Success")
   }
 

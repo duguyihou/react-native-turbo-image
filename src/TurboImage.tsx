@@ -10,6 +10,7 @@ import {
 import type {
   CachePolicy,
   IndicatorStyle,
+  PrefetchSource,
   Source,
   TurboImageApi,
   TurboImageProps,
@@ -120,19 +121,16 @@ const styles = StyleSheet.create({
 
 const TurboImage = Object.assign({}, TurboImageView, {
   prefetch: async (
-    sources: Source[],
+    sources: PrefetchSource[],
     cachePolicy: CachePolicy = 'urlCache'
   ) => {
     return await TurboImageViewManager.prefetch(sources, cachePolicy);
   },
-  dispose: async (sources: Source[]) => {
-    return await TurboImageViewManager.dispose(sources);
+  clearMemoryCache: async (sources?: PrefetchSource[]) => {
+    return await TurboImageViewManager.clearMemoryCache(sources ?? null);
   },
-  clearMemoryCache: async () => {
-    return await TurboImageViewManager.clearMemoryCache();
-  },
-  clearDiskCache: async () => {
-    return await TurboImageViewManager.clearDiskCache();
+  clearDiskCache: async (sources?: Source[]) => {
+    return await TurboImageViewManager.clearDiskCache(sources ?? null);
   },
 });
 

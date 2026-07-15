@@ -13,6 +13,10 @@ export type Source = {
   cacheKey?: String | undefined;
 };
 
+export type PrefetchSource = Source & {
+  resize?: number;
+};
+
 export type IndicatorStyle = 'large' | 'medium';
 export type Indicator = Partial<{
   style: IndicatorStyle;
@@ -81,8 +85,10 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
 }
 
 export type TurboImageApi = {
-  prefetch: (sources: Source[], cachePolicy?: CachePolicy) => Promise<boolean>;
-  dispose: (sources: Source[]) => Promise<void>;
-  clearMemoryCache: () => Promise<void>;
-  clearDiskCache: () => Promise<void>;
+  prefetch: (
+    sources: PrefetchSource[],
+    cachePolicy?: CachePolicy
+  ) => Promise<boolean>;
+  clearMemoryCache: (sources?: PrefetchSource[]) => Promise<void>;
+  clearDiskCache: (sources?: Source[]) => Promise<void>;
 };

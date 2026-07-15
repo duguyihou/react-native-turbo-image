@@ -22,7 +22,7 @@ Performant image component for React Native. Powered by [Nuke](https://github.co
 - Support authorization headers
 - Support thumbhash, blurhash and memoryCacheKey for placeholder
 - Memory cache, aggressive LRU disk cache and HTTP disk cache
-- Prefetch, dispose, cleanMemoryCache and cleanDiskCache
+- Prefetch, cleanMemoryCache and cleanDiskCache
 - Written in TypeScript, Swift and Kotlin
 - Support special formats (SVG, Gif, APNG)
 
@@ -95,20 +95,27 @@ import TurboImage from 'react-native-turbo-image';
 ### `prefetch`
 
 ```ts
-await TurboImage.prefetch([Source]);
+await TurboImage.prefetch([{ ...Source, resize? }], cachePolicy?);
 ```
+
+- `cachePolicy` (optional): `'urlCache'` (default) or `'dataCache'`.
+- `resize` (optional, per source): target width in points. The prefetched image is decoded and downsampled to this width, so it lands in the memory cache with the same key as an image rendered with the matching `resize` prop.
 
 ### `clearMemoryCache`
 
 ```ts
-await TurboImage.clearMemoryCache();
+await TurboImage.clearMemoryCache(sources?);
 ```
+
+- `sources` (optional): array of `{ uri, headers?, cacheKey?, resize? }`. When provided, only those images are evicted from the memory cache; otherwise the whole memory cache is cleared. Pass the same `cacheKey`/`resize` the image was rendered with so the cache key matches.
 
 ### `clearDiskCache`
 
 ```ts
-await TurboImage.clearDiskCache();
+await TurboImage.clearDiskCache(sources?);
 ```
+
+- `sources` (optional): array of `{ uri, headers? }`. When provided, only those images are removed from the disk caches (both the aggressive data cache and the HTTP URL cache on iOS); otherwise all disk caches are cleared.
 
 ## Types
 

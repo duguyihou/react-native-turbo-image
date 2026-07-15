@@ -1,6 +1,7 @@
 import TurboImage from './TurboImage';
 export type {
   Source,
+  PrefetchSource,
   CachePolicy,
   Format,
   Start,
