@@ -53,7 +53,9 @@ final class TurboImageView : UIView {
       if let headers = source?.value(forKey: "headers") as? [String:String] {
         urlRequest.allHTTPHeaderFields = headers
       }
-      if let cacheKey = source?.value(forKey: "cacheKey") as? String {
+      let cacheKey = source?.value(forKey: "cacheKey") as? String
+      TurboImageCacheKeyIndex.shared.register(cacheKey ?? uri)
+      if let cacheKey {
         imageRequest = ImageRequest(urlRequest: urlRequest, userInfo: [.imageIdKey: cacheKey])
       } else {
         imageRequest = ImageRequest(urlRequest: urlRequest)

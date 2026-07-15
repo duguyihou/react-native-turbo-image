@@ -32,6 +32,8 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       val uri = (source as HashMap<*, *>)["uri"] as String
       val headers = source["headers"] as? HashMap<*, *>
       val resize = source["resize"] as? Double
+      val cacheKey = source["cacheKey"] as? String
+      TurboImageCacheKeyIndex.register(context, cacheKey ?: uri)
 
       val builder = ImageRequest.Builder(context)
         .data(uri)
@@ -71,10 +73,19 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       return
     }
     try {
-      sources.toArrayList().forEach { source ->
-        val uri = (source as HashMap<*, *>)["uri"] as String
-        val cacheKey = source["cacheKey"] as? String
-        memoryCache?.remove(MemoryCache.Key(cacheKey ?: uri))
+      sources.toArrayList().forEach { raw ->
+        val source = raw as HashMap<*, *>
+        if (isPrefixFilter(source)) {
+          val includePrefix = source["include_prefix"] as? String
+          val excludePrefix = source["exclude_prefix"] as? String
+          TurboImageCacheKeyIndex.keys(context, includePrefix, excludePrefix).forEach { key ->
+            memoryCache?.remove(MemoryCache.Key(key))
+          }
+        } else {
+          val uri = source["uri"] as String
+          val cacheKey = source["cacheKey"] as? String
+          memoryCache?.remove(MemoryCache.Key(cacheKey ?: uri))
+        }
       }
       promise.resolve("Success")
     } catch (e: Exception) {
@@ -88,19 +99,35 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     val diskCache = Coil.imageLoader(context).diskCache
     if (sources == null || sources.size() == 0) {
       diskCache?.clear()
+      TurboImageCacheKeyIndex.clear(context)
       promise.resolve("Success")
       return
     }
     try {
-      sources.toArrayList().forEach { source ->
-        val uri = (source as HashMap<*, *>)["uri"] as String
-        val cacheKey = source["cacheKey"] as? String
-        diskCache?.remove(cacheKey ?: uri)
+      sources.toArrayList().forEach { raw ->
+        val source = raw as HashMap<*, *>
+        if (isPrefixFilter(source)) {
+          val includePrefix = source["include_prefix"] as? String
+          val excludePrefix = source["exclude_prefix"] as? String
+          val matched = TurboImageCacheKeyIndex.keys(context, includePrefix, excludePrefix)
+          matched.forEach { key -> diskCache?.remove(key) }
+          TurboImageCacheKeyIndex.remove(context, matched)
+        } else {
+          val uri = source["uri"] as String
+          val cacheKey = source["cacheKey"] as? String
+          diskCache?.remove(cacheKey ?: uri)
+        }
       }
       promise.resolve("Success")
     } catch (e: Exception) {
       promise.reject("clearDiskCache", e)
     }
+  }
+
+  // A prefix filter is `{ include_prefix?, exclude_prefix? }` with no `uri` -
+  // distinguishes it from a normal source map passed to clear* calls.
+  private fun isPrefixFilter(source: HashMap<*, *>): Boolean {
+    return source["uri"] == null && (source["include_prefix"] != null || source["exclude_prefix"] != null)
   }
 
 

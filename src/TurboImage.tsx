@@ -11,6 +11,7 @@ import type {
   CachePolicy,
   IndicatorStyle,
   PrefetchSource,
+  PrefixFilter,
   Source,
   TurboImageApi,
   TurboImageProps,
@@ -126,10 +127,10 @@ const TurboImage = Object.assign({}, TurboImageView, {
   ) => {
     return await TurboImageViewManager.prefetch(sources, cachePolicy);
   },
-  clearMemoryCache: async (sources?: PrefetchSource[]) => {
+  clearMemoryCache: async (sources?: (PrefetchSource | PrefixFilter)[]) => {
     return await TurboImageViewManager.clearMemoryCache(sources ?? null);
   },
-  clearDiskCache: async (sources?: Source[]) => {
+  clearDiskCache: async (sources?: (Source | PrefixFilter)[]) => {
     return await TurboImageViewManager.clearDiskCache(sources ?? null);
   },
 });

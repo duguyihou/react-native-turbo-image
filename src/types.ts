@@ -17,6 +17,11 @@ export type PrefetchSource = Source & {
   resize?: number;
 };
 
+export type PrefixFilter = {
+  include_prefix?: string;
+  exclude_prefix?: string;
+};
+
 export type IndicatorStyle = 'large' | 'medium';
 export type Indicator = Partial<{
   style: IndicatorStyle;
@@ -89,6 +94,8 @@ export type TurboImageApi = {
     sources: PrefetchSource[],
     cachePolicy?: CachePolicy
   ) => Promise<boolean>;
-  clearMemoryCache: (sources?: PrefetchSource[]) => Promise<void>;
-  clearDiskCache: (sources?: Source[]) => Promise<void>;
+  clearMemoryCache: (
+    sources?: (PrefetchSource | PrefixFilter)[]
+  ) => Promise<void>;
+  clearDiskCache: (sources?: (Source | PrefixFilter)[]) => Promise<void>;
 };

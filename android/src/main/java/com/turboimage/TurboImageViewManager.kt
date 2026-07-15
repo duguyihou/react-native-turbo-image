@@ -158,6 +158,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
     }
     view.headers = headersBuilder.build()
     view.cacheKey = source.toHashMap()["cacheKey"] as? String
+    uri?.let { TurboImageCacheKeyIndex.register(view.context, view.cacheKey ?: it) }
   }
 
   @ReactProp(name = "placeholder")
