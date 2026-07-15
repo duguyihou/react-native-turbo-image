@@ -24,8 +24,8 @@ extension TurboImageViewManager {
                 resolve: @escaping RCTPromiseResolveBlock,
                 reject: @escaping RCTPromiseRejectBlock) {
 
-    let imageRequests = imageRequests(from: sources)
-    
+    let imageRequests = imageRequests(from: sources, includeResize: true)
+
     let key = UUID().uuidString
     var prefetcher: ImagePrefetcher?
     if(cachePolicy == "dataCache") {
@@ -77,11 +77,15 @@ extension TurboImageViewManager {
     resolve("Success")
   }
 
-  private func imageRequests(from sources: [Source]) -> [ImageRequest] {
-    return sources.compactMap { imageRequest(from: $0) }
+  private func imageRequests(from sources: [Source], includeResize: Bool = false) -> [ImageRequest] {
+    return sources.compactMap { imageRequest(from: $0, includeResize: includeResize) }
   }
 
-  private func imageRequest(from source: Source) -> ImageRequest? {
+  // `includeResize` must stay false for cache-clearing call sites: the resize
+  // processor is baked into Nuke's cache key, so a clear request that isn't
+  // built the exact same way as the original prefetch would silently miss the
+  // cached entry. Clearing identifies entries by uri/cacheKey only.
+  private func imageRequest(from source: Source, includeResize: Bool = false) -> ImageRequest? {
     guard let uri = source["uri"] as? String,
           let url = URL(string: uri)
     else { return nil }
@@ -92,7 +96,7 @@ extension TurboImageViewManager {
     }
 
     var processors: [ImageProcessing] = []
-    if let resize = source["resize"] as? NSNumber {
+    if includeResize, let resize = source["resize"] as? NSNumber {
       processors.append(ImageProcessors.Resize(width: resize.doubleValue))
     }
 

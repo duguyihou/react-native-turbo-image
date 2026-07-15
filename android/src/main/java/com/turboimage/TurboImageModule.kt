@@ -70,12 +70,16 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       promise.resolve("Success")
       return
     }
-    sources.toArrayList().forEach { source ->
-      val uri = (source as HashMap<*, *>)["uri"] as String
-      val cacheKey = source["cacheKey"] as? String
-      memoryCache?.remove(MemoryCache.Key(cacheKey ?: uri))
+    try {
+      sources.toArrayList().forEach { source ->
+        val uri = (source as HashMap<*, *>)["uri"] as String
+        val cacheKey = source["cacheKey"] as? String
+        memoryCache?.remove(MemoryCache.Key(cacheKey ?: uri))
+      }
+      promise.resolve("Success")
+    } catch (e: Exception) {
+      promise.reject("clearMemoryCache", e)
     }
-    promise.resolve("Success")
   }
 
   @OptIn(ExperimentalCoilApi::class)
@@ -87,11 +91,16 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       promise.resolve("Success")
       return
     }
-    sources.toArrayList().forEach { source ->
-      val uri = (source as HashMap<*, *>)["uri"] as String
-      diskCache?.remove(uri)
+    try {
+      sources.toArrayList().forEach { source ->
+        val uri = (source as HashMap<*, *>)["uri"] as String
+        val cacheKey = source["cacheKey"] as? String
+        diskCache?.remove(cacheKey ?: uri)
+      }
+      promise.resolve("Success")
+    } catch (e: Exception) {
+      promise.reject("clearDiskCache", e)
     }
-    promise.resolve("Success")
   }
 
 
