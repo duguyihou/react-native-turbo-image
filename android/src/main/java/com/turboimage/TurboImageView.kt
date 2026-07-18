@@ -53,6 +53,65 @@ class TurboImageView(private val reactContext: ThemedReactContext) :
     }
 
   var memoryCacheKey: String? = null
+  private var activeLoadSignature: String? = null
+  private var lastSuccessfulLoadSignature: String? = null
+
+  fun shouldSkipReload(loadSignature: String): Boolean {
+    return lastSuccessfulLoadSignature == loadSignature
+  }
+
+  fun markLoadStarted(loadSignature: String) {
+    activeLoadSignature = loadSignature
+  }
+
+  fun markLoadSuccess(loadSignature: String) {
+    if (activeLoadSignature == loadSignature) {
+      lastSuccessfulLoadSignature = loadSignature
+      activeLoadSignature = null
+    }
+  }
+
+  fun markLoadFailure(loadSignature: String) {
+    if (activeLoadSignature == loadSignature) {
+      lastSuccessfulLoadSignature = null
+      activeLoadSignature = null
+    }
+  }
+
+  fun resetLoadSignature() {
+    activeLoadSignature = null
+    lastSuccessfulLoadSignature = null
+  }
+
+  fun buildLoadSignature(defaultCrossfade: Int): String {
+    val headersSignature = headers?.names()?.sorted()?.joinToString(",") { name ->
+      "$name=${headers?.values(name)?.joinToString(";")}"
+    } ?: ""
+    val indicatorSignature = indicator.entries.sortedBy { it.key }.joinToString(",") { (key, value) ->
+      "$key=$value"
+    }
+    val viewSizeSignature = if (resize == null) "${width}x${height}" else ""
+    return listOf(
+      uri,
+      headersSignature,
+      cacheKey,
+      cachePolicy,
+      crossfade ?: defaultCrossfade,
+      blurhash,
+      thumbhash,
+      memoryCacheKey,
+      indicatorSignature,
+      showPlaceholderOnFailure,
+      resize,
+      viewSizeSignature,
+      rounded,
+      blur,
+      monochrome,
+      tint,
+      allowHardware,
+      format
+    ).joinToString("|") { it?.toString() ?: "" }
+  }
 
   val circleProgressDrawable: CircularProgressDrawable?
     get() {
