@@ -28,8 +28,11 @@ import com.turboimage.decoder.APNGDecoder
 import com.turboimage.events.ProgressEvent
 import com.turboimage.events.interceptor.ProgressInterceptor
 import com.turboimage.events.interceptor.ProgressListener
+import com.turboimage.events.interceptor.ProgressListeners
 import okhttp3.OkHttpClient
 import androidx.core.graphics.drawable.toDrawable
+import coil.ImageLoader
+import java.util.concurrent.ConcurrentHashMap
 
 class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEventListener {
   override fun getName() = REACT_CLASS
@@ -59,6 +62,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
 
   override fun onDropViewInstance(view: TurboImageView) {
     super.onDropViewInstance(view)
+    ProgressListeners.unregister(view.id)
     view.dispose()
   }
 
@@ -69,29 +73,31 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
       CrossfadeDrawable.DEFAULT_DURATION
     }
 
-    val okHttpClient = OkHttpClient.Builder()
-      .addInterceptor(ProgressInterceptor(object : ProgressListener {
-        override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
-          val reactContext = view.context as ReactContext
-          UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
-            val payload = Arguments.createMap().apply {
-              putDouble("completed", bytesRead.toDouble())
-              putDouble("total", contentLength.toDouble())
-            }
-            val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
-            it.dispatchEvent(ProgressEvent(surfaceId, view.id, payload))
+    // Progress events are routed through a shared OkHttpClient: the request
+    // is tagged with this view's tag (stripped again in ProgressInterceptor
+    // before it reaches the network) and the listener is looked up from
+    // ProgressListeners. Building a client + ImageLoader per load leaked one
+    // ConnectivityManager network callback per ImageLoader — Android caps an
+    // app at 100 and then throws a fatal TooManyRequestsException (#440).
+    ProgressListeners.register(view.id, object : ProgressListener {
+      override fun update(bytesRead: Long, contentLength: Long, done: Boolean) {
+        val reactContext = view.context as ReactContext
+        UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
+          val payload = Arguments.createMap().apply {
+            putDouble("completed", bytesRead.toDouble())
+            putDouble("total", contentLength.toDouble())
           }
+          val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
+          it.dispatchEvent(ProgressEvent(surfaceId, view.id, payload))
         }
-      }))
-      .build()
+      }
+    })
 
-    val imageLoader = Coil.imageLoader(view.context).newBuilder()
-      .respectCacheHeaders(view.cachePolicy == "urlCache")
-      .okHttpClient(okHttpClient)
-      .build()
+    val imageLoader = sharedImageLoader(view, view.cachePolicy == "urlCache")
 
     view.load(view.uri, imageLoader) {
       view.headers?.let { headers(it) }
+      addHeader(ProgressInterceptor.VIEW_TAG_HEADER, view.id.toString())
       view.cacheKey?.let {
         memoryCacheKey(it)
         diskCacheKey(it)
@@ -243,6 +249,33 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
 
   companion object {
     private const val REACT_CLASS = "TurboImageView"
+
+    // One client and (at most) two ImageLoaders — one per cachePolicy — for
+    // the whole app. Each Coil ImageLoader registers a ConnectivityManager
+    // network callback; instantiating one per image load exhausts the
+    // OS-wide limit of 100 callbacks per app (fatal TooManyRequestsException)
+    // and defeats OkHttp connection pooling.
+    private val progressClient by lazy {
+      OkHttpClient.Builder()
+        .addInterceptor(ProgressInterceptor())
+        .build()
+    }
+
+    private val sharedLoaders = ConcurrentHashMap<Boolean, ImageLoader>()
+
+    private fun sharedImageLoader(
+      view: TurboImageView,
+      respectCacheHeaders: Boolean
+    ): ImageLoader {
+      return sharedLoaders.getOrPut(respectCacheHeaders) {
+        Coil.imageLoader(view.context.applicationContext)
+          .newBuilder()
+          .respectCacheHeaders(respectCacheHeaders)
+          .okHttpClient(progressClient)
+          .build()
+      }
+    }
+
     private val RESIZE_MODE = mapOf(
       "contain" to ScaleType.FIT_CENTER,
       "cover" to ScaleType.CENTER_CROP,
