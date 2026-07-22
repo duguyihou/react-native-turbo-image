@@ -11,7 +11,10 @@ import com.turboimage.events.FailureEvent
 import com.turboimage.events.StartEvent
 import com.turboimage.events.SuccessEvent
 
-class TurboImageListener(private val view: TurboImageView) : ImageRequest.Listener {
+class TurboImageListener(
+  private val view: TurboImageView,
+  private val loadSignature: String
+) : ImageRequest.Listener {
 
   override fun onStart(request: ImageRequest) {
     super.onStart(request)
@@ -28,6 +31,7 @@ class TurboImageListener(private val view: TurboImageView) : ImageRequest.Listen
 
   override fun onSuccess(request: ImageRequest, result: SuccessResult) {
     super.onSuccess(request, result)
+    view.markLoadSuccess(loadSignature)
 
     val reactContext = view.context as ReactContext
     UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {
@@ -51,6 +55,7 @@ class TurboImageListener(private val view: TurboImageView) : ImageRequest.Listen
 
   override fun onError(request: ImageRequest, result: ErrorResult) {
     super.onError(request, result)
+    view.markLoadFailure(loadSignature)
 
     val reactContext = view.context as ReactContext
     UIManagerHelper.getEventDispatcher(reactContext, view.id)?.let {

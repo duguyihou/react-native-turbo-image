@@ -54,20 +54,28 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
 
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
-    reloadImage(view)
+    reloadImage(view, force = false)
   }
 
   override fun onDropViewInstance(view: TurboImageView) {
     super.onDropViewInstance(view)
+    view.resetLoadSignature()
     view.dispose()
   }
 
-  private fun reloadImage(view: TurboImageView) {
+  private fun reloadImage(view: TurboImageView, force: Boolean) {
     val defaultCrossfade = if (view.thumbhashDrawable != null || view.blurhashDrawable != null) {
       0
     } else {
       CrossfadeDrawable.DEFAULT_DURATION
     }
+    val loadSignature = view.buildLoadSignature(defaultCrossfade)
+
+    if (!force && view.shouldSkipReload(loadSignature)) {
+      return
+    }
+
+    view.markLoadStarted(loadSignature)
 
     val okHttpClient = OkHttpClient.Builder()
       .addInterceptor(ProgressInterceptor(object : ProgressListener {
@@ -86,6 +94,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
       .build()
 
     val imageLoader = Coil.imageLoader(view.context).newBuilder()
+      .networkObserverEnabled(false)
       .respectCacheHeaders(view.cachePolicy == "urlCache")
       .okHttpClient(okHttpClient)
       .build()
@@ -97,7 +106,7 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
         diskCacheKey(it)
       }
       view.allowHardware?.let { allowHardware(it) }
-      listener(TurboImageListener(view))
+      listener(TurboImageListener(view, loadSignature))
       view.format?.let {
         when (it) {
           "svg" -> {
@@ -253,16 +262,19 @@ class TurboImageViewManager : SimpleViewManager<TurboImageView>(), LifecycleEven
 
   override fun onHostResume() {
     if (isInBackground) {
-      reloadImage(imageView)
+      reloadImage(imageView, force = true)
+      isInBackground = false
     }
   }
 
   override fun onHostPause() {
+    imageView.resetLoadSignature()
     imageView.dispose()
     isInBackground = true
   }
 
   override fun onHostDestroy() {
+    imageView.resetLoadSignature()
     imageView.dispose()
   }
 }
