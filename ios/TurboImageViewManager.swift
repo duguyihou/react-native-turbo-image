@@ -39,7 +39,7 @@ extension TurboImageViewManager {
     let key = UUID().uuidString
     var prefetcher: ImagePrefetcher?
     if(cachePolicy == "dataCache") {
-      prefetcher = ImagePrefetcher(pipeline: ImagePipeline(configuration: .withDataCache))
+      prefetcher = ImagePrefetcher(pipeline: CachePolicy.dataCachePipeline)
     } else {
       prefetcher = ImagePrefetcher()
     }
@@ -61,7 +61,7 @@ extension TurboImageViewManager {
   @objc
   func clearDiskCache(_ resolve: @escaping RCTPromiseResolveBlock,
                       reject: @escaping RCTPromiseRejectBlock) {
-    ImagePipeline(configuration: .withDataCache).cache.removeAll()
+    CachePolicy.dataCachePipeline.cache.removeAll()
     DataLoader.sharedUrlCache.removeAllCachedResponses()
     resolve("Success")
   }
