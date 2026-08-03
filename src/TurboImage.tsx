@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import type {
-  CachePolicy,
+  PrefetchCachePolicy,
   IndicatorStyle,
   PrefetchSource,
   PrefixFilter,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
 const TurboImage = Object.assign({}, TurboImageView, {
   prefetch: async (
     sources: PrefetchSource[],
-    cachePolicy: CachePolicy = 'urlCache'
+    cachePolicy: PrefetchCachePolicy = 'urlCache'
   ) => {
     return await TurboImageViewManager.prefetch(sources, cachePolicy);
   },

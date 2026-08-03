@@ -31,6 +31,17 @@ export type ResizeMode = 'contain' | 'cover' | 'stretch' | 'center';
 
 export type CachePolicy = 'urlCache' | 'dataCache';
 
+/**
+ * Prefetch-only cache policies.
+ *
+ * `dataCache` warms the DISK cache without keeping a decoded bitmap - cheap per page, but the
+ * page still pays a decode when it is finally rendered. `memoryWarm` decodes at display size
+ * into the memory cache so the page appears instantly, at the cost of a full bitmap held for a
+ * page that is not on screen yet. Callers prefetching a window are expected to use `memoryWarm`
+ * for the first few pages and `dataCache` for the rest.
+ */
+export type PrefetchCachePolicy = CachePolicy | 'memoryWarm';
+
 export type Format = 'svg' | 'gif' | 'apng';
 
 type State = 'running' | 'cancelled' | 'completed';
@@ -92,7 +103,7 @@ export interface TurboImageProps extends AccessibilityProps, ViewProps {
 export type TurboImageApi = {
   prefetch: (
     sources: PrefetchSource[],
-    cachePolicy?: CachePolicy
+    cachePolicy?: PrefetchCachePolicy
   ) => Promise<boolean>;
   clearMemoryCache: (
     sources?: (PrefetchSource | PrefixFilter)[]

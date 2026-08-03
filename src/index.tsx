@@ -3,6 +3,7 @@ export type {
   Source,
   PrefetchSource,
   CachePolicy,
+  PrefetchCachePolicy,
   Format,
   Start,
   Progress,

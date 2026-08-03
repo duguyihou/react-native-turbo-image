@@ -4,6 +4,7 @@ import coil.Coil
 import coil.ImageLoader
 import coil.annotation.ExperimentalCoilApi
 import coil.memory.MemoryCache
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Dimension
 import coil.size.Size
@@ -50,8 +51,31 @@ class TurboImageModule(private val context: ReactApplicationContext) :
         builder.headers(headersBuilder.build())
       }
 
-      resize?.let {
-        builder.size(Size(PixelUtil.toPixelFromDIP(it.toFloat()).toInt(), Dimension.Undefined))
+      // A "dataCache" prefetch exists to fill the DISK cache ahead of the viewport, and the disk
+      // entry holds the ORIGINAL bytes regardless of what size the request asks for. So the
+      // request is deliberately decoded tiny and thrown away:
+      //
+      //   - decoding at the display size allocates a full bitmap per prefetched page (tens of MB
+      //     for a webtoon strip) for a page that is not on screen and may never be reached;
+      //   - keeping it in the memory cache then retains all of them at once, which on a low-RAM
+      //     device is enough on its own to get the process killed by lowmemorykiller.
+      //
+      // Writing the disk entry by hand instead (raw OkHttp -> DiskCache.openEditor) does NOT
+      // work: Coil stores response metadata alongside the data and discards any entry that has
+      // only the data half, so those entries are evicted on read and every page loads cold.
+      // Letting Coil do the write is what keeps the entry valid; only the decode is made cheap.
+      //
+      // "memoryWarm" is the opposite trade and exists for the handful of pages just outside the
+      // viewport: decode at display size into the memory cache so the page appears instantly when
+      // scrolled to. Costs a full bitmap each, so the caller is expected to use it for a small,
+      // bounded window and "dataCache" for everything beyond it.
+      if (cachePolicy == "dataCache") {
+        builder.size(Size(PREFETCH_DECODE_PX, Dimension.Undefined))
+        builder.memoryCachePolicy(CachePolicy.DISABLED)
+      } else {
+        resize?.let {
+          builder.size(Size(PixelUtil.toPixelFromDIP(it.toFloat()).toInt(), Dimension.Undefined))
+        }
       }
 
       builder.build()
@@ -133,5 +157,10 @@ class TurboImageModule(private val context: ReactApplicationContext) :
 
   companion object {
     private const val REACT_CLASS = "TurboImageViewManager"
+
+    // Decode width for prefetch requests. Small enough that the bitmap is irrelevant (BitmapFactory
+    // downsamples via inSampleSize, so it is also cheap to produce), non-zero because a request
+    // still has to decode successfully for Coil to commit the disk entry.
+    private const val PREFETCH_DECODE_PX = 32
   }
 }
