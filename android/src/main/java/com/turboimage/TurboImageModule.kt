@@ -15,7 +15,25 @@ import okhttp3.Headers
 
 class TurboImageModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
-  private var imageLoader: ImageLoader? = null
+  // One ImageLoader per cachePolicy, held for the module's lifetime.
+  //
+  // This used to be a single `var` reassigned with a freshly built loader on EVERY prefetch call.
+  // An ImageLoader owns the CoroutineScope its requests run in, so replacing the field dropped the
+  // only strong reference to the loader whose downloads were still in flight, and those requests
+  // died with it. Callers that prefetch in batches — the reader warms 5 pages every 800ms while
+  // idle — therefore cancelled each batch with the next one, and almost nothing ever completed:
+  // measured as 40 pages prefetched with the disk cache growing by exactly 0 files.
+  //
+  // Keyed by cachePolicy because that is the only thing that varies between them
+  // (respectCacheHeaders), so two policies cannot evict each other either.
+  private val imageLoaders = mutableMapOf<String, ImageLoader>()
+
+  private fun loaderFor(cachePolicy: String): ImageLoader =
+    imageLoaders.getOrPut(cachePolicy) {
+      Coil.imageLoader(context).newBuilder()
+        .respectCacheHeaders(cachePolicy == "urlCache")
+        .build()
+    }
 
   override fun getName(): String = REACT_CLASS
 
@@ -80,11 +98,9 @@ class TurboImageModule(private val context: ReactApplicationContext) :
 
       builder.build()
     }
-    imageLoader = Coil.imageLoader(context).newBuilder()
-      .respectCacheHeaders(cachePolicy == "urlCache")
-      .build()
+    val imageLoader = loaderFor(cachePolicy)
     imageRequests.forEach { imageRequest ->
-      imageLoader?.enqueue(imageRequest)
+      imageLoader.enqueue(imageRequest)
     }
   }
 
