@@ -2,12 +2,18 @@ package com.turboimage
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.util.LruCache
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.withSign
 
 // copy from https://github.com/woltapp/blurhash/blob/master/Kotlin/lib/src/main/java/com/wolt/blurhashkt/BlurHashDecoder.kt
 object BlurHashDecoder {
+
+  // Cache decoded bitmaps so the same placeholder is not decoded repeatedly.
+  private val bitmapCache = object : LruCache<String, Bitmap>(256 * 1024) {
+    override fun sizeOf(key: String, bitmap: Bitmap): Int = bitmap.byteCount
+  }
 
   // cache Math.cos() calculations to improve performance.
   // The number of calculations can be huge for many bitmaps: width * height * numCompX * numCompY * 2 * nBitmaps
@@ -21,6 +27,7 @@ object BlurHashDecoder {
    * if the app needs memory it is recommended to clear it.
    */
   fun clearCache() {
+    bitmapCache.evictAll()
     cacheCosinesX.clear()
     cacheCosinesY.clear()
   }
@@ -35,6 +42,10 @@ object BlurHashDecoder {
   fun decode(blurHash: String?, width: Int, height: Int, punch: Float = 1f, useCache: Boolean = true): Bitmap? {
     if (blurHash == null || blurHash.length < 6) {
       return null
+    }
+    val cacheKey = "$blurHash|$width|$height|$punch"
+    if (useCache) {
+      bitmapCache.get(cacheKey)?.let { return it }
     }
     val numCompEnc = decode83(blurHash, 0, 1)
     val numCompX = (numCompEnc % 9) + 1
@@ -54,7 +65,11 @@ object BlurHashDecoder {
         decodeAc(colorEnc, maxAc * punch)
       }
     }
-    return composeBitmap(width, height, numCompX, numCompY, colors, useCache)
+    val bitmap = composeBitmap(width, height, numCompX, numCompY, colors, useCache)
+    if (useCache) {
+      bitmapCache.put(cacheKey, bitmap)
+    }
+    return bitmap
   }
 
   private fun decode83(str: String, from: Int = 0, to: Int = str.length): Int {

@@ -62,6 +62,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   @ReactMethod
   fun clearMemoryCache(promise: Promise) {
     Coil.imageLoader(context).memoryCache?.clear()
+    BlurHashDecoder.clearCache()
     promise.resolve("Success")
   }
 
