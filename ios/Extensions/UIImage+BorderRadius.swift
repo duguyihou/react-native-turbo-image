@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public extension UIImage {
   func with(_ borderRadius: CGFloat? = nil) -> UIImage? {
