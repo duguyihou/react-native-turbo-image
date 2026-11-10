@@ -453,9 +453,11 @@ fileprivate extension TurboImageView {
     liveTextTask = Task { [weak self] in
       guard let self else { return }
       let analyzer = ImageAnalyzer()
-      let configuration = ImageAnalyzer.Configuration([
-        .text,.machineReadableCode,.visualLookUp
-      ])
+      var analysisTypes: ImageAnalyzer.AnalysisTypes = [.text, .machineReadableCode]
+      if #available(iOS 17.0, *) {
+        analysisTypes.insert(.visualLookUp)
+      }
+      let configuration = ImageAnalyzer.Configuration(analysisTypes)
       let analysis = try? await analyzer.analyze(image, configuration: configuration)
       if let analysis {
         // Ensure imageView is still alive
