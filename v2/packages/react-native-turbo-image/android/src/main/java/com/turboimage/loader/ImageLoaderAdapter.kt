@@ -1,5 +1,7 @@
 package com.turboimage.loader
 
+import android.content.res.Resources
+import android.graphics.drawable.Drawable
 import android.widget.ImageView
 import com.turboimage.core.ResolvedRequest
 
@@ -24,6 +26,22 @@ interface ImageLoaderAdapter {
    *   the iOS view applies too).
    */
   fun load(target: ImageView, request: ResolvedRequest, fadeMillis: Int, listener: Listener): LoadHandle
+
+  // Cache management, backing TurboImageModule. Keys are
+  // `ResolvedRequest.cacheKey`s from the core, so views and the module agree.
+
+  /** Loads into the caches without a view; [onDone] once on the main thread. */
+  fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
+
+  /** Evicts the entry from memory and disk. */
+  fun remove(cacheKey: String)
+
+  fun clearMemoryCache()
+
+  fun clearDiskCache()
+
+  /** Synchronous memory lookup for the `memoryCacheKey` placeholder. Main thread. */
+  fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable?
 
   interface Listener {
     /** Bytes received / expected; `total` <= 0 when unknown. */

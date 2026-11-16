@@ -1,11 +1,14 @@
 package com.turboimage.loader
 
 import android.content.Context
+import android.content.res.Resources
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.widget.ImageView
 import coil3.Image
 import coil3.ImageLoader
+import coil3.asDrawable
 import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
@@ -54,7 +57,8 @@ private class KeepCurrentImageTarget(view: ImageView) : ImageViewTarget(view) {
 }
 
 class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
-  private val imageLoader: ImageLoader = buildImageLoader(context.applicationContext)
+  private val appContext = context.applicationContext
+  private val imageLoader: ImageLoader = buildImageLoader(appContext)
 
   override fun load(
     target: ImageView,
@@ -109,6 +113,52 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       finish()
       disposable.dispose()
     }
+  }
+
+  override fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle {
+    var finished = false
+    val coilRequest =
+      ImageRequest.Builder(appContext)
+        .data(request.url)
+        .memoryCacheKey(request.cacheKey)
+        .diskCacheKey(request.cacheKey)
+        .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
+        .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
+        .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
+        .listener(
+          onSuccess = { _, _ -> if (!finished) { finished = true; onDone(true) } },
+          onError = { _, _ -> if (!finished) { finished = true; onDone(false) } },
+        )
+        .build()
+    val disposable = imageLoader.enqueue(coilRequest)
+    return LoadHandle {
+      finished = true
+      disposable.dispose()
+    }
+  }
+
+  // Coil keys memory entries by key *and* extras (e.g. the resolved size of
+  // the view that loaded it), so an exact Key(cacheKey) lookup would miss.
+  // TurboImage owns the key string; match on it across the (small) key set.
+  private fun memoryKeysFor(cacheKey: String) =
+    imageLoader.memoryCache?.keys?.filter { it.key == cacheKey }.orEmpty()
+
+  override fun remove(cacheKey: String) {
+    memoryKeysFor(cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
+    imageLoader.diskCache?.remove(cacheKey)
+  }
+
+  override fun clearMemoryCache() {
+    imageLoader.memoryCache?.clear()
+  }
+
+  override fun clearDiskCache() {
+    imageLoader.diskCache?.clear()
+  }
+
+  override fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable? {
+    val key = memoryKeysFor(cacheKey).firstOrNull() ?: return null
+    return imageLoader.memoryCache?.get(key)?.image?.asDrawable(resources)
   }
 
   /**

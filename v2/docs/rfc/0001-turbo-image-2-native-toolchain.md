@@ -153,6 +153,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Rejected requests.** A request the core rejects (`invalidRequest`) fails *before* `onStart`, because no load began.
 - **Superseded loads.** A load superseded by a new `source` ends with `onCompletion {state:'cancelled'}` and never reports success. 1.x declared that state but never sent it.
 - **Progress pacing.** Progress is paced by the core's `ProgressThrottle`: each whole percent, or every 64 KiB when `total` is unknown (`-1`). So JS sees the same cadence whether Nuke reports per chunk or OkHttp per `read()`. The throttle state is three integers, so Android keeps it in a `LongArray` passed through JNI, with no native handle.
+- **Progress ends at 100%.** A successful load with a known total always ends with a `{total, total}` progress event, via `ProgressThrottle::finish`. Coil can decode a `noCache` response straight from the network stream and stop at the JPEG end marker without reading to EOF, so Android's byte count can end short. The smoke scenario `supersede` caught this intermittently.
 - **Android progress.** Coil has no progress API. The adapter tags each request with a per-load token header (`X-TurboImage-Load`), which an OkHttp interceptor strips and uses to count response bytes. 1.x keyed this on the view tag, which could route an old request's progress into a view's new load.
 - **Known gap.** With Coil's dedup, only the first of N identical concurrent loads reports progress on Android. Nuke reports it to all of them.
 - **Tests.** The smoke scenarios `lifecycle` and `supersede` assert these exact sequences on both platforms.
@@ -168,7 +169,16 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 | `fadeDuration` (default 300 ms) | Native prop, same default | Skipped for memory-cache hits on both platforms: Coil's crossfade rule, mirrored on iOS through a `fromMemoryCache` flag on the seam completion |
 | `rounded` | JS clipping container | Same approach as 1.x. Android's `ImageView` content isn't clipped by RN's border drawing, so a container keeps both platforms identical |
 
-### 4.5 Placeholders (blurhash, thumbhash)
+### 4.4c Cache TurboModule
+
+`TurboImage.prefetch / dispose / clearMemoryCache / clearDiskCache` are 1.x statics, now backed by a Codegen TurboModule (`TurboImageModule`, `codegenConfig.type: "all"`).
+
+- **Same keys as views.** Every source goes through the same core resolution as a view's source: on iOS a shared ObjC++ `TIMakeImageRequest`, on Android the same JNI `resolve`. A prefetched or disposed entry is therefore exactly the one a view reads. The smoke scenarios `prefetchThenCacheOnly`, `disposeEvicts` and `clearCaches` prove this with `cacheOnly` reads.
+- **One loader.** Android shares a single adapter, and so one Coil `ImageLoader`, between views and the module (`TurboImageLoaders`). iOS shares it through `TIImageLoaderRegistry`.
+- **Behaviour changes from 1.x.** `prefetch` resolves `true` only if every source loaded; 1.x resolved `true` regardless. `dispose` evicts from memory and disk; 1.x declared it in JS but never implemented it natively, so calling it threw.
+- **Cache-policy strings** are parsed by the core (`parseCachePolicy`) for both the module and the Android view.
+
+### 4.5 Placeholders (blurhash, thumbhash, memoryCacheKey)
 
 `cpp/include/turboimage/Placeholder.h` is the only decoder, replacing four
 1.x ports (Swift and Kotlin × blurhash and thumbhash).
@@ -178,7 +188,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Untrusted input.** Lengths and alphabets are validated. The JS thumbhash reference reads past the end of a truncated hash; the port returns `nullopt` instead.
 - **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main behind a generation counter plus a "final image shown" flag. 1.x had no such guard and could show a stale placeholder after `source` changed.
 - **Lifetime.** The placeholder is shown until the image loads and **kept on failure**, on both platforms. Android needed a Coil target subclass for this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
-- **Not yet ported.** TODO: 1.x's `memoryCacheKey` placeholder needs a cache-lookup API on the seam, so it lands with the cache TurboModule.
+- **`memoryCacheKey`.** This is a synchronous memory-cache lookup through the seam (`memoryCachedImageForKey:` / `memoryCachedDrawable`), keyed by the core's `canonicalCacheKey`, so it matches what a view stored. Coil keys memory entries by key *plus* extras (e.g. the resolved size), so the Android adapter matches on the key string across the key set.
 
 ### 4.6 View-level fixes found by the smoke test
 
@@ -296,7 +306,7 @@ backed by a non-blocking CI job.
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 12 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 17 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -309,7 +319,11 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 12 scenarios in
 - the event lifecycle,
 - a superseded load ending as `cancelled`,
 - the placeholder being removed on failure by default,
-- the 1.x `dataCache` name together with `rounded`.
+- the 1.x `dataCache` name together with `rounded`,
+- the `memoryCacheKey` placeholder,
+- the cache module: prefetch then `cacheOnly`, dispose, clearing both tiers, and prefetch of an invalid source.
+
+The result line is compact (`passed`, `total`, failures only), because iOS `os_log` truncates messages at about 1 KB.
 
 The failing scenarios carry blurhash and thumbhash placeholders, which must stay visible (`SMOKE_SCREENSHOT=…`). The Android job also runs the core goldens on the emulator (`scripts/test-core-android.sh`).
 
@@ -329,8 +343,8 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 12/12 |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 12/12 |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 17/17 |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 17/17 |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |

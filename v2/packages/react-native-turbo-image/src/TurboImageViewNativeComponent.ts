@@ -18,12 +18,15 @@ export type NativeSource = Readonly<{
 
 // Shown until the image loads, and kept if it fails. Decoded by the shared
 // C++ core off the main thread. Provide at most one (validated in JS).
-// TODO: 1.x's `memoryCacheKey` placeholder needs an adapter cache-lookup
-// API on the seam; it lands with the prefetch/cache TurboModule.
 export type NativePlaceholder = Readonly<{
   blurhash?: string;
   // Base64, as produced by `thumbhash`'s rgbaToThumbHash + base64 encoding.
   thumbhash?: string;
+  // Show an image already in the *memory* cache (e.g. a thumbnail shown on
+  // the previous screen) while this one loads. Pass the URI (or explicit
+  // cacheKey) that image was loaded with; it is canonicalised by the core
+  // exactly like a source, so keys always agree.
+  memoryCacheKey?: string;
 }>;
 
 // Event payloads keep 1.x's names and fields so app handlers keep working

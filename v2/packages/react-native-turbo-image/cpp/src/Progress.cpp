@@ -35,4 +35,13 @@ bool ProgressThrottle::shouldReport(std::int64_t completed, std::int64_t total) 
   return false;
 }
 
+bool ProgressThrottle::finish(std::int64_t total) {
+  if (total <= 0 || reportedCompletion != 0) {
+    return false;
+  }
+  reportedCompletion = 1;
+  lastPercent = 100;
+  return true;
+}
+
 }  // namespace turboimage

@@ -38,10 +38,10 @@ builds, and the CI matrix.
 | `resizeMode` default, `showPlaceholderOnFailure`, `fadeDuration`, `rounded` | Native props + JS | ✅ 1.x defaults kept (RFC §4.4b) |
 | `cacheKey` | ✅ done | |
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
-| `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ blurhash and thumbhash done (byte-exact vs. references, kept on failure). `memoryCacheKey` waits for the cache TurboModule |
+| `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ done. Blurhash and thumbhash are byte-exact vs. the references; `memoryCacheKey` is a memory lookup via the seam |
 | `resize`, `blur`, `monochrome`, `tint`, `borderRadius` processors | Core describes processors; adapters map them to Nuke `ImageProcessors` / Coil `Transformation` | The processor list becomes part of the cache key in core |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop | |
-| `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | Codegen `type: "all"` |
+| `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
 | GIF, APNG, SVG | Adapter decoders | Re-evaluate Gifu/APNGKit vs Nuke 13 built-ins; Coil `coil-gif`/`coil-svg` |
 | Local assets / `require()` sources | Core scheme handling | Out of scope in the skeleton (`UnsupportedScheme`) |
 | `headers` | Seam field | Needs RFC open question 5 settled |
@@ -68,3 +68,4 @@ builds, and the CI matrix.
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- `TurboImage.prefetch` resolves `false` when any source fails (1.x always resolved `true`).

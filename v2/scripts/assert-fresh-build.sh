@@ -6,10 +6,13 @@
 # report a PASS that says nothing about the current sources. Sourced by
 # smoke-{ios,android}.sh before installing.
 #
-# Usage: assert_fresh_build <artifact-path>
+# Usage: assert_fresh_build <artifact-path> <ios|android>
+# The platform selects which native sources count: an iOS-only change must
+# not make an otherwise current APK look stale, and vice versa.
 
 assert_fresh_build() {
   local artifact="$1"
+  local platform="$2"
   local v2_root
   v2_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -18,15 +21,25 @@ assert_fresh_build() {
     return 1
   fi
 
-  # Sources that end up in the binary: the library (JS, C++, ObjC/Swift,
-  # Kotlin) and the example app's JS. Build outputs are excluded.
+  local platform_sources
+  case "${platform}" in
+    ios) platform_sources="ios" ;;
+    android) platform_sources="android/src" ;;
+    *)
+      echo "FAIL: assert_fresh_build: unknown platform '${platform}'" >&2
+      return 1
+      ;;
+  esac
+
+  # Sources that end up in the binary: the library's JS and C++, this
+  # platform's native code, and the example app's JS. Build outputs are
+  # excluded.
   local newer
   newer="$(find \
     "${v2_root}/packages/react-native-turbo-image/src" \
     "${v2_root}/packages/react-native-turbo-image/cpp/include" \
     "${v2_root}/packages/react-native-turbo-image/cpp/src" \
-    "${v2_root}/packages/react-native-turbo-image/ios" \
-    "${v2_root}/packages/react-native-turbo-image/android/src" \
+    "${v2_root}/packages/react-native-turbo-image/${platform_sources}" \
     "${v2_root}/apps/example/App.tsx" \
     -path '*/vendor' -prune -o -type f -newer "${artifact}" -print -quit)"
 

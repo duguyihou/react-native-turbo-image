@@ -43,6 +43,17 @@ TEST(ResolveRequest, ExplicitCacheKeyWins) {
   EXPECT_EQ(result.request->url, "https://cdn.example.com/a.png?sig=123");
 }
 
+TEST(ParseCachePolicy, AcceptsExactlyTheJsNames) {
+  EXPECT_EQ(parseCachePolicy("default"), CachePolicy::Default);
+  EXPECT_EQ(parseCachePolicy("memoryOnly"), CachePolicy::MemoryOnly);
+  EXPECT_EQ(parseCachePolicy("noCache"), CachePolicy::NoCache);
+  EXPECT_EQ(parseCachePolicy("cacheOnly"), CachePolicy::CacheOnly);
+  // 1.x names are mapped in JS, never sent to native.
+  EXPECT_EQ(parseCachePolicy("dataCache"), std::nullopt);
+  EXPECT_EQ(parseCachePolicy(""), std::nullopt);
+  EXPECT_EQ(parseCachePolicy("Default"), std::nullopt);
+}
+
 TEST(LoadErrorCodeName, NamesAreTheJsContract) {
   EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Unknown), "unknown");
   EXPECT_EQ(loadErrorCodeName(LoadErrorCode::InvalidRequest), "invalidRequest");

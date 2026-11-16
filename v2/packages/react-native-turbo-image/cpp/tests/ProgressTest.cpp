@@ -49,6 +49,26 @@ TEST(ProgressThrottle, UnknownTotalReportsEveryStep) {
   EXPECT_FALSE(throttle.shouldReport(step + 2, 0));
 }
 
+TEST(ProgressThrottle, FinishCompletesAShortReadOnce) {
+  ProgressThrottle throttle;
+  EXPECT_TRUE(throttle.shouldReport(990, 1000));  // decoder stopped early
+  EXPECT_TRUE(throttle.finish(1000));
+  EXPECT_FALSE(throttle.finish(1000));
+  EXPECT_FALSE(throttle.shouldReport(1000, 1000));  // already reported
+}
+
+TEST(ProgressThrottle, FinishIsANoOpWhenCompletionWasReported) {
+  ProgressThrottle throttle;
+  EXPECT_TRUE(throttle.shouldReport(1000, 1000));
+  EXPECT_FALSE(throttle.finish(1000));
+}
+
+TEST(ProgressThrottle, FinishNeedsAKnownTotal) {
+  ProgressThrottle throttle;
+  EXPECT_FALSE(throttle.finish(-1));
+  EXPECT_FALSE(throttle.finish(0));
+}
+
 TEST(ProgressThrottle, RejectsNegativeProgress) {
   ProgressThrottle throttle;
   EXPECT_FALSE(throttle.shouldReport(-1, 100));

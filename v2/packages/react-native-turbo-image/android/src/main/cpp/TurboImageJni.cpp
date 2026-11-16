@@ -100,6 +100,37 @@ Java_com_turboimage_core_TurboImageCore_nativeShouldReportProgress(JNIEnv* env, 
   return report ? JNI_TRUE : JNI_FALSE;
 }
 
+// Same LongArray state as nativeShouldReportProgress; see
+// ProgressThrottle::finish for why a success may need a final event.
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeFinishProgress(JNIEnv* env, jobject /* this */,
+                                                              jlongArray state, jlong total) {
+  jlong fields[3];
+  env->GetLongArrayRegion(state, 0, 3, fields);
+  turboimage::ProgressThrottle throttle{
+      .lastPercent = fields[0], .lastReportedBytes = fields[1], .reportedCompletion = fields[2]};
+  const bool report = throttle.finish(total);
+  fields[0] = throttle.lastPercent;
+  fields[1] = throttle.lastReportedBytes;
+  fields[2] = throttle.reportedCompletion;
+  env->SetLongArrayRegion(state, 0, 3, fields);
+  return report ? JNI_TRUE : JNI_FALSE;
+}
+
+// -1 for unknown/empty, else a `turboimage::CachePolicy` value.
+extern "C" JNIEXPORT jint JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeParseCachePolicy(JNIEnv* env, jobject /* this */,
+                                                                jstring js) {
+  const auto policy = turboimage::parseCachePolicy(toStdString(env, js));
+  return policy ? static_cast<jint>(*policy) : -1;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeCanonicalCacheKey(JNIEnv* env, jobject /* this */,
+                                                                 jstring uri) {
+  return env->NewStringUTF(turboimage::canonicalCacheKey(toStdString(env, uri)).c_str());
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeLoadErrorCodeName(JNIEnv* env, jobject /* this */,
                                                                  jint code) {

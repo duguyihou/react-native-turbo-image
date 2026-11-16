@@ -114,6 +114,54 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     return NukeLoadTask(imageTask: imageTask, task: task, progressTask: progressTask)
   }
 
+  // MARK: - Cache management (TurboImageModule)
+
+  public func prefetchRequest(
+    _ request: TIImageRequest,
+    completion: @escaping (Bool) -> Void
+  ) -> any TIImageLoadTask {
+    var nukeRequest = Self.makeNukeRequest(from: request)
+    // Prefetches yield to on-screen loads.
+    nukeRequest.priority = .low
+    let imageTask = pipeline.imageTask(with: nukeRequest)
+    let completionBox = UncheckedSendable(completion)
+    let task = Task { @MainActor in
+      let succeeded = (try? await imageTask.response) != nil
+      guard !Task.isCancelled else { return }
+      completionBox.value(succeeded)
+    }
+    return NukeLoadTask(imageTask: imageTask, task: task, progressTask: nil)
+  }
+
+  public func removeCachedImage(forKey cacheKey: String) {
+    let request = Self.keyOnlyRequest(cacheKey)
+    // Decoded image (memory) and processed variants (disk), then the
+    // original bytes, which DataCache stores under the data key.
+    pipeline.cache.removeCachedImage(for: request, caches: .all)
+    pipeline.cache.removeCachedData(for: request)
+  }
+
+  public func clearMemoryCache() {
+    pipeline.cache.removeAll(caches: .memory)
+  }
+
+  public func clearDiskCache() {
+    pipeline.cache.removeAll(caches: .disk)
+  }
+
+  public func memoryCachedImage(forKey cacheKey: String) -> UIImage? {
+    pipeline.cache.cachedImage(for: Self.keyOnlyRequest(cacheKey), caches: .memory)?.image
+  }
+
+  /// Nuke derives both cache keys from `imageID` when it is set, so a request
+  /// carrying only the key addresses the same entries a view load wrote. The
+  /// URL is never fetched; it only has to be non-nil.
+  private static func keyOnlyRequest(_ cacheKey: String) -> ImageRequest {
+    var request = ImageRequest(url: URL(string: "turboimage://cache-key"))
+    request.imageID = cacheKey
+    return request
+  }
+
   /// Maps Nuke's errors onto TurboImage's cross-platform codes
   /// (`turboimage::LoadErrorCode`). Must stay in step with
   /// `CoilImageLoaderAdapter.classify` on Android.

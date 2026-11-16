@@ -7,7 +7,7 @@
 // the load they depend on, so outcomes are deterministic.
 //
 // When every scenario has settled, the app logs exactly one line:
-//   TURBOIMAGE_SMOKE {"pass":true,"results":{...}}
+//   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"failed":{...}}
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -28,6 +28,8 @@ const URI_LIFECYCLE = 'https://picsum.photos/id/1084/600/400';
 // onStart, so the supersede scenario can cancel it mid-flight.
 const URI_LARGE = 'https://picsum.photos/id/1069/3000/2000';
 const URI_SMALL = 'https://picsum.photos/id/1080/600/400';
+// Used only by the cache-module scenarios (prefetch → dispose chain).
+const URI_PREFETCH = 'https://picsum.photos/id/1050/600/400';
 
 type Outcome = 'load' | 'error';
 type Settle = (id: string, ok: boolean, outcome: string, detail: string) => void;
@@ -46,10 +48,17 @@ type Scenario = {
   expect: Outcome;
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
-  // Mount only after this scenario has settled.
-  after?: string;
+  // Mount only after these scenarios have settled.
+  after?: string | string[];
   // Scenarios that need more than one load render a probe instead.
-  kind?: 'recycle' | 'lifecycle' | 'supersede';
+  kind?:
+    | 'recycle'
+    | 'lifecycle'
+    | 'supersede'
+    | 'prefetch'
+    | 'prefetchInvalid'
+    | 'dispose'
+    | 'clearCaches';
 };
 
 const SCENARIOS: Scenario[] = [
@@ -69,6 +78,19 @@ const SCENARIOS: Scenario[] = [
     title: 'cacheOnly never touches the network',
     source: { uri: URI_NEVER_LOADED },
     placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' },
+    showPlaceholderOnFailure: true,
+    cachePolicy: 'cacheOnly',
+    expect: 'error',
+    expectCode: 'notCached',
+    after: 'network',
+  },
+  {
+    id: 'memoryCacheKeyPlaceholder',
+    title: 'memoryCacheKey placeholder shows the photo loaded above',
+    // The source can never load (cacheOnly miss); the placeholder is the
+    // `network` scenario's image, taken from the memory cache.
+    source: { uri: 'https://picsum.photos/id/1036/600/400' },
+    placeholder: { memoryCacheKey: URI_A },
     showPlaceholderOnFailure: true,
     cachePolicy: 'cacheOnly',
     expect: 'error',
@@ -143,6 +165,44 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'dataCache',
     rounded: true,
     expect: 'load',
+  },
+  {
+    id: 'prefetchThenCacheOnly',
+    title: 'TurboImage.prefetch fills the cache a view then reads',
+    source: { uri: URI_PREFETCH },
+    cachePolicy: 'cacheOnly',
+    expect: 'load',
+    kind: 'prefetch',
+  },
+  {
+    id: 'disposeEvicts',
+    title: 'TurboImage.dispose evicts it again (cacheOnly misses)',
+    source: { uri: URI_PREFETCH },
+    cachePolicy: 'cacheOnly',
+    expect: 'error',
+    expectCode: 'notCached',
+    after: 'prefetchThenCacheOnly',
+    kind: 'dispose',
+  },
+  {
+    id: 'prefetchInvalid',
+    title: 'prefetch of an invalid source resolves false',
+    source: { uri: 'ftp://example.com/c.png' },
+    cachePolicy: 'default',
+    expect: 'error',
+    kind: 'prefetchInvalid',
+  },
+  {
+    id: 'clearCaches',
+    title: 'clearMemoryCache + clearDiskCache empty both tiers',
+    // Written by explicitKeyWrite, read by explicitKeyRead; after clearing,
+    // a cacheOnly read must miss.
+    source: { uri: URI_KEYED_1, cacheKey: 'shared-key' },
+    cachePolicy: 'cacheOnly',
+    expect: 'error',
+    expectCode: 'notCached',
+    after: ['explicitKeyRead', 'disposeEvicts', 'memoryCacheKeyPlaceholder', 'cacheHitCanonicalKey', 'recycledSameSource'],
+    kind: 'clearCaches',
   },
   {
     id: 'lifecycle',
@@ -324,7 +384,67 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
   );
 }
 
+// Runs `before` (a cache-module call), then mounts a cacheOnly view of the
+// scenario's source and checks the outcome against `expect`/`expectCode`.
+function CacheThenView({
+  scenario,
+  settle,
+  before,
+}: {
+  scenario: Scenario;
+  settle: Settle;
+  before: () => Promise<boolean>;
+}) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    before().then(
+      (ok) => (ok ? setReady(true) : settle(scenario.id, false, 'error', 'module call returned false')),
+      (e) => settle(scenario.id, false, 'error', `module call rejected: ${e}`)
+    );
+    // Run once per mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!ready) {
+    return <View style={styles.image} />;
+  }
+  return <PlainImage scenario={scenario} settle={settle} />;
+}
+
+const PrefetchProbe = (p: { scenario: Scenario; settle: Settle }) => (
+  <CacheThenView {...p} before={() => TurboImage.prefetch([p.scenario.source])} />
+);
+
+const DisposeProbe = (p: { scenario: Scenario; settle: Settle }) => (
+  <CacheThenView {...p} before={() => TurboImage.dispose([p.scenario.source]).then(() => true)} />
+);
+
+const ClearCachesProbe = (p: { scenario: Scenario; settle: Settle }) => (
+  <CacheThenView
+    {...p}
+    before={async () => {
+      await TurboImage.clearMemoryCache();
+      await TurboImage.clearDiskCache();
+      return true;
+    }}
+  />
+);
+
+function PrefetchInvalidProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  useEffect(() => {
+    TurboImage.prefetch([scenario.source]).then(
+      (ok) => settle(scenario.id, ok === false, 'error', `prefetch resolved ${ok}`),
+      (e) => settle(scenario.id, false, 'error', `prefetch rejected: ${e}`)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return <View style={styles.image} />;
+}
+
 const PROBES = {
+  prefetch: PrefetchProbe,
+  prefetchInvalid: PrefetchInvalidProbe,
+  dispose: DisposeProbe,
+  clearCaches: ClearCachesProbe,
   recycle: RecycleProbe,
   lifecycle: LifecycleProbe,
   supersede: SupersedeProbe,
@@ -357,7 +477,10 @@ export default function App() {
     setResults((prev) => (prev[id] ? prev : { ...prev, [id]: { ok, outcome, detail } }));
   }, []);
 
-  const mounted = useMemo(() => SCENARIOS.filter((s) => !s.after || results[s.after]), [results]);
+  const mounted = useMemo(
+    () => SCENARIOS.filter((s) => [s.after ?? []].flat().every((dep) => results[dep])),
+    [results]
+  );
   const settled = Object.keys(results).length === SCENARIOS.length;
 
   useEffect(() => {
@@ -366,11 +489,15 @@ export default function App() {
     }
     reported.current = true;
     const pass = Object.values(results).every((r) => r.ok);
+    // Compact on purpose: iOS os_log truncates messages at ~1 KB, which cut
+    // the full results off mid-JSON. Details are only needed for failures.
+    const failed = Object.fromEntries(Object.entries(results).filter(([, r]) => !r.ok));
+    const passed = Object.keys(results).length - Object.keys(failed).length;
     // Release builds on iOS drop everything below RCTLogLevelError, and the
     // smoke scripts run release builds, so the result has to go out as an
     // error there. Debug keeps console.log to avoid a LogBox error toast.
     const report = __DEV__ ? console.log : console.error;
-    report(`TURBOIMAGE_SMOKE ${JSON.stringify({ pass, results })}`);
+    report(`TURBOIMAGE_SMOKE ${JSON.stringify({ pass, passed, total: SCENARIOS.length, failed })}`);
   }, [settled, results]);
 
   useEffect(() => {

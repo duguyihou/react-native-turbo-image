@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import NativeTurboImageModule from './NativeTurboImageModule';
 import TurboImageView from './TurboImageViewNativeComponent';
 import type { NativeProps } from './TurboImageViewNativeComponent';
 
@@ -51,13 +52,16 @@ function resolveCachePolicy(
   return 'default';
 }
 
-export function TurboImage({ cachePolicy, rounded, style, ...props }: TurboImageProps) {
+function TurboImageComponent({ cachePolicy, rounded, style, ...props }: TurboImageProps) {
   // Same rule as 1.x: one placeholder kind at a time. Native would silently
-  // prefer blurhash; failing loudly in development is kinder.
-  if (__DEV__ && props.placeholder?.blurhash && props.placeholder?.thumbhash) {
-    throw new Error(
-      'TurboImage: pass either placeholder.blurhash or placeholder.thumbhash, not both'
-    );
+  // pick one; failing loudly in development is kinder.
+  if (__DEV__ && props.placeholder) {
+    const kinds = Object.values(props.placeholder).filter(Boolean).length;
+    if (kinds > 1) {
+      throw new Error(
+        'TurboImage: choose only one placeholder (blurhash, thumbhash or memoryCacheKey)'
+      );
+    }
   }
 
   const image = (
@@ -79,6 +83,21 @@ export function TurboImage({ cachePolicy, rounded, style, ...props }: TurboImage
 
 const styles = StyleSheet.create({
   rounded: { overflow: 'hidden', borderRadius: 9999 },
+});
+
+type CacheSource = { uri: string; cacheKey?: string };
+
+// 1.x exposed these as statics on the component; kept for compatibility.
+export const TurboImage = Object.assign(TurboImageComponent, {
+  prefetch: (
+    sources: CacheSource[],
+    cachePolicy: TurboImageProps['cachePolicy'] = 'default'
+  ): Promise<boolean> =>
+    NativeTurboImageModule.prefetch(sources, resolveCachePolicy(cachePolicy) ?? 'default'),
+  dispose: (sources: CacheSource[]): Promise<void> =>
+    NativeTurboImageModule.dispose(sources),
+  clearMemoryCache: (): Promise<void> => NativeTurboImageModule.clearMemoryCache(),
+  clearDiskCache: (): Promise<void> => NativeTurboImageModule.clearDiskCache(),
 });
 
 export default TurboImage;

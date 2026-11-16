@@ -43,6 +43,8 @@ class TurboImageView(
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
   var thumbhash: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
+  var memoryCacheKey: String? = null
+    set(value) { if (field != value) { field = value; needsPlaceholder = true } }
 
   private var needsReload = false
   private var needsPlaceholder = false
@@ -55,6 +57,8 @@ class TurboImageView(
   private var loadFailed = false
   private var placeholderGeneration = 0
   private var progressThrottle = TurboImageCore.ProgressThrottle()
+  // Last Content-Length seen this load, for the throttle's finish() step.
+  private var lastProgressTotal = -1L
 
   /** 1.x semantics: false removes the placeholder when the load fails. */
   var showPlaceholderOnFailure = false
@@ -100,6 +104,15 @@ class TurboImageView(
   private fun applyPlaceholder() {
     val generation = ++placeholderGeneration
     if (!placeholderAllowed()) return
+    // memoryCacheKey: a synchronous memory-cache lookup (no decode, no
+    // disk), keyed through the core's canonical form exactly like a source.
+    memoryCacheKey?.takeIf { it.isNotEmpty() }?.let { key ->
+      loader.memoryCachedDrawable(TurboImageCore.canonicalCacheKey(key), resources)?.let {
+        setImageDrawable(it)
+      }
+      return
+    }
+
     // Snapshot: props may change before the decode runs.
     val blur = blurhash.orEmpty()
     val thumb = thumbhash.orEmpty()
@@ -145,6 +158,7 @@ class TurboImageView(
     showingFinalImage = false
     loadFailed = false
     progressThrottle = TurboImageCore.ProgressThrottle()
+    lastProgressTotal = -1L
 
     // Requests the core rejects fail before onStart: no load ever began.
     val invalid = TurboImageCore.LoadErrorCode.INVALID_REQUEST.nativeValue
@@ -174,17 +188,21 @@ class TurboImageView(
         fadeDuration,
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) {
-            if (handle !== thisHandle || !progressThrottle.shouldReport(completed, total)) return
-            emit("topProgress") {
-              putDouble("completed", completed.toDouble())
-              putDouble("total", if (total > 0) total.toDouble() else -1.0)
-            }
+            if (handle !== thisHandle) return
+            lastProgressTotal = total
+            if (!progressThrottle.shouldReport(completed, total)) return
+            emitProgress(completed, total)
           }
 
           override fun onSuccess(width: Int, height: Int) {
             if (handle !== thisHandle) return
             handle = null
             showingFinalImage = true
+            // A successful load ends progress at 100% (core rule, see finish()):
+            // Coil may decode a noCache response without reading it to EOF.
+            if (progressThrottle.finish(lastProgressTotal)) {
+              emitProgress(lastProgressTotal, lastProgressTotal)
+            }
             emit("topSuccess") {
               putDouble("width", width.toDouble())
               putDouble("height", height.toDouble())
@@ -215,6 +233,12 @@ class TurboImageView(
     emit("topFailure") {
       putString("code", TurboImageCore.loadErrorCodeName(code))
       putString("error", message)
+    }
+
+  private fun emitProgress(completed: Long, total: Long) =
+    emit("topProgress") {
+      putDouble("completed", completed.toDouble())
+      putDouble("total", if (total > 0) total.toDouble() else -1.0)
     }
 
   private fun emitCompletion(state: String) = emit("topCompletion") { putString("state", state) }

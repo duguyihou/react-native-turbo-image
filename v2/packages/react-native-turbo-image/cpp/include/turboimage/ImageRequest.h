@@ -56,6 +56,12 @@ struct TierAccess {
   friend bool operator==(const TierAccess&, const TierAccess&) = default;
 };
 
+// Parses the JS spelling ('default' | 'memoryOnly' | 'noCache' |
+// 'cacheOnly'). Unknown or empty strings yield std::nullopt; callers treat
+// that as Default (Codegen already defaults the view prop). One parser so
+// views and the cache module cannot disagree.
+[[nodiscard]] std::optional<CachePolicy> parseCachePolicy(std::string_view js);
+
 struct ImageRequest {
   std::string uri;
   // An explicit cache key overrides URI-derived keys. Used when the same

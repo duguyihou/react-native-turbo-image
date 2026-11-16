@@ -102,6 +102,14 @@ ResolveResult resolveRequest(const ImageRequest& request) {
   return {.request = std::move(resolved), .error = RequestError::None};
 }
 
+std::optional<CachePolicy> parseCachePolicy(std::string_view js) {
+  if (js == "default") return CachePolicy::Default;
+  if (js == "memoryOnly") return CachePolicy::MemoryOnly;
+  if (js == "noCache") return CachePolicy::NoCache;
+  if (js == "cacheOnly") return CachePolicy::CacheOnly;
+  return std::nullopt;
+}
+
 std::string_view loadErrorCodeName(LoadErrorCode code) {
   // Exhaustive on purpose (no `default:`), so a new code must get a name.
   switch (code) {

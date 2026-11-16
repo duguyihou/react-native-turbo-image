@@ -27,7 +27,7 @@ newest_artifact="${app}/TurboImageExample"
 if [[ "${app}/main.jsbundle" -nt "${newest_artifact}" ]]; then
   newest_artifact="${app}/main.jsbundle"
 fi
-assert_fresh_build "${newest_artifact}"
+assert_fresh_build "${newest_artifact}" ios
 
 # Default to the first available iPhone simulator.
 udid="${2:-$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')}"

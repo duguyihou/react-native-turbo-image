@@ -17,14 +17,14 @@ object TurboImageCore {
     CACHE_ONLY(3);
 
     companion object {
-      /** Maps the codegen string union from TurboImageViewNativeComponent.ts. */
-      fun fromJs(value: String?): CachePolicy =
-        when (value) {
-          "memoryOnly" -> MEMORY_ONLY
-          "noCache" -> NO_CACHE
-          "cacheOnly" -> CACHE_ONLY
-          else -> DEFAULT
-        }
+      /**
+       * Parses the JS spelling with the core's parser (one parser for views
+       * and the module, on both platforms). Unknown or null → DEFAULT.
+       */
+      fun fromJs(value: String?): CachePolicy {
+        val native = nativeParseCachePolicy(value.orEmpty())
+        return entries.firstOrNull { it.nativeValue == native } ?: DEFAULT
+      }
     }
   }
 
@@ -36,6 +36,13 @@ object TurboImageCore {
     NETWORK(3),
     DECODE(4),
   }
+
+  /** The core's canonical cache key for a URI (or explicit key). */
+  fun canonicalCacheKey(uri: String): String = nativeCanonicalCacheKey(uri)
+
+  private external fun nativeParseCachePolicy(js: String): Int
+
+  private external fun nativeCanonicalCacheKey(uri: String): String
 
   /** The JS spelling of a load error code, owned by the C++ core. */
   fun loadErrorCodeName(code: Int): String = nativeLoadErrorCodeName(code)
@@ -68,7 +75,12 @@ object TurboImageCore {
 
     fun shouldReport(completed: Long, total: Long): Boolean =
       nativeShouldReportProgress(state, completed, total)
+
+    /** True if a final {total, total} event must still be emitted on success. */
+    fun finish(total: Long): Boolean = nativeFinishProgress(state, total)
   }
+
+  private external fun nativeFinishProgress(state: LongArray, total: Long): Boolean
 
   private external fun nativeShouldReportProgress(state: LongArray, completed: Long, total: Long): Boolean
 

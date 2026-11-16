@@ -19,7 +19,7 @@ timeout_s=120
 
 # shellcheck source=./assert-fresh-build.sh source-path=SCRIPTDIR
 source "${script_dir}/assert-fresh-build.sh"
-assert_fresh_build "${apk}"
+assert_fresh_build "${apk}" android
 
 adb="${ANDROID_HOME:-${HOME}/Library/Android/sdk}/platform-tools/adb"
 if [[ ! -x "${adb}" ]]; then

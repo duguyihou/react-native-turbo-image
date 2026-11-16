@@ -47,7 +47,7 @@
   },
   "codegenConfig": {
     "name": "TurboImageSpec",
-    "type": "components",
+    "type": "all",
     "jsSrcsDir": "src",
     "android": {
       "javaPackageName": "com.turboimage"
@@ -55,6 +55,9 @@
     "ios": {
       "componentProvider": {
         "TurboImageView": "TurboImageComponentView"
+      },
+      "modulesProvider": {
+        "TurboImageModule": "TurboImageModule"
       }
     }
   },

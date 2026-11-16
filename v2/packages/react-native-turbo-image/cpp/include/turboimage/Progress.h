@@ -33,6 +33,18 @@ struct ProgressThrottle {
   // Updates that go backwards (a retried request restarting) are dropped
   // until they pass the last reported point.
   [[nodiscard]] bool shouldReport(std::int64_t completed, std::int64_t total);
+
+  // Called once when the load succeeds, with the last total seen. Returns
+  // true if a final {total, total} event must still be emitted, i.e. the
+  // total is known and completion was not reported yet.
+  //
+  // Why: a decoder may stop reading once the image is complete (Coil
+  // decoding a `noCache` response straight from the network stream stops
+  // at the JPEG end marker), so the byte count can end short of
+  // Content-Length on Android while Nuke on iOS always reads to EOF. A
+  // successful load is complete from the app's point of view, so both
+  // platforms end with 100%.
+  [[nodiscard]] bool finish(std::int64_t total);
 };
 
 }  // namespace turboimage

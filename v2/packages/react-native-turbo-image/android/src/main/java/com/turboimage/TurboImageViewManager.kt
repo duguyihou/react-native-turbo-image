@@ -8,8 +8,7 @@ import com.facebook.react.uimanager.ViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerInterface
 import com.turboimage.core.TurboImageCore
-import com.turboimage.loader.CoilImageLoaderAdapter
-import com.turboimage.loader.ImageLoaderAdapter
+import com.turboimage.loader.TurboImageLoaders
 
 /**
  * Codegen-backed view manager. The delegate/interface pair is generated from
@@ -22,17 +21,14 @@ class TurboImageViewManager :
 
   private val delegate = TurboImageViewManagerDelegate(this)
 
-  // One adapter (and therefore one Coil ImageLoader and cache) per process.
-  // Created lazily because it needs a Context.
-  private var loader: ImageLoaderAdapter? = null
-
   override fun getDelegate(): ViewManagerDelegate<TurboImageView> = delegate
 
   override fun getName() = NAME
 
   override fun createViewInstance(context: ThemedReactContext): TurboImageView {
-    val adapter = loader ?: CoilImageLoaderAdapter(context).also { loader = it }
-    return TurboImageView(context, adapter)
+    // One adapter (one Coil ImageLoader and cache) per process, shared with
+    // TurboImageModule.
+    return TurboImageView(context, TurboImageLoaders.get(context))
   }
 
   override fun setSource(view: TurboImageView, value: ReadableMap?) {
@@ -43,6 +39,8 @@ class TurboImageViewManager :
   override fun setPlaceholder(view: TurboImageView, value: ReadableMap?) {
     view.blurhash = if (value?.hasKey("blurhash") == true) value.getString("blurhash") else null
     view.thumbhash = if (value?.hasKey("thumbhash") == true) value.getString("thumbhash") else null
+    view.memoryCacheKey =
+      if (value?.hasKey("memoryCacheKey") == true) value.getString("memoryCacheKey") else null
   }
 
   override fun setShowPlaceholderOnFailure(view: TurboImageView, value: Boolean) {

@@ -22,6 +22,7 @@
 #include <turboimage/Progress.h>
 
 #import "TIImageLoading.h"
+#import "TIRequestFactory.h"
 
 using namespace facebook::react;
 
@@ -53,11 +54,6 @@ UIViewContentMode toContentMode(TurboImageViewResizeMode mode) {
   }
 }
 
-NSString *toNSString(const std::string &s) {
-  return [[NSString alloc] initWithBytes:s.data()
-                                  length:s.size()
-                                encoding:NSUTF8StringEncoding];
-}
 
 const std::shared_ptr<const TurboImageViewProps> &defaultViewProps() {
   static const auto defaultProps = std::make_shared<const TurboImageViewProps>();
@@ -106,6 +102,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   NSUInteger _placeholderGeneration;
   // Per-load progress throttle (core rule shared with Android).
   turboimage::ProgressThrottle _progressThrottle;
+  // Last Content-Length seen this load, for the throttle's finish() step.
+  int64_t _lastProgressTotal;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -135,7 +133,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     _needsReload = YES;
   }
   if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
-      oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash) {
+      oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash ||
+      oldViewProps.placeholder.memoryCacheKey != newViewProps.placeholder.memoryCacheKey) {
     _needsPlaceholder = YES;
   }
   if (oldViewProps.resizeMode != newViewProps.resizeMode) {
@@ -174,6 +173,17 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     return;
   }
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  // memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk),
+  // keyed through the core's canonical form exactly like a source.
+  if (!props.placeholder.memoryCacheKey.empty()) {
+    NSString *key = TIStringFromStd(turboimage::canonicalCacheKey(props.placeholder.memoryCacheKey));
+    UIImage *cached = [TIImageLoaderRegistry.sharedLoader memoryCachedImageForKey:key];
+    if (cached != nil) {
+      _imageView.image = cached;
+    }
+    return;
+  }
+
   // Copied into the block: props may change before the decode runs.
   const std::string blurhash = props.placeholder.blurhash;
   const std::string thumbhash = props.placeholder.thumbhash;
@@ -208,45 +218,24 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _showingFinalImage = NO;
   _loadFailed = NO;
   _progressThrottle = turboimage::ProgressThrottle{};
+  _lastProgressTotal = -1;
 
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  const auto result = turboimage::resolveRequest({
-      .uri = props.source.uri,
-      .cacheKey = props.source.cacheKey.empty()
-                      ? std::nullopt
-                      : std::optional<std::string>(props.source.cacheKey),
-      .cachePolicy = toCorePolicy(props.cachePolicy),
-  });
-  // Requests the core rejects fail before onStart: no load ever began.
-  if (!result.ok()) {
-    [self emitFailure:turboimage::LoadErrorCode::InvalidRequest
-              message:[NSString stringWithFormat:@"Invalid request (core error %d)",
-                                                 static_cast<int>(result.error)]];
-    [self applyFailureToPlaceholder];
-    [self emitCompletion:@"completed"];
-    return;
-  }
-
-  const auto &resolved = *result.request;
-  NSURL *url = [NSURL URLWithString:toNSString(resolved.url)];
+  // Same factory as the cache module, so prefetched keys always match.
+  const auto built = TIMakeImageRequest(props.source.uri, props.source.cacheKey,
+                                        toCorePolicy(props.cachePolicy));
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
-  if (url == nil || loader == nil) {
-    [self emitFailure:url == nil ? turboimage::LoadErrorCode::InvalidRequest
-                                 : turboimage::LoadErrorCode::Unknown
-              message:url == nil ? @"Invalid URL" : @"No TurboImage loader adapter is linked"];
+  // Requests the core rejects fail before onStart: no load ever began.
+  if (built.request == nil || loader == nil) {
+    [self emitFailure:built.request == nil ? built.error : turboimage::LoadErrorCode::Unknown
+              message:built.request == nil ? built.message
+                                           : @"No TurboImage loader adapter is linked"];
     [self applyFailureToPlaceholder];
     [self emitCompletion:@"completed"];
     return;
   }
-
-  TIImageRequest *request = [[TIImageRequest alloc] initWithURL:url
-                                                       cacheKey:toNSString(resolved.cacheKey)
-                                                memoryCacheRead:resolved.memory.read
-                                               memoryCacheWrite:resolved.memory.write
-                                                  diskCacheRead:resolved.disk.read
-                                                 diskCacheWrite:resolved.disk.write
-                                                   allowNetwork:resolved.allowNetwork];
-  NSString *source = url.absoluteString;
+  TIImageRequest *request = built.request;
+  NSString *source = request.url.absoluteString;
 
   [self emitStart];
 
@@ -257,8 +246,11 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   thisTask = [loader loadImageWithRequest:request
       progress:^(int64_t completed, int64_t total) {
         __typeof(self) strongSelf = weakSelf;
-        if (strongSelf == nil || strongSelf->_task != thisTask ||
-            !strongSelf->_progressThrottle.shouldReport(completed, total)) {
+        if (strongSelf == nil || strongSelf->_task != thisTask) {
+          return;
+        }
+        strongSelf->_lastProgressTotal = total;
+        if (!strongSelf->_progressThrottle.shouldReport(completed, total)) {
           return;
         }
         [strongSelf emitProgress:completed total:(total > 0 ? total : -1)];
@@ -271,6 +263,11 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
         strongSelf->_task = nil;
         if (image != nil) {
           strongSelf->_showingFinalImage = YES;
+          // A successful load ends progress at 100% (core rule, see finish()).
+          const int64_t total = strongSelf->_lastProgressTotal;
+          if (strongSelf->_progressThrottle.finish(total)) {
+            [strongSelf emitProgress:total total:total];
+          }
           [strongSelf showFinalImage:image animated:!fromMemoryCache];
           [strongSelf emitSuccess:image.size source:source];
         } else {
