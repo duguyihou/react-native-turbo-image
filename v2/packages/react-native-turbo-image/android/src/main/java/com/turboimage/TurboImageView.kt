@@ -51,6 +51,7 @@ class TurboImageView(
   // must not replace it, and a newer decode supersedes an older one.
   private var showingFinalImage = false
   private var placeholderGeneration = 0
+  private var progressThrottle = TurboImageCore.ProgressThrottle()
 
   init {
     scaleType = ScaleType.CENTER_CROP
@@ -111,19 +112,35 @@ class TurboImageView(
   private fun maybeReload() {
     if (!needsReload) return
     needsReload = false
-    cancel()
+    // A load still in flight is superseded: tell JS it was cancelled, so
+    // every onStart is matched by exactly one onCompletion (as on iOS).
+    if (handle != null) {
+      cancel()
+      emitCompletion("cancelled")
+    } else {
+      cancel()
+    }
     setImageDrawable(null)
     showingFinalImage = false
+    progressThrottle = TurboImageCore.ProgressThrottle()
 
+    // Requests the core rejects fail before onStart: no load ever began.
     val invalid = TurboImageCore.LoadErrorCode.INVALID_REQUEST.nativeValue
-    val source = uri ?: return emitError(invalid, "Missing source.uri")
-    when (val result = TurboImageCore.resolve(source, cacheKey, cachePolicy)) {
-      is ResolveFailure -> emitError(invalid, "Invalid request (core error ${result.errorCode})")
+    val result =
+      uri?.let { TurboImageCore.resolve(it, cacheKey, cachePolicy) }
+        ?: ResolveFailure(errorCode = 1) // EmptyUri, same as the core's code
+    when (result) {
+      is ResolveFailure -> {
+        emitFailure(invalid, "Invalid request (core error ${result.errorCode})")
+        emitCompletion("completed")
+      }
       is ResolvedRequest -> startLoad(result)
     }
   }
 
   private fun startLoad(request: ResolvedRequest) {
+    emit("topStart") { putString("state", "running") }
+
     // Capture the handle identity so a late callback from a replaced load
     // cannot touch this view (same guard as the iOS view).
     var thisHandle: LoadHandle? = null
@@ -132,17 +149,31 @@ class TurboImageView(
         this as ImageView,
         request,
         object : ImageLoaderAdapter.Listener {
+          override fun onProgress(completed: Long, total: Long) {
+            if (handle !== thisHandle || !progressThrottle.shouldReport(completed, total)) return
+            emit("topProgress") {
+              putDouble("completed", completed.toDouble())
+              putDouble("total", if (total > 0) total.toDouble() else -1.0)
+            }
+          }
+
           override fun onSuccess(width: Int, height: Int) {
             if (handle !== thisHandle) return
             handle = null
             showingFinalImage = true
-            dispatch(LoadEvent(surfaceId(), id, width.toDouble(), height.toDouble()))
+            emit("topSuccess") {
+              putDouble("width", width.toDouble())
+              putDouble("height", height.toDouble())
+              putString("source", request.url)
+            }
+            emitCompletion("completed")
           }
 
           override fun onError(code: Int, message: String) {
             if (handle !== thisHandle) return
             handle = null
-            emitError(code, message)
+            emitFailure(code, message)
+            emitCompletion("completed")
           }
         },
       )
@@ -155,12 +186,16 @@ class TurboImageView(
     ++placeholderGeneration // drop any decode still in flight
   }
 
-  private fun emitError(code: Int, message: String) =
-    dispatch(ErrorEvent(surfaceId(), id, TurboImageCore.loadErrorCodeName(code), message))
+  private fun emitFailure(code: Int, message: String) =
+    emit("topFailure") {
+      putString("code", TurboImageCore.loadErrorCodeName(code))
+      putString("error", message)
+    }
 
-  private fun surfaceId() = UIManagerHelper.getSurfaceId(this)
+  private fun emitCompletion(state: String) = emit("topCompletion") { putString("state", state) }
 
-  private fun dispatch(event: Event<*>) {
+  private fun emit(name: String, payload: WritableMap.() -> Unit) {
+    val event = TurboImageEvent(UIManagerHelper.getSurfaceId(this), id, name, Arguments.createMap().apply(payload))
     UIManagerHelper.getEventDispatcher(reactContext)?.dispatchEvent(event)
   }
 
@@ -173,25 +208,19 @@ class TurboImageView(
       }
   }
 
-  private class LoadEvent(surfaceId: Int, viewTag: Int, val width: Double, val height: Double) :
-    Event<LoadEvent>(surfaceId, viewTag) {
-    override fun getEventName() = "topLoad"
+  // One event class for all five events; they differ only in name and
+  // payload. Coalescing is off: RN's default would merge same-name events in
+  // one batch, which must never drop an onStart/onCompletion pair.
+  private class TurboImageEvent(
+    surfaceId: Int,
+    viewTag: Int,
+    private val name: String,
+    private val payload: WritableMap,
+  ) : Event<TurboImageEvent>(surfaceId, viewTag) {
+    override fun getEventName() = name
 
-    override fun getEventData(): WritableMap =
-      Arguments.createMap().apply {
-        putDouble("width", width)
-        putDouble("height", height)
-      }
-  }
+    override fun canCoalesce() = false
 
-  private class ErrorEvent(surfaceId: Int, viewTag: Int, val code: String, val message: String) :
-    Event<ErrorEvent>(surfaceId, viewTag) {
-    override fun getEventName() = "topError"
-
-    override fun getEventData(): WritableMap =
-      Arguments.createMap().apply {
-        putString("code", code)
-        putString("message", message)
-      }
+    override fun getEventData(): WritableMap = payload
   }
 }

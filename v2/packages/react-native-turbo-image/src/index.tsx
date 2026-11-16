@@ -3,10 +3,13 @@ import type { NativeProps } from './TurboImageViewNativeComponent';
 
 export type TurboImageProps = NativeProps;
 export type {
-  ErrorEvent,
-  LoadEvent,
+  CompletionEvent,
+  FailureEvent,
   NativePlaceholder as Placeholder,
   NativeSource,
+  ProgressEvent,
+  StartEvent,
+  SuccessEvent,
 } from './TurboImageViewNativeComponent';
 
 // 2.0 exposes the native component almost directly. The remaining 1.x JS

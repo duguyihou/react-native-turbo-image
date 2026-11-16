@@ -56,6 +56,22 @@ object TurboImageCore {
    * Decodes a blurhash or base64 thumbhash with the shared C++ core. Pure and
    * thread-safe; call it off the main thread (it can take ~1 ms).
    */
+  /**
+   * Per-load progress throttle; the rule lives in the C++ core
+   * (`turboimage::ProgressThrottle`). Holds only state, owned by one view and
+   * used on the main thread.
+   */
+  class ProgressThrottle {
+    // Mirrors ProgressThrottle's fields: lastPercent, lastReportedBytes,
+    // reportedCompletion. Initial values match the C++ defaults.
+    private val state = longArrayOf(-1L, -1L, 0L)
+
+    fun shouldReport(completed: Long, total: Long): Boolean =
+      nativeShouldReportProgress(state, completed, total)
+  }
+
+  private external fun nativeShouldReportProgress(state: LongArray, completed: Long, total: Long): Boolean
+
   fun decodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels? =
     nativeDecodePlaceholder(blurhash, thumbhash)
 

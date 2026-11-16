@@ -14,6 +14,7 @@
 
 #include "turboimage/ImageRequest.h"
 #include "turboimage/Placeholder.h"
+#include "turboimage/Progress.h"
 
 namespace {
 
@@ -79,6 +80,24 @@ Java_com_turboimage_core_TurboImageCore_nativeDecodePlaceholder(JNIEnv* env, job
   jclass pixelsClass = env->FindClass("com/turboimage/core/PlaceholderPixels");
   jmethodID ctor = env->GetMethodID(pixelsClass, "<init>", "(II[B)V");
   return env->NewObject(pixelsClass, ctor, image->width, image->height, bytes);
+}
+
+// The throttle's state lives in a Kotlin LongArray(3) owned by the view, so
+// the per-load state needs no native handle. Read, decide, write back.
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeShouldReportProgress(JNIEnv* env, jobject /* this */,
+                                                                    jlongArray state,
+                                                                    jlong completed, jlong total) {
+  jlong fields[3];
+  env->GetLongArrayRegion(state, 0, 3, fields);
+  turboimage::ProgressThrottle throttle{
+      .lastPercent = fields[0], .lastReportedBytes = fields[1], .reportedCompletion = fields[2]};
+  const bool report = throttle.shouldReport(completed, total);
+  fields[0] = throttle.lastPercent;
+  fields[1] = throttle.lastReportedBytes;
+  fields[2] = throttle.reportedCompletion;
+  env->SetLongArrayRegion(state, 0, 3, fields);
+  return report ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jstring JNICALL

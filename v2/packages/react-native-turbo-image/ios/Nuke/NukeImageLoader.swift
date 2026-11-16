@@ -23,18 +23,21 @@ private final class NukeLoadTask: NSObject, TIImageLoadTask, @unchecked Sendable
   // Written once on the main thread before the task is returned, then only
   // read. `@unchecked Sendable` is sound because of that publish-once rule.
   private let task: Task<Void, Never>
+  private let progressTask: Task<Void, Never>?
   private let imageTask: ImageTask
 
-  init(imageTask: ImageTask, task: Task<Void, Never>) {
+  init(imageTask: ImageTask, task: Task<Void, Never>, progressTask: Task<Void, Never>?) {
     self.imageTask = imageTask
     self.task = task
+    self.progressTask = progressTask
   }
 
   func cancel() {
-    // Cancelling both is idempotent: Nuke ignores repeated cancels, and
-    // cancelling the Swift Task makes the awaiting closure drop its result.
+    // All idempotent: Nuke ignores repeated cancels, and cancelling the Swift
+    // Tasks makes the awaiting closures drop their results.
     imageTask.cancel()
     task.cancel()
+    progressTask?.cancel()
   }
 }
 
@@ -69,9 +72,24 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
 
   public func loadImage(
     with request: TIImageRequest,
+    progress: TIImageLoadProgress?,
     completion: @escaping TIImageLoadCompletion
   ) -> any TIImageLoadTask {
     let imageTask = pipeline.imageTask(with: Self.makeNukeRequest(from: request))
+
+    // Progress runs in its own MainActor task. The completion path cancels
+    // it *before* calling completion; because both run on the main actor,
+    // the `isCancelled` check below guarantees no progress callback lands
+    // after completion (seam contract).
+    let progressTask: Task<Void, Never>? = progress.map { callback in
+      let progressBox = UncheckedSendable(callback)
+      return Task { @MainActor in
+        for await update in imageTask.progress {
+          if Task.isCancelled { break }
+          progressBox.value(update.completed, update.total)
+        }
+      }
+    }
 
     // Hop the ObjC block into a Sendable box: TIImageLoadCompletion is an
     // ObjC block type the compiler cannot prove Sendable. The completion
@@ -81,17 +99,19 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     let task = Task { @MainActor in
       do {
         let image = try await imageTask.image
+        progressTask?.cancel()
         // Dropping results after cancellation is part of the
         // request-lifecycle contract: a recycled view must never receive
         // the image for its previous source.
         guard !Task.isCancelled else { return }
         completionBox.value(image, nil)
       } catch {
+        progressTask?.cancel()
         guard !Task.isCancelled else { return }
         completionBox.value(nil, Self.classify(error))
       }
     }
-    return NukeLoadTask(imageTask: imageTask, task: task)
+    return NukeLoadTask(imageTask: imageTask, task: task, progressTask: progressTask)
   }
 
   /// Maps Nuke's errors onto TurboImage's cross-platform codes

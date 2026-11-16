@@ -1,10 +1,10 @@
 // TurboImage 2.0 example and on-device smoke test.
 //
-// Each scenario checks one cross-platform contract owned by the C++ core
-// (cache keys, the cache-policy tier matrix, validation) through the real
-// Fabric view and the real Nuke/Coil adapter. Scenarios that depend on cache
-// state run strictly after the load they depend on, so the outcome is
-// deterministic.
+// Each scenario checks one cross-platform contract through the real Fabric
+// view and the real Nuke/Coil adapter: cache keys, the cache-policy tier
+// matrix, validation, error codes, placeholders, view recycling, and the
+// event lifecycle. Scenarios that depend on cache state mount strictly after
+// the load they depend on, so outcomes are deterministic.
 //
 // When every scenario has settled, the app logs exactly one line:
 //   TURBOIMAGE_SMOKE {"pass":true,"results":{...}}
@@ -23,8 +23,14 @@ const URI_A = 'https://picsum.photos/id/1025/600/400';
 const URI_NEVER_LOADED = 'https://picsum.photos/id/1043/600/400';
 const URI_KEYED_1 = 'https://picsum.photos/id/1062/600/400';
 const URI_KEYED_2 = 'https://picsum.photos/id/1074/600/400';
+const URI_LIFECYCLE = 'https://picsum.photos/id/1084/600/400';
+// Large enough (~1 MB) that it is still downloading when JS reacts to
+// onStart, so the supersede scenario can cancel it mid-flight.
+const URI_LARGE = 'https://picsum.photos/id/1069/3000/2000';
+const URI_SMALL = 'https://picsum.photos/id/1080/600/400';
 
 type Outcome = 'load' | 'error';
+type Settle = (id: string, ok: boolean, outcome: string, detail: string) => void;
 
 type Scenario = {
   id: string;
@@ -32,15 +38,15 @@ type Scenario = {
   source: TurboImageProps['source'];
   cachePolicy: NonNullable<TurboImageProps['cachePolicy']>;
   // Failing scenarios carry a placeholder: it must stay visible after the
-  // failure, on both platforms (check screenshots side by side).
+  // failure, on both platforms (compare SMOKE_SCREENSHOT output).
   placeholder?: TurboImageProps['placeholder'];
   expect: Outcome;
-  // For expected errors: the cross-platform `onError.code` that must match.
+  // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
   // Mount only after this scenario has settled.
   after?: string;
-  // Scenarios that need more than one <TurboImage> render this instead.
-  kind?: 'recycle';
+  // Scenarios that need more than one load render a probe instead.
+  kind?: 'recycle' | 'lifecycle' | 'supersede';
 };
 
 const SCENARIOS: Scenario[] = [
@@ -74,8 +80,8 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'cacheHitCanonicalKey',
     title: 'cacheOnly hits the entry written above (fragment ignored)',
-    // Same image with a fragment and an upper-case host: the core's
-    // canonical key must map it to the entry `network` wrote.
+    // Upper-case host and a fragment: the core's canonical key must map it
+    // to the entry `network` wrote.
     source: { uri: URI_A.replace('picsum.photos', 'PICSUM.photos') + '#thumb' },
     cachePolicy: 'cacheOnly',
     expect: 'load',
@@ -107,31 +113,141 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'recycledSameSource',
     title: 'a recycled view with the same source loads again',
-    // Mounts an image, unmounts it once loaded, then mounts a new one with
-    // the same source. Fabric on iOS hands back the recycled view, whose
-    // stale props used to suppress the reload (blank image forever).
+    // Mounts, unmounts once loaded, remounts with the same source: Fabric on
+    // iOS hands back the recycled view, whose stale props used to suppress
+    // the reload.
     source: { uri: URI_A },
     cachePolicy: 'default',
     expect: 'load',
     after: 'network',
     kind: 'recycle',
   },
+  {
+    id: 'lifecycle',
+    title: 'events: start → progress… → success → completion',
+    source: { uri: URI_LIFECYCLE },
+    cachePolicy: 'noCache',
+    expect: 'load',
+    kind: 'lifecycle',
+  },
+  {
+    id: 'supersede',
+    title: 'a superseded load completes as cancelled, never succeeds',
+    source: { uri: URI_LARGE },
+    cachePolicy: 'noCache',
+    expect: 'load',
+    kind: 'supersede',
+  },
 ];
 
 // Fail rather than hang if a callback never arrives (e.g. a lost event).
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 45_000;
 
-type Result = { outcome: Outcome | 'timeout'; detail: string; ok: boolean };
+type Result = { ok: boolean; outcome: string; detail: string };
 
-// First mount loads, unmounts, and a second <TurboImage> with the same
-// source takes its place; only the second mount settles the scenario.
-function RecycleProbe({
-  scenario,
-  onSettled,
-}: {
-  scenario: Scenario;
-  onSettled: (id: string, outcome: Outcome, detail: string, code?: string) => void;
-}) {
+// --- event recording -------------------------------------------------------
+
+type Recorded =
+  | { type: 'start'; source: string }
+  | { type: 'progress'; completed: number; total: number }
+  | { type: 'success'; source: string }
+  | { type: 'failure'; code: string }
+  | { type: 'completion'; state: string };
+
+// Builds the five handlers for one <TurboImage>, tagging every event with
+// the source the element had when it fired.
+function recorder(source: string, push: (e: Recorded) => void) {
+  return {
+    onStart: () => push({ type: 'start', source }),
+    onProgress: (e: { nativeEvent: { completed: number; total: number } }) =>
+      push({ type: 'progress', ...e.nativeEvent }),
+    // The native `source` field, not the JS-side URI: proves *which* load
+    // succeeded even if a late callback raced a source change.
+    onSuccess: (e: { nativeEvent: { source: string } }) =>
+      push({ type: 'success', source: e.nativeEvent.source }),
+    onFailure: (e: { nativeEvent: { code: string } }) =>
+      push({ type: 'failure', code: e.nativeEvent.code }),
+    onCompletion: (e: { nativeEvent: { state: string } }) =>
+      push({ type: 'completion', state: e.nativeEvent.state }),
+  };
+}
+
+const describe = (events: Recorded[]) =>
+  events
+    .map((e) => (e.type === 'completion' ? `completion:${e.state}` : e.type))
+    .filter((t, i, all) => t !== 'progress' || all[i - 1] !== 'progress')
+    .join(' → ');
+
+// Validates one complete, successful load: start, monotonic progress that
+// ends at completed == total (when total is known), success, completion.
+function validateLoad(events: Recorded[]): string | null {
+  const types = events.map((e) => e.type);
+  if (types[0] !== 'start') return 'first event is not start';
+  const last = events[events.length - 1];
+  if (last?.type !== 'completion' || last.state !== 'completed') return 'does not end with completion:completed';
+  if (types[types.length - 2] !== 'success') return 'success is not right before completion';
+  const progress = events.filter((e): e is Extract<Recorded, { type: 'progress' }> => e.type === 'progress');
+  if (progress.length === 0) return 'no progress events for a network load';
+  for (let i = 1; i < progress.length; i++) {
+    if (progress[i]!.completed < progress[i - 1]!.completed) return 'progress went backwards';
+  }
+  const final = progress[progress.length - 1]!;
+  if (final.total > 0 && final.completed !== final.total) return 'last progress is not completed == total';
+  if (types.some((t, i) => t === 'progress' && i > types.indexOf('success'))) return 'progress after success';
+  return null;
+}
+
+// --- probes ---------------------------------------------------------------
+
+function LifecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  const events = useRef<Recorded[]>([]);
+  const push = (e: Recorded) => {
+    events.current.push(e);
+    if (e.type === 'completion') {
+      const problem = validateLoad(events.current);
+      settle(scenario.id, problem === null, 'load', problem ?? describe(events.current));
+    }
+  };
+  return (
+    <TurboImage
+      style={styles.image}
+      source={scenario.source}
+      cachePolicy={scenario.cachePolicy}
+      {...recorder(scenario.source.uri, push)}
+    />
+  );
+}
+
+function SupersedeProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  const [uri, setUri] = useState(scenario.source.uri);
+  const events = useRef<Recorded[]>([]);
+  const push = (e: Recorded) => {
+    events.current.push(e);
+    // Swap the source as soon as the first (large) load has started.
+    if (e.type === 'start' && e.source === URI_LARGE) {
+      setUri(URI_SMALL);
+    }
+    if (e.type === 'completion' && e.state === 'completed') {
+      const all = events.current;
+      const cancelAt = all.findIndex((x) => x.type === 'completion' && x.state === 'cancelled');
+      let problem: string | null = null;
+      if (cancelAt < 0) problem = 'first load did not complete as cancelled';
+      else if (all.some((x) => x.type === 'success' && x.source === URI_LARGE)) problem = 'superseded load reported success';
+      else problem = validateLoad(all.slice(cancelAt + 1));
+      settle(scenario.id, problem === null, 'load', problem ?? describe(all));
+    }
+  };
+  return (
+    <TurboImage
+      style={styles.image}
+      source={{ uri }}
+      cachePolicy={scenario.cachePolicy}
+      {...recorder(uri, push)}
+    />
+  );
+}
+
+function RecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
   const [phase, setPhase] = useState<'first' | 'gap' | 'second'>('first');
   useEffect(() => {
     if (phase === 'gap') {
@@ -146,39 +262,53 @@ function RecycleProbe({
   return (
     <TurboImage
       key={phase}
-      testID={`image-${scenario.id}-${phase}`}
       style={styles.image}
       source={scenario.source}
       cachePolicy={scenario.cachePolicy}
-      onLoad={(e) =>
+      onSuccess={(e) =>
         phase === 'first'
           ? setPhase('gap')
-          : onSettled(scenario.id, 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`)
+          : settle(scenario.id, true, 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`)
       }
-      onError={(e) =>
-        onSettled(scenario.id, 'error', `${e.nativeEvent.code}: ${e.nativeEvent.message}`, e.nativeEvent.code)
+      onFailure={(e) => settle(scenario.id, false, 'error', `${e.nativeEvent.code}: ${e.nativeEvent.error}`)}
+    />
+  );
+}
+
+function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  return (
+    <TurboImage
+      testID={`image-${scenario.id}`}
+      style={styles.image}
+      source={scenario.source}
+      placeholder={scenario.placeholder}
+      cachePolicy={scenario.cachePolicy}
+      resizeMode="cover"
+      onSuccess={(e) =>
+        settle(scenario.id, scenario.expect === 'load', 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`)
+      }
+      onFailure={(e) =>
+        settle(
+          scenario.id,
+          scenario.expect === 'error' &&
+            (scenario.expectCode === undefined || e.nativeEvent.code === scenario.expectCode),
+          'error',
+          `${e.nativeEvent.code}: ${e.nativeEvent.error}`
+        )
       }
     />
   );
 }
 
-function ScenarioCard({
-  scenario,
-  result,
-  onSettled,
-}: {
-  scenario: Scenario;
-  result?: Result;
-  onSettled: (
-    id: string,
-    outcome: Outcome,
-    detail: string,
-    code?: string
-  ) => void;
-}) {
-  const status = result
-    ? `${result.ok ? 'PASS' : 'FAIL'} · ${result.outcome}: ${result.detail}`
-    : 'running…';
+const PROBES = {
+  recycle: RecycleProbe,
+  lifecycle: LifecycleProbe,
+  supersede: SupersedeProbe,
+} as const;
+
+function ScenarioCard({ scenario, result, settle }: { scenario: Scenario; result?: Result; settle: Settle }) {
+  const Probe = scenario.kind ? PROBES[scenario.kind] : PlainImage;
+  const status = result ? `${result.ok ? 'PASS' : 'FAIL'} · ${result.outcome}: ${result.detail}` : 'running…';
   return (
     <View style={styles.card}>
       <Text style={styles.label}>
@@ -186,70 +316,24 @@ function ScenarioCard({
         {'\n'}
         {scenario.cachePolicy} · expect {scenario.expect} · {status}
       </Text>
-      {scenario.kind === 'recycle' ? (
-        <RecycleProbe scenario={scenario} onSettled={onSettled} />
-      ) : (
-      <TurboImage
-        testID={`image-${scenario.id}`}
-        style={styles.image}
-        source={scenario.source}
-        placeholder={scenario.placeholder}
-        cachePolicy={scenario.cachePolicy}
-        resizeMode="cover"
-        onLoad={(e) =>
-          onSettled(
-            scenario.id,
-            'load',
-            `${e.nativeEvent.width}×${e.nativeEvent.height}`
-          )
-        }
-        onError={(e) =>
-          onSettled(
-            scenario.id,
-            'error',
-            `${e.nativeEvent.code}: ${e.nativeEvent.message}`,
-            e.nativeEvent.code
-          )
-        }
-      />
-      )}
+      <Probe scenario={scenario} settle={settle} />
     </View>
   );
 }
+
+// --- app ----------------------------------------------------------------------
 
 export default function App() {
   const [results, setResults] = useState<Record<string, Result>>({});
   const reported = useRef(false);
 
-  // First callback wins: a duplicate onLoad (e.g. a restarted Coil request
+  // First settle wins: a duplicate callback (e.g. a restarted Coil request
   // after reattach) must not flip a settled result.
-  const onSettled = useCallback(
-    (id: string, outcome: Outcome, detail: string, code?: string) => {
-      setResults((prev) => {
-        if (prev[id]) {
-          return prev;
-        }
-        const scenario = SCENARIOS.find((s) => s.id === id)!;
-        return {
-          ...prev,
-          [id]: {
-            outcome,
-            detail,
-            ok:
-              outcome === scenario.expect &&
-              (scenario.expectCode === undefined ||
-                code === scenario.expectCode),
-          },
-        };
-      });
-    },
-    []
-  );
+  const settle = useCallback<Settle>((id, ok, outcome, detail) => {
+    setResults((prev) => (prev[id] ? prev : { ...prev, [id]: { ok, outcome, detail } }));
+  }, []);
 
-  const mounted = useMemo(
-    () => SCENARIOS.filter((s) => !s.after || results[s.after]),
-    [results]
-  );
+  const mounted = useMemo(() => SCENARIOS.filter((s) => !s.after || results[s.after]), [results]);
   const settled = Object.keys(results).length === SCENARIOS.length;
 
   useEffect(() => {
@@ -270,7 +354,7 @@ export default function App() {
       setResults((prev) => {
         const next = { ...prev };
         for (const s of SCENARIOS) {
-          next[s.id] ??= { outcome: 'timeout', detail: '', ok: false };
+          next[s.id] ??= { ok: false, outcome: 'timeout', detail: '' };
         }
         return next;
       });
@@ -291,12 +375,7 @@ export default function App() {
               : `running ${Object.keys(results).length}/${SCENARIOS.length}`}
           </Text>
           {mounted.map((scenario) => (
-            <ScenarioCard
-              key={scenario.id}
-              scenario={scenario}
-              result={results[scenario.id]}
-              onSettled={onSettled}
-            />
+            <ScenarioCard key={scenario.id} scenario={scenario} result={results[scenario.id]} settle={settle} />
           ))}
         </ScrollView>
       </SafeAreaView>

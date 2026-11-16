@@ -53,7 +53,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
 ## 4. Architecture
 
 ```
-            JS  <TurboImage source cachePolicy resizeMode onLoad onError>
+            JS  <TurboImage source placeholder cachePolicy resizeMode on{Start,Progress,Success,Failure,Completion}>
                          │  Codegen (TurboImageSpec)
         ┌────────────────┴─────────────────┐
   iOS   │ TurboImageComponentView (ObjC++) │   TurboImageView/Manager (Kotlin)   Android
@@ -123,8 +123,8 @@ show up there.
 
 ### 4.4 Error taxonomy
 
-`onError` carries `{ code, message }`. `code` is the contract and `message`
-is diagnostic text only. The core defines the codes (`turboimage::LoadErrorCode`
+`onFailure` carries `{ code, error }`. `code` is the contract (new in 2.0), and `error`
+keeps its 1.x name but is diagnostic text only. The core defines the codes (`turboimage::LoadErrorCode`
 and `loadErrorCodeName()`), and each adapter classifies its loader's errors
 into them:
 
@@ -139,6 +139,23 @@ into them:
 Without this, a `cacheOnly` miss surfaced as `Nuke.ImagePipeline.Error error 4`
 on iOS and `HTTP 504` on Android. The on-device smoke test now asserts
 `notCached` on both.
+
+### 4.4a Event lifecycle
+
+The event names and payloads are 1.x's, so app handlers keep working. Per load:
+
+```
+onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width,height,source}
+                                                          | onFailure {code,error}
+                         → onCompletion {state:'completed'}
+```
+
+- **Rejected requests.** A request the core rejects (`invalidRequest`) fails *before* `onStart`, because no load began.
+- **Superseded loads.** A load superseded by a new `source` ends with `onCompletion {state:'cancelled'}` and never reports success. 1.x declared that state but never sent it.
+- **Progress pacing.** Progress is paced by the core's `ProgressThrottle`: each whole percent, or every 64 KiB when `total` is unknown (`-1`). So JS sees the same cadence whether Nuke reports per chunk or OkHttp per `read()`. The throttle state is three integers, so Android keeps it in a `LongArray` passed through JNI, with no native handle.
+- **Android progress.** Coil has no progress API. The adapter tags each request with a per-load token header (`X-TurboImage-Load`), which an OkHttp interceptor strips and uses to count response bytes. 1.x keyed this on the view tag, which could route an old request's progress into a view's new load.
+- **Known gap.** With Coil's dedup, only the first of N identical concurrent loads reports progress on Android. Nuke reports it to all of them.
+- **Tests.** The smoke scenarios `lifecycle` and `supersede` assert these exact sequences on both platforms.
 
 ### 4.5 Placeholders (blurhash, thumbhash)
 
@@ -268,7 +285,7 @@ backed by a non-blocking CI job.
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 8 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 10 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -277,7 +294,9 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 8 scenarios in
 - an explicit `cacheKey` shared across two different URLs,
 - `noCache`,
 - core validation (`invalidRequest`),
-- a recycled view reloading the same source.
+- a recycled view reloading the same source,
+- the event lifecycle,
+- a superseded load ending as `cancelled`.
 
 The failing scenarios carry blurhash and thumbhash placeholders, which must stay visible (`SMOKE_SCREENSHOT=…`). The Android job also runs the core goldens on the emulator (`scripts/test-core-android.sh`).
 
@@ -293,12 +312,12 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 | iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
-| iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, `onLoad` fires |
+| iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, the load event fires |
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 8/8 |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 8/8 |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 10/10 |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 10/10 |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |
@@ -310,7 +329,7 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
    - disposes on detach and restarts on reattach,
    - stops restarting after our explicit `dispose()`.
 
-   Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. A restart after a completed load re-fires Coil's listener, but the view's handle-identity guard drops it, so `onLoad` fires once per request. TODO: a long, fast-scrolling list stress test before enabling recycling.
+   Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. A restart after a completed load re-fires Coil's listener, but the view's handle-identity guard drops it, so `onSuccess` fires once per request. TODO: a long, fast-scrolling list stress test before enabling recycling.
 2. ~~Context lifecycle.~~ **Resolved; this RFC was wrong.** Fabric builds each `ThemedReactContext` on top of the root view's context, which is the Activity (`FabricUIManager.startSurface`). Coil's `getLifecycle()` walks the `ContextWrapper` chain, so it finds the Activity. Requests therefore wait for `STARTED` and are disposed on `ON_DESTROY`, without TurboImage doing anything.
 3. ~~`cacheOnly` race in the example.~~ **Resolved.** The example is now a deterministic smoke test: scenarios that depend on the cache mount only after the load they depend on has settled.
 4. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.

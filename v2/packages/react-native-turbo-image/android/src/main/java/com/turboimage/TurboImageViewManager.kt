@@ -65,10 +65,9 @@ class TurboImageViewManager :
   }
 
   override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> =
-    mapOf(
-      "topLoad" to mapOf("registrationName" to "onLoad"),
-      "topError" to mapOf("registrationName" to "onError"),
-    )
+    listOf("Start", "Progress", "Success", "Failure", "Completion").associate {
+      "top$it" to mapOf("registrationName" to "on$it")
+    }
 
   companion object {
     const val NAME = "TurboImageView"

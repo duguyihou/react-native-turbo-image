@@ -26,19 +26,41 @@ export type NativePlaceholder = Readonly<{
   thumbhash?: string;
 }>;
 
-export type LoadEvent = Readonly<{
-  width: CodegenTypes.Double;
-  height: CodegenTypes.Double;
+// Event payloads keep 1.x's names and fields so app handlers keep working
+// (docs/migration-plan.md). Lifecycle per load:
+//   onStart → onProgress* → (onSuccess | onFailure) → onCompletion
+// A load superseded by a newer one ends with onCompletion {state:'cancelled'}
+// and no success/failure (new in 2.0; 1.x declared but never sent it).
+export type StartEvent = Readonly<{
+  state: string; // 'running'
 }>;
 
-export type ErrorEvent = Readonly<{
+export type ProgressEvent = Readonly<{
+  // Bytes. `total` is -1 when the server sends no Content-Length. Throttled
+  // by the core to ~100 events per load (cpp/include/turboimage/Progress.h).
+  completed: CodegenTypes.Double;
+  total: CodegenTypes.Double;
+}>;
+
+export type SuccessEvent = Readonly<{
+  width: CodegenTypes.Double;
+  height: CodegenTypes.Double;
+  // The URL that was loaded.
+  source: string;
+}>;
+
+export type FailureEvent = Readonly<{
   // Stable, cross-platform classification; one of
   // 'invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown'.
-  // Defined by `turboimage::LoadErrorCode` in cpp/include.
+  // Defined by `turboimage::LoadErrorCode` in cpp/include. New in 2.0.
   code: string;
-  // Diagnostic text from the platform loader. Not stable across platforms
-  // or versions; do not branch on it.
-  message: string;
+  // Diagnostic text from the platform loader (1.x field name). Not stable
+  // across platforms or versions; branch on `code` instead.
+  error: string;
+}>;
+
+export type CompletionEvent = Readonly<{
+  state: string; // 'completed' | 'cancelled'
 }>;
 
 export interface NativeProps extends ViewProps {
@@ -54,8 +76,11 @@ export interface NativeProps extends ViewProps {
     'cover' | 'contain' | 'stretch' | 'center',
     'cover'
   >;
-  onLoad?: CodegenTypes.DirectEventHandler<LoadEvent>;
-  onError?: CodegenTypes.DirectEventHandler<ErrorEvent>;
+  onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
+  onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;
+  onSuccess?: CodegenTypes.DirectEventHandler<SuccessEvent>;
+  onFailure?: CodegenTypes.DirectEventHandler<FailureEvent>;
+  onCompletion?: CodegenTypes.DirectEventHandler<CompletionEvent>;
 }
 
 export default codegenNativeComponent<NativeProps>(

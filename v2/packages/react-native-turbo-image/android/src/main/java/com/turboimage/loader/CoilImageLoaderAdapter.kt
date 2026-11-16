@@ -1,6 +1,8 @@
 package com.turboimage.loader
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.widget.ImageView
 import coil3.Image
 import coil3.ImageLoader
@@ -10,6 +12,8 @@ import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
 import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.HttpException
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
@@ -56,6 +60,19 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     request: ResolvedRequest,
     listener: ImageLoaderAdapter.Listener,
   ): LoadHandle {
+    // `finished` enforces the seam contract on the main thread: no progress
+    // after success/failure/cancel. Progress arrives on OkHttp threads and is
+    // posted to main, where this flag is checked.
+    var finished = false
+    val token =
+      ProgressInterceptor.register { completed, total ->
+        mainHandler.post { if (!finished) listener.onProgress(completed, total) }
+      }
+    fun finish() {
+      finished = true
+      ProgressInterceptor.unregister(token)
+    }
+
     // Mechanical translation only; the C++ core already decided policy.
     val coilRequest =
       ImageRequest.Builder(target.context)
@@ -65,20 +82,28 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
         .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
         .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
+        .httpHeaders(NetworkHeaders.Builder().set(ProgressInterceptor.TOKEN_HEADER, token.toString()).build())
         .target(KeepCurrentImageTarget(target))
         .listener(
-          onSuccess = { _, result -> listener.onSuccess(result.image.width, result.image.height) },
+          onSuccess = { _, result ->
+            finish()
+            listener.onSuccess(result.image.width, result.image.height)
+          },
           onError = { _, result ->
+            finish()
             listener.onError(classify(result.throwable, request), result.throwable.message ?: "Unknown error")
           },
+          onCancel = { finish() },
         )
         .build()
 
     val disposable = imageLoader.enqueue(coilRequest)
     // `dispose()` cancels the job and clears the ViewTarget, so no listener
-    // fires afterwards. Cancellation behaviour under Fabric view recycling
-    // is tracked in docs/rfc §Open questions.
-    return LoadHandle { disposable.dispose() }
+    // fires afterwards (RFC §Open questions 1).
+    return LoadHandle {
+      finish()
+      disposable.dispose()
+    }
   }
 
   /**
@@ -111,6 +136,8 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     }
 
   companion object {
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     /** Must equal `NukeImageLoader.diskCacheBytes` on iOS. */
     const val DISK_CACHE_BYTES = 150L * 1024 * 1024
 
@@ -121,6 +148,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       // interceptors. TODO: expose an opt-in hook for auth headers/cookies.
       val okHttpClient =
         OkHttpClient.Builder()
+          // Application interceptor: sees the token header before the
+          // network layer, strips it, and counts response bytes.
+          .addInterceptor(ProgressInterceptor())
           .connectTimeout(15, TimeUnit.SECONDS)
           .readTimeout(30, TimeUnit.SECONDS)
           .build()

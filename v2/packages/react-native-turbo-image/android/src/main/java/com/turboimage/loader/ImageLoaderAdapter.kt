@@ -11,14 +11,19 @@ import com.turboimage.core.ResolvedRequest
  *
  * Contract:
  *  * [load] is called on the main thread.
- *  * Exactly one [Listener] callback fires, on the main thread, unless the
- *    handle is cancelled first, in which case none fire.
+ *  * Exactly one of [Listener.onSuccess]/[Listener.onError] fires, on the
+ *    main thread, unless the handle is cancelled first, in which case none
+ *    fire. [Listener.onProgress] may fire before that, never after it or
+ *    after cancel, unthrottled (the view applies the core's throttle).
  *  * [LoadHandle.cancel] is idempotent and safe after completion.
  */
 interface ImageLoaderAdapter {
   fun load(target: ImageView, request: ResolvedRequest, listener: Listener): LoadHandle
 
   interface Listener {
+    /** Bytes received / expected; `total` <= 0 when unknown. */
+    fun onProgress(completed: Long, total: Long)
+
     fun onSuccess(width: Int, height: Int)
 
     /**

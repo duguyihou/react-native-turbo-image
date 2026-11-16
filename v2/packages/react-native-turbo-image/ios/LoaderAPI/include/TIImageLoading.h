@@ -48,8 +48,15 @@ typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
 typedef void (^TIImageLoadCompletion)(UIImage *_Nullable image,
                                       NSError *_Nullable error);
 
+/// Progress contract: bytes received / expected (`total` <= 0 if unknown).
+/// Called on the main thread, zero or more times, only before completion and
+/// never after cancel. Unthrottled: the view applies the core's
+/// `ProgressThrottle` so both platforms emit the same event cadence.
+typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
+
 @protocol TIImageLoading <NSObject>
 - (id<TIImageLoadTask>)loadImageWithRequest:(TIImageRequest *)request
+                                   progress:(nullable TIImageLoadProgress)progress
                                  completion:(TIImageLoadCompletion)completion;
 @end
 

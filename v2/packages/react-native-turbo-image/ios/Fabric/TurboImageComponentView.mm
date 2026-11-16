@@ -19,6 +19,7 @@
 
 #include <turboimage/ImageRequest.h>
 #include <turboimage/Placeholder.h>
+#include <turboimage/Progress.h>
 
 #import "TIImageLoading.h"
 
@@ -100,6 +101,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // older decode finishing late is dropped (1.x had no such guard and could
   // flash a stale placeholder after `source` changed).
   NSUInteger _placeholderGeneration;
+  // Per-load progress throttle (core rule shared with Android).
+  turboimage::ProgressThrottle _progressThrottle;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -186,10 +189,16 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 }
 
 - (void)startLoad {
-  [_task cancel];
-  _task = nil;
+  // A load still in flight is superseded: tell JS it was cancelled, so every
+  // onStart is matched by exactly one onCompletion.
+  if (_task != nil) {
+    [_task cancel];
+    _task = nil;
+    [self emitCompletion:@"cancelled"];
+  }
   _imageView.image = nil;
   _showingFinalImage = NO;
+  _progressThrottle = turboimage::ProgressThrottle{};
 
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   const auto result = turboimage::resolveRequest({
@@ -199,24 +208,23 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
                       : std::optional<std::string>(props.source.cacheKey),
       .cachePolicy = toCorePolicy(props.cachePolicy),
   });
+  // Requests the core rejects fail before onStart: no load ever began.
   if (!result.ok()) {
-    [self emitError:turboimage::LoadErrorCode::InvalidRequest
-            message:[NSString stringWithFormat:@"Invalid request (core error %d)",
-                                               static_cast<int>(result.error)]];
+    [self emitFailure:turboimage::LoadErrorCode::InvalidRequest
+              message:[NSString stringWithFormat:@"Invalid request (core error %d)",
+                                                 static_cast<int>(result.error)]];
+    [self emitCompletion:@"completed"];
     return;
   }
 
   const auto &resolved = *result.request;
   NSURL *url = [NSURL URLWithString:toNSString(resolved.url)];
-  if (url == nil) {
-    [self emitError:turboimage::LoadErrorCode::InvalidRequest message:@"Invalid URL"];
-    return;
-  }
-
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
-  if (loader == nil) {
-    [self emitError:turboimage::LoadErrorCode::Unknown
-            message:@"No TurboImage loader adapter is linked"];
+  if (url == nil || loader == nil) {
+    [self emitFailure:url == nil ? turboimage::LoadErrorCode::InvalidRequest
+                                 : turboimage::LoadErrorCode::Unknown
+              message:url == nil ? @"Invalid URL" : @"No TurboImage loader adapter is linked"];
+    [self emitCompletion:@"completed"];
     return;
   }
 
@@ -227,32 +235,43 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
                                                   diskCacheRead:resolved.disk.read
                                                  diskCacheWrite:resolved.disk.write
                                                    allowNetwork:resolved.allowNetwork];
+  NSString *source = url.absoluteString;
 
-  // The adapter drops completions after cancel, but guard by identity as
-  // well: if a newer load replaced this one, its result is stale.
+  [self emitStart];
+
+  // The adapter drops callbacks after cancel, but guard by identity as well:
+  // if a newer load replaced this one, its callbacks are stale.
   __weak __typeof(self) weakSelf = self;
   __block id<TIImageLoadTask> thisTask = nil;
   thisTask = [loader loadImageWithRequest:request
-                               completion:^(UIImage *image, NSError *error) {
-                                 __typeof(self) strongSelf = weakSelf;
-                                 if (strongSelf == nil || strongSelf->_task != thisTask) {
-                                   return;
-                                 }
-                                 strongSelf->_task = nil;
-                                 if (image != nil) {
-                                   strongSelf->_showingFinalImage = YES;
-                                   strongSelf->_imageView.image = image;
-                                   [strongSelf emitLoad:image.size];
-                                 } else {
-                                   // The seam guarantees TIImageLoadErrorDomain;
-                                   // anything else is an adapter bug → unknown.
-                                   const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
-                                                         ? static_cast<turboimage::LoadErrorCode>(error.code)
-                                                         : turboimage::LoadErrorCode::Unknown;
-                                   [strongSelf emitError:code
-                                                 message:error.localizedDescription ?: @"Unknown error"];
-                                 }
-                               }];
+      progress:^(int64_t completed, int64_t total) {
+        __typeof(self) strongSelf = weakSelf;
+        if (strongSelf == nil || strongSelf->_task != thisTask ||
+            !strongSelf->_progressThrottle.shouldReport(completed, total)) {
+          return;
+        }
+        [strongSelf emitProgress:completed total:(total > 0 ? total : -1)];
+      }
+      completion:^(UIImage *image, NSError *error) {
+        __typeof(self) strongSelf = weakSelf;
+        if (strongSelf == nil || strongSelf->_task != thisTask) {
+          return;
+        }
+        strongSelf->_task = nil;
+        if (image != nil) {
+          strongSelf->_showingFinalImage = YES;
+          strongSelf->_imageView.image = image;
+          [strongSelf emitSuccess:image.size source:source];
+        } else {
+          // The seam guarantees TIImageLoadErrorDomain; anything else is an
+          // adapter bug, reported as unknown.
+          const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
+                                ? static_cast<turboimage::LoadErrorCode>(error.code)
+                                : turboimage::LoadErrorCode::Unknown;
+          [strongSelf emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
+        }
+        [strongSelf emitCompletion:@"completed"];
+      }];
   _task = thisTask;
 }
 
@@ -274,18 +293,45 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 #pragma mark - Events
 
-- (void)emitLoad:(CGSize)size {
-  if (auto emitter = std::static_pointer_cast<const TurboImageViewEventEmitter>(_eventEmitter)) {
-    emitter->onLoad({.width = size.width, .height = size.height});
+// One accessor so every emitter shares the "no emitter yet" check (events
+// fired before mount, or after unmount, are dropped).
+- (std::shared_ptr<const TurboImageViewEventEmitter>)emitter {
+  return std::static_pointer_cast<const TurboImageViewEventEmitter>(_eventEmitter);
+}
+
+- (void)emitStart {
+  if (auto emitter = [self emitter]) {
+    emitter->onStart({.state = "running"});
   }
 }
 
-- (void)emitError:(turboimage::LoadErrorCode)code message:(NSString *)message {
-  if (auto emitter = std::static_pointer_cast<const TurboImageViewEventEmitter>(_eventEmitter)) {
-    emitter->onError({
+- (void)emitProgress:(int64_t)completed total:(int64_t)total {
+  if (auto emitter = [self emitter]) {
+    emitter->onProgress({.completed = static_cast<double>(completed),
+                         .total = static_cast<double>(total)});
+  }
+}
+
+- (void)emitSuccess:(CGSize)size source:(NSString *)source {
+  if (auto emitter = [self emitter]) {
+    emitter->onSuccess({.width = size.width,
+                        .height = size.height,
+                        .source = std::string(source.UTF8String ?: "")});
+  }
+}
+
+- (void)emitFailure:(turboimage::LoadErrorCode)code message:(NSString *)message {
+  if (auto emitter = [self emitter]) {
+    emitter->onFailure({
         .code = std::string(turboimage::loadErrorCodeName(code)),
-        .message = std::string(message.UTF8String ?: ""),
+        .error = std::string(message.UTF8String ?: ""),
     });
+  }
+}
+
+- (void)emitCompletion:(NSString *)state {
+  if (auto emitter = [self emitter]) {
+    emitter->onCompletion({.state = std::string(state.UTF8String)});
   }
 }
 

@@ -18,7 +18,7 @@
 
 ### Phase 0: walking skeleton (this branch)
 Done: the `v2/` monorepo, the C++ core with the cache matrix, the Fabric
-component (`source`, `cachePolicy`, `resizeMode`, `onLoad`, `onError`), the
+component (`source`, `cachePolicy`, `resizeMode`, `onLoad`, `onError`; the events were later renamed to 1.x's set), the
 Nuke 13.2.3 and Coil 3.6.3 adapters, SwiftPM + CocoaPods + Gradle + CMake
 builds, and the CI matrix.
 
@@ -26,7 +26,7 @@ builds, and the CI matrix.
 - [ ] Run `v2-ci.yml` on GitHub-hosted runners and fix any differences from the local runs (runner Xcode version, NDK install, emulator).
 - [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios, release builds).
 - [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
-- [x] Cross-platform `onError.code` taxonomy (RFC §4.4).
+- [x] Cross-platform `onFailure.code` taxonomy (RFC §4.4).
 - [x] RN 0.89.0-rc.1 evaluation, scripted (`scripts/eval-rn-version.sh`) and run in CI (non-blocking).
 - [x] iOS Release through RN SwiftPM verified by the smoke test.
 - [x] Smoke scripts refuse stale build artifacts (`scripts/assert-fresh-build.sh`).
@@ -36,7 +36,7 @@ builds, and the CI matrix.
 |---|---|---|
 | `cachePolicy` `urlCache`/`dataCache`/`memory` | Core matrix | Map 1.x names to 2.0 policies in a JS compatibility shim with deprecation warnings |
 | `cacheKey` | ✅ done | |
-| `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | Progress needs a seam extension; Coil progress via an OkHttp interceptor |
+| `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ blurhash and thumbhash done (byte-exact vs. references, kept on failure). `memoryCacheKey` waits for the cache TurboModule |
 | `resize`, `blur`, `monochrome`, `tint`, `borderRadius` processors | Core describes processors; adapters map them to Nuke `ImageProcessors` / Coil `Transformation` | The processor list becomes part of the cache key in core |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop | |
