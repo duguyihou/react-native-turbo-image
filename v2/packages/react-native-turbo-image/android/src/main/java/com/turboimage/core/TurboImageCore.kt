@@ -28,6 +28,18 @@ object TurboImageCore {
     }
   }
 
+  /** Mirrors `turboimage::LoadErrorCode`; the ints are a pinned ABI. */
+  enum class LoadErrorCode(val nativeValue: Int) {
+    UNKNOWN(0),
+    INVALID_REQUEST(1),
+    NOT_CACHED(2),
+    NETWORK(3),
+    DECODE(4),
+  }
+
+  /** The JS spelling of a load error code, owned by the C++ core. */
+  fun loadErrorCodeName(code: Int): String = nativeLoadErrorCodeName(code)
+
   fun resolve(uri: String, cacheKey: String?, cachePolicy: CachePolicy): ResolveResult =
     nativeResolve(uri, cacheKey ?: "", cachePolicy.nativeValue)
 
@@ -37,6 +49,8 @@ object TurboImageCore {
   private external fun nativeResolve(uri: String, cacheKey: String, cachePolicy: Int): ResolveResult
 
   private external fun nativeCoreVersion(): String
+
+  private external fun nativeLoadErrorCodeName(code: Int): String
 }
 
 sealed interface ResolveResult

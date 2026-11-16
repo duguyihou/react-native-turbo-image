@@ -125,7 +125,8 @@ NSString *toNSString(const std::string &s) {
       .cachePolicy = toCorePolicy(props.cachePolicy),
   });
   if (!result.ok()) {
-    [self emitError:[NSString stringWithFormat:@"Invalid request (core error %d)",
+    [self emitError:turboimage::LoadErrorCode::InvalidRequest
+            message:[NSString stringWithFormat:@"Invalid request (core error %d)",
                                                static_cast<int>(result.error)]];
     return;
   }
@@ -133,13 +134,14 @@ NSString *toNSString(const std::string &s) {
   const auto &resolved = *result.request;
   NSURL *url = [NSURL URLWithString:toNSString(resolved.url)];
   if (url == nil) {
-    [self emitError:@"Invalid URL"];
+    [self emitError:turboimage::LoadErrorCode::InvalidRequest message:@"Invalid URL"];
     return;
   }
 
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   if (loader == nil) {
-    [self emitError:@"No TurboImage loader adapter is linked"];
+    [self emitError:turboimage::LoadErrorCode::Unknown
+            message:@"No TurboImage loader adapter is linked"];
     return;
   }
 
@@ -166,7 +168,13 @@ NSString *toNSString(const std::string &s) {
                                    strongSelf->_imageView.image = image;
                                    [strongSelf emitLoad:image.size];
                                  } else {
-                                   [strongSelf emitError:error.localizedDescription ?: @"Unknown error"];
+                                   // The seam guarantees TIImageLoadErrorDomain;
+                                   // anything else is an adapter bug → unknown.
+                                   const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
+                                                         ? static_cast<turboimage::LoadErrorCode>(error.code)
+                                                         : turboimage::LoadErrorCode::Unknown;
+                                   [strongSelf emitError:code
+                                                 message:error.localizedDescription ?: @"Unknown error"];
                                  }
                                }];
   _task = thisTask;
@@ -188,9 +196,12 @@ NSString *toNSString(const std::string &s) {
   }
 }
 
-- (void)emitError:(NSString *)message {
+- (void)emitError:(turboimage::LoadErrorCode)code message:(NSString *)message {
   if (auto emitter = std::static_pointer_cast<const TurboImageViewEventEmitter>(_eventEmitter)) {
-    emitter->onError({.message = std::string(message.UTF8String ?: "")});
+    emitter->onError({
+        .code = std::string(turboimage::loadErrorCodeName(code)),
+        .message = std::string(message.UTF8String ?: ""),
+    });
   }
 }
 

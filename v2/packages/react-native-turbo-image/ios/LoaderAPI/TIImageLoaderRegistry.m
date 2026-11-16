@@ -1,5 +1,7 @@
 #import "TIImageLoading.h"
 
+NSErrorDomain const TIImageLoadErrorDomain = @"com.turboimage.load";
+
 // The ObjC runtime name pinned by `@objc(TurboImageNukeLoader)` in
 // ios/Nuke/NukeImageLoader.swift.
 static NSString *const kDefaultLoaderClassName = @"TurboImageNukeLoader";

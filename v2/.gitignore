@@ -1,3 +1,4 @@
 .spm-trial/
 node_modules/
 tmp/
+tmp-smoke-ios.*

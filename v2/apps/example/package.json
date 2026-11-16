@@ -10,12 +10,16 @@
     "pods": "cd ios && pod install",
     "build:android": "cd android && ./gradlew assembleDebug --console=plain -PreactNativeArchitectures=arm64-v8a",
     "build:android:release": "cd android && ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "build:ios": "xcodebuild -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build"
+    "build:ios": "xcodebuild -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build",
+    "build:ios:release": "xcodebuild -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build",
+    "smoke:android": "bash ../../scripts/smoke-android.sh",
+    "smoke:ios": "bash ../../scripts/smoke-ios.sh"
   },
   "dependencies": {
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "react-native-turbo-image": "workspace:*"
+    "react-native-turbo-image": "workspace:*",
+    "react-native-safe-area-context": "5.11.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

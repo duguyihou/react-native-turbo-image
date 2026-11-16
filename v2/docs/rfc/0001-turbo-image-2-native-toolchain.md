@@ -121,7 +121,26 @@ show up there.
 - **Seams** (`TIImageLoading`, `ImageLoaderAdapter`): `load` is called on the main thread. The completion fires exactly once on the main thread, or never if the load was cancelled first. `cancel` is idempotent.
 - **Views** guard against stale completions by handle identity. This applies on top of adapter-side cancellation, because Fabric recycles views.
 
-### 4.4 iOS module layout (rules 5 and 6)
+### 4.4 Error taxonomy
+
+`onError` carries `{ code, message }`. `code` is the contract and `message`
+is diagnostic text only. The core defines the codes (`turboimage::LoadErrorCode`
+and `loadErrorCodeName()`), and each adapter classifies its loader's errors
+into them:
+
+| `code` | Meaning | Nuke 13 | Coil 3 |
+|---|---|---|---|
+| `invalidRequest` | Rejected by the core before any loader ran | — (core) | — (core) |
+| `notCached` | The policy forbade the network and no cache tier had the image | `dataMissingInCache` | Synthetic HTTP 504 **and** `!allowNetwork` |
+| `network` | Transport or HTTP failure | `dataLoadingFailed`, `dataIsEmpty`, `dataDownloadExceededMaximumSize` | `HttpException`, `IOException` (including a 504 while offline) |
+| `decode` | Bytes arrived but no image came out | `decoderNotRegistered`, `decodingFailed`, `processingFailed` | Any other failure |
+| `unknown` | Everything else, including adapter bugs | `imageRequestMissing`, `pipelineInvalidated`, non-Nuke errors | — |
+
+Without this, a `cacheOnly` miss surfaced as `Nuke.ImagePipeline.Error error 4`
+on iOS and `HTTP 504` on Android. The on-device smoke test now asserts
+`notCached` on both.
+
+### 4.5 iOS module layout (rules 5 and 6)
 
 | SwiftPM target | Language | Path | Depends on | Owner |
 |---|---|---|---|---|
@@ -137,13 +156,13 @@ Rules:
 - **Adapter lookup by name**: `TIImageLoaderRegistry` finds the default adapter with `NSClassFromString(@"TurboImageNukeLoader")`. Importing the Swift adapter from the seam would invert the layering and create a SwiftPM cycle. The trade-off is that a name typo fails at runtime, not at link time; the example app exercises this lookup in CI. Apps can replace the adapter with `TIImageLoaderRegistry.sharedLoader = …`.
 - **CocoaPods equivalence**: `TurboImage.podspec` compiles the same four trees into one pod. The sources are written to work under both: `#if canImport(TurboImageLoaderAPI)`, quoted seam includes, and `cpp/include` on the header search path. Swift 6 mode, C++20 and the Nuke tag are the same in both.
 
-### 4.5 Android layout
+### 4.6 Android layout
 
 - `android/CMakeLists.txt` does `add_subdirectory(../cpp)` and links `turboimage_core` into `libturboimage.so` alongside a JNI bridge. There is no Android copy of the C++ (rule 4). The `.so` is linked with 16 KB page alignment.
 - Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` follows the same steps as the iOS view. `ImageLoaderAdapter` is the seam and `CoilImageLoaderAdapter` the only Coil-aware file.
 - R8: `consumer-rules.pro` keeps the classes and constructors that JNI creates by name. The example's release build has R8 enabled, and CI asserts that those classes survive unrenamed.
 
-### 4.6 C++ core build
+### 4.7 C++ core build
 
 `cpp/CMakeLists.txt` is the only build description for the core. It has three consumers:
 
@@ -229,8 +248,19 @@ backed by a non-blocking CI job.
 | `ios-spm-app` | macOS | — | RN 0.88 SwiftPM integration (preview) |
 | `eval-nuke-14` | macOS | — | Nuke 14.0.0-rc.1 source compatibility |
 
-TODO: `eval-rn-0.89` (needs a parallel example with the 0.89 template), and
-emulator/simulator smoke tests that assert `onLoad` fires.
+`ios-cocoapods` and `android (release)` also run the on-device smoke test
+(`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 7 scenarios in
+`apps/example/App.tsx` cover:
+
+- a network load,
+- a `cacheOnly` hit through the canonical key (upper-case host, fragment),
+- a `cacheOnly` miss (`notCached`),
+- an explicit `cacheKey` shared across two different URLs,
+- `noCache`,
+- core validation (`invalidRequest`).
+
+TODO: `eval-rn-0.89` (needs a parallel example with the 0.89 template).
 
 ## 9. Gate status: the minimal example builds and runs
 
@@ -238,20 +268,27 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 
 | Check | Result |
 |---|---|
-| C++ core, 11 GoogleTests (host CMake) | ✅ pass |
+| C++ core, 13 GoogleTests (host CMake) | ✅ pass |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
 | iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, `onLoad` fires |
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 7/7 |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 7/7 |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |
 
 ## 10. Open questions
 
-1. **Coil view lifecycle under Fabric recycling.** `target(ImageView)` ties requests to view attach/detach and can restart them on reattach. We need to confirm this doesn't conflict with explicit `dispose()` when Fabric recycles views. The test is a long, fast-scrolling list.
-2. **Context lifecycle.** `ThemedReactContext` is not a `LifecycleOwner`, so Coil falls back to `GlobalLifecycle` and requests aren't paused with the Activity.
-3. **`cacheOnly` race in the example.** On a cold cache it fails, or succeeds if a sibling `default` load finished first. That is fine for the skeleton, but the pipeline milestone needs a deterministic test.
+1. ~~Coil view lifecycle under Fabric recycling.~~ **Resolved by reading the source; the smoke test is consistent with it.** With `target(ImageView)`, Coil:
+   - cancels a request that starts before the view is attached and restarts it on attach (Fabric applies props before mounting),
+   - disposes on detach and restarts on reattach,
+   - stops restarting after our explicit `dispose()`.
+
+   Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. A restart after a completed load re-fires Coil's listener, but the view's handle-identity guard drops it, so `onLoad` fires once per request. TODO: a long, fast-scrolling list stress test before enabling recycling.
+2. ~~Context lifecycle.~~ **Resolved; this RFC was wrong.** Fabric builds each `ThemedReactContext` on top of the root view's context, which is the Activity (`FabricUIManager.startSurface`). Coil's `getLifecycle()` walks the `ContextWrapper` chain, so it finds the Activity. Requests therefore wait for `STARTED` and are disposed on `ON_DESTROY`, without TurboImage doing anything.
+3. ~~`cacheOnly` race in the example.~~ **Resolved.** The example is now a deterministic smoke test: scenarios that depend on the cache mount only after the load they depend on has settled.
 4. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.
 5. **Host network configuration.** Should adapters accept app-supplied headers, cookies or interceptors? This matters for authenticated images, which 1.x supported through RN's shared `OkHttpClient`.
 6. **Nuke 14 adoption.** It raises the iOS floor to 16.0, above RN's 15.1. Adopt it in 2.x only once it is stable and the floor change is acceptable.

@@ -58,6 +58,13 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLoadErrorCodeName(JNIEnv* env, jobject /* this */,
+                                                                 jint code) {
+  const auto name = turboimage::loadErrorCodeName(static_cast<turboimage::LoadErrorCode>(code));
+  return env->NewStringUTF(std::string(name).c_str());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeCoreVersion(JNIEnv* env, jobject /* this */) {
   const auto version = turboimage::coreVersion();
   return env->NewStringUTF(std::string(version).c_str());

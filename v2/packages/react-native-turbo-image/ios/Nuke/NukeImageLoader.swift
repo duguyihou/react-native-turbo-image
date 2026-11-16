@@ -88,10 +88,46 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
         completionBox.value(image, nil)
       } catch {
         guard !Task.isCancelled else { return }
-        completionBox.value(nil, error as NSError)
+        completionBox.value(nil, Self.classify(error))
       }
     }
     return NukeLoadTask(imageTask: imageTask, task: task)
+  }
+
+  /// Maps Nuke's errors onto TurboImage's cross-platform codes
+  /// (`turboimage::LoadErrorCode`). Must stay in step with
+  /// `CoilImageLoaderAdapter.classify` on Android.
+  private static func classify(_ error: any Error) -> NSError {
+    // `imageTask.image` throws `ImagePipeline.Error`, but do/catch only
+    // infers typed errors with the FullTypedThrows upcoming feature, so the
+    // caught value arrives as `any Error` and is narrowed here.
+    guard let error = error as? ImagePipeline.Error else {
+      return NSError(
+        domain: TIImageLoadErrorDomain,
+        code: TIImageLoadError.Code.unknown.rawValue,
+        userInfo: [NSLocalizedDescriptionKey: String(describing: error)]
+      )
+    }
+    let code: TIImageLoadError.Code
+    switch error {
+    case .dataMissingInCache:
+      code = .notCached
+    case .dataLoadingFailed, .dataIsEmpty, .dataDownloadExceededMaximumSize:
+      code = .network
+    case .decoderNotRegistered, .decodingFailed, .processingFailed:
+      code = .decode
+    case .imageRequestMissing, .pipelineInvalidated, .cancelled:
+      code = .unknown
+    @unknown default:
+      code = .unknown
+    }
+    return NSError(
+      domain: TIImageLoadErrorDomain,
+      code: code.rawValue,
+      // Nuke's `description` is readable ("Data is missing in cache")
+      // unlike the bridged NSError text ("…Nuke.ImagePipeline.Error error 4").
+      userInfo: [NSLocalizedDescriptionKey: error.description]
+    )
   }
 
   /// Mechanical translation of a resolved TurboImage request. No policy

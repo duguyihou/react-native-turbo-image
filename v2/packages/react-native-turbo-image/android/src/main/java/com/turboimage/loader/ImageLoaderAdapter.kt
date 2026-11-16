@@ -21,7 +21,12 @@ interface ImageLoaderAdapter {
   interface Listener {
     fun onSuccess(width: Int, height: Int)
 
-    fun onError(message: String)
+    /**
+     * @param code a `turboimage::LoadErrorCode` value; adapters classify
+     *   their loader's errors so JS sees the same code on both platforms.
+     * @param message diagnostic text only; not part of the contract.
+     */
+    fun onError(code: Int, message: String)
   }
 }
 

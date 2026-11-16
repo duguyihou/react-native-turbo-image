@@ -28,8 +28,23 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)cancel;
 @end
 
+/// Error domain every adapter must report failures in. Codes mirror
+/// `turboimage::LoadErrorCode` (cpp/include/turboimage/ImageRequest.h); the
+/// integer values are a pinned ABI.
+FOUNDATION_EXPORT NSErrorDomain const TIImageLoadErrorDomain;
+
+typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
+    TIImageLoadErrorUnknown = 0,
+    TIImageLoadErrorInvalidRequest = 1,
+    TIImageLoadErrorNotCached = 2,
+    TIImageLoadErrorNetwork = 3,
+    TIImageLoadErrorDecode = 4,
+};
+
 /// Completion contract: called exactly once, on the main thread, unless the
-/// task was cancelled first (then it may not be called at all).
+/// task was cancelled first (then it may not be called at all). A non-nil
+/// error is always in `TIImageLoadErrorDomain`; adapters classify their
+/// loader's errors so JS sees the same code on both platforms.
 typedef void (^TIImageLoadCompletion)(UIImage *_Nullable image,
                                       NSError *_Nullable error);
 

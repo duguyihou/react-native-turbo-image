@@ -102,6 +102,24 @@ ResolveResult resolveRequest(const ImageRequest& request) {
   return {.request = std::move(resolved), .error = RequestError::None};
 }
 
+std::string_view loadErrorCodeName(LoadErrorCode code) {
+  // Exhaustive on purpose (no `default:`), so a new code must get a name.
+  switch (code) {
+    case LoadErrorCode::Unknown:
+      return "unknown";
+    case LoadErrorCode::InvalidRequest:
+      return "invalidRequest";
+    case LoadErrorCode::NotCached:
+      return "notCached";
+    case LoadErrorCode::Network:
+      return "network";
+    case LoadErrorCode::Decode:
+      return "decode";
+  }
+  // Out-of-range values can arrive from the JNI/ObjC ABI boundary.
+  return "unknown";
+}
+
 std::string_view coreVersion() { return "2.0.0-alpha.0"; }
 
 }  // namespace turboimage

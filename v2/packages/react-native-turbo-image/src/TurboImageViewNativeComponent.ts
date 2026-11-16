@@ -22,6 +22,12 @@ export type LoadEvent = Readonly<{
 }>;
 
 export type ErrorEvent = Readonly<{
+  // Stable, cross-platform classification; one of
+  // 'invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown'.
+  // Defined by `turboimage::LoadErrorCode` in cpp/include.
+  code: string;
+  // Diagnostic text from the platform loader. Not stable across platforms
+  // or versions; do not branch on it.
   message: string;
 }>;
 

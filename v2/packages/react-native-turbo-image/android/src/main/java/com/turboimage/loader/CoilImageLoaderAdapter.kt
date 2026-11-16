@@ -8,11 +8,14 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
 import coil3.network.DeDupeConcurrentRequestStrategy
+import coil3.network.HttpException
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.target
 import com.turboimage.core.ResolvedRequest
+import com.turboimage.core.TurboImageCore
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
@@ -49,7 +52,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .target(target)
         .listener(
           onSuccess = { _, result -> listener.onSuccess(result.image.width, result.image.height) },
-          onError = { _, result -> listener.onError(result.throwable.message ?: "Unknown error") },
+          onError = { _, result ->
+            listener.onError(classify(result.throwable, request), result.throwable.message ?: "Unknown error")
+          },
         )
         .build()
 
@@ -59,6 +64,27 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     // is tracked in docs/rfc §Open questions.
     return LoadHandle { disposable.dispose() }
   }
+
+  /**
+   * Maps Coil failures onto `turboimage::LoadErrorCode`. Must stay in step
+   * with `NukeImageLoader.classify` on iOS.
+   *
+   * With network reads disabled Coil asks OkHttp for `only-if-cached`, and
+   * our cache-less client answers with a synthetic HTTP 504. Coil does the
+   * same when the device is offline, so a 504 only means "not cached" when
+   * the *policy* forbade the network; otherwise it is a network failure.
+   *
+   * Anything that is not a transport failure happened after bytes arrived
+   * (fetchers are chosen by the core-validated http(s) scheme), so it is
+   * classified as a decode failure.
+   */
+  private fun classify(error: Throwable, request: ResolvedRequest): Int =
+    when {
+      error is HttpException && error.response.code == 504 && !request.allowNetwork ->
+        TurboImageCore.LoadErrorCode.NOT_CACHED.nativeValue
+      error is HttpException || error is IOException -> TurboImageCore.LoadErrorCode.NETWORK.nativeValue
+      else -> TurboImageCore.LoadErrorCode.DECODE.nativeValue
+    }
 
   private fun tierPolicy(read: Boolean, write: Boolean): CachePolicy =
     when {

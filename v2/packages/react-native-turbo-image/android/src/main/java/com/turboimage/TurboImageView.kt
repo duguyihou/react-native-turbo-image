@@ -57,9 +57,10 @@ class TurboImageView(
     cancel()
     setImageDrawable(null)
 
-    val source = uri ?: return emitError("Missing source.uri")
+    val invalid = TurboImageCore.LoadErrorCode.INVALID_REQUEST.nativeValue
+    val source = uri ?: return emitError(invalid, "Missing source.uri")
     when (val result = TurboImageCore.resolve(source, cacheKey, cachePolicy)) {
-      is ResolveFailure -> emitError("Invalid request (core error ${result.errorCode})")
+      is ResolveFailure -> emitError(invalid, "Invalid request (core error ${result.errorCode})")
       is ResolvedRequest -> startLoad(result)
     }
   }
@@ -79,10 +80,10 @@ class TurboImageView(
             dispatch(LoadEvent(surfaceId(), id, width.toDouble(), height.toDouble()))
           }
 
-          override fun onError(message: String) {
+          override fun onError(code: Int, message: String) {
             if (handle !== thisHandle) return
             handle = null
-            emitError(message)
+            emitError(code, message)
           }
         },
       )
@@ -94,7 +95,8 @@ class TurboImageView(
     handle = null
   }
 
-  private fun emitError(message: String) = dispatch(ErrorEvent(surfaceId(), id, message))
+  private fun emitError(code: Int, message: String) =
+    dispatch(ErrorEvent(surfaceId(), id, TurboImageCore.loadErrorCodeName(code), message))
 
   private fun surfaceId() = UIManagerHelper.getSurfaceId(this)
 
@@ -113,11 +115,14 @@ class TurboImageView(
       }
   }
 
-  private class ErrorEvent(surfaceId: Int, viewTag: Int, val message: String) :
+  private class ErrorEvent(surfaceId: Int, viewTag: Int, val code: String, val message: String) :
     Event<ErrorEvent>(surfaceId, viewTag) {
     override fun getEventName() = "topError"
 
     override fun getEventData(): WritableMap =
-      Arguments.createMap().apply { putString("message", message) }
+      Arguments.createMap().apply {
+        putString("code", code)
+        putString("message", message)
+      }
   }
 }

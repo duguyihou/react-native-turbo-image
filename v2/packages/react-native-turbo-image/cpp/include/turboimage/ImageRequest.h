@@ -89,6 +89,26 @@ struct ResolveResult {
   [[nodiscard]] bool ok() const { return request.has_value(); }
 };
 
+// Why a load failed, as exposed to JS in `onError.code`. Adapters classify
+// their loader's errors into these buckets so JS sees the same code for the
+// same situation on both platforms (e.g. a `cacheOnly` miss is `NotCached`
+// whether Nuke reports `dataMissingInCache` or Coil synthesises HTTP 504).
+// Integer values are a pinned ABI shared with the ObjC seam and JNI.
+enum class LoadErrorCode : std::int32_t {
+  Unknown = 0,
+  // The core rejected the request before any loader ran.
+  InvalidRequest = 1,
+  // The policy forbade the network and no cache tier had the image.
+  NotCached = 2,
+  // Transport or HTTP failure.
+  Network = 3,
+  // Bytes arrived but could not be decoded into an image.
+  Decode = 4,
+};
+
+// The stable JS spelling of a `LoadErrorCode`.
+[[nodiscard]] std::string_view loadErrorCodeName(LoadErrorCode code);
+
 // Normalises a URI into the canonical form used for cache keys:
 //   * scheme and host are lower-cased (they are case-insensitive per
 //     RFC 3986, and the two loaders disagree on whether they normalise them),

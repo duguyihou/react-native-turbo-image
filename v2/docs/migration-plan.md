@@ -23,9 +23,10 @@ Nuke 13.2.3 and Coil 3.6.3 adapters, SwiftPM + CocoaPods + Gradle + CMake
 builds, and the CI matrix.
 
 ### Phase 1: CI green and lifecycle hardening
-- Run `v2-ci.yml` on GitHub-hosted runners and fix any differences from the local runs (runner Xcode version, NDK install).
-- Add emulator and simulator smoke tests that assert `onLoad` fires.
-- Resolve RFC open questions 1–3: Coil view lifecycle, Activity lifecycle, a deterministic `cacheOnly` test.
+- [ ] Run `v2-ci.yml` on GitHub-hosted runners and fix any differences from the local runs (runner Xcode version, NDK install, emulator).
+- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios, release builds).
+- [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
+- [x] Cross-platform `onError.code` taxonomy (RFC §4.4).
 
 ### Phase 2: pipeline parity with 1.x (ordered by usage)
 | 1.x feature | 2.0 home | Notes |

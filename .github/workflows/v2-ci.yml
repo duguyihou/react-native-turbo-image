@@ -90,7 +90,8 @@ jobs:
         working-directory: v2/apps/example/android
         run: |
           task=assemble${{ matrix.variant == 'release' && 'Release' || 'Debug' }}
-          ./gradlew "$task" --console=plain -PreactNativeArchitectures=arm64-v8a
+          # x86_64 for the hosted emulator, arm64-v8a for real devices.
+          ./gradlew "$task" --console=plain -PreactNativeArchitectures=x86_64,arm64-v8a
       - name: Assert JNI classes survived R8
         if: matrix.variant == 'release'
         working-directory: v2/apps/example/android
@@ -99,6 +100,23 @@ jobs:
           for cls in ResolvedRequest ResolveFailure TurboImageCore; do
             grep -q "^com.turboimage.core.${cls} -> com.turboimage.core.${cls}:" "$mapping"
           done
+      - name: Enable KVM for the emulator
+        if: matrix.variant == 'release'
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: On-device smoke test (R8 release)
+        if: matrix.variant == 'release'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          working-directory: v2
+          script: bash scripts/smoke-android.sh
 
   ios-cocoapods:
     name: iOS example (CocoaPods)
@@ -118,7 +136,9 @@ jobs:
       - working-directory: v2/apps/example/ios
         run: pod install
       - working-directory: v2/apps/example
-        run: bun run build:ios
+        run: bun run build:ios:release
+      - name: On-simulator smoke test (Release)
+        run: bash scripts/smoke-ios.sh
 
   ios-spm-standalone:
     name: iOS SwiftPM package (standalone)

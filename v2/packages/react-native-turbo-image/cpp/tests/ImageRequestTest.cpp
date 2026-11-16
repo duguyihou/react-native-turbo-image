@@ -43,6 +43,18 @@ TEST(ResolveRequest, ExplicitCacheKeyWins) {
   EXPECT_EQ(result.request->url, "https://cdn.example.com/a.png?sig=123");
 }
 
+TEST(LoadErrorCodeName, NamesAreTheJsContract) {
+  EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Unknown), "unknown");
+  EXPECT_EQ(loadErrorCodeName(LoadErrorCode::InvalidRequest), "invalidRequest");
+  EXPECT_EQ(loadErrorCodeName(LoadErrorCode::NotCached), "notCached");
+  EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Network), "network");
+  EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Decode), "decode");
+}
+
+TEST(LoadErrorCodeName, OutOfRangeIsUnknown) {
+  EXPECT_EQ(loadErrorCodeName(static_cast<LoadErrorCode>(99)), "unknown");
+}
+
 // The cache-tier matrix is the contract both adapters are tested against, so
 // spell every policy out explicitly.
 struct PolicyCase {
