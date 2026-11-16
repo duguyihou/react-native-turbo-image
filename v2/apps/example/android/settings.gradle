@@ -1,0 +1,7 @@
+// Bun hoists all dependencies to the monorepo root (v2/node_modules).
+pluginManagement { includeBuild("../../../node_modules/@react-native/gradle-plugin") }
+plugins { id("com.facebook.react.settings") }
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'TurboImageExample'
+include ':app'
+includeBuild('../../../node_modules/@react-native/gradle-plugin')

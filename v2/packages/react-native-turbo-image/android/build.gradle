@@ -1,0 +1,112 @@
+// TurboImage 2.0 — Android library build.
+//
+// Toolchain contract (docs/compatibility-matrix.md):
+//   * AGP / NDK / compileSdk come from the host app (`rootProject.ext`), with
+//     defaults matching React Native 0.88.1's own `libs.versions.toml`.
+//   * Kotlin: Coil 3.6.3 is compiled with Kotlin 2.4.10. A Kotlin compiler
+//     only reads metadata up to one minor version ahead, so the host app's
+//     Kotlin must be >= 2.3. RN 0.88's template ships 2.2.0, so apps have to
+//     bump `kotlinVersion`. We fail fast below instead of letting the build
+//     die later with an opaque "incompatible metadata" error.
+//   * Shared C++ core is built with CMake from ../cpp (RFC rule 4).
+
+buildscript {
+  ext.TurboImage = [
+    kotlinVersion    : "2.4.21",
+    minSdkVersion    : 24,
+    compileSdkVersion: 37,
+    targetSdkVersion : 36,
+    ndkVersion       : "27.1.12297006",
+  ]
+  ext.getExtOrDefault = { prop ->
+    rootProject.ext.has(prop) ? rootProject.ext.get(prop) : TurboImage[prop]
+  }
+  // Intentionally no `classpath` entries: AGP, KGP and the RN Gradle plugin
+  // come from the host app's root buildscript. Declaring them here as well
+  // either fails to resolve (versionless) or silently forks the plugin
+  // version from the app's (versioned). The library is always built inside
+  // an app; CI uses apps/example.
+}
+
+// Pinned production versions (RFC rule 7). Must match
+// scripts/native-versions.env; scripts/check-native-versions.sh enforces it.
+def coilVersion = "3.6.3"
+def minimumKotlinForCoil = "2.3.0"
+
+// Compares major.minor only (patch and -RC suffixes do not affect metadata
+// compatibility). Hand-rolled because Gradle 9 removed `VersionNumber`.
+def majorMinor = { String v ->
+  def parts = v.tokenize(".-")
+  parts[0].toInteger() * 1000 + parts[1].toInteger()
+}
+def appKotlin = getExtOrDefault("kotlinVersion").toString()
+if (majorMinor(appKotlin) < majorMinor(minimumKotlinForCoil)) {
+  throw new GradleException(
+    "react-native-turbo-image requires kotlinVersion >= ${minimumKotlinForCoil} " +
+    "(Coil ${coilVersion} is compiled with Kotlin 2.4). Found ${appKotlin}. " +
+    "Set `kotlinVersion` in android/build.gradle `ext {}`."
+  )
+}
+
+apply plugin: "com.android.library"
+// AGP 9 can register Kotlin itself (`android.builtInKotlin=true`); applying
+// the plugin again would fail with a duplicate `kotlin` extension.
+if (project.extensions.findByName("kotlin") == null) {
+  apply plugin: "kotlin-android"
+}
+apply plugin: "com.facebook.react"
+
+android {
+  namespace "com.turboimage"
+  compileSdk getExtOrDefault("compileSdkVersion")
+  ndkVersion getExtOrDefault("ndkVersion")
+
+  defaultConfig {
+    minSdk getExtOrDefault("minSdkVersion")
+    targetSdk getExtOrDefault("targetSdkVersion")
+    consumerProguardFiles "consumer-rules.pro"
+    externalNativeBuild {
+      cmake {
+        arguments "-DANDROID_STL=c++_shared"
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path "CMakeLists.txt"
+    }
+  }
+
+  buildTypes {
+    release {
+      // Libraries are not minified themselves; R8 runs in the app, guided
+      // by consumer-rules.pro. The example's release build is the R8 test.
+      minifyEnabled false
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  lint {
+    disable "GradleCompatible"
+  }
+}
+
+if (project.extensions.findByName("kotlin") != null) {
+  kotlin {
+    jvmToolchain(17)
+  }
+}
+
+dependencies {
+  implementation "com.facebook.react:react-android"
+  // coil-core, not `coil`: the `coil` artifact adds a process-wide singleton
+  // ImageLoader, and TurboImage must not share cache state with the host app
+  // (mirrors the dedicated Nuke pipeline on iOS).
+  implementation "io.coil-kt.coil3:coil-core:${coilVersion}"
+  implementation "io.coil-kt.coil3:coil-network-okhttp:${coilVersion}"
+}

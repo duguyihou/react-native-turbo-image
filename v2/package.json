@@ -1,0 +1,17 @@
+{
+  "name": "turbo-image-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "packageManager": "bun@1.3.13",
+  "scripts": {
+    "typecheck": "bun run --filter '*' typecheck",
+    "test:core": "bun run --filter react-native-turbo-image test:core",
+    "check:versions": "bash scripts/check-native-versions.sh",
+    "vendor:nuke": "bash scripts/build-nuke-xcframework.sh",
+    "example:android": "bun run --filter turbo-image-example build:android",
+    "example:ios": "bun run --filter turbo-image-example build:ios"
+  }
+}

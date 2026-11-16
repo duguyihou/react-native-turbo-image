@@ -1,0 +1,51 @@
+# Native dependency compatibility matrix
+
+Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16.
+
+Legend: ✅ verified by building (and running, where noted) · 🟡 builds, needs more verification · 🔬 evaluation only · ❌ incompatible · — not applicable
+
+## Production baseline (TurboImage 2.0.0-alpha.0)
+
+| Component | Pinned | Requires | Status |
+|---|---|---|---|
+| React Native | 0.88.1 | Node ≥ 22.11, New Architecture | ✅ example runs on iOS and Android |
+| Nuke (SwiftPM) | 13.2.3 (`exact:`) | iOS 15, Swift tools 6.0 | ✅ standalone + in app via RN SPM |
+| Nuke (CocoaPods) | 13.2.3, vendored xcframework | Same tag, built by `build-nuke-xcframework.sh` | ✅ example runs |
+| Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug + R8 release run |
+| Kotlin (app) | 2.4.21 | — | ✅ |
+| AGP | 9.2.1 (from RN) | Gradle 9.4.1, JDK 17 | ✅ |
+| Android NDK | 27.1.12297006 | — | ✅ (16 KB page alignment set) |
+| compileSdk / targetSdk / minSdk | 37 / 36 / 24 | — | ✅ |
+| C++ standard | C++20 | Apple Clang (Xcode 27.2), NDK Clang, CMake ≥ 3.22 | ✅ |
+| GoogleTest | 1.17.0 | — | ✅ 11/11 |
+| Bun | 1.3.13, hoisted linker | — | ✅ |
+| Xcode | 27.2 (local) | Swift tools ≥ 6.2 for Package.swift | ✅ |
+
+## Cross-version matrix
+
+| | RN 0.88.1 (Kotlin 2.2.0 default) | RN 0.88.1 + Kotlin 2.4.21 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2) |
+|---|---|---|---|
+| Coil 3.6.3 | ❌ metadata 2.4 unreadable by 2.2. The library's Gradle check fails early with a fix-it message | ✅ | 🔬 should work (2.3 reads 2.4); not yet built |
+| Android NDK 27.1 | ✅ | ✅ | 🔬 RN 0.89 defaults to 28.2; the core is plain C++20 and should be unaffected |
+
+| | iOS 15.1 floor (RN default) | iOS 16.0 floor |
+|---|---|---|
+| Nuke 13.2.3 | ✅ | ✅ |
+| Nuke 14.0.0-rc.1 | ❌ Nuke 14 requires iOS 16 | 🔬 standalone package builds with **no adapter changes** (`ImagePipeline.Configuration`, `ImageRequest.Options`, `imageID` and `ImageTask.image` are source-compatible). Not run in the app yet |
+
+| iOS integration | CocoaPods | RN SwiftPM (0.88 preview) |
+|---|---|---|
+| Debug, simulator | ✅ runs | ✅ runs |
+| Release, simulator | 🟡 not yet built | 🟡 not yet built |
+| Device (arm64) | 🟡 not yet built | 🟡 not yet built |
+| `use_frameworks! :linkage => :static` | 🟡 not yet built | — |
+
+## Behaviour parity (adapter configuration)
+
+See RFC §4.2. Things to re-verify on every Nuke or Coil bump:
+
+- [ ] `imageID` (Nuke) and `memoryCacheKey`/`diskCacheKey` (Coil) still key both tiers.
+- [ ] HTTP caching is still disabled (`withDataCache` sets `urlCache = nil`; `CacheStrategy.DEFAULT` semantics).
+- [ ] Coil's `DeDupeConcurrentRequestStrategy` still exists. It is `@ExperimentalCoilApi`.
+- [ ] Cancellation drops callbacks (`ImageTask.cancel` / `Disposable.dispose`).
+- [ ] The R8 mapping keeps `com.turboimage.core.{ResolvedRequest,ResolveFailure,TurboImageCore}` (CI asserts this).

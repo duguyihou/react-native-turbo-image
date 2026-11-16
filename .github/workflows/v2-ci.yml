@@ -1,0 +1,172 @@
+# TurboImage 2.0 CI build matrix (v2/ monorepo).
+#
+# Blocking jobs gate merges. `eval-*` and `ios-spm-app` are informational
+# (continue-on-error): they track beta dependencies and React Native's
+# preview SwiftPM tooling separately from production (RFC rule 8).
+#
+# The 1.x workflow (ci.yml) is untouched and keeps covering the repo root.
+name: v2 CI
+
+on:
+  pull_request:
+    paths: ['v2/**', '.github/workflows/v2-ci.yml']
+  push:
+    branches: [main]
+    paths: ['v2/**', '.github/workflows/v2-ci.yml']
+
+concurrency:
+  group: v2-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: v2
+
+env:
+  # Keep in sync with v2/scripts/native-versions.env and the RFC matrix.
+  BUN_VERSION: 1.3.13
+  NODE_VERSION: 22.14.0
+  JAVA_VERSION: '17'
+  XCODE_VERSION: '27.2'
+
+jobs:
+  versions:
+    name: Pinned versions agree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: bash scripts/check-native-versions.sh
+      - run: shellcheck -x scripts/*.sh
+
+  core:
+    name: C++ core (${{ matrix.os }})
+    needs: versions
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: cmake -S packages/react-native-turbo-image/cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON
+      - run: cmake --build build/core -j
+      - run: ctest --test-dir build/core --output-on-failure
+
+  js:
+    name: TypeScript
+    needs: versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: '${{ env.BUN_VERSION }}' }
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+
+  android:
+    name: Android example (${{ matrix.variant }})
+    needs: [core, js]
+    strategy:
+      fail-fast: false
+      matrix:
+        # release = R8-optimised build; exercises consumer-rules.pro.
+        variant: [debug, release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: '${{ env.BUN_VERSION }}' }
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
+      - uses: gradle/actions/setup-gradle@v5
+      - run: bun install --frozen-lockfile
+      - name: Install pinned NDK
+        run: |
+          source scripts/native-versions.env
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${ANDROID_NDK_VERSION}" > /dev/null
+      - name: Build
+        working-directory: v2/apps/example/android
+        run: |
+          task=assemble${{ matrix.variant == 'release' && 'Release' || 'Debug' }}
+          ./gradlew "$task" --console=plain -PreactNativeArchitectures=arm64-v8a
+      - name: Assert JNI classes survived R8
+        if: matrix.variant == 'release'
+        working-directory: v2/apps/example/android
+        run: |
+          mapping=app/build/outputs/mapping/release/mapping.txt
+          for cls in ResolvedRequest ResolveFailure TurboImageCore; do
+            grep -q "^com.turboimage.core.${cls} -> com.turboimage.core.${cls}:" "$mapping"
+          done
+
+  ios-cocoapods:
+    name: iOS example (CocoaPods)
+    needs: [core, js]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: '${{ env.BUN_VERSION }}' }
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - run: bun install --frozen-lockfile
+      - name: Build pinned Nuke.xcframework
+        run: bash scripts/build-nuke-xcframework.sh
+      - run: bash scripts/check-native-versions.sh
+      - working-directory: v2/apps/example/ios
+        run: pod install
+      - working-directory: v2/apps/example
+        run: bun run build:ios
+
+  ios-spm-standalone:
+    name: iOS SwiftPM package (standalone)
+    needs: core
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - working-directory: v2/packages/react-native-turbo-image
+        env: { TURBOIMAGE_SPM_STANDALONE: '1' }
+        run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
+
+  ios-spm-app:
+    name: iOS example (RN SwiftPM, preview)
+    # RN 0.88's SwiftPM integration is a preview: tracked, not gating.
+    continue-on-error: true
+    needs: [core, js]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: '${{ env.BUN_VERSION }}' }
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - run: bun install --frozen-lockfile
+      - name: Convert a copy of the example to SwiftPM
+        run: |
+          mkdir -p .spm-trial
+          rsync -a --exclude ios/Pods --exclude android apps/example/ .spm-trial/example/
+          cd .spm-trial/example
+          node ../../node_modules/react-native/scripts/setup-apple-spm.js add --deintegrate --yes
+      - working-directory: v2/.spm-trial/example
+        run: |
+          xcodebuild -project ios/TurboImageExample.xcodeproj -scheme TurboImageExample \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' build
+
+  eval-nuke-14:
+    name: Evaluate Nuke 14 (pre-release)
+    continue-on-error: true
+    needs: core
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - working-directory: v2/packages/react-native-turbo-image
+        env:
+          TURBOIMAGE_SPM_STANDALONE: '1'
+          TURBOIMAGE_EVAL_NUKE_VERSION: 14.0.0-rc.1
+        run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
