@@ -190,3 +190,42 @@ jobs:
           TURBOIMAGE_SPM_STANDALONE: '1'
           TURBOIMAGE_EVAL_NUKE_VERSION: 14.0.0-rc.1
         run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
+
+  eval-rn-0-89:
+    name: Evaluate React Native 0.89 (${{ matrix.platform }}, pre-release)
+    continue-on-error: true
+    needs: [core, js]
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [android, ios]
+    runs-on: ${{ matrix.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+    env:
+      EVAL_RN_VERSION: 0.89.0-rc.1
+    steps:
+      - uses: actions/checkout@v5
+      - if: matrix.platform == 'ios'
+        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - uses: oven-sh/setup-bun@v2
+        with: { bun-version: '${{ env.BUN_VERSION }}' }
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - if: matrix.platform == 'android'
+        uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
+      - run: bun install --frozen-lockfile
+      - if: matrix.platform == 'ios'
+        run: bash scripts/build-nuke-xcframework.sh
+      - name: Prepare workspace copy on RN ${{ env.EVAL_RN_VERSION }}
+        run: echo "EVAL_DIR=$(bash scripts/eval-rn-version.sh "$EVAL_RN_VERSION" | tail -1)" >> "$GITHUB_ENV"
+      - name: Build Android release
+        if: matrix.platform == 'android'
+        run: |
+          cd "$EVAL_DIR/apps/example/android"
+          ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=arm64-v8a
+      - name: Build iOS Release and smoke test
+        if: matrix.platform == 'ios'
+        run: |
+          cd "$EVAL_DIR/apps/example/ios" && pod install
+          cd .. && bun run build:ios:release
+          bash "$EVAL_DIR/scripts/smoke-ios.sh"

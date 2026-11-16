@@ -8,7 +8,7 @@ source (`react-native/scripts/spm/*`) and tried on TurboImage's example app.
 | Question | Answer |
 |---|---|
 | Can a library with a third-party SwiftPM dependency (Nuke) integrate today? | **Yes**, through a hand-written "self-managed" `Package.swift`. Verified end to end: Debug simulator build, app runs, images load. |
-| Is it production-ready? | **Not yet.** It works, but the manifest depends on the app's build layout, the tooling is partly marked PREVIEW/UNSTABLE, and only Debug simulator builds were tried. |
+| Is it production-ready? | **Not yet.** It works (Debug and Release simulator builds pass the 7/7 smoke test alongside another self-managed package, `react-native-safe-area-context`). But the manifest depends on the app's build layout, the tooling is partly marked PREVIEW/UNSTABLE, and device builds are untested. |
 | Default for TurboImage 2.0.0 | **CocoaPods.** SPM is an opt-in, tracked by a non-blocking CI job (`ios-spm-app`). |
 | What would flip the default | RN shipping "V2" autolinking, where library manifests are referenced via `.package(url:)` with no app-relative paths, or a stable remote mode. Plus green Release and device builds in CI. |
 
@@ -48,7 +48,7 @@ TurboImage's mitigation, in `Package.swift`:
 1. **Layout drift.** If a future RN moves `build/xcframeworks` or the `libs/` symlink, the Fabric target silently disappears. The app would then fail at runtime ("Unimplemented component"), not at build time. Mitigation: the `ios-spm-app` CI job; TODO: add a smoke test that asserts the component renders.
 2. **Remote mode** (`RN_SPM_REMOTE_URL`) isn't handled. In that mode the RN package identity is the remote URL, so our local-path dependency would be wrong. TODO once RN documents the identity contract.
 3. **Preview APIs.** Autolinking plugins are explicitly PREVIEW/UNSTABLE. We don't use them.
-4. **Untested configurations.** Release configuration, device builds, and coexistence with other self-managed packages that also depend on Nuke (SwiftPM unifies on one version, and our `exact:` pin could conflict with them).
+4. **Untested configurations.** Device builds, and coexistence with other self-managed packages that also depend on Nuke. SwiftPM unifies on one version, so our `exact:` pin could conflict with theirs. Release simulator builds are verified.
 5. **Codegen headers.** The Fabric target gets `react/renderer/components/TurboImageSpec/*` from the app-level `ReactAppHeaders` product, the same as CocoaPods' `ReactCodegen`. This works but is another app-scoped dependency.
 
 ## Designing for 0.89+ (SPM-first)

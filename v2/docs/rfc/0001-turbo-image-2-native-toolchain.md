@@ -37,7 +37,7 @@ Non-goals for this milestone (TODO, pipeline milestone):
 | Area | Choice | Notes |
 |---|---|---|
 | React Native | **0.88.1** (stable) | New Architecture only; Fabric component via Codegen. |
-| Next RN | 0.89.0-rc.1 tracked | SPM-first direction. Not a production dependency (§7). |
+| Next RN | 0.89.0-rc.1 tracked | SPM-first direction. Not a production dependency (§7). Smoke test passes on both platforms with no TurboImage changes. |
 | iOS language | Swift 6.2 tools, Swift 6 language mode | Local toolchain is Xcode 27.2 / Swift 6.4.2; the manifest requires tools 6.2. |
 | iOS loader | **Nuke 13.2.3** | Nuke 14 is evaluated separately; it is now `14.0.0-rc.1`, no longer beta. |
 | Android loader | **Coil 3.6.3** (`coil-core`, `coil-network-okhttp`) | Compiled with Kotlin 2.4.10. |
@@ -247,6 +247,7 @@ backed by a non-blocking CI job.
 | `ios-spm-standalone` | macOS | ✓ | Package.swift layering without an app |
 | `ios-spm-app` | macOS | — | RN 0.88 SwiftPM integration (preview) |
 | `eval-nuke-14` | macOS | — | Nuke 14.0.0-rc.1 source compatibility |
+| `eval-rn-0-89` (android, ios) | ubuntu, macOS | — | `scripts/eval-rn-version.sh 0.89.0-rc.1`: the example on the next RN template |
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
@@ -260,7 +261,6 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 7 scenarios in
 - `noCache`,
 - core validation (`invalidRequest`).
 
-TODO: `eval-rn-0.89` (needs a parallel example with the 0.89 template).
 
 ## 9. Gate status: the minimal example builds and runs
 
@@ -277,6 +277,8 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
 | Smoke test, iOS Release simulator (CocoaPods) | ✅ 7/7 |
 | Smoke test, Android R8 release, arm64 emulator | ✅ 7/7 |
+| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
+| RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |
 
 ## 10. Open questions

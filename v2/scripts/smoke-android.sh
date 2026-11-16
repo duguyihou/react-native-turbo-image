@@ -16,6 +16,10 @@ apk="${1:-${v2_root}/apps/example/android/app/build/outputs/apk/release/app-rele
 package="com.turboimageexample"
 timeout_s=120
 
+# shellcheck source=./assert-fresh-build.sh source-path=SCRIPTDIR
+source "${script_dir}/assert-fresh-build.sh"
+assert_fresh_build "${apk}"
+
 adb="${ANDROID_HOME:-${HOME}/Library/Android/sdk}/platform-tools/adb"
 if [[ ! -x "${adb}" ]]; then
   adb="adb"

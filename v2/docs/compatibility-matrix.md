@@ -26,8 +26,17 @@ Legend: ✅ verified by building (and running, where noted) · 🟡 builds, need
 
 | | RN 0.88.1 (Kotlin 2.2.0 default) | RN 0.88.1 + Kotlin 2.4.21 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2) |
 |---|---|---|---|
-| Coil 3.6.3 | ❌ metadata 2.4 unreadable by 2.2. The library's Gradle check fails early with a fix-it message | ✅ | 🔬 should work (2.3 reads 2.4); not yet built |
-| Android NDK 27.1 | ✅ | ✅ | 🔬 RN 0.89 defaults to 28.2; the core is plain C++20 and should be unaffected |
+| Coil 3.6.3 | ❌ metadata 2.4 unreadable by 2.2. The library's Gradle check fails early with a fix-it message | ✅ | ✅ R8 release smoke test 7/7 with the template's Kotlin 2.3.21. This confirms Kotlin 2.3 reads Coil's 2.4 metadata |
+| Android NDK | 27.1 ✅ | 27.1 ✅ | 28.2 ✅ (AGP auto-installs it) |
+| iOS (CocoaPods, Release simulator) | — | ✅ | ✅ smoke test 7/7 |
+
+RN 0.89 app-side changes, none of them in TurboImage itself:
+
+- Apps must add `@react-native/community-cli-plugin` as a devDependency. `bundle` moved there, and release bundling fails without it.
+- `DefaultReactActivityDelegate(activity, name, fabricEnabled)` is removed. The example now uses the two-argument form, which also works on 0.88.
+- npm/Bun warn that `0.89.0-rc.1` doesn't satisfy the library's `react-native >=0.88.0` peer range (semver excludes prereleases). This is harmless.
+
+Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 
 | | iOS 15.1 floor (RN default) | iOS 16.0 floor |
 |---|---|---|
@@ -37,7 +46,7 @@ Legend: ✅ verified by building (and running, where noted) · 🟡 builds, need
 | iOS integration | CocoaPods | RN SwiftPM (0.88 preview) |
 |---|---|---|
 | Debug, simulator | ✅ runs | ✅ runs |
-| Release, simulator | ✅ smoke test 7/7 | 🟡 not yet built |
+| Release, simulator | ✅ smoke test 7/7 | ✅ smoke test 7/7 |
 | Device (arm64) | 🟡 not yet built | 🟡 not yet built |
 | `use_frameworks! :linkage => :static` | 🟡 not yet built | — |
 

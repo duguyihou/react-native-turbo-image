@@ -27,6 +27,9 @@ builds, and the CI matrix.
 - [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios, release builds).
 - [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
 - [x] Cross-platform `onError.code` taxonomy (RFC §4.4).
+- [x] RN 0.89.0-rc.1 evaluation, scripted (`scripts/eval-rn-version.sh`) and run in CI (non-blocking).
+- [x] iOS Release through RN SwiftPM verified by the smoke test.
+- [x] Smoke scripts refuse stale build artifacts (`scripts/assert-fresh-build.sh`).
 
 ### Phase 2: pipeline parity with 1.x (ordered by usage)
 | 1.x feature | 2.0 home | Notes |

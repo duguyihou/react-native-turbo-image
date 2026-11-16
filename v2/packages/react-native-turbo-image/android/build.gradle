@@ -48,6 +48,12 @@ if (majorMinor(appKotlin) < majorMinor(minimumKotlinForCoil)) {
   )
 }
 
+def reactNativeArchitectures() {
+  def value = rootProject.findProperty("reactNativeArchitectures")
+  return value ? value.toString().split(",").collect { it.trim() } :
+    ["armeabi-v7a", "x86", "x86_64", "arm64-v8a"]
+}
+
 apply plugin: "com.android.library"
 // AGP 9 can register Kotlin itself (`android.builtInKotlin=true`); applying
 // the plugin again would fail with a duplicate `kotlin` extension.
@@ -68,6 +74,10 @@ android {
     externalNativeBuild {
       cmake {
         arguments "-DANDROID_STL=c++_shared"
+        // Honour the app's `-PreactNativeArchitectures=...`. The RN Gradle
+        // plugin narrows ABIs only for the app module; without this, the
+        // library compiles the core for all four ABIs on every build.
+        abiFilters(*reactNativeArchitectures())
       }
     }
   }

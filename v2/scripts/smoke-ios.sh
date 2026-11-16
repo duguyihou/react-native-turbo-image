@@ -17,6 +17,17 @@ app="${1:-${v2_root}/apps/example/ios/build/Build/Products/Release-iphonesimulat
 bundle_id="org.reactjs.native.example.TurboImageExample"
 timeout_s=120
 
+# shellcheck source=./assert-fresh-build.sh source-path=SCRIPTDIR
+source "${script_dir}/assert-fresh-build.sh"
+# An .app directory's mtime does not change when Xcode rewrites files inside
+# it, so compare against whichever of the executable and the JS bundle was
+# written last (a JS-only change re-bundles without relinking, and vice versa).
+newest_artifact="${app}/TurboImageExample"
+if [[ "${app}/main.jsbundle" -nt "${newest_artifact}" ]]; then
+  newest_artifact="${app}/main.jsbundle"
+fi
+assert_fresh_build "${newest_artifact}"
+
 # Default to the first available iPhone simulator.
 udid="${2:-$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')}"
 if [[ -z "${udid}" ]]; then
