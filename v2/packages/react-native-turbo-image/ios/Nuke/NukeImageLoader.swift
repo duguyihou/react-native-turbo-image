@@ -98,17 +98,17 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     let completionBox = UncheckedSendable(completion)
     let task = Task { @MainActor in
       do {
-        let image = try await imageTask.image
+        let response = try await imageTask.response
         progressTask?.cancel()
         // Dropping results after cancellation is part of the
         // request-lifecycle contract: a recycled view must never receive
         // the image for its previous source.
         guard !Task.isCancelled else { return }
-        completionBox.value(image, nil)
+        completionBox.value(response.image, response.cacheType == .memory, nil)
       } catch {
         progressTask?.cancel()
         guard !Task.isCancelled else { return }
-        completionBox.value(nil, Self.classify(error))
+        completionBox.value(nil, false, Self.classify(error))
       }
     }
     return NukeLoadTask(imageTask: imageTask, task: task, progressTask: progressTask)

@@ -157,6 +157,17 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Known gap.** With Coil's dedup, only the first of N identical concurrent loads reports progress on Android. Nuke reports it to all of them.
 - **Tests.** The smoke scenarios `lifecycle` and `supersede` assert these exact sequences on both platforms.
 
+### 4.4b 1.x prop compatibility
+
+| 1.x prop | 2.0 | Notes |
+|---|---|---|
+| `resizeMode` default `contain` | Spec default `contain` | React Native's `<Image>` defaults to `cover`; kept as `contain` so 1.x layouts don't change |
+| `cachePolicy` `'dataCache'` | Mapped to `'default'` in JS | Same behaviour (RFC §4.2); warns in development |
+| `cachePolicy` `'urlCache'` | Mapped to `'default'` in JS | **Behaviour differs**: HTTP `Cache-Control` is no longer honoured; warns in development |
+| `showPlaceholderOnFailure` (default `false`) | Native prop, same default | When false, the placeholder is removed on failure, including a decode that finishes after the failure |
+| `fadeDuration` (default 300 ms) | Native prop, same default | Skipped for memory-cache hits on both platforms: Coil's crossfade rule, mirrored on iOS through a `fromMemoryCache` flag on the seam completion |
+| `rounded` | JS clipping container | Same approach as 1.x. Android's `ImageView` content isn't clipped by RN's border drawing, so a container keeps both platforms identical |
+
 ### 4.5 Placeholders (blurhash, thumbhash)
 
 `cpp/include/turboimage/Placeholder.h` is the only decoder, replacing four
@@ -285,7 +296,7 @@ backed by a non-blocking CI job.
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 10 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 12 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -296,7 +307,9 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 10 scenarios in
 - core validation (`invalidRequest`),
 - a recycled view reloading the same source,
 - the event lifecycle,
-- a superseded load ending as `cancelled`.
+- a superseded load ending as `cancelled`,
+- the placeholder being removed on failure by default,
+- the 1.x `dataCache` name together with `rounded`.
 
 The failing scenarios carry blurhash and thumbhash placeholders, which must stay visible (`SMOKE_SCREENSHOT=…`). The Android job also runs the core goldens on the emulator (`scripts/test-core-android.sh`).
 
@@ -316,8 +329,8 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 10/10 |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 10/10 |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 12/12 |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 12/12 |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |

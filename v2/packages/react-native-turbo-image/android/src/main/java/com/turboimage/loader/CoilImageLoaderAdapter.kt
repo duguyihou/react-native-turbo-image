@@ -17,6 +17,7 @@ import coil3.network.httpHeaders
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.crossfade
 import coil3.target.ImageViewTarget
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
@@ -58,6 +59,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   override fun load(
     target: ImageView,
     request: ResolvedRequest,
+    fadeMillis: Int,
     listener: ImageLoaderAdapter.Listener,
   ): LoadHandle {
     // `finished` enforces the seam contract on the main thread: no progress
@@ -84,6 +86,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
         .httpHeaders(NetworkHeaders.Builder().set(ProgressInterceptor.TOKEN_HEADER, token.toString()).build())
         .target(KeepCurrentImageTarget(target))
+        // Coil's crossfade already skips memory-cache hits (the seam rule)
+        // and fades from the target's current drawable, i.e. the placeholder.
+        .crossfade(fadeMillis)
         .listener(
           onSuccess = { _, result ->
             finish()

@@ -50,11 +50,21 @@ class TurboImageView(
   // Mirrors the iOS view: once the loaded image is shown, a late placeholder
   // must not replace it, and a newer decode supersedes an older one.
   private var showingFinalImage = false
+  // The current load failed; with showPlaceholderOnFailure=false no
+  // placeholder may appear any more (same rule as the iOS view).
+  private var loadFailed = false
   private var placeholderGeneration = 0
   private var progressThrottle = TurboImageCore.ProgressThrottle()
 
+  /** 1.x semantics: false removes the placeholder when the load fails. */
+  var showPlaceholderOnFailure = false
+
+  /** Cross-fade duration in ms; 0 disables it. 1.x default. */
+  var fadeDuration = 300
+
   init {
-    scaleType = ScaleType.CENTER_CROP
+    // Matches the spec default (`contain`, 1.x's default).
+    scaleType = ScaleType.FIT_CENTER
     // `cover` scales past the view's bounds by design, and ImageView only
     // clips that if its parent does. Fabric's ReactViewGroup sets
     // clipChildren=false (to support overflow: visible), so without this an
@@ -66,12 +76,13 @@ class TurboImageView(
   fun setResizeMode(mode: String?) {
     scaleType =
       when (mode) {
-        "contain" -> ScaleType.FIT_CENTER
+        "cover" -> ScaleType.CENTER_CROP
         "stretch" -> ScaleType.FIT_XY
         "center" -> ScaleType.CENTER
-        else -> ScaleType.CENTER_CROP
+        else -> ScaleType.FIT_CENTER // "contain", the default
       }
   }
+
 
   /** Called once per Fabric transaction, after all props have landed. */
   fun onTransactionEnd() {
@@ -88,7 +99,7 @@ class TurboImageView(
 
   private fun applyPlaceholder() {
     val generation = ++placeholderGeneration
-    if (showingFinalImage) return
+    if (!placeholderAllowed()) return
     // Snapshot: props may change before the decode runs.
     val blur = blurhash.orEmpty()
     val thumb = thumbhash.orEmpty()
@@ -102,10 +113,20 @@ class TurboImageView(
           copyPixelsFromBuffer(ByteBuffer.wrap(pixels.rgba))
         }
       post {
-        if (generation == placeholderGeneration && !showingFinalImage) {
+        if (generation == placeholderGeneration && placeholderAllowed()) {
           setImageBitmap(bitmap)
         }
       }
+    }
+  }
+
+  private fun placeholderAllowed() = !showingFinalImage && !(loadFailed && !showPlaceholderOnFailure)
+
+  private fun onLoadFailed() {
+    loadFailed = true
+    if (!showPlaceholderOnFailure) {
+      ++placeholderGeneration // a decode still in flight must not appear
+      setImageDrawable(null)
     }
   }
 
@@ -122,6 +143,7 @@ class TurboImageView(
     }
     setImageDrawable(null)
     showingFinalImage = false
+    loadFailed = false
     progressThrottle = TurboImageCore.ProgressThrottle()
 
     // Requests the core rejects fail before onStart: no load ever began.
@@ -132,6 +154,7 @@ class TurboImageView(
     when (result) {
       is ResolveFailure -> {
         emitFailure(invalid, "Invalid request (core error ${result.errorCode})")
+        onLoadFailed()
         emitCompletion("completed")
       }
       is ResolvedRequest -> startLoad(result)
@@ -148,6 +171,7 @@ class TurboImageView(
       loader.load(
         this as ImageView,
         request,
+        fadeDuration,
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) {
             if (handle !== thisHandle || !progressThrottle.shouldReport(completed, total)) return
@@ -173,6 +197,7 @@ class TurboImageView(
             if (handle !== thisHandle) return
             handle = null
             emitFailure(code, message)
+            onLoadFailed()
             emitCompletion("completed")
           }
         },

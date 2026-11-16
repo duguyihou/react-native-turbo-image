@@ -72,10 +72,18 @@ export interface NativeProps extends ViewProps {
     'default' | 'memoryOnly' | 'noCache' | 'cacheOnly',
     'default'
   >;
+  // 'contain' is 1.x's default (React Native's <Image> defaults to 'cover');
+  // kept for compatibility, see docs/migration-plan.md.
   resizeMode?: CodegenTypes.WithDefault<
     'cover' | 'contain' | 'stretch' | 'center',
-    'cover'
+    'contain'
   >;
+  // 1.x semantics: by default the placeholder is removed when the load
+  // fails; true keeps it.
+  showPlaceholderOnFailure?: CodegenTypes.WithDefault<boolean, false>;
+  // Cross-fade from the placeholder (or blank) to the loaded image, in ms.
+  // Skipped for memory-cache hits on both platforms. 0 disables it.
+  fadeDuration?: CodegenTypes.WithDefault<CodegenTypes.Int32, 300>;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
   onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;
   onSuccess?: CodegenTypes.DirectEventHandler<SuccessEvent>;

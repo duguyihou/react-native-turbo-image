@@ -97,6 +97,9 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // True once the loaded image is on screen; a late placeholder must not
   // replace it.
   BOOL _showingFinalImage;
+  // The current load failed; with showPlaceholderOnFailure=false no
+  // placeholder may appear any more (even one whose decode finishes later).
+  BOOL _loadFailed;
   // Bumped whenever a placeholder decode is started or invalidated, so an
   // older decode finishing late is dropped (1.x had no such guard and could
   // flash a stale placeholder after `source` changed).
@@ -115,7 +118,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
     _imageView = [[UIImageView alloc] initWithFrame:self.bounds];
     _imageView.clipsToBounds = YES;
-    _imageView.contentMode = UIViewContentModeScaleAspectFill;
+    // Matches the spec default (`contain`, 1.x's default).
+    _imageView.contentMode = UIViewContentModeScaleAspectFit;
     self.contentView = _imageView;
   }
   return self;
@@ -159,9 +163,14 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 // Decodes the placeholder off the main thread with the shared C++ core and
 // shows it unless the real image (or a newer placeholder) got there first.
+- (BOOL)placeholderAllowed {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  return !_showingFinalImage && !(_loadFailed && !props.showPlaceholderOnFailure);
+}
+
 - (void)applyPlaceholder {
   const NSUInteger generation = ++_placeholderGeneration;
-  if (_showingFinalImage) {
+  if (![self placeholderAllowed]) {
     return;
   }
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
@@ -179,8 +188,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     dispatch_async(dispatch_get_main_queue(), ^{
       __typeof(self) strongSelf = weakSelf;
       if (strongSelf == nil || placeholder == nil ||
-          strongSelf->_placeholderGeneration != generation ||
-          strongSelf->_showingFinalImage) {
+          strongSelf->_placeholderGeneration != generation || ![strongSelf placeholderAllowed]) {
         return;
       }
       strongSelf->_imageView.image = placeholder;
@@ -198,6 +206,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   }
   _imageView.image = nil;
   _showingFinalImage = NO;
+  _loadFailed = NO;
   _progressThrottle = turboimage::ProgressThrottle{};
 
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
@@ -213,6 +222,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     [self emitFailure:turboimage::LoadErrorCode::InvalidRequest
               message:[NSString stringWithFormat:@"Invalid request (core error %d)",
                                                  static_cast<int>(result.error)]];
+    [self applyFailureToPlaceholder];
     [self emitCompletion:@"completed"];
     return;
   }
@@ -224,6 +234,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     [self emitFailure:url == nil ? turboimage::LoadErrorCode::InvalidRequest
                                  : turboimage::LoadErrorCode::Unknown
               message:url == nil ? @"Invalid URL" : @"No TurboImage loader adapter is linked"];
+    [self applyFailureToPlaceholder];
     [self emitCompletion:@"completed"];
     return;
   }
@@ -252,7 +263,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
         }
         [strongSelf emitProgress:completed total:(total > 0 ? total : -1)];
       }
-      completion:^(UIImage *image, NSError *error) {
+      completion:^(UIImage *image, BOOL fromMemoryCache, NSError *error) {
         __typeof(self) strongSelf = weakSelf;
         if (strongSelf == nil || strongSelf->_task != thisTask) {
           return;
@@ -260,9 +271,10 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
         strongSelf->_task = nil;
         if (image != nil) {
           strongSelf->_showingFinalImage = YES;
-          strongSelf->_imageView.image = image;
+          [strongSelf showFinalImage:image animated:!fromMemoryCache];
           [strongSelf emitSuccess:image.size source:source];
         } else {
+          [strongSelf applyFailureToPlaceholder];
           // The seam guarantees TIImageLoadErrorDomain; anything else is an
           // adapter bug, reported as unknown.
           const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
@@ -275,6 +287,37 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _task = thisTask;
 }
 
+// Cross-fades from whatever is shown (placeholder or blank). Memory-cache
+// hits appear instantly, the same rule as Coil's crossfade on Android, so
+// scrolling back through a list does not re-fade every cell.
+- (void)showFinalImage:(UIImage *)image animated:(BOOL)animated {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  if (!animated || props.fadeDuration <= 0) {
+    _imageView.image = image;
+    return;
+  }
+  [UIView transitionWithView:_imageView
+                    duration:props.fadeDuration / 1000.0
+                     options:UIViewAnimationOptionTransitionCrossDissolve |
+                             UIViewAnimationOptionAllowUserInteraction
+                  animations:^{
+                    self->_imageView.image = image;
+                  }
+                  completion:nil];
+}
+
+// 1.x semantics: without `showPlaceholderOnFailure` the placeholder is
+// removed when the load fails. Also stops a placeholder decode still in
+// flight from appearing after the failure.
+- (void)applyFailureToPlaceholder {
+  _loadFailed = YES;
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  if (!props.showPlaceholderOnFailure) {
+    ++_placeholderGeneration;
+    _imageView.image = nil;
+  }
+}
+
 - (void)prepareForRecycle {
   [super prepareForRecycle];
   [_task cancel];
@@ -283,6 +326,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _needsReload = NO;
   _needsPlaceholder = NO;
   _showingFinalImage = NO;
+  _loadFailed = NO;
   ++_placeholderGeneration;  // drop any decode still in flight
   // Fabric does not reset `_props` on recycle, and remounts a recycled view
   // with `oldProps:nullptr`. updateProps diffs against `_props`, so without

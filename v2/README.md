@@ -25,5 +25,8 @@ bun run example:android             # debug
 (cd apps/example && bun run build:android:release)   # R8 release build
 ```
 
+After changing the Codegen spec (`src/TurboImageViewNativeComponent.ts`),
+re-run `pod install`: iOS Codegen runs there, not during the Xcode build.
+
 Run the app with `cd apps/example && npx react-native start`, then launch it
 from Xcode or Android Studio, or with `npx react-native run-ios` / `run-android`.

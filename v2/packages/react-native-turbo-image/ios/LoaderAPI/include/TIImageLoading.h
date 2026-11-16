@@ -45,7 +45,10 @@ typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
 /// task was cancelled first (then it may not be called at all). A non-nil
 /// error is always in `TIImageLoadErrorDomain`; adapters classify their
 /// loader's errors so JS sees the same code on both platforms.
+/// `fromMemoryCache` lets the view skip the fade for memory hits, which is
+/// what Coil's crossfade does on Android.
 typedef void (^TIImageLoadCompletion)(UIImage *_Nullable image,
+                                      BOOL fromMemoryCache,
                                       NSError *_Nullable error);
 
 /// Progress contract: bytes received / expected (`total` <= 0 if unknown).

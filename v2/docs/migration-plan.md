@@ -34,7 +34,8 @@ builds, and the CI matrix.
 ### Phase 2: pipeline parity with 1.x (ordered by usage)
 | 1.x feature | 2.0 home | Notes |
 |---|---|---|
-| `cachePolicy` `urlCache`/`dataCache`/`memory` | Core matrix | Map 1.x names to 2.0 policies in a JS compatibility shim with deprecation warnings |
+| `cachePolicy` `urlCache`/`dataCache` | JS compatibility shim | ✅ both map to `'default'`, with development warnings; `urlCache` no longer honours HTTP headers (RFC §4.4b) |
+| `resizeMode` default, `showPlaceholderOnFailure`, `fadeDuration`, `rounded` | Native props + JS | ✅ 1.x defaults kept (RFC §4.4b) |
 | `cacheKey` | ✅ done | |
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ blurhash and thumbhash done (byte-exact vs. references, kept on failure). `memoryCacheKey` waits for the cache TurboModule |
@@ -66,3 +67,4 @@ builds, and the CI matrix.
 - tvOS support is dropped until requested (1.x listed it in the podspec).
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
+- `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.

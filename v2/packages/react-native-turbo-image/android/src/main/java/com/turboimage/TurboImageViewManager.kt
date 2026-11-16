@@ -45,6 +45,14 @@ class TurboImageViewManager :
     view.thumbhash = if (value?.hasKey("thumbhash") == true) value.getString("thumbhash") else null
   }
 
+  override fun setShowPlaceholderOnFailure(view: TurboImageView, value: Boolean) {
+    view.showPlaceholderOnFailure = value
+  }
+
+  override fun setFadeDuration(view: TurboImageView, value: Int) {
+    view.fadeDuration = value
+  }
+
   override fun setCachePolicy(view: TurboImageView, value: String?) {
     view.cachePolicy = TurboImageCore.CachePolicy.fromJs(value)
   }

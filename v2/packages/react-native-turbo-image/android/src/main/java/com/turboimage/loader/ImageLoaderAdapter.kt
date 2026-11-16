@@ -18,7 +18,12 @@ import com.turboimage.core.ResolvedRequest
  *  * [LoadHandle.cancel] is idempotent and safe after completion.
  */
 interface ImageLoaderAdapter {
-  fun load(target: ImageView, request: ResolvedRequest, listener: Listener): LoadHandle
+  /**
+   * @param fadeMillis cross-fade from the current drawable to the result;
+   *   0 disables it. Adapters must skip it for memory-cache hits (the rule
+   *   the iOS view applies too).
+   */
+  fun load(target: ImageView, request: ResolvedRequest, fadeMillis: Int, listener: Listener): LoadHandle
 
   interface Listener {
     /** Bytes received / expected; `total` <= 0 when unknown. */

@@ -37,9 +37,12 @@ type Scenario = {
   title: string;
   source: TurboImageProps['source'];
   cachePolicy: NonNullable<TurboImageProps['cachePolicy']>;
-  // Failing scenarios carry a placeholder: it must stay visible after the
-  // failure, on both platforms (compare SMOKE_SCREENSHOT output).
+  // Failing scenarios carry a placeholder. With showPlaceholderOnFailure it
+  // must stay visible after the failure, without it the view must be blank
+  // (compare SMOKE_SCREENSHOT output across platforms).
   placeholder?: TurboImageProps['placeholder'];
+  showPlaceholderOnFailure?: boolean;
+  rounded?: boolean;
   expect: Outcome;
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
@@ -56,6 +59,7 @@ const SCENARIOS: Scenario[] = [
     title: 'core rejects unsupported schemes',
     source: { uri: 'ftp://example.com/a.png' },
     placeholder: { thumbhash: '4AcKPJpwd3dwd3eHh3eAgAj3iA==' },
+    showPlaceholderOnFailure: true,
     cachePolicy: 'default',
     expect: 'error',
     expectCode: 'invalidRequest',
@@ -65,10 +69,20 @@ const SCENARIOS: Scenario[] = [
     title: 'cacheOnly never touches the network',
     source: { uri: URI_NEVER_LOADED },
     placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' },
+    showPlaceholderOnFailure: true,
     cachePolicy: 'cacheOnly',
     expect: 'error',
     expectCode: 'notCached',
     after: 'network',
+  },
+  {
+    id: 'placeholderClearedOnFailure',
+    title: 'placeholder removed on failure by default (blank card)',
+    source: { uri: 'ftp://example.com/b.png' },
+    placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' },
+    cachePolicy: 'default',
+    expect: 'error',
+    expectCode: 'invalidRequest',
   },
   {
     id: 'network',
@@ -121,6 +135,14 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
     after: 'network',
     kind: 'recycle',
+  },
+  {
+    id: 'legacyDataCache',
+    title: "1.x cachePolicy 'dataCache' + rounded still work",
+    source: { uri: 'https://picsum.photos/id/1011/600/400' },
+    cachePolicy: 'dataCache',
+    rounded: true,
+    expect: 'load',
   },
   {
     id: 'lifecycle',
@@ -282,6 +304,8 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       style={styles.image}
       source={scenario.source}
       placeholder={scenario.placeholder}
+      showPlaceholderOnFailure={scenario.showPlaceholderOnFailure}
+      rounded={scenario.rounded}
       cachePolicy={scenario.cachePolicy}
       resizeMode="cover"
       onSuccess={(e) =>
