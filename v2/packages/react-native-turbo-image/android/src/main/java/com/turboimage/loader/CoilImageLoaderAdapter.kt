@@ -2,6 +2,7 @@ package com.turboimage.loader
 
 import android.content.Context
 import android.widget.ImageView
+import coil3.Image
 import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
@@ -12,7 +13,7 @@ import coil3.network.HttpException
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
-import coil3.request.target
+import coil3.target.ImageViewTarget
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import java.io.IOException
@@ -32,6 +33,21 @@ import okio.Path.Companion.toOkioPath
  *  * concurrent requests for the same cache key are de-duplicated, which
  *    matches Nuke's default task coalescing.
  */
+/**
+ * A Coil ImageView target that only ever sets the *loaded* image. Coil's
+ * default target sets the request's placeholder on start and its error
+ * image on failure; both are null for us, so it would wipe the TurboImage
+ * placeholder the view already shows. iOS keeps the placeholder on start and
+ * on failure, so Android must too (RFC rule 3). Subclassing (rather than a
+ * plain Target) keeps Coil's view-lifecycle handling: detach/attach
+ * cancel/restart, see RFC open question 1.
+ */
+private class KeepCurrentImageTarget(view: ImageView) : ImageViewTarget(view) {
+  override fun onStart(placeholder: Image?) = Unit
+
+  override fun onError(error: Image?) = Unit
+}
+
 class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   private val imageLoader: ImageLoader = buildImageLoader(context.applicationContext)
 
@@ -49,7 +65,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
         .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
         .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
-        .target(target)
+        .target(KeepCurrentImageTarget(target))
         .listener(
           onSuccess = { _, result -> listener.onSuccess(result.image.width, result.image.height) },
           onError = { _, result ->

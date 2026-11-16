@@ -5,6 +5,7 @@
 # data (so caches start cold), launches it, and waits for the single
 # `TURBOIMAGE_SMOKE {...}` line App.tsx logs once every scenario settles.
 #
+# Env: SMOKE_SCREENSHOT=<png path> saves a screenshot after the run.
 # Usage: scripts/smoke-android.sh [path/to/app.apk]
 # Exit: 0 when the app reports pass=true, 1 otherwise (including timeout).
 
@@ -48,6 +49,11 @@ if [[ -z "${line}" ]]; then
 fi
 
 echo "${line}"
+# Optional: capture what the smoke run left on screen (placeholders must
+# still be visible on the failing scenarios).
+if [[ -n "${SMOKE_SCREENSHOT:-}" ]]; then
+  "${adb}" exec-out screencap -p > "${SMOKE_SCREENSHOT}" || true
+fi
 if [[ "${line}" == *'"pass":true'* ]]; then
   echo "PASS (android)"
 else

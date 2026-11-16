@@ -18,6 +18,7 @@
 #import <react/renderer/components/TurboImageSpec/RCTComponentViewHelpers.h>
 
 #include <turboimage/ImageRequest.h>
+#include <turboimage/Placeholder.h>
 
 #import "TIImageLoading.h"
 
@@ -57,6 +58,31 @@ NSString *toNSString(const std::string &s) {
                                 encoding:NSUTF8StringEncoding];
 }
 
+const std::shared_ptr<const TurboImageViewProps> &defaultViewProps() {
+  static const auto defaultProps = std::make_shared<const TurboImageViewProps>();
+  return defaultProps;
+}
+
+// Wraps premultiplied RGBA from the core in a UIImage. Copies the pixels so
+// the UIImage owns its memory independently of the C++ buffer.
+UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
+  NSData *data = [NSData dataWithBytes:rgba.pixels.data() length:rgba.pixels.size()];
+  CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
+  // sRGB: blurhash/thumbhash operate in sRGB. (1.x used DeviceRGB, which is
+  // sRGB on iOS anyway; naming it is explicit.)
+  CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+  CGImageRef cgImage = CGImageCreate(
+      static_cast<size_t>(rgba.width), static_cast<size_t>(rgba.height), 8, 32,
+      static_cast<size_t>(rgba.width) * 4, colorSpace,
+      kCGBitmapByteOrder32Big | kCGImageAlphaPremultipliedLast, provider, nullptr,
+      true /* interpolate: placeholders are upscaled */, kCGRenderingIntentDefault);
+  UIImage *image = cgImage ? [UIImage imageWithCGImage:cgImage] : nil;
+  CGImageRelease(cgImage);
+  CGColorSpaceRelease(colorSpace);
+  CGDataProviderRelease(provider);
+  return image;
+}
+
 }  // namespace
 
 @interface TurboImageComponentView () <RCTTurboImageViewViewProtocol>
@@ -66,6 +92,14 @@ NSString *toNSString(const std::string &s) {
   UIImageView *_imageView;
   id<TIImageLoadTask> _task;
   BOOL _needsReload;
+  BOOL _needsPlaceholder;
+  // True once the loaded image is on screen; a late placeholder must not
+  // replace it.
+  BOOL _showingFinalImage;
+  // Bumped whenever a placeholder decode is started or invalidated, so an
+  // older decode finishing late is dropped (1.x had no such guard and could
+  // flash a stale placeholder after `source` changed).
+  NSUInteger _placeholderGeneration;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -74,8 +108,7 @@ NSString *toNSString(const std::string &s) {
 
 - (instancetype)initWithFrame:(CGRect)frame {
   if ((self = [super initWithFrame:frame])) {
-    static const auto defaultProps = std::make_shared<const TurboImageViewProps>();
-    _props = defaultProps;
+    _props = defaultViewProps();
 
     _imageView = [[UIImageView alloc] initWithFrame:self.bounds];
     _imageView.clipsToBounds = YES;
@@ -94,6 +127,10 @@ NSString *toNSString(const std::string &s) {
       oldViewProps.cachePolicy != newViewProps.cachePolicy) {
     _needsReload = YES;
   }
+  if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
+      oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash) {
+    _needsPlaceholder = YES;
+  }
   if (oldViewProps.resizeMode != newViewProps.resizeMode) {
     _imageView.contentMode = toContentMode(newViewProps.resizeMode);
   }
@@ -107,14 +144,52 @@ NSString *toNSString(const std::string &s) {
   [super finalizeUpdates:updateMask];
   if (_needsReload) {
     _needsReload = NO;
+    // startLoad clears the view, so the placeholder must be (re)applied.
+    _needsPlaceholder = YES;
     [self startLoad];
   }
+  if (_needsPlaceholder) {
+    _needsPlaceholder = NO;
+    [self applyPlaceholder];
+  }
+}
+
+// Decodes the placeholder off the main thread with the shared C++ core and
+// shows it unless the real image (or a newer placeholder) got there first.
+- (void)applyPlaceholder {
+  const NSUInteger generation = ++_placeholderGeneration;
+  if (_showingFinalImage) {
+    return;
+  }
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  // Copied into the block: props may change before the decode runs.
+  const std::string blurhash = props.placeholder.blurhash;
+  const std::string thumbhash = props.placeholder.thumbhash;
+  if (blurhash.empty() && thumbhash.empty()) {
+    return;
+  }
+
+  __weak __typeof(self) weakSelf = self;
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+    const auto rgba = turboimage::decodePlaceholder(blurhash, thumbhash);
+    UIImage *placeholder = rgba ? imageFromRgba(*rgba) : nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+      __typeof(self) strongSelf = weakSelf;
+      if (strongSelf == nil || placeholder == nil ||
+          strongSelf->_placeholderGeneration != generation ||
+          strongSelf->_showingFinalImage) {
+        return;
+      }
+      strongSelf->_imageView.image = placeholder;
+    });
+  });
 }
 
 - (void)startLoad {
   [_task cancel];
   _task = nil;
   _imageView.image = nil;
+  _showingFinalImage = NO;
 
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   const auto result = turboimage::resolveRequest({
@@ -165,6 +240,7 @@ NSString *toNSString(const std::string &s) {
                                  }
                                  strongSelf->_task = nil;
                                  if (image != nil) {
+                                   strongSelf->_showingFinalImage = YES;
                                    strongSelf->_imageView.image = image;
                                    [strongSelf emitLoad:image.size];
                                  } else {
@@ -186,6 +262,14 @@ NSString *toNSString(const std::string &s) {
   _task = nil;
   _imageView.image = nil;
   _needsReload = NO;
+  _needsPlaceholder = NO;
+  _showingFinalImage = NO;
+  ++_placeholderGeneration;  // drop any decode still in flight
+  // Fabric does not reset `_props` on recycle, and remounts a recycled view
+  // with `oldProps:nullptr`. updateProps diffs against `_props`, so without
+  // this a recycled view given the same source as its previous life would
+  // never reload and stay blank (smoke scenario `recycledSameSource`).
+  _props = defaultViewProps();
 }
 
 #pragma mark - Events

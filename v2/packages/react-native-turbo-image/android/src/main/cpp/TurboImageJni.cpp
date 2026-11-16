@@ -13,6 +13,7 @@
 #include <string>
 
 #include "turboimage/ImageRequest.h"
+#include "turboimage/Placeholder.h"
 
 namespace {
 
@@ -55,6 +56,29 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
   return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
                         env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
                         r.disk.read, r.disk.write, r.allowNetwork);
+}
+
+// Returns `com.turboimage.core.PlaceholderPixels` (premultiplied RGBA, the
+// byte layout of an ARGB_8888 Bitmap), or null if neither hash decodes.
+// Called on a background thread; the decode is pure (Placeholder.h).
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeDecodePlaceholder(JNIEnv* env, jobject /* this */,
+                                                                 jstring blurhash,
+                                                                 jstring thumbhash) {
+  const auto image =
+      turboimage::decodePlaceholder(toStdString(env, blurhash), toStdString(env, thumbhash));
+  if (!image) {
+    return nullptr;
+  }
+  const auto size = static_cast<jsize>(image->pixels.size());
+  jbyteArray bytes = env->NewByteArray(size);
+  if (bytes == nullptr) {
+    return nullptr;  // OutOfMemoryError is pending; let it propagate.
+  }
+  env->SetByteArrayRegion(bytes, 0, size, reinterpret_cast<const jbyte*>(image->pixels.data()));
+  jclass pixelsClass = env->FindClass("com/turboimage/core/PlaceholderPixels");
+  jmethodID ctor = env->GetMethodID(pixelsClass, "<init>", "(II[B)V");
+  return env->NewObject(pixelsClass, ctor, image->width, image->height, bytes);
 }
 
 extern "C" JNIEXPORT jstring JNICALL

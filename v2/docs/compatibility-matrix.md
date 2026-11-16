@@ -17,10 +17,11 @@ Legend: ✅ verified by building (and running, where noted) · 🟡 builds, need
 | Android NDK | 27.1.12297006 | — | ✅ (16 KB page alignment set) |
 | compileSdk / targetSdk / minSdk | 37 / 36 / 24 | — | ✅ |
 | C++ standard | C++20 | Apple Clang (Xcode 27.2), NDK Clang, CMake ≥ 3.22 | ✅ |
-| GoogleTest | 1.17.0 | — | ✅ 13/13 |
+| GoogleTest | 1.17.0 | — | ✅ 27/27 on host (Apple Clang) and on the Android arm64 emulator |
 | Bun | 1.3.13, hoisted linker | — | ✅ |
 | react-native-safe-area-context (example only) | 5.11.1 | — | ✅ |
 | Xcode | 27.2 (local) | Swift tools ≥ 6.2 for Package.swift | ✅ |
+| blurhash / thumbhash (npm, devDependencies) | 2.0.5 / 0.1.1 | Reference implementations for the C++ goldens only | ✅ |
 
 ## Cross-version matrix
 
@@ -47,7 +48,7 @@ Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 |---|---|---|
 | Debug, simulator | ✅ runs | ✅ runs |
 | Release, simulator | ✅ smoke test 7/7 | ✅ smoke test 7/7 |
-| Device (arm64) | 🟡 not yet built | 🟡 not yet built |
+| Device (arm64) | 🟡 compiles and links (unsigned Release); not run | 🟡 compiles and links (unsigned Release); not run |
 | `use_frameworks! :linkage => :static` | 🟡 not yet built | — |
 
 ## Behaviour parity (adapter configuration)

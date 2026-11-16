@@ -5,14 +5,26 @@ export type TurboImageProps = NativeProps;
 export type {
   ErrorEvent,
   LoadEvent,
+  NativePlaceholder as Placeholder,
   NativeSource,
 } from './TurboImageViewNativeComponent';
 
-// The 2.0 walking skeleton exposes the native component directly. The 1.x
-// JS conveniences (placeholder props, prefetch, cache helpers) are
-// intentionally omitted until the image pipeline milestone; see
-// docs/migration-plan.md for the order they come back in.
+// 2.0 exposes the native component almost directly. The remaining 1.x JS
+// conveniences (memoryCacheKey placeholders, prefetch, cache helpers) are
+// intentionally omitted for now; docs/migration-plan.md lists the order they
+// come back in.
 export function TurboImage(props: TurboImageProps) {
+  // Same rule as 1.x: one placeholder kind at a time. Native would silently
+  // prefer blurhash; failing loudly in development is kinder.
+  if (
+    __DEV__ &&
+    props.placeholder?.blurhash &&
+    props.placeholder?.thumbhash
+  ) {
+    throw new Error(
+      'TurboImage: pass either placeholder.blurhash or placeholder.thumbhash, not both'
+    );
+  }
   return <TurboImageView {...props} />;
 }
 

@@ -1,6 +1,7 @@
 package com.turboimage
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import com.facebook.react.bridge.Arguments
@@ -13,6 +14,9 @@ import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import com.turboimage.loader.ImageLoaderAdapter
 import com.turboimage.loader.LoadHandle
+import java.nio.ByteBuffer
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * Fabric host view for <TurboImage> on Android. Mirrors
@@ -34,11 +38,28 @@ class TurboImageView(
   var cachePolicy: TurboImageCore.CachePolicy = TurboImageCore.CachePolicy.DEFAULT
     set(value) { if (field != value) { field = value; needsReload = true } }
 
+  // Placeholder hashes. A change re-decodes; see [applyPlaceholder].
+  var blurhash: String? = null
+    set(value) { if (field != value) { field = value; needsPlaceholder = true } }
+  var thumbhash: String? = null
+    set(value) { if (field != value) { field = value; needsPlaceholder = true } }
+
   private var needsReload = false
+  private var needsPlaceholder = false
   private var handle: LoadHandle? = null
+  // Mirrors the iOS view: once the loaded image is shown, a late placeholder
+  // must not replace it, and a newer decode supersedes an older one.
+  private var showingFinalImage = false
+  private var placeholderGeneration = 0
 
   init {
     scaleType = ScaleType.CENTER_CROP
+    // `cover` scales past the view's bounds by design, and ImageView only
+    // clips that if its parent does. Fabric's ReactViewGroup sets
+    // clipChildren=false (to support overflow: visible), so without this an
+    // image whose aspect differs from the view paints over its neighbours.
+    // Mirrors `clipsToBounds = YES` on iOS.
+    cropToPadding = true
   }
 
   fun setResizeMode(mode: String?) {
@@ -51,11 +72,48 @@ class TurboImageView(
       }
   }
 
-  fun maybeReload() {
+  /** Called once per Fabric transaction, after all props have landed. */
+  fun onTransactionEnd() {
+    if (needsReload) {
+      // reload clears the view, so the placeholder must be (re)applied.
+      needsPlaceholder = true
+      maybeReload()
+    }
+    if (needsPlaceholder) {
+      needsPlaceholder = false
+      applyPlaceholder()
+    }
+  }
+
+  private fun applyPlaceholder() {
+    val generation = ++placeholderGeneration
+    if (showingFinalImage) return
+    // Snapshot: props may change before the decode runs.
+    val blur = blurhash.orEmpty()
+    val thumb = thumbhash.orEmpty()
+    if (blur.isEmpty() && thumb.isEmpty()) return
+
+    placeholderExecutor.execute {
+      val pixels = TurboImageCore.decodePlaceholder(blur, thumb) ?: return@execute
+      val bitmap =
+        Bitmap.createBitmap(pixels.width, pixels.height, Bitmap.Config.ARGB_8888).apply {
+          // The core returns premultiplied RGBA, ARGB_8888's in-memory layout.
+          copyPixelsFromBuffer(ByteBuffer.wrap(pixels.rgba))
+        }
+      post {
+        if (generation == placeholderGeneration && !showingFinalImage) {
+          setImageBitmap(bitmap)
+        }
+      }
+    }
+  }
+
+  private fun maybeReload() {
     if (!needsReload) return
     needsReload = false
     cancel()
     setImageDrawable(null)
+    showingFinalImage = false
 
     val invalid = TurboImageCore.LoadErrorCode.INVALID_REQUEST.nativeValue
     val source = uri ?: return emitError(invalid, "Missing source.uri")
@@ -77,6 +135,7 @@ class TurboImageView(
           override fun onSuccess(width: Int, height: Int) {
             if (handle !== thisHandle) return
             handle = null
+            showingFinalImage = true
             dispatch(LoadEvent(surfaceId(), id, width.toDouble(), height.toDouble()))
           }
 
@@ -93,6 +152,7 @@ class TurboImageView(
   fun cancel() {
     handle?.cancel()
     handle = null
+    ++placeholderGeneration // drop any decode still in flight
   }
 
   private fun emitError(code: Int, message: String) =
@@ -102,6 +162,15 @@ class TurboImageView(
 
   private fun dispatch(event: Event<*>) {
     UIManagerHelper.getEventDispatcher(reactContext)?.dispatchEvent(event)
+  }
+
+  private companion object {
+    // One background thread is plenty: a decode is ~1 ms, and serialising
+    // them bounds memory when a list mounts many placeholders at once.
+    val placeholderExecutor: ExecutorService =
+      Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "TurboImagePlaceholder").apply { isDaemon = true }
+      }
   }
 
   private class LoadEvent(surfaceId: Int, viewTag: Int, val width: Double, val height: Double) :

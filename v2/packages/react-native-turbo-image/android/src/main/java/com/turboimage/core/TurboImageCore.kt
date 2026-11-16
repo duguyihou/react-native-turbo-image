@@ -51,6 +51,15 @@ object TurboImageCore {
   private external fun nativeCoreVersion(): String
 
   private external fun nativeLoadErrorCodeName(code: Int): String
+
+  /**
+   * Decodes a blurhash or base64 thumbhash with the shared C++ core. Pure and
+   * thread-safe; call it off the main thread (it can take ~1 ms).
+   */
+  fun decodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels? =
+    nativeDecodePlaceholder(blurhash, thumbhash)
+
+  private external fun nativeDecodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels?
 }
 
 sealed interface ResolveResult
@@ -65,6 +74,12 @@ data class ResolvedRequest(
   val diskWrite: Boolean,
   val allowNetwork: Boolean,
 ) : ResolveResult
+
+/**
+ * Premultiplied RGBA8, row-major: the in-memory layout of an ARGB_8888
+ * Bitmap. Constructed from JNI; constructor pinned in consumer-rules.pro.
+ */
+class PlaceholderPixels(val width: Int, val height: Int, val rgba: ByteArray)
 
 /** Constructed from JNI; `errorCode` mirrors `turboimage::RequestError`. */
 data class ResolveFailure(val errorCode: Int) : ResolveResult

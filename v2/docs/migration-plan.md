@@ -37,7 +37,7 @@ builds, and the CI matrix.
 | `cachePolicy` `urlCache`/`dataCache`/`memory` | Core matrix | Map 1.x names to 2.0 policies in a JS compatibility shim with deprecation warnings |
 | `cacheKey` | ✅ done | |
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | Progress needs a seam extension; Coil progress via an OkHttp interceptor |
-| `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | Removes two duplicated decoder implementations (rule 4) |
+| `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ blurhash and thumbhash done (byte-exact vs. references, kept on failure). `memoryCacheKey` waits for the cache TurboModule |
 | `resize`, `blur`, `monochrome`, `tint`, `borderRadius` processors | Core describes processors; adapters map them to Nuke `ImageProcessors` / Coil `Transformation` | The processor list becomes part of the cache key in core |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop | |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | Codegen `type: "all"` |

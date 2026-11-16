@@ -16,6 +16,16 @@ export type NativeSource = Readonly<{
   cacheKey?: string;
 }>;
 
+// Shown until the image loads, and kept if it fails. Decoded by the shared
+// C++ core off the main thread. Provide at most one (validated in JS).
+// TODO: 1.x's `memoryCacheKey` placeholder needs an adapter cache-lookup
+// API on the seam; it lands with the prefetch/cache TurboModule.
+export type NativePlaceholder = Readonly<{
+  blurhash?: string;
+  // Base64, as produced by `thumbhash`'s rgbaToThumbHash + base64 encoding.
+  thumbhash?: string;
+}>;
+
 export type LoadEvent = Readonly<{
   width: CodegenTypes.Double;
   height: CodegenTypes.Double;
@@ -33,6 +43,7 @@ export type ErrorEvent = Readonly<{
 
 export interface NativeProps extends ViewProps {
   source: NativeSource;
+  placeholder?: NativePlaceholder;
   // These string unions mirror `turboimage::CachePolicy`; the native side
   // converts them to the pinned integer values in cpp/include.
   cachePolicy?: CodegenTypes.WithDefault<

@@ -140,7 +140,24 @@ Without this, a `cacheOnly` miss surfaced as `Nuke.ImagePipeline.Error error 4`
 on iOS and `HTTP 504` on Android. The on-device smoke test now asserts
 `notCached` on both.
 
-### 4.5 iOS module layout (rules 5 and 6)
+### 4.5 Placeholders (blurhash, thumbhash)
+
+`cpp/include/turboimage/Placeholder.h` is the only decoder, replacing four
+1.x ports (Swift and Kotlin × blurhash and thumbhash).
+
+- **Exactness.** The decoders are ports of npm `blurhash` 2.0.5 and `thumbhash` 0.1.1. GoogleTest goldens come from those references (`cpp/tests/tools/generate-placeholder-goldens.mjs`, pinned devDependencies), and the C++ output matches them **byte for byte**. That holds on macOS arm64 (Apple Clang) and on the Android arm64 emulator (NDK Clang, bionic `libm`, `scripts/test-core-android.sh`). CI adds Linux GCC and Android x86_64.
+- **FP contraction.** `#pragma STDC FP_CONTRACT OFF` is required. Clang fuses `a*b + c` into FMA by default on arm64, which rounds differently and would make the platforms disagree.
+- **Untrusted input.** Lengths and alphabets are validated. The JS thumbhash reference reads past the end of a truncated hash; the port returns `nullopt` instead.
+- **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main behind a generation counter plus a "final image shown" flag. 1.x had no such guard and could show a stale placeholder after `source` changed.
+- **Lifetime.** The placeholder is shown until the image loads and **kept on failure**, on both platforms. Android needed a Coil target subclass for this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
+- **Not yet ported.** TODO: 1.x's `memoryCacheKey` placeholder needs a cache-lookup API on the seam, so it lands with the cache TurboModule.
+
+### 4.6 View-level fixes found by the smoke test
+
+- **iOS recycling.** Fabric doesn't reset `_props` in `prepareForRecycle`, and it remounts a recycled view with `oldProps:nullptr`. Because the view diffs against `_props`, a recycled view given its previous source never reloaded and stayed blank. `prepareForRecycle` now resets `_props` to defaults. The smoke scenario `recycledSameSource` failed (timed out) before the fix and passes after it.
+- **Android clipping.** Fabric's `ReactViewGroup` sets `clipChildren=false`, and `ImageView` doesn't clip its own drawable, so `cover` images whose aspect differs from the view painted over their neighbours. `cropToPadding = true` is the Android counterpart of iOS `clipsToBounds`.
+
+### 4.7 iOS module layout (rules 5 and 6)
 
 | SwiftPM target | Language | Path | Depends on | Owner |
 |---|---|---|---|---|
@@ -156,13 +173,13 @@ Rules:
 - **Adapter lookup by name**: `TIImageLoaderRegistry` finds the default adapter with `NSClassFromString(@"TurboImageNukeLoader")`. Importing the Swift adapter from the seam would invert the layering and create a SwiftPM cycle. The trade-off is that a name typo fails at runtime, not at link time; the example app exercises this lookup in CI. Apps can replace the adapter with `TIImageLoaderRegistry.sharedLoader = …`.
 - **CocoaPods equivalence**: `TurboImage.podspec` compiles the same four trees into one pod. The sources are written to work under both: `#if canImport(TurboImageLoaderAPI)`, quoted seam includes, and `cpp/include` on the header search path. Swift 6 mode, C++20 and the Nuke tag are the same in both.
 
-### 4.6 Android layout
+### 4.8 Android layout
 
 - `android/CMakeLists.txt` does `add_subdirectory(../cpp)` and links `turboimage_core` into `libturboimage.so` alongside a JNI bridge. There is no Android copy of the C++ (rule 4). The `.so` is linked with 16 KB page alignment.
 - Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` follows the same steps as the iOS view. `ImageLoaderAdapter` is the seam and `CoilImageLoaderAdapter` the only Coil-aware file.
 - R8: `consumer-rules.pro` keeps the classes and constructors that JNI creates by name. The example's release build has R8 enabled, and CI asserts that those classes survive unrenamed.
 
-### 4.7 C++ core build
+### 4.9 C++ core build
 
 `cpp/CMakeLists.txt` is the only build description for the core. It has three consumers:
 
@@ -251,7 +268,7 @@ backed by a non-blocking CI job.
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 7 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 8 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -259,7 +276,10 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 7 scenarios in
 - a `cacheOnly` miss (`notCached`),
 - an explicit `cacheKey` shared across two different URLs,
 - `noCache`,
-- core validation (`invalidRequest`).
+- core validation (`invalidRequest`),
+- a recycled view reloading the same source.
+
+The failing scenarios carry blurhash and thumbhash placeholders, which must stay visible (`SMOKE_SCREENSHOT=…`). The Android job also runs the core goldens on the emulator (`scripts/test-core-android.sh`).
 
 
 ## 9. Gate status: the minimal example builds and runs
@@ -268,15 +288,17 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 
 | Check | Result |
 |---|---|
-| C++ core, 13 GoogleTests (host CMake) | ✅ pass |
+| C++ core, 27 GoogleTests (host CMake) | ✅ pass |
+| C++ core, 27 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages) | ✅ pass |
+| iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
 | iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, `onLoad` fires |
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 7/7 |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 7/7 |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 8/8 |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 8/8 |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |

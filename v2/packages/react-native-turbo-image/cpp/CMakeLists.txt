@@ -20,6 +20,7 @@ option(TURBOIMAGE_BUILD_TESTS "Build the GoogleTest suite" OFF)
 
 add_library(turboimage_core STATIC
   src/ImageRequest.cpp
+  src/Placeholder.cpp
 )
 target_include_directories(turboimage_core PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -47,8 +48,21 @@ if(TURBOIMAGE_BUILD_TESTS)
   FetchContent_MakeAvailable(googletest)
 
   enable_testing()
-  add_executable(turboimage_core_tests tests/ImageRequestTest.cpp)
+  add_executable(turboimage_core_tests
+    tests/ImageRequestTest.cpp
+    tests/PlaceholderTest.cpp
+  )
+  # PlaceholderGoldens.inc lives next to the tests.
+  target_include_directories(turboimage_core_tests PRIVATE tests)
   target_link_libraries(turboimage_core_tests PRIVATE turboimage_core GTest::gtest_main)
+  if(ANDROID)
+    # Devices with 16 KB pages (Android 15+, incl. current emulator images)
+    # cannot load an ELF with 4 KB segment alignment; it segfaults before
+    # main. Same flag as the app's libturboimage.so (android/CMakeLists.txt).
+    target_link_options(turboimage_core_tests PRIVATE "-Wl,-z,max-page-size=16384")
+  endif()
   include(GoogleTest)
-  gtest_discover_tests(turboimage_core_tests)
+  # PRE_TEST: discover at ctest time, not build time, so the suite can be
+  # cross-compiled (Android NDK) and run on a device with adb.
+  gtest_discover_tests(turboimage_core_tests DISCOVERY_MODE PRE_TEST)
 endif()

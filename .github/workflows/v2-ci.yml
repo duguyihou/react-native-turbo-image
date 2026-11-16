@@ -116,7 +116,10 @@ jobs:
           target: google_apis
           disable-animations: true
           working-directory: v2
-          script: bash scripts/smoke-android.sh
+          # Core goldens on-device (x86_64 bionic libm), then the app smoke test.
+          script: |
+            bash scripts/test-core-android.sh
+            bash scripts/smoke-android.sh
 
   ios-cocoapods:
     name: iOS example (CocoaPods)

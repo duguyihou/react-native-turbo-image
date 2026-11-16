@@ -40,6 +40,11 @@ class TurboImageViewManager :
     view.cacheKey = if (value?.hasKey("cacheKey") == true) value.getString("cacheKey") else null
   }
 
+  override fun setPlaceholder(view: TurboImageView, value: ReadableMap?) {
+    view.blurhash = if (value?.hasKey("blurhash") == true) value.getString("blurhash") else null
+    view.thumbhash = if (value?.hasKey("thumbhash") == true) value.getString("thumbhash") else null
+  }
+
   override fun setCachePolicy(view: TurboImageView, value: String?) {
     view.cachePolicy = TurboImageCore.CachePolicy.fromJs(value)
   }
@@ -51,7 +56,7 @@ class TurboImageViewManager :
   // Start at most one load per Fabric transaction, after all props landed.
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)
-    view.maybeReload()
+    view.onTransactionEnd()
   }
 
   override fun onDropViewInstance(view: TurboImageView) {

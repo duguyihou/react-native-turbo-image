@@ -6,6 +6,7 @@
 # scenario settles. In Release, React Native forwards console.error to
 # os_log, which is where we read it from.
 #
+# Env: SMOKE_SCREENSHOT=<png path> saves a screenshot after the run.
 # Usage: scripts/smoke-ios.sh [path/to/App.app] [simulator-udid]
 # Exit: 0 when the app reports pass=true, 1 otherwise (including timeout).
 
@@ -63,6 +64,11 @@ if [[ -z "${line}" ]]; then
 fi
 
 echo "${line}"
+# Optional: capture what the smoke run left on screen (placeholders must
+# still be visible on the failing scenarios).
+if [[ -n "${SMOKE_SCREENSHOT:-}" ]]; then
+  xcrun simctl io "${udid}" screenshot "${SMOKE_SCREENSHOT}" > /dev/null 2>&1 || true
+fi
 if [[ "${line}" == *'"pass":true'* ]]; then
   echo "PASS (ios)"
 else
