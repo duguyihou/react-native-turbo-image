@@ -11,9 +11,15 @@
 import { codegenNativeComponent } from 'react-native';
 import type { CodegenTypes, ColorValue, HostComponent, ViewProps } from 'react-native';
 
+export type NativeHeader = Readonly<{ name: string; value: string }>;
+
 export type NativeSource = Readonly<{
   uri: string;
   cacheKey?: string;
+  // Sent with the request (e.g. auth). Not part of the cache key. An array
+  // because Codegen props cannot express a free-form dictionary; the public
+  // API accepts 1.x's record/pairs/Headers forms and converts them.
+  headers?: ReadonlyArray<NativeHeader>;
 }>;
 
 // Shown until the image loads, and kept if it fails. Decoded by the shared

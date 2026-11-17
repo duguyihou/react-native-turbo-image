@@ -108,7 +108,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
         .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
         .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
-        .httpHeaders(NetworkHeaders.Builder().set(ProgressInterceptor.TOKEN_HEADER, token.toString()).build())
+        .httpHeaders(
+          request.networkHeaders().set(ProgressInterceptor.TOKEN_HEADER, token.toString()).build()
+        )
         .target(KeepCurrentImageTarget(target))
         // Coil's crossfade already skips memory-cache hits (the seam rule)
         // and fades from the target's current drawable, i.e. the placeholder.
@@ -146,6 +148,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
         .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
         .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
+        .httpHeaders(request.networkHeaders().build())
         .listener(
           onSuccess = { _, _ -> if (!finished) { finished = true; onDone(true) } },
           onError = { _, _ -> if (!finished) { finished = true; onDone(false) } },
@@ -220,6 +223,10 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       transformations(CoreProcessingTransformation(request.processorKey))
     }
   }
+
+  /** The request's headers, in order; `add` keeps repeated names. */
+  private fun ResolvedRequest.networkHeaders(): NetworkHeaders.Builder =
+    NetworkHeaders.Builder().apply { headers.forEach { (name, value) -> add(name, value) } }
 
   private fun tierPolicy(read: Boolean, write: Boolean): CachePolicy =
     when {

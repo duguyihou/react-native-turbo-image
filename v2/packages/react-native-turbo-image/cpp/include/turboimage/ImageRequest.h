@@ -29,6 +29,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "turboimage/Processing.h"
 
@@ -64,6 +65,14 @@ struct TierAccess {
 // views and the cache module cannot disagree.
 [[nodiscard]] std::optional<CachePolicy> parseCachePolicy(std::string_view js);
 
+// One HTTP request header from `source.headers`. Order is preserved.
+struct Header {
+  std::string name;
+  std::string value;
+
+  friend bool operator==(const Header&, const Header&) = default;
+};
+
 struct ImageRequest {
   std::string uri;
   // An explicit cache key overrides URI-derived keys. Used when the same
@@ -74,6 +83,11 @@ struct ImageRequest {
   // converts `resize` from points/dp to pixels. See Processing.h.
   ProcessingOptions processing;
   double pixelRatio = 1;
+  // Sent with the network request (1.x `source.headers`), e.g. an auth
+  // token. Deliberately NOT part of the cache key, as in 1.x: a URL is one
+  // cache entry whoever fetched it. Apps that serve per-user content at one
+  // URL must pass a per-user `cacheKey`.
+  std::vector<Header> headers;
 };
 
 struct ResolvedRequest {
@@ -86,6 +100,8 @@ struct ResolvedRequest {
   // Empty when no processing is requested; otherwise the identity of the
   // processing step and its complete description (see Processing.h).
   std::string processorKey;
+  // Validated copies of the request's headers, in order.
+  std::vector<Header> headers;
   TierAccess memory;
   TierAccess disk;
   bool allowNetwork = true;
@@ -98,6 +114,10 @@ enum class RequestError : std::int32_t {
   None = 0,
   EmptyUri = 1,
   UnsupportedScheme = 2,
+  // A header name that is not an RFC 9110 token, or a value containing CR,
+  // LF or NUL. Rejected rather than dropped: passing it on would allow
+  // header injection, and silently dropping it would hide an auth bug.
+  InvalidHeader = 3,
 };
 
 struct ResolveResult {

@@ -30,6 +30,11 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
 /// Applies the processors the key describes. nil iff `processorKey` is empty.
 /// The core owns the algorithms; adapters only schedule this step.
 @property(nonatomic, readonly, copy, nullable) TIImageProcessor processor;
+/// Request headers in order, each a two-element `@[name, value]` array,
+/// already validated by the core. Adapters add them all (a repeated name is
+/// sent twice, like `-[NSMutableURLRequest addValue:forHTTPHeaderField:]`).
+/// Not part of any cache key.
+@property(nonatomic, readonly, copy) NSArray<NSArray<NSString *> *> *headers;
 
 - (instancetype)initWithURL:(NSURL *)url
                    cacheKey:(NSString *)cacheKey
@@ -39,7 +44,8 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
              diskCacheWrite:(BOOL)diskCacheWrite
                allowNetwork:(BOOL)allowNetwork
                processorKey:(NSString *)processorKey
-                  processor:(nullable TIImageProcessor)processor NS_DESIGNATED_INITIALIZER;
+                  processor:(nullable TIImageProcessor)processor
+                    headers:(NSArray<NSArray<NSString *> *> *)headers NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;

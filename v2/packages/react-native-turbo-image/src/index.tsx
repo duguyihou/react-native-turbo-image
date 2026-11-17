@@ -3,17 +3,52 @@ import type { ColorValue } from 'react-native';
 
 import NativeTurboImageModule from './NativeTurboImageModule';
 import TurboImageView from './TurboImageViewNativeComponent';
-import type { NativeProps } from './TurboImageViewNativeComponent';
+import type { NativeHeader, NativeProps, NativeSource } from './TurboImageViewNativeComponent';
 
 export type {
   CompletionEvent,
   FailureEvent,
   NativePlaceholder as Placeholder,
-  NativeSource as Source,
   ProgressEvent,
   StartEvent,
   SuccessEvent,
 } from './TurboImageViewNativeComponent';
+
+// 1.x's `source.headers` forms: a record, [name, value] pairs, or a fetch
+// `Headers` object (anything with forEach(value, name)).
+export type HeadersInput =
+  | Readonly<Record<string, string>>
+  | ReadonlyArray<readonly [string, string]>
+  | { forEach(callback: (value: string, name: string) => void): void };
+
+export type Source = Omit<NativeSource, 'headers'> & { headers?: HeadersInput };
+
+function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | undefined {
+  if (headers == null) {
+    return undefined;
+  }
+  const out: NativeHeader[] = [];
+  if (Array.isArray(headers)) {
+    for (const [name, value] of headers as ReadonlyArray<readonly [string, string]>) {
+      out.push({ name, value: String(value) });
+    }
+  } else if (typeof (headers as { forEach?: unknown }).forEach === 'function') {
+    (headers as { forEach(cb: (v: string, n: string) => void): void }).forEach((value, name) =>
+      out.push({ name, value: String(value) })
+    );
+  } else {
+    for (const [name, value] of Object.entries(headers as Record<string, string>)) {
+      out.push({ name, value: String(value) });
+    }
+  }
+  return out;
+}
+
+function toNativeSource(source: Source): NativeSource {
+  const { headers, ...rest } = source;
+  const native = toNativeHeaders(headers);
+  return native === undefined ? rest : { ...rest, headers: native };
+}
 
 // 2.0's cache policies, owned by the C++ core (cpp/include/turboimage).
 export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
@@ -22,7 +57,8 @@ export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 // TODO: remove in 3.0.
 export type LegacyCachePolicy = 'urlCache' | 'dataCache';
 
-export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | 'tint'> & {
+export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | 'tint' | 'source'> & {
+  source: Source;
   cachePolicy?: CachePolicy | LegacyCachePolicy;
   // 1.x also accepted processColor() output (a number); RN's colour
   // processing handles both, Codegen's ColorValue just doesn't spell it.
@@ -57,7 +93,7 @@ function resolveCachePolicy(
   return 'default';
 }
 
-function TurboImageComponent({ cachePolicy, rounded, style, ...props }: TurboImageProps) {
+function TurboImageComponent({ cachePolicy, rounded, style, source, ...props }: TurboImageProps) {
   // Same rule as 1.x: one placeholder kind at a time. Native would silently
   // pick one; failing loudly in development is kinder.
   if (__DEV__ && props.placeholder) {
@@ -71,7 +107,10 @@ function TurboImageComponent({ cachePolicy, rounded, style, ...props }: TurboIma
 
   const image = (
     <TurboImageView
-      {...(props as Omit<NativeProps, 'cachePolicy'>)}
+      {...(props as Omit<NativeProps, 'cachePolicy' | 'source'>)}
+      // A new object each render is fine: both native views compare the
+      // request fields by value before reloading.
+      source={toNativeSource(source)}
       style={rounded ? StyleSheet.absoluteFill : style}
       cachePolicy={resolveCachePolicy(cachePolicy)}
     />
@@ -90,7 +129,7 @@ const styles = StyleSheet.create({
   rounded: { overflow: 'hidden', borderRadius: 9999 },
 });
 
-type CacheSource = { uri: string; cacheKey?: string };
+type CacheSource = Source;
 
 // 1.x exposed these as statics on the component; kept for compatibility.
 export const TurboImage = Object.assign(TurboImageComponent, {
@@ -98,9 +137,12 @@ export const TurboImage = Object.assign(TurboImageComponent, {
     sources: CacheSource[],
     cachePolicy: TurboImageProps['cachePolicy'] = 'default'
   ): Promise<boolean> =>
-    NativeTurboImageModule.prefetch(sources, resolveCachePolicy(cachePolicy) ?? 'default'),
+    NativeTurboImageModule.prefetch(
+      sources.map(toNativeSource),
+      resolveCachePolicy(cachePolicy) ?? 'default'
+    ),
   dispose: (sources: CacheSource[]): Promise<void> =>
-    NativeTurboImageModule.dispose(sources),
+    NativeTurboImageModule.dispose(sources.map(toNativeSource)),
   clearMemoryCache: (): Promise<void> => NativeTurboImageModule.clearMemoryCache(),
   clearDiskCache: (): Promise<void> => NativeTurboImageModule.clearDiskCache(),
 });

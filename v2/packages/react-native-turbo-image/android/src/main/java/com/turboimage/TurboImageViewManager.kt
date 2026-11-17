@@ -8,6 +8,7 @@ import com.facebook.react.uimanager.ViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerInterface
 import com.turboimage.core.TurboImageCore
+import com.turboimage.core.readHeaders
 import com.turboimage.loader.TurboImageLoaders
 
 /**
@@ -34,6 +35,7 @@ class TurboImageViewManager :
   override fun setSource(view: TurboImageView, value: ReadableMap?) {
     view.uri = value?.getString("uri")
     view.cacheKey = if (value?.hasKey("cacheKey") == true) value.getString("cacheKey") else null
+    view.headers = readHeaders(value)
   }
 
   override fun setPlaceholder(view: TurboImageView, value: ReadableMap?) {

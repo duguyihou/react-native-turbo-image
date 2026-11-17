@@ -12,20 +12,43 @@
 #import "TIImageLoading.h"
 #import "TIRequestFactory.h"
 
+#include <vector>
+
 namespace {
 
-// `{ uri, cacheKey? }` from JS. Anything else becomes an empty URI, which
-// the core rejects as invalid.
-std::pair<std::string, std::string> sourceFields(id source) {
+// `{ uri, cacheKey?, headers? }` from JS (headers already normalised to
+// `[{name, value}]` by index.tsx). Anything malformed becomes something the
+// core rejects: a non-dictionary source an empty URI, a malformed header an
+// empty name (InvalidHeader), so a bad source fails instead of loading
+// without its auth header.
+struct SourceFields {
+  std::string uri;
+  std::string cacheKey;
+  std::vector<turboimage::Header> headers;
+};
+
+std::string stringField(NSDictionary *dict, NSString *key) {
+  id value = dict[key];
+  return [value isKindOfClass:[NSString class]] ? std::string([(NSString *)value UTF8String]) : "";
+}
+
+SourceFields sourceFields(id source) {
   if (![source isKindOfClass:[NSDictionary class]]) {
     return {};
   }
   NSDictionary *dict = source;
-  auto field = [&](NSString *key) -> std::string {
-    id value = dict[key];
-    return [value isKindOfClass:[NSString class]] ? std::string([(NSString *)value UTF8String]) : "";
-  };
-  return {field(@"uri"), field(@"cacheKey")};
+  SourceFields fields{.uri = stringField(dict, @"uri"),
+                      .cacheKey = stringField(dict, @"cacheKey"),
+                      .headers = {}};
+  id headers = dict[@"headers"];
+  if ([headers isKindOfClass:[NSArray class]]) {
+    for (id header in (NSArray *)headers) {
+      NSDictionary *pair = [header isKindOfClass:[NSDictionary class]] ? header : @{};
+      fields.headers.push_back(
+          {.name = stringField(pair, @"name"), .value = stringField(pair, @"value")});
+    }
+  }
+  return fields;
 }
 
 }  // namespace
@@ -83,8 +106,9 @@ RCT_EXPORT_MODULE(TurboImageModule)
   };
 
   for (id source in sources) {
-    const auto [uri, cacheKey] = sourceFields(source);
-    const auto built = TIMakeImageRequest(uri, cacheKey, policy);
+    const auto fields = sourceFields(source);
+    const auto built =
+        TIMakeImageRequest(fields.uri, fields.cacheKey, policy, {}, 1, fields.headers);
     if (built.request == nil) {
       finishOne(NO);
       continue;
@@ -107,9 +131,11 @@ RCT_EXPORT_MODULE(TurboImageModule)
          reject:(RCTPromiseRejectBlock)reject {
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   for (id source in sources) {
-    const auto [uri, cacheKey] = sourceFields(source);
-    // Policy is irrelevant for the key; Default resolves it like a view would.
-    const auto built = TIMakeImageRequest(uri, cacheKey, turboimage::CachePolicy::Default);
+    const auto fields = sourceFields(source);
+    // Policy and headers are irrelevant for the key; Default resolves it
+    // like a view would.
+    const auto built =
+        TIMakeImageRequest(fields.uri, fields.cacheKey, turboimage::CachePolicy::Default);
     if (built.request != nil) {
       [loader removeCachedImageForKey:built.request.cacheKey];
     }

@@ -72,19 +72,24 @@ NSString *TIStringFromStd(const std::string &s) {
 TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &cacheKey,
                                    turboimage::CachePolicy policy,
                                    const turboimage::ProcessingOptions &processing,
-                                   double pixelRatio) {
+                                   double pixelRatio,
+                                   const std::vector<turboimage::Header> &headers) {
   const auto result = turboimage::resolveRequest({
       .uri = uri,
       .cacheKey = cacheKey.empty() ? std::nullopt : std::optional<std::string>(cacheKey),
       .cachePolicy = policy,
       .processing = processing,
       .pixelRatio = pixelRatio,
+      .headers = headers,
   });
   if (!result.ok()) {
     return {.request = nil,
             .error = turboimage::LoadErrorCode::InvalidRequest,
-            .message = [NSString stringWithFormat:@"Invalid request (core error %d)",
-                                                  static_cast<int>(result.error)]};
+            .message = result.error == turboimage::RequestError::InvalidHeader
+                           ? @"Invalid header: names must be HTTP tokens and values must not "
+                             @"contain CR, LF or NUL"
+                           : [NSString stringWithFormat:@"Invalid request (core error %d)",
+                                                        static_cast<int>(result.error)]};
   }
 
   const auto &resolved = *result.request;
@@ -105,6 +110,12 @@ TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &ca
     };
   }
 
+  NSMutableArray<NSArray<NSString *> *> *headerPairs =
+      [NSMutableArray arrayWithCapacity:resolved.headers.size()];
+  for (const auto &header : resolved.headers) {
+    [headerPairs addObject:@[ TIStringFromStd(header.name), TIStringFromStd(header.value) ]];
+  }
+
   TIImageRequest *request = [[TIImageRequest alloc] initWithURL:url
                                                        cacheKey:TIStringFromStd(resolved.cacheKey)
                                                 memoryCacheRead:resolved.memory.read
@@ -113,6 +124,7 @@ TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &ca
                                                  diskCacheWrite:resolved.disk.write
                                                    allowNetwork:resolved.allowNetwork
                                                    processorKey:TIStringFromStd(resolved.processorKey)
-                                                      processor:processor];
+                                                      processor:processor
+                                                        headers:headerPairs];
   return {.request = request, .error = turboimage::LoadErrorCode::Unknown, .message = nil};
 }

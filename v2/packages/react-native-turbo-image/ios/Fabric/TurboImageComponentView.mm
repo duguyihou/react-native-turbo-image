@@ -68,6 +68,17 @@ std::optional<std::uint32_t> toArgb(const SharedColor &color) {
          static_cast<std::uint32_t>(blueFromColor(color));
 }
 
+// Codegen's header structs have no operator==; this is the comparison and
+// the conversion in one place.
+std::vector<turboimage::Header> toHeaders(const TurboImageViewSourceStruct &source) {
+  std::vector<turboimage::Header> headers;
+  headers.reserve(source.headers.size());
+  for (const auto &header : source.headers) {
+    headers.push_back({.name = header.name, .value = header.value});
+  }
+  return headers;
+}
+
 turboimage::ProcessingOptions toProcessing(const TurboImageViewProps &props) {
   return {
       .resize = props.resize,
@@ -154,6 +165,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
   if (oldViewProps.source.uri != newViewProps.source.uri ||
       oldViewProps.source.cacheKey != newViewProps.source.cacheKey ||
+      toHeaders(oldViewProps.source) != toHeaders(newViewProps.source) ||
       oldViewProps.cachePolicy != newViewProps.cachePolicy ||
       // Processors change the pixels, so they need a new load (served from
       // the disk original, or memory if this variant is cached).
@@ -286,7 +298,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   const CGFloat pixelRatio = RCTScreenScale();
   const auto built = TIMakeImageRequest(props.source.uri, props.source.cacheKey,
                                         toCorePolicy(props.cachePolicy), toProcessing(props),
-                                        pixelRatio);
+                                        pixelRatio, toHeaders(props.source));
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   // Requests the core rejects fail before onStart: no load ever began.
   if (built.request == nil || loader == nil) {

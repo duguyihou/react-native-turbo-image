@@ -43,6 +43,47 @@ TEST(ResolveRequest, ExplicitCacheKeyWins) {
   EXPECT_EQ(result.request->url, "https://cdn.example.com/a.png?sig=123");
 }
 
+TEST(ResolveRequestHeaders, PassesHeadersThroughInOrder) {
+  const auto result = resolveRequest(
+      {.uri = "https://cdn.example.com/a.png",
+       .headers = {{"Authorization", "Bearer abc.def"}, {"X-Trace", ""}}});
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result.request->headers,
+            (std::vector<Header>{{"Authorization", "Bearer abc.def"}, {"X-Trace", ""}}));
+}
+
+TEST(ResolveRequestHeaders, HeadersAreNotPartOfTheCacheKey) {
+  const auto plain = resolveRequest({.uri = "https://cdn.example.com/a.png"});
+  const auto authed = resolveRequest(
+      {.uri = "https://cdn.example.com/a.png", .headers = {{"Authorization", "x"}}});
+  ASSERT_TRUE(plain.ok());
+  ASSERT_TRUE(authed.ok());
+  EXPECT_EQ(plain.request->cacheKey, authed.request->cacheKey);
+}
+
+TEST(ResolveRequestHeaders, RejectsInjectionAndNonTokenNames) {
+  const std::vector<Header> invalid = {
+      {"", "x"},                       // empty name
+      {"Bad Name", "x"},               // space
+      {"Bad:Name", "x"},               // separator
+      {"X-A", "ok\r\nX-Evil: 1"},       // CRLF injection
+      {"X-A", "line\nbreak"},          // bare LF
+      {"X-A", std::string("nul\0", 4)}, // NUL
+  };
+  for (const auto& header : invalid) {
+    const auto result = resolveRequest(
+        {.uri = "https://cdn.example.com/a.png", .headers = {{"Accept", "image/*"}, header}});
+    EXPECT_EQ(result.error, RequestError::InvalidHeader) << header.name << ": " << header.value;
+  }
+}
+
+TEST(ResolveRequestHeaders, AcceptsEveryTokenCharacterAndOpaqueValueBytes) {
+  const auto result = resolveRequest(
+      {.uri = "https://cdn.example.com/a.png",
+       .headers = {{"!#$%&'*+-.^_`|~09azAZ", "tab\tand UTF-8 \xc3\xa9"}}});
+  EXPECT_TRUE(result.ok());
+}
+
 TEST(ParseCachePolicy, AcceptsExactlyTheJsNames) {
   EXPECT_EQ(parseCachePolicy("default"), CachePolicy::Default);
   EXPECT_EQ(parseCachePolicy("memoryOnly"), CachePolicy::MemoryOnly);

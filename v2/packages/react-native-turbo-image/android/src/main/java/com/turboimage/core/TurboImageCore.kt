@@ -68,6 +68,7 @@ object TurboImageCore {
     cachePolicy: CachePolicy,
     processing: Processing = Processing(),
     pixelRatio: Double = 1.0,
+    headers: List<Pair<String, String>> = emptyList(),
   ): ResolveResult =
     nativeResolve(
       uri,
@@ -78,6 +79,7 @@ object TurboImageCore {
       processing.monochrome.toNativeColor(),
       processing.tint.toNativeColor(),
       pixelRatio,
+      headers.flatMap { (name, value) -> listOf(name, value) }.toTypedArray(),
     )
 
   // An ARGB Int widened without sign extension, or -1 for "unset" (JNI side).
@@ -116,6 +118,7 @@ object TurboImageCore {
     monochrome: Long,
     tint: Long,
     pixelRatio: Double,
+    headers: Array<String>,
   ): ResolveResult
 
   private external fun nativeCoreVersion(): String
@@ -171,7 +174,26 @@ data class ResolvedRequest(
    * [TurboImageCore.process].
    */
   val processorKey: String,
-) : ResolveResult
+  /** Validated headers as alternating names and values (the JNI shape). */
+  private val headerFields: Array<String>,
+) : ResolveResult {
+  /** Request headers in order; never part of a cache key. */
+  val headers: List<Pair<String, String>>
+    get() = headerFields.toList().chunked(2) { (name, value) -> name to value }
+
+  // A data class compares arrays by identity; compare their contents.
+  override fun equals(other: Any?): Boolean =
+    other is ResolvedRequest &&
+      url == other.url && cacheKey == other.cacheKey &&
+      memoryRead == other.memoryRead && memoryWrite == other.memoryWrite &&
+      diskRead == other.diskRead && diskWrite == other.diskWrite &&
+      allowNetwork == other.allowNetwork && processorKey == other.processorKey &&
+      headerFields.contentEquals(other.headerFields)
+
+  override fun hashCode(): Int =
+    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey)
+      .hashCode() * 31 + headerFields.contentHashCode()
+}
 
 /**
  * Premultiplied RGBA8, row-major: the in-memory layout of an ARGB_8888

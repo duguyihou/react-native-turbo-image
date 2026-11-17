@@ -275,6 +275,36 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'default',
     expect: 'load',
   },
+  // httpbin's /image answers according to the Accept header (406 when it
+  // cannot), so the outcome proves the header reached the server. noCache
+  // because headers deliberately do not key the cache (RFC §4.1).
+  {
+    id: 'headersSent',
+    title: 'source.headers reach the server (Accept: image/png → 200)',
+    source: { uri: 'https://httpbin.org/image', headers: { Accept: 'image/png' } },
+    cachePolicy: 'noCache',
+    expect: 'load',
+  },
+  {
+    id: 'headersChangeResponse',
+    title: 'a different header changes the response (Accept: JSON → 406)',
+    source: { uri: 'https://httpbin.org/image', headers: [['Accept', 'application/json']] },
+    cachePolicy: 'noCache',
+    expect: 'error',
+    expectCode: 'network',
+    // Sequential on purpose: concurrent loads of one URL are coalesced on
+    // both platforms (Nuke task coalescing, Coil dedup), and headers are not
+    // part of that identity any more than of the cache key (RFC §4.1).
+    after: 'headersSent',
+  },
+  {
+    id: 'headerInjection',
+    title: 'a header value with CR/LF is rejected by the core',
+    source: { uri: 'https://httpbin.org/image', headers: { 'X-Test': 'a\r\nX-Injected: 1' } },
+    cachePolicy: 'noCache',
+    expect: 'error',
+    expectCode: 'invalidRequest',
+  },
   {
     id: 'lifecycle',
     title: 'events: start → progress… → success → completion',

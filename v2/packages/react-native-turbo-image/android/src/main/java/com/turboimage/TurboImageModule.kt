@@ -7,6 +7,7 @@ import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
+import com.turboimage.core.readHeaders
 import com.turboimage.loader.LoadHandle
 import com.turboimage.loader.TurboImageLoaders
 
@@ -31,7 +32,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     val source = sources.getMap(index) ?: return null
     val uri = if (source.hasKey("uri")) source.getString("uri").orEmpty() else ""
     val cacheKey = if (source.hasKey("cacheKey")) source.getString("cacheKey") else null
-    return TurboImageCore.resolve(uri, cacheKey, policy) as? ResolvedRequest
+    return TurboImageCore.resolve(uri, cacheKey, policy, headers = readHeaders(source)) as? ResolvedRequest
   }
 
   override fun prefetch(sources: ReadableArray, cachePolicy: String, promise: Promise) {

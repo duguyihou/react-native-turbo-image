@@ -10,7 +10,8 @@
              diskCacheWrite:(BOOL)diskCacheWrite
                allowNetwork:(BOOL)allowNetwork
                processorKey:(NSString *)processorKey
-                  processor:(TIImageProcessor)processor {
+                  processor:(TIImageProcessor)processor
+                    headers:(NSArray<NSArray<NSString *> *> *)headers {
   if ((self = [super init])) {
     _url = [url copy];
     _cacheKey = [cacheKey copy];
@@ -21,6 +22,7 @@
     _allowNetwork = allowNetwork;
     _processorKey = [processorKey copy];
     _processor = [processor copy];
+    _headers = [headers copy];
   }
   return self;
 }

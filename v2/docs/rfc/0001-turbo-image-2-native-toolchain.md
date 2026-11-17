@@ -74,7 +74,8 @@ Pinned values live in `v2/scripts/native-versions.env`.
 
 `cpp/include/turboimage/ImageRequest.h` is the single definition of:
 
-- **Validation**: empty URIs and unsupported schemes are rejected (only http/https in the skeleton).
+- **Validation**: empty URIs and unsupported schemes are rejected (only http/https in the skeleton), and so are header names that are not RFC 9110 tokens and header values containing CR, LF or NUL (`InvalidHeader`, reported to JS as `invalidRequest`). Passing such a header on would allow header injection; dropping it silently would hide an auth bug.
+- **Headers** (`source.headers`, 1.x's record, pairs or `Headers` forms, normalised in JS to `[{name, value}]` because Codegen props can't express a dictionary): sent in order by both adapters, and by `prefetch`. They are **not** part of the cache key, as in 1.x: a URL is one entry whoever fetched it. Nor are they part of the in-flight identity: concurrent loads of one key are coalesced (Nuke task coalescing, Coil dedup) whatever their headers. Apps that serve per-user content at one URL must pass a per-user `cacheKey`, which separates both. The smoke scenarios `headersSent` / `headersChangeResponse` use httpbin's `Accept`-dependent `/image` (200 vs 406) to prove the header reaches the server, and `headerInjection` checks the rejection.
 - **Cache key**: an explicit `cacheKey`, otherwise the canonical URI with the scheme and host lower-cased and the fragment dropped. Adapters use this key for **both** the memory and disk tiers (Nuke `imageID`; Coil `memoryCacheKey` + `diskCacheKey`).
 - **Cache policy → tier access matrix**:
 
@@ -387,5 +388,5 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 2. ~~Context lifecycle.~~ **Resolved; this RFC was wrong.** Fabric builds each `ThemedReactContext` on top of the root view's context, which is the Activity (`FabricUIManager.startSurface`). Coil's `getLifecycle()` walks the `ContextWrapper` chain, so it finds the Activity. Requests therefore wait for `STARTED` and are disposed on `ON_DESTROY`, without TurboImage doing anything.
 3. ~~`cacheOnly` race in the example.~~ **Resolved.** The example is now a deterministic smoke test: scenarios that depend on the cache mount only after the load they depend on has settled.
 4. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.
-5. **Host network configuration.** Should adapters accept app-supplied headers, cookies or interceptors? This matters for authenticated images, which 1.x supported through RN's shared `OkHttpClient`.
+5. ~~Host network configuration.~~ **Decided: per-source `source.headers`** (§4.1), as in 1.x. TODO: an app-wide native hook (default headers, cookies or an interceptor). 1.x got Android cookies implicitly from RN's shared `OkHttpClient`; 2.0's adapters use their own clients (§4.2), so cookie-based auth needs that hook.
 6. **Nuke 14 adoption.** It raises the iOS floor to 16.0, above RN's 15.1. Adopt it in 2.x only once it is stable and the floor change is acceptable.

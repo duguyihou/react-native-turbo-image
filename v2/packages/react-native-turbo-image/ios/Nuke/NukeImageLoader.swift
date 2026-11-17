@@ -231,7 +231,13 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     if !request.diskCacheWrite { options.insert(.disableDiskCacheWrites) }
     if !request.allowNetwork { options.insert(.returnCacheDataDontLoad) }
 
-    var nukeRequest = ImageRequest(url: request.url, options: options)
+    // Headers need a URLRequest; they are not part of Nuke's cache keys,
+    // which come from `imageID` below (core rule: headers never key caches).
+    var urlRequest = URLRequest(url: request.url)
+    for pair in request.headers where pair.count == 2 {
+      urlRequest.addValue(pair[1], forHTTPHeaderField: pair[0])
+    }
+    var nukeRequest = ImageRequest(urlRequest: urlRequest, options: options)
     // `imageID` keys both Nuke's memory and data caches.
     nukeRequest.imageID = request.cacheKey
     // One opaque step; the core owns the algorithms. Nuke folds its id into

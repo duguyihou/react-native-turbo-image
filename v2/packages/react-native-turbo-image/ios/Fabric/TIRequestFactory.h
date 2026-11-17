@@ -10,6 +10,7 @@
 #import <Foundation/Foundation.h>
 
 #include <string>
+#include <vector>
 
 #include <turboimage/ImageRequest.h>
 
@@ -28,6 +29,7 @@ struct TIRequestResult {
 TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &cacheKey,
                                    turboimage::CachePolicy policy,
                                    const turboimage::ProcessingOptions &processing = {},
-                                   double pixelRatio = 1);
+                                   double pixelRatio = 1,
+                                   const std::vector<turboimage::Header> &headers = {});
 
 NSString *_Nonnull TIStringFromStd(const std::string &s);

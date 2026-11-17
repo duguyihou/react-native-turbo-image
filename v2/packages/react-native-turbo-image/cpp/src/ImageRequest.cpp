@@ -24,6 +24,25 @@ std::string lowerAscii(std::string_view s) {
   return out;
 }
 
+// RFC 9110 §5.6.2 `tchar`.
+bool isTokenChar(char c) {
+  if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+    return true;
+  }
+  return std::string_view("!#$%&'*+-.^_`|~").find(c) != std::string_view::npos;
+}
+
+bool isValidHeader(const Header& header) {
+  if (header.name.empty() ||
+      !std::all_of(header.name.begin(), header.name.end(), isTokenChar)) {
+    return false;
+  }
+  // Field values may hold any octet except the ones that end a line (or a C
+  // string on the way into the platform HTTP stacks).
+  return header.value.find_first_of(std::string_view("\r\n\0", 3)) ==
+         std::string::npos;
+}
+
 }  // namespace
 
 std::string canonicalCacheKey(std::string_view uri) {
@@ -67,6 +86,10 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       kSupportedSchemes.end()) {
     return {.request = std::nullopt, .error = RequestError::UnsupportedScheme};
   }
+  if (!std::all_of(request.headers.begin(), request.headers.end(),
+                   isValidHeader)) {
+    return {.request = std::nullopt, .error = RequestError::InvalidHeader};
+  }
 
   // Every field is spelled out: NDK clang's -Wmissing-field-initializers
   // (-Wextra) rejects partial designated initialisers under -Werror.
@@ -75,6 +98,7 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       .cacheKey = request.cacheKey.value_or(canonicalCacheKey(request.uri)),
       .processorKey = processorKey(
           resolveProcessing(request.processing, request.pixelRatio)),
+      .headers = request.headers,
       .memory = {.read = true, .write = true},
       .disk = {.read = true, .write = true},
       .allowNetwork = true,

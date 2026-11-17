@@ -35,6 +35,8 @@ class TurboImageView(
     set(value) { if (field != value) { field = value; needsReload = true } }
   var cacheKey: String? = null
     set(value) { if (field != value) { field = value; needsReload = true } }
+  var headers: List<Pair<String, String>> = emptyList()
+    set(value) { if (field != value) { field = value; needsReload = true } }
   var cachePolicy: TurboImageCore.CachePolicy = TurboImageCore.CachePolicy.DEFAULT
     set(value) { if (field != value) { field = value; needsReload = true } }
   // Processors change the pixels, so they need a new load (served from the
@@ -171,7 +173,7 @@ class TurboImageView(
         // `density` is what RN's PixelRatio reports to JS, so `resize` (dp)
         // means the same as in the app's layout maths.
         TurboImageCore.resolve(
-          it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble())
+          it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble(), headers)
       }
         ?: ResolveFailure(errorCode = 1) // EmptyUri, same as the core's code
     when (result) {

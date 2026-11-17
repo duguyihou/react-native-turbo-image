@@ -38,6 +38,35 @@ std::optional<std::uint32_t> toArgb(jlong value) {
   return static_cast<std::uint32_t>(value & 0xffffffff);
 }
 
+// `String[]` of alternating names and values <-> core headers. A trailing
+// odd element is ignored (Kotlin always passes pairs).
+std::vector<turboimage::Header> toHeaders(JNIEnv* env, jobjectArray flat) {
+  std::vector<turboimage::Header> headers;
+  const jsize length = flat == nullptr ? 0 : env->GetArrayLength(flat);
+  for (jsize i = 0; i + 1 < length; i += 2) {
+    auto name = static_cast<jstring>(env->GetObjectArrayElement(flat, i));
+    auto value = static_cast<jstring>(env->GetObjectArrayElement(flat, i + 1));
+    headers.push_back({.name = toStdString(env, name), .value = toStdString(env, value)});
+    env->DeleteLocalRef(name);
+    env->DeleteLocalRef(value);
+  }
+  return headers;
+}
+
+jobjectArray fromHeaders(JNIEnv* env, const std::vector<turboimage::Header>& headers) {
+  jclass stringClass = env->FindClass("java/lang/String");
+  auto flat = env->NewObjectArray(static_cast<jsize>(headers.size() * 2), stringClass, nullptr);
+  for (std::size_t i = 0; i < headers.size(); ++i) {
+    jstring name = env->NewStringUTF(headers[i].name.c_str());
+    jstring value = env->NewStringUTF(headers[i].value.c_str());
+    env->SetObjectArrayElement(flat, static_cast<jsize>(2 * i), name);
+    env->SetObjectArrayElement(flat, static_cast<jsize>(2 * i + 1), value);
+    env->DeleteLocalRef(name);
+    env->DeleteLocalRef(value);
+  }
+  return flat;
+}
+
 }  // namespace
 
 // Returns a `com.turboimage.core.ResolvedRequest`, or an
@@ -48,7 +77,8 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
                                                        jstring uri, jstring cacheKey,
                                                        jint cachePolicy, jdouble resize,
                                                        jdouble blur, jlong monochrome,
-                                                       jlong tint, jdouble pixelRatio) {
+                                                       jlong tint, jdouble pixelRatio,
+                                                       jobjectArray headers) {
   const auto key = toStdString(env, cacheKey);
   const auto result = turboimage::resolveRequest({
       .uri = toStdString(env, uri),
@@ -59,6 +89,7 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
                      .monochrome = toArgb(monochrome),
                      .tint = toArgb(tint)},
       .pixelRatio = pixelRatio,
+      .headers = toHeaders(env, headers),
   });
 
   if (!result.ok()) {
@@ -71,11 +102,11 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
   jclass resolvedClass = env->FindClass("com/turboimage/core/ResolvedRequest");
   jmethodID ctor =
       env->GetMethodID(resolvedClass, "<init>",
-                       "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;)V");
+                       "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;)V");
   return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
                         env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
                         r.disk.read, r.disk.write, r.allowNetwork,
-                        env->NewStringUTF(r.processorKey.c_str()));
+                        env->NewStringUTF(r.processorKey.c_str()), fromHeaders(env, r.headers));
 }
 
 namespace {

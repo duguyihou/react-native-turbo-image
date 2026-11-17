@@ -45,9 +45,9 @@ builds, and the CI matrix.
 | `allowHardware` (Android) | Not yet placed | Coil 3 still has `allowHardware`; processed loads already use software bitmaps |
 | `isProgressiveImageRenderingEnabled` (iOS) | Not yet placed | Nuke 13 progressive decoding; Coil has no equivalent |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
-| GIF, APNG, SVG | Adapter decoders | Re-evaluate Gifu/APNGKit vs Nuke 13 built-ins; Coil `coil-gif`/`coil-svg` |
+| GIF, APNG, SVG | Adapter decoders | Animated: ImageIO on iOS (GIF, APNG and WebP natively, dropping Gifu and APNGKit), `coil-gif` on Android; format detected from the bytes, `format` kept as an ignored hint. SVG: **decided to keep 1.x's private CoreSVG** on iOS (`coil-svg` on Android). Private-API use is an App Review risk, which the migration guide must state |
 | Local assets / `require()` sources | Core scheme handling | Out of scope in the skeleton (`UnsupportedScheme`) |
-| `headers` | Seam field | Needs RFC open question 5 settled |
+| `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
 
 ### Phase 3: promote `v2/` to the repository root
 1. Tag the final 1.x release and create a `1.x` maintenance branch.
@@ -71,5 +71,7 @@ builds, and the CI matrix.
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- A `source.headers` entry with CR/LF/NUL in its value or a non-token name now fails the load with `invalidRequest` instead of being sent.
+- Android no longer inherits React Native's shared `OkHttpClient`, so cookies set through RN's networking are not sent with image requests.
 - `TurboImage.prefetch` resolves `false` when any source fails (1.x always resolved `true`).
 - `blur`, `monochrome` and `tint` are now one cross-platform implementation, so results differ slightly from 1.x on both platforms. `blur` is σ in pixels of the (resized) image. On Android it now applies to the original-size decode, not the view-size one, so the same value looks weaker on large photos; pair it with `resize`. A `monochrome` colour's alpha is now its intensity.
