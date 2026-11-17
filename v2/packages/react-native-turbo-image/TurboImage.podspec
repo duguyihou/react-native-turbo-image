@@ -32,8 +32,12 @@ Pod::Spec.new do |s|
     "cpp/src/**/*.cpp",
     "ios/LoaderAPI/**/*.{h,m}",
     "ios/Nuke/**/*.swift",
+    "ios/LiveText/**/*.swift",
     "ios/Fabric/**/*.{h,mm}",
   ]
+  # Live Text (ios/LiveText). VisionKit exists on every supported iOS; its
+  # image-analysis classes are iOS 16+ and gated at runtime.
+  s.frameworks = "VisionKit"
   s.public_header_files = "ios/LoaderAPI/include/*.h"
   s.private_header_files = ["cpp/include/**/*.h", "ios/Fabric/**/*.h"]
 

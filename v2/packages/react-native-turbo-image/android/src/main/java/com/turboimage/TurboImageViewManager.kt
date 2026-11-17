@@ -75,6 +75,10 @@ class TurboImageViewManager :
     view.processing = view.processing.copy(tint = value)
   }
 
+  // iOS-only (VisionKit Live Text). Android has no equivalent system
+  // interaction, and 1.x ignored the prop there too.
+  override fun setEnableLiveTextInteraction(view: TurboImageView, value: Boolean) = Unit
+
   // Start at most one load per Fabric transaction, after all props landed.
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)

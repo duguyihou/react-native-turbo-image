@@ -52,6 +52,7 @@ type Scenario = {
   placeholder?: TurboImageProps['placeholder'];
   showPlaceholderOnFailure?: boolean;
   rounded?: boolean;
+  enableLiveTextInteraction?: boolean;
   // Image processors, passed straight through to <TurboImage>.
   processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
@@ -264,6 +265,17 @@ const SCENARIOS: Scenario[] = [
     kind: 'dispose',
   },
   {
+    id: 'liveText',
+    title: 'Live Text on an image with text (iOS 16+; no-op on Android)',
+    // Asserts the load succeeds with the interaction attached, which
+    // exercises the runtime lookup of the Swift class. Whether VisionKit
+    // found the text is visible in a screenshot (the Live Text button).
+    source: { uri: 'https://dummyimage.com/600x400/ffffff/000000.png&text=TurboImage+Live+Text' },
+    enableLiveTextInteraction: true,
+    cachePolicy: 'default',
+    expect: 'load',
+  },
+  {
     id: 'lifecycle',
     title: 'events: start → progress… → success → completion',
     source: { uri: URI_LIFECYCLE },
@@ -426,6 +438,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       showPlaceholderOnFailure={scenario.showPlaceholderOnFailure}
       rounded={scenario.rounded}
       cachePolicy={scenario.cachePolicy}
+      enableLiveTextInteraction={scenario.enableLiveTextInteraction}
       {...scenario.processing}
       resizeMode="cover"
       onSuccess={(e) => {

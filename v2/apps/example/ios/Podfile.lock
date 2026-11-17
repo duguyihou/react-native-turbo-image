@@ -2198,7 +2198,7 @@ SPEC CHECKSUMS:
   ReactCommon: b63ce798b898ed77c6cfdeb80b18080161f52ed5
   ReactNativeDependencies: a5164c3ebbe90d992022b5d9cbabbf770a6d7d05
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
-  TurboImage: 1a2782d1bc1b36cfaba55f655d1b760b692efde6
+  TurboImage: a117bc6eb4ba3b8cdc89e723eddb41c521793139
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
 PODFILE CHECKSUM: e54066f32cf7a632a7e0f6c9e294af302a7fc41c

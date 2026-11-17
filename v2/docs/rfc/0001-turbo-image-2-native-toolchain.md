@@ -168,6 +168,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 | `showPlaceholderOnFailure` (default `false`) | Native prop, same default | When false, the placeholder is removed on failure, including a decode that finishes after the failure |
 | `fadeDuration` (default 300 ms) | Native prop, same default | Skipped for memory-cache hits on both platforms: Coil's crossfade rule, mirrored on iOS through a `fromMemoryCache` flag on the seam completion |
 | `rounded` | JS clipping container | Same approach as 1.x. Android's `ImageView` content isn't clipped by RN's border drawing, so a container keeps both platforms identical |
+| `enableLiveTextInteraction` | iOS 16+ native prop; no-op on Android (as in 1.x) | VisionKit's image analysis is Swift-only, so it lives in the `TurboImageLiveText` Swift target (`ios/LiveText`). The ObjC++ view reaches it through the plain-ObjC `TILiveTextInteraction` protocol and a class-name lookup, the same pattern as the Nuke adapter. Only the loaded image is analysed, never a placeholder. 1.x added a new interaction on every load and ignored turning the prop off |
 
 ### 4.4c Cache TurboModule
 
@@ -227,6 +228,7 @@ Order: resize → blur → monochrome → tint, as in 1.x.
 | `TurboImageCore` | C++20 | `cpp/` | — | core |
 | `TurboImageLoaderAPI` | ObjC | `ios/LoaderAPI` | UIKit | core (seam) |
 | `TurboImageNuke` | Swift 6 | `ios/Nuke` | LoaderAPI, Nuke | iOS adapter |
+| `TurboImageLiveText` | Swift 6 | `ios/LiveText` | LoaderAPI, VisionKit | Live Text |
 | `TurboImage` | ObjC++ | `ios/Fabric` | Core, LoaderAPI, TurboImageNuke, React products | RN integration |
 
 Rules:

@@ -98,13 +98,20 @@ var targets: [Target] = [
     path: "ios/Nuke",
     swiftSettings: [.swiftLanguageMode(.v6)]
   ),
+  .target(
+    name: "TurboImageLiveText",
+    dependencies: ["TurboImageLoaderAPI"],
+    path: "ios/LiveText",
+    swiftSettings: [.swiftLanguageMode(.v6)],
+    linkerSettings: [.linkedFramework("VisionKit")]
+  ),
 ]
 
 var dependencies: [Package.Dependency] = [
   .package(url: "https://github.com/kean/Nuke.git", exact: nukeVersion),
 ]
 
-var productTargets = ["TurboImageCore", "TurboImageLoaderAPI", "TurboImageNuke"]
+var productTargets = ["TurboImageCore", "TurboImageLoaderAPI", "TurboImageNuke", "TurboImageLiveText"]
 
 if isInsideReactNativeApp {
   dependencies += [
@@ -120,6 +127,8 @@ if isInsideReactNativeApp {
         // Linked so the registry's runtime lookup of `TurboImageNukeLoader`
         // succeeds; Fabric code never imports it.
         "TurboImageNuke",
+        // Same for `TurboImageLiveTextInteraction` (TIMakeLiveTextInteraction).
+        "TurboImageLiveText",
         .product(name: "ReactHeaders", package: "ReactNative"),
         .product(name: "ReactNativeHeaders", package: "ReactNative"),
         .product(name: "ReactNativeDependenciesHeaders", package: "ReactNative"),

@@ -40,7 +40,10 @@ builds, and the CI matrix.
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ done. Blurhash and thumbhash are byte-exact vs. the references; `memoryCacheKey` is a memory lookup via the seam |
 | `resize`, `blur`, `monochrome`, `tint` processors | **Core C++** pixel ops; adapters attach one opaque step keyed by the core's `processorKey` | ✅ done (RFC §4.5a). Variants are separate memory entries over one disk original; `dispose` evicts all of them. 1.x's `borderRadius` processor never existed, and `rounded`'s circle crop is replaced by the clipping container |
-| `enableLiveTextInteraction` (iOS) | iOS-only prop | |
+| `enableLiveTextInteraction` (iOS) | iOS-only prop; Swift target `TurboImageLiveText` behind the ObjC `TILiveTextInteraction` seam | ✅ done (RFC §4.4b). One interaction per view (1.x stacked one per load); toggling off detaches at once. Visual Look Up needs iOS 17 |
+| `indicator` (activity spinner while loading) | Not yet placed | Missing from this plan until now. Could live in JS, driven by `onStart`/`onCompletion` |
+| `allowHardware` (Android) | Not yet placed | Coil 3 still has `allowHardware`; processed loads already use software bitmaps |
+| `isProgressiveImageRenderingEnabled` (iOS) | Not yet placed | Nuke 13 progressive decoding; Coil has no equivalent |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
 | GIF, APNG, SVG | Adapter decoders | Re-evaluate Gifu/APNGKit vs Nuke 13 built-ins; Coil `coil-gif`/`coil-svg` |
 | Local assets / `require()` sources | Core scheme handling | Out of scope in the skeleton (`UnsupportedScheme`) |

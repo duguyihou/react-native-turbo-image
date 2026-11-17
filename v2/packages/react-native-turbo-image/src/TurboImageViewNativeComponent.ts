@@ -99,6 +99,9 @@ export interface NativeProps extends ViewProps {
   monochrome?: ColorValue;
   // Fills the image's opaque area with this colour, keeping transparency.
   tint?: ColorValue;
+  // iOS 16+ only (ignored on Android, as in 1.x): select text, scan codes
+  // and look up subjects in the loaded image with VisionKit.
+  enableLiveTextInteraction?: CodegenTypes.WithDefault<boolean, false>;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
   onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;
   onSuccess?: CodegenTypes.DirectEventHandler<SuccessEvent>;

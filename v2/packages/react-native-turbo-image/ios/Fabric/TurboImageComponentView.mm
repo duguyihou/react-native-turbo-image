@@ -23,6 +23,7 @@
 #include <turboimage/Progress.h>
 
 #import "TIImageLoading.h"
+#import "TILiveText.h"
 #import "TIRequestFactory.h"
 
 using namespace facebook::react;
@@ -111,6 +112,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   id<TIImageLoadTask> _task;
   BOOL _needsReload;
   BOOL _needsPlaceholder;
+  BOOL _needsLiveTextUpdate;
   // True once the loaded image is on screen; a late placeholder must not
   // replace it.
   BOOL _showingFinalImage;
@@ -125,6 +127,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   turboimage::ProgressThrottle _progressThrottle;
   // Last Content-Length seen this load, for the throttle's finish() step.
   int64_t _lastProgressTotal;
+  // Created on first use; nil while Live Text is off or unsupported.
+  id<TILiveTextInteraction> _liveText;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -161,6 +165,10 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
       oldViewProps.placeholder.memoryCacheKey != newViewProps.placeholder.memoryCacheKey) {
     _needsPlaceholder = YES;
   }
+  if (oldViewProps.enableLiveTextInteraction != newViewProps.enableLiveTextInteraction) {
+    // Applied in finalizeUpdates, once `_props` holds the new value.
+    _needsLiveTextUpdate = YES;
+  }
   if (oldViewProps.resizeMode != newViewProps.resizeMode) {
     _imageView.contentMode = toContentMode(newViewProps.resizeMode);
   }
@@ -182,6 +190,30 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     _needsPlaceholder = NO;
     [self applyPlaceholder];
   }
+  if (_needsLiveTextUpdate) {
+    _needsLiveTextUpdate = NO;
+    [self updateLiveText];
+  }
+}
+
+#pragma mark - Live Text
+
+// Analyses the loaded image only: never a placeholder, and nothing while a
+// load is in flight. Turning the prop off removes the interaction at once.
+- (void)updateLiveText {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  if (!props.enableLiveTextInteraction) {
+    [_liveText detach];
+    _liveText = nil;
+    return;
+  }
+  if (!_showingFinalImage || _imageView.image == nil) {
+    return;  // the load's success calls this again
+  }
+  if (_liveText == nil) {
+    _liveText = TIMakeLiveTextInteraction();
+  }
+  [_liveText analyzeImage:_imageView.image inImageView:_imageView];
 }
 
 // Decodes the placeholder off the main thread with the shared C++ core and
@@ -241,6 +273,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _imageView.image = nil;
   _showingFinalImage = NO;
   _loadFailed = NO;
+  // The old image's analysis must not outlive it.
+  [_liveText detach];
   _progressThrottle = turboimage::ProgressThrottle{};
   _lastProgressTotal = -1;
 
@@ -298,6 +332,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
             [strongSelf emitProgress:total total:total];
           }
           [strongSelf showFinalImage:image animated:!fromMemoryCache];
+          [strongSelf updateLiveText];
           [strongSelf emitSuccess:image.size source:source];
         } else {
           [strongSelf applyFailureToPlaceholder];
@@ -351,6 +386,9 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _imageView.image = nil;
   _needsReload = NO;
   _needsPlaceholder = NO;
+  _needsLiveTextUpdate = NO;
+  [_liveText detach];
+  _liveText = nil;
   _showingFinalImage = NO;
   _loadFailed = NO;
   ++_placeholderGeneration;  // drop any decode still in flight
