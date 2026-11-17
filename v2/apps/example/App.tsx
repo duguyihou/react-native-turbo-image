@@ -305,6 +305,42 @@ const SCENARIOS: Scenario[] = [
     expect: 'error',
     expectCode: 'invalidRequest',
   },
+  // Formats are detected from the bytes (no `format` prop). Whether the
+  // animated ones actually play is checked with two screenshots, since no
+  // event reports animation.
+  {
+    id: 'gif',
+    title: 'animated GIF',
+    source: { uri: 'https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif' },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSize: { width: 400, height: 400 },
+  },
+  {
+    id: 'apng',
+    title: 'animated PNG (APNG)',
+    source: {
+      uri: 'https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
+    },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSize: { width: 100, height: 100 },
+  },
+  {
+    id: 'webp',
+    title: 'animated WebP',
+    source: { uri: 'https://www.gstatic.com/webp/animated/1.webp' },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSize: { width: 300, height: 225 },
+  },
+  {
+    id: 'svg',
+    title: 'SVG (size is the view size on Android, the canvas on iOS)',
+    source: { uri: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/android.svg' },
+    cachePolicy: 'default',
+    expect: 'load',
+  },
   {
     id: 'lifecycle',
     title: 'events: start → progress… → success → completion',

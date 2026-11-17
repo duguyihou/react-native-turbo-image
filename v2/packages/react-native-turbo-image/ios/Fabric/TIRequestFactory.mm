@@ -13,6 +13,13 @@ namespace {
 // result keeps the input's scale so its size in points is unchanged (unless
 // `resize` changed it on purpose).
 UIImage *TIProcessImage(UIImage *image, const std::string &key) {
+  // Processors apply to still images. An animated image is processed as its
+  // first frame and becomes static, which is also what Coil does with
+  // transformations on Android (and what 1.x Android did).
+  // TODO: process every frame, on both platforms.
+  if (image.images.count > 0) {
+    image = image.images.firstObject;
+  }
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   const auto width = static_cast<int>(std::lround(image.size.width * scale));
   const auto height = static_cast<int>(std::lround(image.size.height * scale));

@@ -76,7 +76,10 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // memory tier so the host app cannot evict or poison it.
     configuration.imageCache = ImageCache()
     configuration.isTaskCoalescingEnabled = true
-    pipeline = ImagePipeline(configuration: configuration)
+    // Animated GIF/APNG/WebP and SVG, chosen by content (NukeDecoders.swift).
+    configuration.makeImageDecoder = { TurboImageDecoders.make($0) }
+    // Skips decompression for animated and SVG images (NukeDecoders.swift).
+    pipeline = ImagePipeline(configuration: configuration, delegate: TurboImagePipelineDelegate())
     super.init()
   }
 

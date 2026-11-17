@@ -11,6 +11,10 @@ import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
+import coil3.svg.SvgDecoder
+import android.os.Build
 import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
 import coil3.network.DeDupeConcurrentRequestStrategy
@@ -242,6 +246,33 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     /** The extra `transformations()` adds to memory keys (Coil 3 imageRequests.kt). */
     private const val TRANSFORMATIONS_EXTRA = "coil#transformations"
 
+    /**
+     * OkHttp's default `okhttp/x.y` User-Agent is refused by some major image
+     * hosts (Wikimedia answers 403), where iOS's CFNetwork default
+     * (`<App>/<build> CFNetwork/… Darwin/…`) is accepted. This mirrors that
+     * shape: `<App>/<version> TurboImage/<core> (Android <release>)`. A
+     * `User-Agent` in `source.headers` wins. 1.x sent OkHttp's default.
+     */
+    private fun userAgentInterceptor(context: Context): okhttp3.Interceptor {
+      val packageInfo = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+      val label = context.applicationInfo.loadLabel(context.packageManager).toString()
+      // Product tokens must be ASCII HTTP tokens (OkHttp rejects non-ASCII
+      // header values outright); app labels may hold spaces or any script.
+      val app =
+        label.filter { it.code < 128 && (it.isLetterOrDigit() || it in "!#$%&'*+-.^_`|~") }
+          .ifEmpty { context.packageName }
+      val userAgent =
+        "$app/${packageInfo?.versionName ?: "0"} TurboImage/${TurboImageCore.coreVersion} " +
+          "(Android ${Build.VERSION.RELEASE})"
+      return okhttp3.Interceptor { chain ->
+        val request = chain.request()
+        chain.proceed(
+          if (request.header("User-Agent") != null) request
+          else request.newBuilder().header("User-Agent", userAgent).build()
+        )
+      }
+    }
+
     /** Must equal `NukeImageLoader.diskCacheBytes` on iOS. */
     const val DISK_CACHE_BYTES = 150L * 1024 * 1024
 
@@ -255,12 +286,24 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
           // Application interceptor: sees the token header before the
           // network layer, strips it, and counts response bytes.
           .addInterceptor(ProgressInterceptor())
+          .addInterceptor(userAgentInterceptor(context))
           .connectTimeout(15, TimeUnit.SECONDS)
           .readTimeout(30, TimeUnit.SECONDS)
           .build()
 
       return ImageLoader.Builder(context)
         .components {
+          // Format decoders, chosen by content (the iOS adapter does the
+          // same with ImageIO and CoreSVG). Added components are tried before
+          // Coil's built-in bitmap decoder, so these see the bytes first;
+          // a factory that does not recognise them returns null.
+          add(ApngDecoder.Factory())
+          if (Build.VERSION.SDK_INT >= 28) {
+            add(AnimatedImageDecoder.Factory())
+          } else {
+            add(GifDecoder.Factory())
+          }
+          add(SvgDecoder.Factory())
           add(
             OkHttpNetworkFetcherFactory(
               callFactory = { okHttpClient },

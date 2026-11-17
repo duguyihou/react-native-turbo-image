@@ -31,6 +31,8 @@ buildscript {
 // Pinned production versions (RFC rule 7). Must match
 // scripts/native-versions.env; scripts/check-native-versions.sh enforces it.
 def coilVersion = "3.6.3"
+// LINE apng-drawable; must match scripts/native-versions.env.
+def apngDrawableVersion = "1.12.0"
 def minimumKotlinForCoil = "2.3.0"
 
 // Compares major.minor only (patch and -RC suffixes do not affect metadata
@@ -119,4 +121,11 @@ dependencies {
   // (mirrors the dedicated Nuke pipeline on iOS).
   implementation "io.coil-kt.coil3:coil-core:${coilVersion}"
   implementation "io.coil-kt.coil3:coil-network-okhttp:${coilVersion}"
+  // Animated GIF/WebP/HEIF (AnimatedImageDecoder on API 28+, GifDecoder below)
+  // and SVG (AndroidSVG). Same version as Coil, like iOS's single Nuke pin.
+  implementation "io.coil-kt.coil3:coil-gif:${coilVersion}"
+  implementation "io.coil-kt.coil3:coil-svg:${coilVersion}"
+  // APNG: see loader/ApngDecoder.kt. Its .so files are 16 KB-aligned for
+  // arm64-v8a and x86_64 (checked for 1.12.0).
+  implementation "com.linecorp:apng:${apngDrawableVersion}"
 }

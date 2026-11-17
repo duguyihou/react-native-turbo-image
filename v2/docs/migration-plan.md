@@ -45,7 +45,8 @@ builds, and the CI matrix.
 | `allowHardware` (Android) | Not yet placed | Coil 3 still has `allowHardware`; processed loads already use software bitmaps |
 | `isProgressiveImageRenderingEnabled` (iOS) | Not yet placed | Nuke 13 progressive decoding; Coil has no equivalent |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
-| GIF, APNG, SVG | Adapter decoders | Animated: ImageIO on iOS (GIF, APNG and WebP natively, dropping Gifu and APNGKit), `coil-gif` on Android; format detected from the bytes, `format` kept as an ignored hint. SVG: **decided to keep 1.x's private CoreSVG** on iOS (`coil-svg` on Android). Private-API use is an App Review risk, which the migration guide must state |
+| GIF, APNG, SVG | Adapter decoders, chosen by content | ✅ done (RFC §4.5b). ImageIO on iOS (drops Gifu and APNGKit), `coil-gif` + LINE `apng-drawable` on Android. SVG keeps 1.x's private CoreSVG on iOS by decision; `coil-svg` on Android. `format` is ignored |
+| Video thumbnails (1.x Android `coil-video`) | Not yet placed | Missing from this plan until now. iOS 1.x had no equivalent |
 | Local assets / `require()` sources | Core scheme handling | Out of scope in the skeleton (`UnsupportedScheme`) |
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
 
@@ -71,6 +72,11 @@ builds, and the CI matrix.
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- `format` is ignored: formats are detected from the bytes. Gifu and APNGKit are no longer dependencies.
+- SVG on iOS still uses Apple's private CoreSVG framework, as in 1.x. Apps should know this is private-API use that App Review could flag.
+- Processors on an animated image now produce a static image on iOS too (1.x iOS ignored the processors and animated the raw data).
+- On iOS, animations larger than 64 MB decoded show only their first frame.
+- On Android, image requests now send a descriptive `User-Agent` (`<App>/<version> TurboImage/<version> (Android <release>)`) instead of OkHttp's default.
 - A `source.headers` entry with CR/LF/NUL in its value or a non-token name now fails the load with `invalidRequest` instead of being sent.
 - Android no longer inherits React Native's shared `OkHttpClient`, so cookies set through RN's networking are not sent with image requests.
 - `TurboImage.prefetch` resolves `false` when any source fails (1.x always resolved `true`).

@@ -27,6 +27,7 @@ expect() {
 
 expect "${pkg}/Package.swift" "?? \"${NUKE_VERSION}\"" "Package.swift Nuke ${NUKE_VERSION}"
 expect "${pkg}/android/build.gradle" "def coilVersion = \"${COIL_VERSION}\"" "build.gradle Coil ${COIL_VERSION}"
+expect "${pkg}/android/build.gradle" "def apngDrawableVersion = \"${APNG_DRAWABLE_VERSION}\"" "build.gradle apng-drawable ${APNG_DRAWABLE_VERSION}"
 expect "${pkg}/android/build.gradle" "kotlinVersion    : \"${KOTLIN_VERSION}\"" "build.gradle default Kotlin ${KOTLIN_VERSION}"
 expect "${pkg}/android/build.gradle" "ndkVersion       : \"${ANDROID_NDK_VERSION}\"" "build.gradle default NDK ${ANDROID_NDK_VERSION}"
 expect "${pkg}/cpp/CMakeLists.txt" "googletest/archive/refs/tags/v${GOOGLETEST_VERSION}.tar.gz" "CMake GoogleTest ${GOOGLETEST_VERSION}"

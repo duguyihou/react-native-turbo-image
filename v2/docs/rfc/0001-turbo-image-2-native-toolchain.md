@@ -217,6 +217,22 @@ Order: resize → blur → monochrome → tint, as in 1.x.
 - **Cost.** A 12 MP blur takes ~270 ms on an M-series host. It runs on the loaders' background queues. `resize` + blur on a 1200 px result takes ~50 ms.
 - **Not ported.** 1.x's `rounded` also added a circle-crop processor. 2.0 clips with a container (§4.4b), so that processor is redundant. The plan's `borderRadius` processor never existed as a 1.x prop: `UIImage+BorderRadius.swift` was dead code.
 
+### 4.5b Formats (animated GIF/APNG/WebP, SVG)
+
+The format is detected from the bytes on both platforms, so 1.x's `format` prop is accepted and ignored.
+
+| Format | iOS (Nuke adapter, `NukeDecoders.swift`) | Android (Coil components) |
+|---|---|---|
+| Animated GIF, APNG, WebP | ImageIO → `UIImage.animatedImage`, played by the plain `UIImageView`. Replaces 1.x's Gifu and APNGKit pods | `AnimatedImageDecoder` (API 28+; `GifDecoder` below) for GIF/WebP; LINE `apng-drawable` 1.12.0 for APNG, which `ImageDecoder` shows as a still |
+| SVG | 1.x's private CoreSVG (vector `UIImage`), now with every symbol checked so a missing one fails as `decode` instead of crashing. **Private API, kept by decision** (App Review risk) | `coil-svg` (AndroidSVG) |
+
+- **Two Nuke details** cost a debugging round each, and the smoke screenshots caught both. (1) Nuke creates a task's decoder once, from the *first partial chunk*, and reuses it for the complete data, so the format can't be picked in `makeImageDecoder`. Every task gets a `ContentDecoder` that decides on the complete bytes and forwards previews to Nuke's default. (2) Nuke flags every completed decode for decompression, which redraws it into one bitmap and drops all animation frames. `TurboImagePipelineDelegate.shouldDecompress` exempts animated and SVG images; everything else keeps background decompression.
+- **Timing.** Per-frame delays are kept by repeating frames on the uniform `UIImage` timeline (repeats share a bitmap). Delays ≤ 10 ms play at 100 ms, the browser rule Android's decoder also follows.
+- **Memory.** iOS decodes every frame up front. Animations over 64 MB decoded fall back to their first frame. Android decodes lazily and has no such limit. TODO: a lazily decoding animated view on iOS.
+- **Processors** apply to the first frame and the result is static, on both platforms (Coil converts animated results to a bitmap for transformations; 1.x Android did the same). TODO: per-frame processing.
+- **User-Agent (Android).** OkHttp's default `okhttp/x` is refused by some hosts (Wikimedia answers 403; 1.x had the same problem), while iOS's CFNetwork default is accepted. The Android client now sends `<App>/<version> TurboImage/<core> (Android <release>)`; `source.headers` can override it.
+- **Tests.** The smoke scenarios `gif`, `apng`, `webp` and `svg` assert loads and intrinsic sizes. Animation was verified with two screenshots a second apart on each platform. There is no event for it.
+
 ### 4.6 View-level fixes found by the smoke test
 
 - **iOS recycling.** Fabric doesn't reset `_props` in `prepareForRecycle`, and it remounts a recycled view with `oldProps:nullptr`. Because the view diffs against `_props`, a recycled view given its previous source never reloaded and stayed blank. `prepareForRecycle` now resets `_props` to defaults. The smoke scenario `recycledSameSource` failed (timed out) before the fix and passes after it.

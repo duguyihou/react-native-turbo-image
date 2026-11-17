@@ -66,6 +66,11 @@ export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | '
   tint?: ColorValue | number;
   // 1.x prop: clip the image to a circle/pill.
   rounded?: boolean;
+  /**
+   * @deprecated Ignored. 1.x needed it to pick a GIF/APNG/SVG decoder; 2.0
+   * detects the format from the image bytes on both platforms.
+   */
+  format?: 'svg' | 'gif' | 'apng' | string;
 };
 
 // Maps 1.x names onto 2.0 policies.
@@ -93,7 +98,15 @@ function resolveCachePolicy(
   return 'default';
 }
 
-function TurboImageComponent({ cachePolicy, rounded, style, source, ...props }: TurboImageProps) {
+function TurboImageComponent({
+  cachePolicy,
+  rounded,
+  style,
+  source,
+  // Accepted for 1.x compatibility and dropped; see the type's note.
+  format: _format,
+  ...props
+}: TurboImageProps) {
   // Same rule as 1.x: one placeholder kind at a time. Native would silently
   // pick one; failing loudly in development is kinder.
   if (__DEV__ && props.placeholder) {

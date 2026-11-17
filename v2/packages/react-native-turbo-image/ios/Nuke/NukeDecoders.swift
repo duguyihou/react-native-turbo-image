@@ -1,0 +1,239 @@
+// Format decoders for the Nuke adapter: animated images and SVG.
+//
+// Nuke's default decoder shows only the first frame of a GIF/APNG/WebP and
+// cannot decode SVG. 1.x filled the gap with two pods (Gifu, APNGKit) plus a
+// private-API SVG renderer, and needed a `format` prop to pick one. 2.0 picks
+// by content, on both platforms (Coil's decoder factories sniff too), so
+// `format` is no longer needed:
+//
+//   * animated GIF, APNG and WebP: ImageIO, which decodes all three, into a
+//     `UIImage.animatedImage` that UIImageView plays without extra views,
+//   * SVG: Apple's private CoreSVG, as in 1.x (a deliberate decision recorded
+//     in docs/migration-plan.md: App Review risk accepted for 1.x parity),
+//   * everything else: Nuke's default decoder.
+
+import Foundation
+import ImageIO
+import Nuke
+import UIKit
+
+enum TurboImageDecoders {
+  /// `ImagePipeline.Configuration.makeImageDecoder`.
+  ///
+  /// Nuke creates a task's decoder once, lazily, usually from the *first
+  /// chunk* of partial data, and then reuses it for the completed data
+  /// (`TaskFetchOriginalImage.getDecoder`). So the format cannot be chosen
+  /// here: a partial GIF would get Nuke's static decoder for good. Every task
+  /// gets a dispatcher instead, which decides on the complete bytes.
+  static func make(_ context: ImageDecodingContext) -> (any ImageDecoding)? {
+    ContentDecoder(fallback: ImageDecoders.Default(context: context))
+  }
+}
+
+/// Picks a decoder by content once the data is complete; previews of partial
+/// data (progressive JPEG and the like) stay with Nuke's default decoder.
+struct ContentDecoder: ImageDecoding {
+  /// Nuke's decoder for this context, if it recognised the data; it keeps
+  /// the incremental state for previews.
+  let fallback: ImageDecoders.Default?
+
+  func decode(_ data: Data) throws -> ImageContainer {
+    if SVGDecoder.isSVG(data) {
+      return try SVGDecoder().decode(data)
+    }
+    if AnimatedImageDecoder.isAnimated(data) {
+      return try AnimatedImageDecoder().decode(data)
+    }
+    return try (fallback ?? ImageDecoders.Default()).decode(data)
+  }
+
+  func decodePartiallyDownloadedData(_ data: Data) -> ImageContainer? {
+    fallback?.decodePartiallyDownloadedData(data)
+  }
+}
+
+/// Nuke flags every completed decode as needing decompression
+/// (`makeImageResponse`), and decompression redraws the image into a single
+/// bitmap: an animated UIImage would lose its frames and the vector SVG image
+/// would be rasterised at its canvas size. Everything else keeps Nuke's
+/// background decompression, which spares the main thread the first draw.
+final class TurboImagePipelineDelegate: ImagePipeline.Delegate {
+  func shouldDecompress(response: ImageResponse, for request: ImageRequest, pipeline: ImagePipeline) -> Bool {
+    guard pipeline.configuration.isDecompressionEnabled else { return false }
+    return response.image.images == nil && response.container.type != SVGDecoder.assetType
+  }
+}
+
+// MARK: - Animated images
+
+struct AnimatedImageDecoder: ImageDecoding {
+  /// Every frame is decoded up front (UIImageView needs them all), so an
+  /// animation larger than this is shown as its first frame instead.
+  /// Android's AnimatedImageDrawable decodes frames lazily and has no such
+  /// limit. TODO: a lazily decoding animated view would lift this.
+  static let maxDecodedBytes = 64 * 1024 * 1024
+
+  /// Uniform frame slots UIImage may expand variable delays into (see below).
+  private static let maxExpandedFrames = 1000
+
+  // ImageIO also reports several images for TIFF/ICO/HEIC sequences; only
+  // the formats TurboImage documents as animated are animated.
+  private static let animatedTypes: Set<String> = [
+    "com.compuserve.gif", "public.png", "org.webmproject.webp",
+  ]
+
+  static func isAnimated(_ data: Data) -> Bool {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+      let type = CGImageSourceGetType(source) as String?,
+      animatedTypes.contains(type)
+    else { return false }
+    return CGImageSourceGetCount(source) > 1
+  }
+
+  func decode(_ data: Data) throws -> ImageContainer {
+    guard
+      let source = CGImageSourceCreateWithData(
+        data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+      let first = CGImageSourceCreateImageAtIndex(source, 0, nil)
+    else {
+      throw ImageDecodingError.unknown
+    }
+    let count = CGImageSourceGetCount(source)
+    let frameBytes = first.width * first.height * 4
+    guard count > 1, frameBytes > 0, frameBytes * count <= Self.maxDecodedBytes else {
+      // Too large to hold every frame: the first frame, like Nuke would.
+      return ImageContainer(image: UIImage(cgImage: first), type: Self.assetType(source))
+    }
+
+    var frames: [UIImage] = []
+    var delays: [Int] = []  // centiseconds
+    for index in 0..<count {
+      let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+      guard let frame = CGImageSourceCreateImageAtIndex(source, index, options) else { continue }
+      frames.append(UIImage(cgImage: frame))
+      delays.append(Self.delayCentiseconds(source, index))
+    }
+    guard let image = Self.animatedImage(frames: frames, delays: delays) else {
+      throw ImageDecodingError.unknown
+    }
+    return ImageContainer(image: image, type: Self.assetType(source), data: data)
+  }
+
+  /// `UIImage.animatedImage` plays frames at one uniform rate. Variable
+  /// delays are kept by repeating each frame `delay / gcd` times (repeats
+  /// share one bitmap, so they cost no pixel memory). Pathological timings
+  /// that would need too many slots fall back to the average rate.
+  private static func animatedImage(frames: [UIImage], delays: [Int]) -> UIImage? {
+    guard !frames.isEmpty else { return nil }
+    let total = delays.reduce(0, +)
+    let unit = delays.reduce(0) { gcd($0, $1) }
+    let slots = unit > 0 ? total / unit : Int.max
+    let duration = Double(total) / 100
+    guard slots <= maxExpandedFrames else {
+      return UIImage.animatedImage(with: frames, duration: duration)
+    }
+    var expanded: [UIImage] = []
+    expanded.reserveCapacity(slots)
+    for (frame, delay) in zip(frames, delays) {
+      expanded.append(contentsOf: repeatElement(frame, count: delay / unit))
+    }
+    return UIImage.animatedImage(with: expanded, duration: duration)
+  }
+
+  /// Browsers (and Android's decoder) treat delays of 10 ms or less as
+  /// 100 ms: many GIFs declare 0 and rely on it.
+  private static func delayCentiseconds(_ source: CGImageSource, _ index: Int) -> Int {
+    let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any]
+    let containers: [(CFString, CFString, CFString)] = [
+      (kCGImagePropertyGIFDictionary, kCGImagePropertyGIFUnclampedDelayTime, kCGImagePropertyGIFDelayTime),
+      (kCGImagePropertyPNGDictionary, kCGImagePropertyAPNGUnclampedDelayTime, kCGImagePropertyAPNGDelayTime),
+      (kCGImagePropertyWebPDictionary, kCGImagePropertyWebPUnclampedDelayTime, kCGImagePropertyWebPDelayTime),
+    ]
+    for (dictionaryKey, unclamped, clamped) in containers {
+      guard let dictionary = properties?[dictionaryKey] as? [CFString: Any] else { continue }
+      let seconds = (dictionary[unclamped] as? Double) ?? (dictionary[clamped] as? Double) ?? 0
+      let centiseconds = Int((seconds * 100).rounded())
+      return centiseconds <= 1 ? 10 : centiseconds
+    }
+    return 10
+  }
+
+  private static func assetType(_ source: CGImageSource) -> AssetType? {
+    switch CGImageSourceGetType(source) as String? {
+    case "com.compuserve.gif": .gif
+    case "public.png": .png
+    case "org.webmproject.webp": .webp
+    default: nil
+    }
+  }
+
+  private static func gcd(_ a: Int, _ b: Int) -> Int { b == 0 ? a : gcd(b, a % b) }
+}
+
+// MARK: - SVG (private CoreSVG)
+
+struct SVGDecoder: ImageDecoding {
+  static let assetType = AssetType(rawValue: "public.svg-image")
+
+  /// Cheap content sniff: optional BOM, whitespace, XML declaration,
+  /// comments or doctype, then an `<svg` element near the start.
+  static func isSVG(_ data: Data) -> Bool {
+    let head = data.prefix(4096)
+    guard let text = String(data: head, encoding: .utf8) ?? String(data: head, encoding: .ascii)
+    else { return false }
+    let trimmed = text.drop { $0 == "\u{FEFF}" || $0.isWhitespace }
+    return trimmed.hasPrefix("<") && text.contains("<svg")
+  }
+
+  func decode(_ data: Data) throws -> ImageContainer {
+    guard let image = CoreSVG.image(from: data) else {
+      throw ImageDecodingError.unknown
+    }
+    return ImageContainer(image: image, type: Self.assetType, data: data)
+  }
+}
+
+/// The 1.x approach (ios/CoreSVG.swift on main): CoreSVG's C functions via
+/// dlsym, and UIKit's private `+[UIImage _imageWithCGSVGDocument:]`, which
+/// returns a vector-backed UIImage that stays sharp at any size. Unlike 1.x,
+/// every symbol is checked: if a future iOS removes one, SVGs fail with a
+/// `decode` error instead of crashing on a nil function pointer.
+private enum CoreSVG {
+  private typealias CreateFromData = @convention(c) (CFData, CFDictionary?) -> OpaquePointer?
+  private typealias Release = @convention(c) (OpaquePointer) -> Void
+  private typealias GetCanvasSize = @convention(c) (OpaquePointer) -> CGSize
+  private typealias ImageWithDocument = @convention(c) (AnyObject, Selector, OpaquePointer) -> UIImage?
+
+  private struct Symbols: @unchecked Sendable {
+    let create: CreateFromData
+    let release: Release
+    let canvasSize: GetCanvasSize
+  }
+
+  // Resolved once. `@unchecked Sendable`: C function pointers are immutable.
+  private static let symbols: Symbols? = {
+    guard let handle = dlopen("/System/Library/PrivateFrameworks/CoreSVG.framework/CoreSVG", RTLD_NOW),
+      let create = dlsym(handle, "CGSVGDocumentCreateFromData"),
+      let release = dlsym(handle, "CGSVGDocumentRelease"),
+      let canvasSize = dlsym(handle, "CGSVGDocumentGetCanvasSize")
+    else { return nil }
+    return Symbols(
+      create: unsafeBitCast(create, to: CreateFromData.self),
+      release: unsafeBitCast(release, to: Release.self),
+      canvasSize: unsafeBitCast(canvasSize, to: GetCanvasSize.self))
+  }()
+
+  private static let imageSelector = NSSelectorFromString("_imageWithCGSVGDocument:")
+
+  static func image(from data: Data) -> UIImage? {
+    guard let symbols, UIImage.responds(to: imageSelector),
+      let document = symbols.create(data as CFData, nil)
+    else { return nil }
+    // The UIImage retains the document it renders from; this +1 is ours.
+    defer { symbols.release(document) }
+    guard symbols.canvasSize(document) != .zero else { return nil }
+    let implementation = UIImage.method(for: imageSelector)
+    let makeImage = unsafeBitCast(implementation, to: ImageWithDocument.self)
+    return makeImage(UIImage.self, imageSelector, document)
+  }
+}
