@@ -8,6 +8,7 @@ import com.facebook.react.bridge.UiThreadUtil
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.readHeaders
+import com.turboimage.core.resolveSourceUri
 import com.turboimage.loader.LoadHandle
 import com.turboimage.loader.TurboImageLoaders
 
@@ -30,7 +31,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   private fun resolve(sources: ReadableArray, index: Int, policy: TurboImageCore.CachePolicy): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
     val source = sources.getMap(index) ?: return null
-    val uri = if (source.hasKey("uri")) source.getString("uri").orEmpty() else ""
+    val uri = resolveSourceUri(context, if (source.hasKey("uri")) source.getString("uri").orEmpty() else "")
     val cacheKey = if (source.hasKey("cacheKey")) source.getString("cacheKey") else null
     return TurboImageCore.resolve(uri, cacheKey, policy, headers = readHeaders(source)) as? ResolvedRequest
   }

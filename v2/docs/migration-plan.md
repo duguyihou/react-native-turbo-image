@@ -47,7 +47,7 @@ builds, and the CI matrix.
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
 | GIF, APNG, SVG | Adapter decoders, chosen by content | ✅ done (RFC §4.5b). ImageIO on iOS (drops Gifu and APNGKit), `coil-gif` + LINE `apng-drawable` on Android. SVG keeps 1.x's private CoreSVG on iOS by decision; `coil-svg` on Android. `format` is ignored |
 | Video thumbnails (1.x Android `coil-video`) | Not yet placed | Missing from this plan until now. iOS 1.x had no equivalent |
-| Local assets / `require()` sources | Core scheme handling | Out of scope in the skeleton (`UnsupportedScheme`) |
+| Local assets / `require()` sources | Core scheme handling | ✅ done (RFC §4.1). `require()` is new in 2.0 (1.x only took `{ uri }`); `file://`, `content://`, `android.resource://` are explicit now (1.x loaded them by accident). Local sources skip the disk tier and load under `cacheOnly` |
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
 
 ### Phase 3: promote `v2/` to the repository root
@@ -72,6 +72,8 @@ builds, and the CI matrix.
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.
+- Local sources (`file://`, `content://`, `android.resource://`) are never copied into the disk cache, and `cacheOnly` does not block them.
 - `format` is ignored: formats are detected from the bytes. Gifu and APNGKit are no longer dependencies.
 - SVG on iOS still uses Apple's private CoreSVG framework, as in 1.x. Apps should know this is private-API use that App Review could flag.
 - Processors on an animated image now produce a static image on iOS too (1.x iOS ignored the processors and animated the raw data).

@@ -342,6 +342,17 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
   },
   {
+    id: 'requireAsset',
+    title: "require()'d bundled asset loads even with cacheOnly",
+    // Release builds resolve this to a file:// bundle URL on iOS and to a
+    // resource name on Android (mapped to android.resource://). Local
+    // sources are not "network", so cacheOnly must still read them.
+    source: require('./assets/local-fixture.png'),
+    cachePolicy: 'cacheOnly',
+    expect: 'load',
+    expectSize: { width: 120, height: 80 },
+  },
+  {
     id: 'lifecycle',
     title: 'events: start → progress… → success → completion',
     source: { uri: URI_LIFECYCLE },
@@ -358,6 +369,10 @@ const SCENARIOS: Scenario[] = [
     kind: 'supersede',
   },
 ];
+
+// The probes that track a source by URI only ever get URI sources.
+const uriOf = (source: TurboImageProps['source']) =>
+  typeof source === 'number' ? `asset:${source}` : source.uri;
 
 // Fail rather than hang if a callback never arrives (e.g. a lost event).
 const TIMEOUT_MS = 45_000;
@@ -432,13 +447,13 @@ function LifecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       style={styles.image}
       source={scenario.source}
       cachePolicy={scenario.cachePolicy}
-      {...recorder(scenario.source.uri, push)}
+      {...recorder(uriOf(scenario.source), push)}
     />
   );
 }
 
 function SupersedeProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
-  const [uri, setUri] = useState(scenario.source.uri);
+  const [uri, setUri] = useState(uriOf(scenario.source));
   const events = useRef<Recorded[]>([]);
   const push = (e: Recorded) => {
     events.current.push(e);

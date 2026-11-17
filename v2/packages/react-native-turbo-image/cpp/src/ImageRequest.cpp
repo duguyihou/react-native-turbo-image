@@ -8,11 +8,25 @@ namespace turboimage {
 
 namespace {
 
-// Schemes the 2.0 walking skeleton accepts. Local assets (`file`, bundled
-// resources) are a TODO for the pipeline milestone; they need per-platform
-// resolution rules that are out of scope until both platforms build.
-constexpr std::array<std::string_view, 2> kSupportedSchemes = {"http",
-                                                               "https"};
+// Remote sources: fetched over the network, cached in memory and on disk.
+constexpr std::array<std::string_view, 2> kRemoteSchemes = {"http", "https"};
+
+// Local sources (RFC §4.1): `file` (iOS bundled `require()` assets in
+// release builds, documents, photos), and Android's `content` (pickers,
+// MediaStore) and `android.resource` (release `require()` assets, resolved
+// from resource names by the Android view). They are always readable,
+// because reading one is not a network request, so `cacheOnly` still loads
+// them; and they never touch the disk tier, because copying a local file
+// into the cache only costs space. The core does not know the platform: an
+// Android-only scheme on iOS gets past here and fails in the loader.
+constexpr std::array<std::string_view, 3> kLocalSchemes = {"file", "content",
+                                                           "android.resource"};
+
+template <std::size_t N>
+bool contains(const std::array<std::string_view, N>& schemes,
+              std::string_view scheme) {
+  return std::find(schemes.begin(), schemes.end(), scheme) != schemes.end();
+}
 
 char toLowerAscii(char c) {
   return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -82,8 +96,8 @@ ResolveResult resolveRequest(const ImageRequest& request) {
                           ? std::string{}
                           : lowerAscii(std::string_view(request.uri).substr(
                                 0, schemeEnd));
-  if (std::find(kSupportedSchemes.begin(), kSupportedSchemes.end(), scheme) ==
-      kSupportedSchemes.end()) {
+  const bool isLocal = contains(kLocalSchemes, scheme);
+  if (!isLocal && !contains(kRemoteSchemes, scheme)) {
     return {.request = std::nullopt, .error = RequestError::UnsupportedScheme};
   }
   if (!std::all_of(request.headers.begin(), request.headers.end(),
@@ -123,6 +137,12 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       resolved.memory.write = false;
       resolved.disk.write = false;
       break;
+  }
+  // Applied after the matrix so every policy agrees on local sources: the
+  // policy still governs the memory tier, never the disk or the "network".
+  if (isLocal) {
+    resolved.disk = {.read = false, .write = false};
+    resolved.allowNetwork = true;
   }
 
   return {.request = std::move(resolved), .error = RequestError::None};

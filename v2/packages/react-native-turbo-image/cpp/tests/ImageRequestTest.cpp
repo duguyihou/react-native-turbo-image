@@ -84,6 +84,41 @@ TEST(ResolveRequestHeaders, AcceptsEveryTokenCharacterAndOpaqueValueBytes) {
   EXPECT_TRUE(result.ok());
 }
 
+TEST(ResolveRequestLocal, AcceptsLocalSchemes) {
+  for (const char* uri : {"file:///var/mobile/Containers/Bundle/App.app/assets/logo.png",
+                          "content://media/external/images/media/42",
+                          "android.resource://com.example.app/2131165270",
+                          "FILE:///tmp/a.png"}) {
+    EXPECT_TRUE(resolveRequest({.uri = uri}).ok()) << uri;
+  }
+}
+
+TEST(ResolveRequestLocal, StillRejectsOtherSchemes) {
+  for (const char* uri : {"data:image/png;base64,iVBOR", "asset:/logo.png", "ph://ABC",
+                          "src_assets_logo"}) {
+    EXPECT_EQ(resolveRequest({.uri = uri}).error, RequestError::UnsupportedScheme) << uri;
+  }
+}
+
+class ResolveRequestLocalPolicy : public ::testing::TestWithParam<CachePolicy> {};
+
+TEST_P(ResolveRequestLocalPolicy, NeverUsesDiskAndIsAlwaysReadable) {
+  const auto result =
+      resolveRequest({.uri = "file:///tmp/logo.png", .cachePolicy = GetParam()});
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(result.request->disk, (TierAccess{.read = false, .write = false}));
+  EXPECT_TRUE(result.request->allowNetwork);
+  // The memory tier still follows the policy, exactly as for a remote URL.
+  const auto remote =
+      resolveRequest({.uri = "https://cdn.example.com/logo.png", .cachePolicy = GetParam()});
+  ASSERT_TRUE(remote.ok());
+  EXPECT_EQ(result.request->memory, remote.request->memory);
+}
+
+INSTANTIATE_TEST_SUITE_P(AllPolicies, ResolveRequestLocalPolicy,
+                         ::testing::Values(CachePolicy::Default, CachePolicy::MemoryOnly,
+                                           CachePolicy::NoCache, CachePolicy::CacheOnly));
+
 TEST(ParseCachePolicy, AcceptsExactlyTheJsNames) {
   EXPECT_EQ(parseCachePolicy("default"), CachePolicy::Default);
   EXPECT_EQ(parseCachePolicy("memoryOnly"), CachePolicy::MemoryOnly);

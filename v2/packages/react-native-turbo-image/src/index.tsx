@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import type { ColorValue } from 'react-native';
 
 import NativeTurboImageModule from './NativeTurboImageModule';
@@ -21,7 +21,12 @@ export type HeadersInput =
   | ReadonlyArray<readonly [string, string]>
   | { forEach(callback: (value: string, name: string) => void): void };
 
-export type Source = Omit<NativeSource, 'headers'> & { headers?: HeadersInput };
+export type RemoteSource = Omit<NativeSource, 'headers'> & { headers?: HeadersInput };
+
+// A URI source, or a bundled asset from `require('./logo.png')` (new in 2.0).
+// URIs may be http(s), `file://`, and on Android `content://` or
+// `android.resource://`.
+export type Source = RemoteSource | number;
 
 function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | undefined {
   if (headers == null) {
@@ -45,6 +50,13 @@ function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | un
 }
 
 function toNativeSource(source: Source): NativeSource {
+  if (typeof source === 'number') {
+    // RN's resolver picks the @2x/@3x file for this screen and returns a
+    // dev-server URL in development, a `file://` bundle URL on iOS release,
+    // and a bare resource name on Android release (resolved natively).
+    // An unknown asset id resolves to null: an empty URI the core rejects.
+    return { uri: Image.resolveAssetSource(source)?.uri ?? '' };
+  }
   const { headers, ...rest } = source;
   const native = toNativeHeaders(headers);
   return native === undefined ? rest : { ...rest, headers: native };

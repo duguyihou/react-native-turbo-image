@@ -9,6 +9,7 @@ import com.facebook.react.viewmanagers.TurboImageViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerInterface
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.readHeaders
+import com.turboimage.core.resolveSourceUri
 import com.turboimage.loader.TurboImageLoaders
 
 /**
@@ -33,7 +34,7 @@ class TurboImageViewManager :
   }
 
   override fun setSource(view: TurboImageView, value: ReadableMap?) {
-    view.uri = value?.getString("uri")
+    view.uri = value?.getString("uri")?.let { resolveSourceUri(view.context, it) }
     view.cacheKey = if (value?.hasKey("cacheKey") == true) value.getString("cacheKey") else null
     view.headers = readHeaders(value)
   }
