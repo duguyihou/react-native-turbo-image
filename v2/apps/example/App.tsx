@@ -7,7 +7,7 @@
 // the load they depend on, so outcomes are deterministic.
 //
 // When every scenario has settled, the app logs exactly one line:
-//   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"failed":{...}}
+//   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"blocked":N,"failed":{...}}
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -664,13 +664,17 @@ export default function App() {
     const pass = Object.values(results).every((r) => r.ok);
     // Compact on purpose: iOS os_log truncates messages at ~1 KB, which cut
     // the full results off mid-JSON. Details are only needed for failures.
-    const failed = Object.fromEntries(Object.entries(results).filter(([, r]) => !r.ok));
-    const passed = Object.keys(results).length - Object.keys(failed).length;
+    // Blocked scenarios are only counted: their cause is one of the listed
+    // failures, and listing them would push that cause past the 1 KB cut.
+    const notOk = Object.entries(results).filter(([, r]) => !r.ok);
+    const failed = Object.fromEntries(notOk.filter(([, r]) => r.outcome !== 'blocked'));
+    const blocked = notOk.length - Object.keys(failed).length;
+    const passed = Object.keys(results).length - notOk.length;
     // Release builds on iOS drop everything below RCTLogLevelError, and the
     // smoke scripts run release builds, so the result has to go out as an
     // error there. Debug keeps console.log to avoid a LogBox error toast.
     const report = __DEV__ ? console.log : console.error;
-    report(`TURBOIMAGE_SMOKE ${JSON.stringify({ pass, passed, total: SCENARIOS.length, failed })}`);
+    report(`TURBOIMAGE_SMOKE ${JSON.stringify({ pass, passed, total: SCENARIOS.length, blocked, failed })}`);
   }, [settled, results]);
 
   useEffect(() => {
@@ -678,7 +682,15 @@ export default function App() {
       setResults((prev) => {
         const next = { ...prev };
         for (const s of SCENARIOS) {
-          next[s.id] ??= { ok: false, outcome: 'timeout', detail: '' };
+          // A scenario whose prerequisites never settled was never mounted.
+          // Reporting it as a timeout once made hung network loads look
+          // like hung cache reads, so say which it is. Judged against
+          // `prev`: only what settled before the deadline counts.
+          const waitingFor = [s.after ?? []].flat().filter((dep) => !prev[dep]);
+          next[s.id] ??=
+            waitingFor.length > 0
+              ? { ok: false, outcome: 'blocked', detail: `never ran; waiting for ${waitingFor.join(', ')}` }
+              : { ok: false, outcome: 'timeout', detail: '' };
         }
         return next;
       });

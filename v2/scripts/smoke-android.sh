@@ -58,5 +58,9 @@ if [[ "${line}" == *'"pass":true'* ]]; then
   echo "PASS (android)"
 else
   echo "FAIL (android)" >&2
+  # Every network scenario fails or times out when the host's connection
+  # drops, which looks like a product bug. Say what the host sees right now.
+  host_status="$(curl -s -o /dev/null -m 5 -w '%{http_code}' https://picsum.photos/id/1/10/10 || true)"
+  echo "host network check (picsum.photos): HTTP ${host_status:-none} (000 = unreachable)" >&2
   exit 1
 fi
