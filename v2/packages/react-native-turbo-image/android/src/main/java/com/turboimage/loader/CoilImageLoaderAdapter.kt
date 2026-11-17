@@ -5,6 +5,7 @@ import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import android.os.Message
 import android.view.View
 import android.widget.ImageView
 import coil3.Extras
@@ -190,7 +191,16 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     var finished = false
     val token =
       ProgressInterceptor.register { completed, total ->
-        mainHandler.post { if (!finished) listener.onProgress(completed, total) }
+        // Asynchronous, because Coil's own callbacks are: Dispatchers.Main
+        // posts asynchronous messages, which pass the sync barrier the view
+        // system holds from scheduling a traversal until it runs (up to a
+        // frame). A plain `post` waits behind that barrier, so when a small
+        // image downloaded and decoded within one frame, onSuccess overtook
+        // every progress message, `finished` dropped them all, and the load
+        // reported no progress. Same kind of message, same queue: FIFO.
+        val message = Message.obtain(mainHandler) { if (!finished) listener.onProgress(completed, total) }
+        message.isAsynchronous = true
+        mainHandler.sendMessage(message)
       }
     fun finish() {
       finished = true
