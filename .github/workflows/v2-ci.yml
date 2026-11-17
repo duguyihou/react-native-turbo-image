@@ -39,13 +39,23 @@ jobs:
       - run: shellcheck -x scripts/*.sh
 
   core:
-    name: C++ core (${{ matrix.os }})
+    name: C++ core (${{ matrix.os }}, ${{ matrix.cc }})
     needs: versions
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Three compilers, not just two runners (RFC §8): the placeholder
+        # goldens are byte-exact, and GCC, Clang and Apple Clang differ in
+        # exactly the floating-point defaults that could break that.
+        include:
+          - { os: ubuntu-latest, cc: gcc, cxx: g++ }
+          - { os: ubuntu-latest, cc: clang, cxx: clang++ }
+          # `clang` on macOS is Apple Clang.
+          - { os: macos-latest, cc: clang, cxx: clang++ }
     runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v5
       - run: cmake -S packages/react-native-turbo-image/cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON
@@ -101,7 +111,10 @@ jobs:
         working-directory: v2/apps/example/android
         run: |
           mapping=app/build/outputs/mapping/release/mapping.txt
-          for cls in ResolvedRequest ResolveFailure TurboImageCore; do
+          # Every class TurboImageJni.cpp looks up by name, plus the class
+          # that declares the native methods. Keep in step with
+          # consumer-rules.pro.
+          for cls in ResolvedRequest ResolveFailure PlaceholderPixels TurboImageCore; do
             grep -q "^com.turboimage.core.${cls} -> com.turboimage.core.${cls}:" "$mapping"
           done
       - name: Enable KVM for the emulator
@@ -229,7 +242,27 @@ jobs:
         if: matrix.platform == 'android'
         run: |
           cd "$EVAL_DIR/apps/example/android"
-          ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=arm64-v8a
+          # x86_64 for the hosted emulator, arm64-v8a for real devices.
+          ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=x86_64,arm64-v8a
+      - name: Enable KVM for the emulator
+        if: matrix.platform == 'android'
+        working-directory: .
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      # The evaluation must smoke-test both platforms (RFC §3), not only
+      # build: the copy's own script, so it checks the copy's APK.
+      - name: On-device smoke test (Android R8 release)
+        if: matrix.platform == 'android'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          working-directory: v2
+          script: bash "$EVAL_DIR/scripts/smoke-android.sh"
       - name: Build iOS Release and smoke test
         if: matrix.platform == 'ios'
         run: |
