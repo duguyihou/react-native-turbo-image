@@ -53,7 +53,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
 ## 4. Architecture
 
 ```
-            JS  <TurboImage source placeholder cachePolicy resizeMode on{Start,Progress,Success,Failure,Completion}>
+            JS  <TurboImage source placeholder cachePolicy resizeMode resize blur monochrome tint on{…}>
                          │  Codegen (TurboImageSpec)
         ┌────────────────┴─────────────────┐
   iOS   │ TurboImageComponentView (ObjC++) │   TurboImageView/Manager (Kotlin)   Android
@@ -189,6 +189,31 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main behind a generation counter plus a "final image shown" flag. 1.x had no such guard and could show a stale placeholder after `source` changed.
 - **Lifetime.** The placeholder is shown until the image loads and **kept on failure**, on both platforms. Android needed a Coil target subclass for this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
 - **`memoryCacheKey`.** This is a synchronous memory-cache lookup through the seam (`memoryCachedImageForKey:` / `memoryCachedDrawable`), keyed by the core's `canonicalCacheKey`, so it matches what a view stored. Coil keys memory entries by key *plus* extras (e.g. the resolved size), so the Android adapter matches on the key string across the key set.
+
+### 4.5a Processors (resize, blur, monochrome, tint)
+
+`cpp/include/turboimage/Processing.h` implements every processor once, as
+integer arithmetic on premultiplied RGBA8. 1.x used each platform's filters
+(Nuke `Resize`, `CIGaussianBlur`, `CIColorMonochrome`, `withTintColor` on iOS;
+Coil 2 `coil-transformations` with RenderScript blur and `BlendMode.COLOR` on
+Android), so the same props gave visibly different images, and that library
+has no Coil 3 version.
+
+| Prop | Unit / semantics | Algorithm |
+|---|---|---|
+| `resize` | Width in points/dp, × the screen scale (`RCTScreenScale`, `DisplayMetrics.density`). Aspect kept, never upscaled | Exact area averaging |
+| `blur` | Gaussian σ in pixels of the resized image, rounded, capped at 250 | Three box blurs (Kovesi), O(pixels) for any radius, edges clamped |
+| `monochrome` | Colour; Rec. 709 luma mapped onto it (`white` = greyscale). Colour alpha = intensity | Integer luma |
+| `tint` | Colour, Porter-Duff source-atop (opaque area takes the colour) | Integer blend |
+
+Order: resize → blur → monochrome → tint, as in 1.x.
+
+- **The key is the description.** `resolveRequest` normalises the props into a `ProcessingSpec` and encodes it as `ResolvedRequest.processorKey` (`ti1;w=180;b=6;m=ffffffff`), empty when unprocessed. Adapters attach one opaque step identified by that key (Nuke `ImageProcessors.Anonymous(id:)`, a Coil `Transformation` with that `cacheKey`), and the step calls `processImage(pixels, key)`. Nothing else crosses JNI or ObjC, so the cache identity cannot disagree with the pixels. Swift can't call C++, so iOS passes the step as a block on `TIImageRequest`, built by the ObjC++ factory.
+- **Caching.** `cacheKey` still names the original. Both loaders fold the processor id into the *memory* key, giving one memory entry per variant, and keep only the original on disk (Nuke `.storeOriginalData`; Coil keys disk by `diskCacheKey` alone). The smoke scenario `processed` loads a variant with `cacheOnly` from the original another view wrote. `plainAfterProcessed` checks that an unprocessed read still gets the original.
+- **Dispose.** `dispose` evicts every variant. Coil matches memory keys by string, so this comes for free on Android. Nuke's memory cache can't be enumerated, so the iOS adapter records the processor keys it has seen per cache key and evicts each one. `disposeEvictsVariants` fails without that index (verified by disabling it). The `memoryCacheKey` placeholder only uses the unprocessed entry on both platforms.
+- **Decode size.** Processed loads decode the original on both platforms. Coil would otherwise decode at the view's size, so `blur` (in image pixels) would act on a different bitmap than on iOS. TODO: decode-time downsampling to the `resize` width on both platforms.
+- **Cost.** A 12 MP blur takes ~270 ms on an M-series host. It runs on the loaders' background queues. `resize` + blur on a 1200 px result takes ~50 ms.
+- **Not ported.** 1.x's `rounded` also added a circle-crop processor. 2.0 clips with a container (§4.4b), so that processor is redundant. The plan's `borderRadius` processor never existed as a 1.x prop: `UIImage+BorderRadius.swift` was dead code.
 
 ### 4.6 View-level fixes found by the smoke test
 

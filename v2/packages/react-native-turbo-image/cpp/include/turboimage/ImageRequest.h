@@ -30,6 +30,8 @@
 #include <string>
 #include <string_view>
 
+#include "turboimage/Processing.h"
+
 namespace turboimage {
 
 // The JS-facing cache policy. The integer values are part of the ABI shared
@@ -68,12 +70,22 @@ struct ImageRequest {
   // image is served from rotating signed URLs.
   std::optional<std::string> cacheKey;
   CachePolicy cachePolicy = CachePolicy::Default;
+  // Pixel processors (resize/blur/monochrome/tint) and the screen scale that
+  // converts `resize` from points/dp to pixels. See Processing.h.
+  ProcessingOptions processing;
+  double pixelRatio = 1;
 };
 
 struct ResolvedRequest {
   std::string url;
-  // The key adapters MUST use for both memory and disk caches.
+  // The key adapters MUST use for both memory and disk caches. It names the
+  // *original* image: processed variants share it, and adapters attach
+  // `processorKey` so their loader keeps one memory entry per variant while
+  // the disk tier keeps one copy of the original bytes.
   std::string cacheKey;
+  // Empty when no processing is requested; otherwise the identity of the
+  // processing step and its complete description (see Processing.h).
+  std::string processorKey;
   TierAccess memory;
   TierAccess disk;
   bool allowNetwork = true;

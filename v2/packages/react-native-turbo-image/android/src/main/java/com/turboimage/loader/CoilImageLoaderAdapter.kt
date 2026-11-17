@@ -21,6 +21,9 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.request.transformations
+import coil3.size.Size
+import coil3.transform.Transformation
 import coil3.target.ImageViewTarget
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
@@ -28,6 +31,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
+import android.graphics.Bitmap
 
 /**
  * Coil 3 adapter. Everything Coil-specific lives in this file.
@@ -54,6 +58,22 @@ private class KeepCurrentImageTarget(view: ImageView) : ImageViewTarget(view) {
   override fun onStart(placeholder: Image?) = Unit
 
   override fun onError(error: Image?) = Unit
+}
+
+/**
+ * The core's processing step as one Coil transformation. Its `cacheKey` is
+ * the core's processor key, which Coil adds to the memory key's extras, so
+ * each variant is its own memory entry while the disk cache (keyed by
+ * `diskCacheKey` alone) keeps one original, the same split Nuke makes.
+ * Throwing fails the load; `classify` reports it as `decode`, like Nuke's
+ * `processingFailed`.
+ */
+private class CoreProcessingTransformation(private val processorKey: String) : Transformation() {
+  override val cacheKey: String = processorKey
+
+  override suspend fun transform(input: Bitmap, size: Size): Bitmap =
+    TurboImageCore.process(input, processorKey)
+      ?: throw IllegalStateException("TurboImage processing failed ($processorKey)")
 }
 
 class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
@@ -93,6 +113,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         // Coil's crossfade already skips memory-cache hits (the seam rule)
         // and fades from the target's current drawable, i.e. the placeholder.
         .crossfade(fadeMillis)
+        .applyProcessing(request)
         .listener(
           onSuccess = { _, result ->
             finish()
@@ -138,8 +159,10 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   }
 
   // Coil keys memory entries by key *and* extras (e.g. the resolved size of
-  // the view that loaded it), so an exact Key(cacheKey) lookup would miss.
-  // TurboImage owns the key string; match on it across the (small) key set.
+  // the view that loaded it, or the processing step), so an exact
+  // Key(cacheKey) lookup would miss. TurboImage owns the key string; match on
+  // it across the (small) key set. `remove` thereby evicts every processed
+  // variant too.
   private fun memoryKeysFor(cacheKey: String) =
     imageLoader.memoryCache?.keys?.filter { it.key == cacheKey }.orEmpty()
 
@@ -157,7 +180,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   }
 
   override fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable? {
-    val key = memoryKeysFor(cacheKey).firstOrNull() ?: return null
+    // The unprocessed image only, like Nuke's (imageID, no processors) key:
+    // a blurred variant must not stand in as another view's placeholder.
+    val key = memoryKeysFor(cacheKey).firstOrNull { TRANSFORMATIONS_EXTRA !in it.extras } ?: return null
     return imageLoader.memoryCache?.get(key)?.image?.asDrawable(resources)
   }
 
@@ -182,6 +207,20 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       else -> TurboImageCore.LoadErrorCode.DECODE.nativeValue
     }
 
+  /**
+   * Processed loads decode at the original size. Otherwise Coil would decode
+   * to the view's size first, and `blur` (in image pixels) and `resize` would
+   * act on a different bitmap than on iOS, where Nuke decodes the original.
+   * TODO: decode-time downsampling to the `resize` width on both platforms
+   * (Nuke thumbnail options, Coil size), to cut peak memory for large photos.
+   */
+  private fun ImageRequest.Builder.applyProcessing(request: ResolvedRequest) = apply {
+    if (request.processorKey.isNotEmpty()) {
+      size(Size.ORIGINAL)
+      transformations(CoreProcessingTransformation(request.processorKey))
+    }
+  }
+
   private fun tierPolicy(read: Boolean, write: Boolean): CachePolicy =
     when {
       read && write -> CachePolicy.ENABLED
@@ -192,6 +231,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
 
   companion object {
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** The extra `transformations()` adds to memory keys (Coil 3 imageRequests.kt). */
+    private const val TRANSFORMATIONS_EXTRA = "coil#transformations"
 
     /** Must equal `NukeImageLoader.diskCacheBytes` on iOS. */
     const val DISK_CACHE_BYTES = 150L * 1024 * 1024

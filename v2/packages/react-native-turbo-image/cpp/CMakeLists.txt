@@ -21,6 +21,7 @@ option(TURBOIMAGE_BUILD_TESTS "Build the GoogleTest suite" OFF)
 add_library(turboimage_core STATIC
   src/ImageRequest.cpp
   src/Placeholder.cpp
+  src/Processing.cpp
   src/Progress.cpp
 )
 target_include_directories(turboimage_core PUBLIC
@@ -52,6 +53,7 @@ if(TURBOIMAGE_BUILD_TESTS)
   add_executable(turboimage_core_tests
     tests/ImageRequestTest.cpp
     tests/PlaceholderTest.cpp
+    tests/ProcessingTest.cpp
     tests/ProgressTest.cpp
   )
   # PlaceholderGoldens.inc lives next to the tests.

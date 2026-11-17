@@ -12,6 +12,7 @@
 
 #import "TurboImageComponentView.h"
 
+#import <React/RCTUtils.h>
 #import <react/renderer/components/TurboImageSpec/ComponentDescriptors.h>
 #import <react/renderer/components/TurboImageSpec/EventEmitters.h>
 #import <react/renderer/components/TurboImageSpec/Props.h>
@@ -54,6 +55,26 @@ UIViewContentMode toContentMode(TurboImageViewResizeMode mode) {
   }
 }
 
+
+// RN's colour as the core's 0xAARRGGBB, or nullopt when the prop is unset.
+std::optional<std::uint32_t> toArgb(const SharedColor &color) {
+  if (!color) {
+    return std::nullopt;
+  }
+  return (static_cast<std::uint32_t>(alphaFromColor(color)) << 24) |
+         (static_cast<std::uint32_t>(redFromColor(color)) << 16) |
+         (static_cast<std::uint32_t>(greenFromColor(color)) << 8) |
+         static_cast<std::uint32_t>(blueFromColor(color));
+}
+
+turboimage::ProcessingOptions toProcessing(const TurboImageViewProps &props) {
+  return {
+      .resize = props.resize,
+      .blur = props.blur,
+      .monochrome = toArgb(props.monochrome),
+      .tint = toArgb(props.tint),
+  };
+}
 
 const std::shared_ptr<const TurboImageViewProps> &defaultViewProps() {
   static const auto defaultProps = std::make_shared<const TurboImageViewProps>();
@@ -129,7 +150,10 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
   if (oldViewProps.source.uri != newViewProps.source.uri ||
       oldViewProps.source.cacheKey != newViewProps.source.cacheKey ||
-      oldViewProps.cachePolicy != newViewProps.cachePolicy) {
+      oldViewProps.cachePolicy != newViewProps.cachePolicy ||
+      // Processors change the pixels, so they need a new load (served from
+      // the disk original, or memory if this variant is cached).
+      toProcessing(oldViewProps) != toProcessing(newViewProps)) {
     _needsReload = YES;
   }
   if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
@@ -222,8 +246,13 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   // Same factory as the cache module, so prefetched keys always match.
+  // Fabric applies props (and so starts loads) before mounting, when there
+  // is no window to ask; RN's own screen scale is what `PixelRatio` reports
+  // to JS, so `resize` means the same here as in the app's layout maths.
+  const CGFloat pixelRatio = RCTScreenScale();
   const auto built = TIMakeImageRequest(props.source.uri, props.source.cacheKey,
-                                        toCorePolicy(props.cachePolicy));
+                                        toCorePolicy(props.cachePolicy), toProcessing(props),
+                                        pixelRatio);
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   // Requests the core rejects fail before onStart: no load ever began.
   if (built.request == nil || loader == nil) {

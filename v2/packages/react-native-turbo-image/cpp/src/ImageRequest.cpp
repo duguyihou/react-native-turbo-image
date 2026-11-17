@@ -73,6 +73,8 @@ ResolveResult resolveRequest(const ImageRequest& request) {
   ResolvedRequest resolved{
       .url = request.uri,
       .cacheKey = request.cacheKey.value_or(canonicalCacheKey(request.uri)),
+      .processorKey = processorKey(
+          resolveProcessing(request.processing, request.pixelRatio)),
       .memory = {.read = true, .write = true},
       .disk = {.read = true, .write = true},
       .allowNetwork = true,

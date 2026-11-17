@@ -10,7 +10,7 @@
 //   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"failed":{...}}
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -30,6 +30,13 @@ const URI_LARGE = 'https://picsum.photos/id/1069/3000/2000';
 const URI_SMALL = 'https://picsum.photos/id/1080/600/400';
 // Used only by the cache-module scenarios (prefetch → dispose chain).
 const URI_PREFETCH = 'https://picsum.photos/id/1050/600/400';
+// Used only by the processed-variant dispose chain.
+const URI_PROCESSED = 'https://picsum.photos/id/1035/600/400';
+
+// `resize` is in points/dp and the core converts it with the screen scale,
+// so the processed bitmap is this many pixels wide on either platform.
+const RESIZE_DP = 60;
+const RESIZED_PX = Math.round(RESIZE_DP * PixelRatio.get());
 
 type Outcome = 'load' | 'error';
 type Settle = (id: string, ok: boolean, outcome: string, detail: string) => void;
@@ -45,7 +52,11 @@ type Scenario = {
   placeholder?: TurboImageProps['placeholder'];
   showPlaceholderOnFailure?: boolean;
   rounded?: boolean;
+  // Image processors, passed straight through to <TurboImage>.
+  processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
+  // For expected loads: the exact onSuccess size (in pixels).
+  expectSize?: { width: number; height: number };
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
   // Mount only after these scenarios have settled.
@@ -201,8 +212,56 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'cacheOnly',
     expect: 'error',
     expectCode: 'notCached',
-    after: ['explicitKeyRead', 'disposeEvicts', 'memoryCacheKeyPlaceholder', 'cacheHitCanonicalKey', 'recycledSameSource'],
+    after: [
+      'explicitKeyRead',
+      'disposeEvicts',
+      'memoryCacheKeyPlaceholder',
+      'cacheHitCanonicalKey',
+      'recycledSameSource',
+      'plainAfterProcessed',
+      'disposeEvictsVariants',
+    ],
     kind: 'clearCaches',
+  },
+  {
+    id: 'processed',
+    title: 'resize + tint, served from the shared disk original',
+    // cacheOnly after `network`: the processed variant is not in memory yet,
+    // so this proves it is derived from the original's disk entry.
+    source: { uri: URI_A },
+    processing: { resize: RESIZE_DP, tint: '#2060c0' },
+    cachePolicy: 'cacheOnly',
+    expect: 'load',
+    expectSize: { width: RESIZED_PX, height: Math.round((RESIZED_PX * 400) / 600) },
+    after: 'network',
+  },
+  {
+    id: 'plainAfterProcessed',
+    title: 'an unprocessed read still gets the original, not a variant',
+    source: { uri: URI_A },
+    cachePolicy: 'cacheOnly',
+    expect: 'load',
+    expectSize: { width: 600, height: 400 },
+    after: 'processed',
+  },
+  {
+    id: 'processedWrite',
+    title: 'blur + monochrome variant is written',
+    source: { uri: URI_PROCESSED },
+    processing: { blur: 6, monochrome: 'white' },
+    cachePolicy: 'default',
+    expect: 'load',
+  },
+  {
+    id: 'disposeEvictsVariants',
+    title: 'dispose evicts processed variants too (cacheOnly misses)',
+    source: { uri: URI_PROCESSED },
+    processing: { blur: 6, monochrome: 'white' },
+    cachePolicy: 'cacheOnly',
+    expect: 'error',
+    expectCode: 'notCached',
+    after: 'processedWrite',
+    kind: 'dispose',
   },
   {
     id: 'lifecycle',
@@ -367,10 +426,15 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       showPlaceholderOnFailure={scenario.showPlaceholderOnFailure}
       rounded={scenario.rounded}
       cachePolicy={scenario.cachePolicy}
+      {...scenario.processing}
       resizeMode="cover"
-      onSuccess={(e) =>
-        settle(scenario.id, scenario.expect === 'load', 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`)
-      }
+      onSuccess={(e) => {
+        const { width, height } = e.nativeEvent;
+        const sizeOk =
+          scenario.expectSize === undefined ||
+          (width === scenario.expectSize.width && height === scenario.expectSize.height);
+        settle(scenario.id, scenario.expect === 'load' && sizeOk, 'load', `${width}×${height}`);
+      }}
       onFailure={(e) =>
         settle(
           scenario.id,

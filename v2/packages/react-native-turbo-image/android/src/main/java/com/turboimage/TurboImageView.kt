@@ -37,6 +37,10 @@ class TurboImageView(
     set(value) { if (field != value) { field = value; needsReload = true } }
   var cachePolicy: TurboImageCore.CachePolicy = TurboImageCore.CachePolicy.DEFAULT
     set(value) { if (field != value) { field = value; needsReload = true } }
+  // Processors change the pixels, so they need a new load (served from the
+  // disk original, or memory if this variant is cached). Same rule as iOS.
+  var processing = TurboImageCore.Processing()
+    set(value) { if (field != value) { field = value; needsReload = true } }
 
   // Placeholder hashes. A change re-decodes; see [applyPlaceholder].
   var blurhash: String? = null
@@ -163,7 +167,12 @@ class TurboImageView(
     // Requests the core rejects fail before onStart: no load ever began.
     val invalid = TurboImageCore.LoadErrorCode.INVALID_REQUEST.nativeValue
     val result =
-      uri?.let { TurboImageCore.resolve(it, cacheKey, cachePolicy) }
+      uri?.let {
+        // `density` is what RN's PixelRatio reports to JS, so `resize` (dp)
+        // means the same as in the app's layout maths.
+        TurboImageCore.resolve(
+          it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble())
+      }
         ?: ResolveFailure(errorCode = 1) // EmptyUri, same as the core's code
     when (result) {
       is ResolveFailure -> {

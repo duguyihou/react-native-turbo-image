@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import type { ColorValue } from 'react-native';
 
 import NativeTurboImageModule from './NativeTurboImageModule';
 import TurboImageView from './TurboImageViewNativeComponent';
@@ -21,8 +22,12 @@ export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 // TODO: remove in 3.0.
 export type LegacyCachePolicy = 'urlCache' | 'dataCache';
 
-export type TurboImageProps = Omit<NativeProps, 'cachePolicy'> & {
+export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | 'tint'> & {
   cachePolicy?: CachePolicy | LegacyCachePolicy;
+  // 1.x also accepted processColor() output (a number); RN's colour
+  // processing handles both, Codegen's ColorValue just doesn't spell it.
+  monochrome?: ColorValue | number;
+  tint?: ColorValue | number;
   // 1.x prop: clip the image to a circle/pill.
   rounded?: boolean;
 };
@@ -66,7 +71,7 @@ function TurboImageComponent({ cachePolicy, rounded, style, ...props }: TurboIma
 
   const image = (
     <TurboImageView
-      {...props}
+      {...(props as Omit<NativeProps, 'cachePolicy'>)}
       style={rounded ? StyleSheet.absoluteFill : style}
       cachePolicy={resolveCachePolicy(cachePolicy)}
     />

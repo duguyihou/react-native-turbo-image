@@ -9,7 +9,7 @@
 // Coil: request semantics are owned by TurboImage (RFC rule 2) and the
 // loaders are adapters behind the native layer (RFC rule 1).
 import { codegenNativeComponent } from 'react-native';
-import type { CodegenTypes, HostComponent, ViewProps } from 'react-native';
+import type { CodegenTypes, ColorValue, HostComponent, ViewProps } from 'react-native';
 
 export type NativeSource = Readonly<{
   uri: string;
@@ -87,6 +87,18 @@ export interface NativeProps extends ViewProps {
   // Cross-fade from the placeholder (or blank) to the loaded image, in ms.
   // Skipped for memory-cache hits on both platforms. 0 disables it.
   fadeDuration?: CodegenTypes.WithDefault<CodegenTypes.Int32, 300>;
+  // Image processors, applied by the shared C++ core in this order (see
+  // cpp/include/turboimage/Processing.h). Each processed variant is its own
+  // memory-cache entry; the disk cache keeps one original.
+  // Target width in points/dp; aspect kept, never upscaled. 0 = off.
+  resize?: CodegenTypes.WithDefault<CodegenTypes.Double, 0>;
+  // Gaussian standard deviation in pixels of the (resized) image. 0 = off.
+  blur?: CodegenTypes.WithDefault<CodegenTypes.Double, 0>;
+  // Luminance mapped onto this colour ('white' = greyscale). The colour's
+  // alpha is the effect's intensity.
+  monochrome?: ColorValue;
+  // Fills the image's opaque area with this colour, keeping transparency.
+  tint?: ColorValue;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
   onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;
   onSuccess?: CodegenTypes.DirectEventHandler<SuccessEvent>;

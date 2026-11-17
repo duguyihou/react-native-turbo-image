@@ -14,6 +14,7 @@
 
 #include "turboimage/ImageRequest.h"
 #include "turboimage/Placeholder.h"
+#include "turboimage/Processing.h"
 #include "turboimage/Progress.h"
 
 namespace {
@@ -28,6 +29,15 @@ std::string toStdString(JNIEnv* env, jstring value) {
   return out;
 }
 
+// Kotlin passes colours as a jlong: the 0xAARRGGBB value, or -1 for "unset"
+// (a jint cannot express both every ARGB value and "absent").
+std::optional<std::uint32_t> toArgb(jlong value) {
+  if (value < 0) {
+    return std::nullopt;
+  }
+  return static_cast<std::uint32_t>(value & 0xffffffff);
+}
+
 }  // namespace
 
 // Returns a `com.turboimage.core.ResolvedRequest`, or an
@@ -36,12 +46,19 @@ std::string toStdString(JNIEnv* env, jstring value) {
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* this */,
                                                        jstring uri, jstring cacheKey,
-                                                       jint cachePolicy) {
+                                                       jint cachePolicy, jdouble resize,
+                                                       jdouble blur, jlong monochrome,
+                                                       jlong tint, jdouble pixelRatio) {
   const auto key = toStdString(env, cacheKey);
   const auto result = turboimage::resolveRequest({
       .uri = toStdString(env, uri),
       .cacheKey = key.empty() ? std::nullopt : std::optional<std::string>(key),
       .cachePolicy = static_cast<turboimage::CachePolicy>(cachePolicy),
+      .processing = {.resize = resize,
+                     .blur = blur,
+                     .monochrome = toArgb(monochrome),
+                     .tint = toArgb(tint)},
+      .pixelRatio = pixelRatio,
   });
 
   if (!result.ok()) {
@@ -53,10 +70,45 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
   const auto& r = *result.request;
   jclass resolvedClass = env->FindClass("com/turboimage/core/ResolvedRequest");
   jmethodID ctor =
-      env->GetMethodID(resolvedClass, "<init>", "(Ljava/lang/String;Ljava/lang/String;ZZZZZ)V");
+      env->GetMethodID(resolvedClass, "<init>",
+                       "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;)V");
   return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
                         env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
-                        r.disk.read, r.disk.write, r.allowNetwork);
+                        r.disk.read, r.disk.write, r.allowNetwork,
+                        env->NewStringUTF(r.processorKey.c_str()));
+}
+
+namespace {
+
+// Wraps core pixels as `com.turboimage.core.PlaceholderPixels` (the class is
+// just "premultiplied RGBA plus a size"; it predates processing).
+jobject toPixels(JNIEnv* env, const turboimage::RgbaImage& image) {
+  const auto size = static_cast<jsize>(image.pixels.size());
+  jbyteArray bytes = env->NewByteArray(size);
+  if (bytes == nullptr) {
+    return nullptr;  // OutOfMemoryError is pending; let it propagate.
+  }
+  env->SetByteArrayRegion(bytes, 0, size, reinterpret_cast<const jbyte*>(image.pixels.data()));
+  jclass pixelsClass = env->FindClass("com/turboimage/core/PlaceholderPixels");
+  jmethodID ctor = env->GetMethodID(pixelsClass, "<init>", "(II[B)V");
+  return env->NewObject(pixelsClass, ctor, image.width, image.height, bytes);
+}
+
+}  // namespace
+
+// Runs the processors a `processorKey` describes over premultiplied RGBA
+// (an ARGB_8888 Bitmap's memory layout). Null when the key or buffer is
+// invalid. Called on Coil's decode dispatcher; pure (Processing.h).
+extern "C" JNIEXPORT jobject JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeProcess(JNIEnv* env, jobject /* this */,
+                                                       jbyteArray rgba, jint width, jint height,
+                                                       jstring processorKey) {
+  turboimage::RgbaImage image{.width = width, .height = height, .pixels = {}};
+  image.pixels.resize(static_cast<std::size_t>(env->GetArrayLength(rgba)));
+  env->GetByteArrayRegion(rgba, 0, static_cast<jsize>(image.pixels.size()),
+                          reinterpret_cast<jbyte*>(image.pixels.data()));
+  const auto processed = turboimage::processImage(std::move(image), toStdString(env, processorKey));
+  return processed ? toPixels(env, *processed) : nullptr;
 }
 
 // Returns `com.turboimage.core.PlaceholderPixels` (premultiplied RGBA, the
@@ -68,18 +120,7 @@ Java_com_turboimage_core_TurboImageCore_nativeDecodePlaceholder(JNIEnv* env, job
                                                                  jstring thumbhash) {
   const auto image =
       turboimage::decodePlaceholder(toStdString(env, blurhash), toStdString(env, thumbhash));
-  if (!image) {
-    return nullptr;
-  }
-  const auto size = static_cast<jsize>(image->pixels.size());
-  jbyteArray bytes = env->NewByteArray(size);
-  if (bytes == nullptr) {
-    return nullptr;  // OutOfMemoryError is pending; let it propagate.
-  }
-  env->SetByteArrayRegion(bytes, 0, size, reinterpret_cast<const jbyte*>(image->pixels.data()));
-  jclass pixelsClass = env->FindClass("com/turboimage/core/PlaceholderPixels");
-  jmethodID ctor = env->GetMethodID(pixelsClass, "<init>", "(II[B)V");
-  return env->NewObject(pixelsClass, ctor, image->width, image->height, bytes);
+  return image ? toPixels(env, *image) : nullptr;
 }
 
 // The throttle's state lives in a Kotlin LongArray(3) owned by the view, so

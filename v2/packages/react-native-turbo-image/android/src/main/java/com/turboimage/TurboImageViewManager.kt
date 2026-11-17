@@ -59,6 +59,22 @@ class TurboImageViewManager :
     view.setResizeMode(value)
   }
 
+  override fun setResize(view: TurboImageView, value: Double) {
+    view.processing = view.processing.copy(resize = value)
+  }
+
+  override fun setBlur(view: TurboImageView, value: Double) {
+    view.processing = view.processing.copy(blur = value)
+  }
+
+  override fun setMonochrome(view: TurboImageView, value: Int?) {
+    view.processing = view.processing.copy(monochrome = value)
+  }
+
+  override fun setTint(view: TurboImageView, value: Int?) {
+    view.processing = view.processing.copy(tint = value)
+  }
+
   // Start at most one load per Fabric transaction, after all props landed.
   override fun onAfterUpdateTransaction(view: TurboImageView) {
     super.onAfterUpdateTransaction(view)

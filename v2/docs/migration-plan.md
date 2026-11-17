@@ -39,7 +39,7 @@ builds, and the CI matrix.
 | `cacheKey` | ✅ done | |
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ done. Blurhash and thumbhash are byte-exact vs. the references; `memoryCacheKey` is a memory lookup via the seam |
-| `resize`, `blur`, `monochrome`, `tint`, `borderRadius` processors | Core describes processors; adapters map them to Nuke `ImageProcessors` / Coil `Transformation` | The processor list becomes part of the cache key in core |
+| `resize`, `blur`, `monochrome`, `tint` processors | **Core C++** pixel ops; adapters attach one opaque step keyed by the core's `processorKey` | ✅ done (RFC §4.5a). Variants are separate memory entries over one disk original; `dispose` evicts all of them. 1.x's `borderRadius` processor never existed, and `rounded`'s circle crop is replaced by the clipping container |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop | |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
 | GIF, APNG, SVG | Adapter decoders | Re-evaluate Gifu/APNGKit vs Nuke 13 built-ins; Coil `coil-gif`/`coil-svg` |
@@ -69,3 +69,4 @@ builds, and the CI matrix.
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
 - `TurboImage.prefetch` resolves `false` when any source fails (1.x always resolved `true`).
+- `blur`, `monochrome` and `tint` are now one cross-platform implementation, so results differ slightly from 1.x on both platforms. `blur` is σ in pixels of the (resized) image. On Android it now applies to the original-size decode, not the view-size one, so the same value looks weaker on large photos; pair it with `resize`. A `monochrome` colour's alpha is now its intensity.

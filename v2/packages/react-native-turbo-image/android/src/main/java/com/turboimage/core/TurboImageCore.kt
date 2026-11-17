@@ -1,5 +1,8 @@
 package com.turboimage.core
 
+import android.graphics.Bitmap
+import java.nio.ByteBuffer
+
 /**
  * Kotlin face of the shared C++ core (cpp/). Android never re-implements
  * request semantics; it asks the core, exactly like the iOS Fabric view does.
@@ -47,13 +50,73 @@ object TurboImageCore {
   /** The JS spelling of a load error code, owned by the C++ core. */
   fun loadErrorCodeName(code: Int): String = nativeLoadErrorCodeName(code)
 
-  fun resolve(uri: String, cacheKey: String?, cachePolicy: CachePolicy): ResolveResult =
-    nativeResolve(uri, cacheKey ?: "", cachePolicy.nativeValue)
+  /**
+   * Image processors as the view receives them (see
+   * cpp/include/turboimage/Processing.h). `resize` is in dp; colours are
+   * ARGB ints, null when unset.
+   */
+  data class Processing(
+    val resize: Double = 0.0,
+    val blur: Double = 0.0,
+    val monochrome: Int? = null,
+    val tint: Int? = null,
+  )
+
+  fun resolve(
+    uri: String,
+    cacheKey: String?,
+    cachePolicy: CachePolicy,
+    processing: Processing = Processing(),
+    pixelRatio: Double = 1.0,
+  ): ResolveResult =
+    nativeResolve(
+      uri,
+      cacheKey ?: "",
+      cachePolicy.nativeValue,
+      processing.resize,
+      processing.blur,
+      processing.monochrome.toNativeColor(),
+      processing.tint.toNativeColor(),
+      pixelRatio,
+    )
+
+  // An ARGB Int widened without sign extension, or -1 for "unset" (JNI side).
+  private fun Int?.toNativeColor(): Long = this?.toLong()?.and(0xffffffffL) ?: -1L
+
+  /**
+   * Runs the processors a `ResolvedRequest.processorKey` describes over a
+   * bitmap. Returns null if the key is invalid. Pure; call it off the main
+   * thread (a 12 MP blur takes a few hundred ms).
+   */
+  fun process(input: Bitmap, processorKey: String): Bitmap? {
+    // The core works on premultiplied RGBA8, which is exactly ARGB_8888's
+    // memory layout. Other configs (RGB_565, RGBA_F16, HARDWARE) are copied.
+    val source =
+      if (input.config == Bitmap.Config.ARGB_8888) input
+      else input.copy(Bitmap.Config.ARGB_8888, false) ?: return null
+    val bytes = ByteArray(source.byteCount)
+    source.copyPixelsToBuffer(ByteBuffer.wrap(bytes))
+    val pixels = nativeProcess(bytes, source.width, source.height, processorKey) ?: return null
+    return Bitmap.createBitmap(pixels.width, pixels.height, Bitmap.Config.ARGB_8888).apply {
+      copyPixelsFromBuffer(ByteBuffer.wrap(pixels.rgba))
+    }
+  }
+
+  private external fun nativeProcess(rgba: ByteArray, width: Int, height: Int, processorKey: String): PlaceholderPixels?
 
   val coreVersion: String
     get() = nativeCoreVersion()
 
-  private external fun nativeResolve(uri: String, cacheKey: String, cachePolicy: Int): ResolveResult
+  private external fun nativeResolve(
+    uri: String,
+    cacheKey: String,
+    cachePolicy: Int,
+    resize: Double,
+    blur: Double,
+    monochrome: Long,
+    tint: Long,
+    pixelRatio: Double,
+  ): ResolveResult
 
   private external fun nativeCoreVersion(): String
 
@@ -101,6 +164,13 @@ data class ResolvedRequest(
   val diskRead: Boolean,
   val diskWrite: Boolean,
   val allowNetwork: Boolean,
+  /**
+   * Empty when unprocessed. Otherwise the identity *and* full description of
+   * the processing step: adapters key memory variants by it (with
+   * `cacheKey` naming the shared original) and pass it to
+   * [TurboImageCore.process].
+   */
+  val processorKey: String,
 ) : ResolveResult
 
 /**
