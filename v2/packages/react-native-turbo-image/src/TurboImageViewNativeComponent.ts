@@ -87,10 +87,18 @@ export interface NativeProps extends ViewProps {
     'cover' | 'contain' | 'stretch' | 'center',
     'contain'
   >;
+  // Identifies what this view is showing, for lists that reuse views
+  // (FlashList). When a request prop changes, the image already on screen
+  // stays until the new one has loaded, unless this key changed with it:
+  // then the view is blanked (or shows the placeholder) first, so a reused
+  // row never shows the previous row's image. New in 2.0; the same contract
+  // as expo-image's prop of this name.
+  recyclingKey?: string;
   // 1.x semantics: by default the placeholder is removed when the load
   // fails; true keeps it.
   showPlaceholderOnFailure?: CodegenTypes.WithDefault<boolean, false>;
-  // Cross-fade from the placeholder (or blank) to the loaded image, in ms.
+  // Cross-fade from what is shown (the placeholder, the previous image or
+  // blank) to the loaded image, in ms.
   // Skipped for memory-cache hits on both platforms. 0 disables it.
   fadeDuration?: CodegenTypes.WithDefault<CodegenTypes.Int32, 300>;
   // Image processors, applied by the shared C++ core in this order (see

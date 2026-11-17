@@ -185,6 +185,26 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Behaviour changes from 1.x.** `prefetch` resolves `true` only if every source loaded; 1.x resolved `true` regardless. `dispose` evicts from memory and disk; 1.x declared it in JS but never implemented it natively, so calling it threw.
 - **Cache-policy strings** are parsed by the core (`parseCachePolicy`) for both the module and the Android view.
 
+### 4.4d Source changes and `recyclingKey`
+
+New in 2.0, with the contract of expo-image's prop of the same name. It
+decides what a view shows while a *new* load runs, after a request prop
+(`source`, `cachePolicy`, a processor, `allowHardware`) changed:
+
+| `recyclingKey` in that update | Shown while the new load runs |
+|---|---|
+| unchanged (or never set) | The previous image. The new one replaces it with the usual cross-fade, or at once on a memory-cache hit |
+| changed | Nothing, or the placeholder |
+
+- **Why both.** Keeping the previous image is right when the view still shows the same thing: a thumbnail swapped for the full photo, a processor toggled. It is wrong in a list that reuses views (FlashList), where the previous image belongs to another row. Only the app knows which case it is in, so it says so with the key, typically the row's id.
+- **Behaviour change from 1.x**, which blanked the view on every load. Apps that reuse views and relied on that must now pass a `recyclingKey`.
+- **Only a loaded image is kept.** A placeholder or a failed view is cleared as before, and the placeholder is not drawn over a kept image.
+- **Failure.** A kept image is removed when the new load fails, because it is not what `source` names. With `showPlaceholderOnFailure` the placeholder then appears, as it would have without a previous image.
+- **A key change alone does nothing.** With the request props unchanged the image on screen is already the right one, so no load starts and nothing is cleared.
+- **Not a request field.** The key lives in the two views only. It never reaches the core, the seams or the cache keys, and Fabric's own view recycling on iOS still clears the view regardless (§4.6).
+- **Events** are unchanged: the superseded load still ends with `onCompletion {state:'cancelled'}`.
+- **Tests.** Jest covers the JS prop. TODO: the smoke test observes events, not pixels, so nothing yet checks on a device what is on screen during the second load; a screenshot taken mid-load would.
+
 ### 4.5 Placeholders (blurhash, thumbhash, memoryCacheKey)
 
 `cpp/include/turboimage/Placeholder.h` is the only decoder, replacing four

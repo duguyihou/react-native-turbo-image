@@ -127,6 +127,13 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // True once the loaded image is on screen; a late placeholder must not
   // replace it.
   BOOL _showingFinalImage;
+  // The image of the previous request is still on screen while the current
+  // load runs. It stands in for the placeholder, so no placeholder may
+  // replace it. See startLoad.
+  BOOL _showingPreviousImage;
+  // `recyclingKey` changed in this transaction: the next load must not keep
+  // the previous image.
+  BOOL _recyclingKeyChanged;
   // The current load failed; with showPlaceholderOnFailure=false no
   // placeholder may appear any more (even one whose decode finishes later).
   BOOL _loadFailed;
@@ -172,6 +179,12 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
       toProcessing(oldViewProps) != toProcessing(newViewProps)) {
     _needsReload = YES;
   }
+  // Not a request prop: a new key alone starts no load, because the image
+  // on screen is still the one `source` names. It only decides how the load
+  // started in this same transaction treats the previous image.
+  if (oldViewProps.recyclingKey != newViewProps.recyclingKey) {
+    _recyclingKeyChanged = YES;
+  }
   if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
       oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash ||
       oldViewProps.placeholder.memoryCacheKey != newViewProps.placeholder.memoryCacheKey) {
@@ -194,10 +207,13 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   [super finalizeUpdates:updateMask];
   if (_needsReload) {
     _needsReload = NO;
-    // startLoad clears the view, so the placeholder must be (re)applied.
+    // startLoad may clear the view, so the placeholder must be (re)applied.
     _needsPlaceholder = YES;
     [self startLoad];
   }
+  // Consumed by the load above, or dropped: the key applies only to a load
+  // in its own transaction.
+  _recyclingKeyChanged = NO;
   if (_needsPlaceholder) {
     _needsPlaceholder = NO;
     [self applyPlaceholder];
@@ -232,7 +248,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 // shows it unless the real image (or a newer placeholder) got there first.
 - (BOOL)placeholderAllowed {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  return !_showingFinalImage && !(_loadFailed && !props.showPlaceholderOnFailure);
+  return !_showingFinalImage && !_showingPreviousImage &&
+         !(_loadFailed && !props.showPlaceholderOnFailure);
 }
 
 - (void)applyPlaceholder {
@@ -282,10 +299,21 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     _task = nil;
     [self emitCompletion:@"cancelled"];
   }
-  _imageView.image = nil;
+  // What stays on screen while this load runs (expo-image's rule):
+  //   * same `recyclingKey`: the previous image, so a changed source or
+  //     processor swaps (and cross-fades) without a blank frame in between;
+  //   * new `recyclingKey`: nothing, or the placeholder. The view is being
+  //     reused for other content, and the old image would be wrong.
+  // Only a loaded image is kept, never a placeholder or a failed view.
+  _showingPreviousImage =
+      (_showingFinalImage || _showingPreviousImage) && !_recyclingKeyChanged &&
+      _imageView.image != nil;
+  if (!_showingPreviousImage) {
+    _imageView.image = nil;
+  }
   _showingFinalImage = NO;
   _loadFailed = NO;
-  // The old image's analysis must not outlive it.
+  // The old image's analysis must not outlive its request.
   [_liveText detach];
   _progressThrottle = turboimage::ProgressThrottle{};
   _lastProgressTotal = -1;
@@ -338,6 +366,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
         strongSelf->_task = nil;
         if (image != nil) {
           strongSelf->_showingFinalImage = YES;
+          strongSelf->_showingPreviousImage = NO;
           // A successful load ends progress at 100% (core rule, see finish()).
           const int64_t total = strongSelf->_lastProgressTotal;
           if (strongSelf->_progressThrottle.finish(total)) {
@@ -360,8 +389,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _task = thisTask;
 }
 
-// Cross-fades from whatever is shown (placeholder or blank). Memory-cache
-// hits appear instantly, the same rule as Coil's crossfade on Android, so
+// Cross-fades from whatever is shown (placeholder, previous image or
+// blank). Memory-cache hits appear instantly, the same rule as Coil's crossfade on Android, so
 // scrolling back through a list does not re-fade every cell.
 - (void)showFinalImage:(UIImage *)image animated:(BOOL)animated {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
@@ -384,10 +413,18 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 // flight from appearing after the failure.
 - (void)applyFailureToPlaceholder {
   _loadFailed = YES;
+  // A previous image kept during the load goes either way: it is not what
+  // `source` names, and leaving it up would hide the failure.
+  const BOOL hadPreviousImage = _showingPreviousImage;
+  _showingPreviousImage = NO;
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   if (!props.showPlaceholderOnFailure) {
     ++_placeholderGeneration;
     _imageView.image = nil;
+  } else if (hadPreviousImage) {
+    // The placeholder was held back while the previous image stood in.
+    _imageView.image = nil;
+    [self applyPlaceholder];
   }
 }
 
@@ -402,6 +439,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   [_liveText detach];
   _liveText = nil;
   _showingFinalImage = NO;
+  _showingPreviousImage = NO;
+  _recyclingKeyChanged = NO;
   _loadFailed = NO;
   ++_placeholderGeneration;  // drop any decode still in flight
   // Fabric does not reset `_props` on recycle, and remounts a recycled view

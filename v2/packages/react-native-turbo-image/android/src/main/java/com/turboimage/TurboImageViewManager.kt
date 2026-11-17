@@ -46,6 +46,10 @@ class TurboImageViewManager :
       if (value?.hasKey("memoryCacheKey") == true) value.getString("memoryCacheKey") else null
   }
 
+  override fun setRecyclingKey(view: TurboImageView, value: String?) {
+    view.recyclingKey = value
+  }
+
   override fun setShowPlaceholderOnFailure(view: TurboImageView, value: Boolean) {
     view.showPlaceholderOnFailure = value
   }

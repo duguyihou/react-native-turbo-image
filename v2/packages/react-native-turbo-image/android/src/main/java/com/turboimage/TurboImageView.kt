@@ -52,8 +52,19 @@ class TurboImageView(
   var memoryCacheKey: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
 
+  // Not a request prop: a new key alone starts no load, because the image on
+  // screen is still the one `uri` names. It only decides how the load started
+  // in this same transaction treats the previous image (see [maybeReload]).
+  var recyclingKey: String? = null
+    set(value) { if (field != value) { field = value; recyclingKeyChanged = true } }
+
   private var needsReload = false
   private var needsPlaceholder = false
+  private var recyclingKeyChanged = false
+  // The image of the previous request is still on screen while the current
+  // load runs. It stands in for the placeholder, so no placeholder may
+  // replace it (same rule as the iOS view).
+  private var showingPreviousImage = false
   private var handle: LoadHandle? = null
   // Mirrors the iOS view: once the loaded image is shown, a late placeholder
   // must not replace it, and a newer decode supersedes an older one.
@@ -101,10 +112,13 @@ class TurboImageView(
   /** Called once per Fabric transaction, after all props have landed. */
   fun onTransactionEnd() {
     if (needsReload) {
-      // reload clears the view, so the placeholder must be (re)applied.
+      // reload may clear the view, so the placeholder must be (re)applied.
       needsPlaceholder = true
       maybeReload()
     }
+    // Consumed by the load above, or dropped: the key applies only to a load
+    // in its own transaction.
+    recyclingKeyChanged = false
     if (needsPlaceholder) {
       needsPlaceholder = false
       applyPlaceholder()
@@ -143,13 +157,22 @@ class TurboImageView(
     }
   }
 
-  private fun placeholderAllowed() = !showingFinalImage && !(loadFailed && !showPlaceholderOnFailure)
+  private fun placeholderAllowed() =
+    !showingFinalImage && !showingPreviousImage && !(loadFailed && !showPlaceholderOnFailure)
 
   private fun onLoadFailed() {
     loadFailed = true
+    // A previous image kept during the load goes either way: it is not what
+    // `uri` names, and leaving it up would hide the failure.
+    val hadPreviousImage = showingPreviousImage
+    showingPreviousImage = false
     if (!showPlaceholderOnFailure) {
       ++placeholderGeneration // a decode still in flight must not appear
       setImageDrawable(null)
+    } else if (hadPreviousImage) {
+      // The placeholder was held back while the previous image stood in.
+      setImageDrawable(null)
+      applyPlaceholder()
     }
   }
 
@@ -164,7 +187,17 @@ class TurboImageView(
     } else {
       cancel()
     }
-    setImageDrawable(null)
+    // What stays on screen while this load runs (expo-image's rule):
+    //   * same `recyclingKey`: the previous image, so a changed source or
+    //     processor swaps (and cross-fades) without a blank frame in between;
+    //   * new `recyclingKey`: nothing, or the placeholder. The view is being
+    //     reused for other content, and the old image would be wrong.
+    // Only a loaded image is kept, never a placeholder or a failed view.
+    showingPreviousImage =
+      (showingFinalImage || showingPreviousImage) && !recyclingKeyChanged && drawable != null
+    if (!showingPreviousImage) {
+      setImageDrawable(null)
+    }
     showingFinalImage = false
     loadFailed = false
     progressThrottle = TurboImageCore.ProgressThrottle()
@@ -213,6 +246,7 @@ class TurboImageView(
             if (handle !== thisHandle) return
             handle = null
             showingFinalImage = true
+            showingPreviousImage = false
             // A successful load ends progress at 100% (core rule, see finish()):
             // Coil may decode a noCache response without reading it to EOF.
             if (progressThrottle.finish(lastProgressTotal)) {

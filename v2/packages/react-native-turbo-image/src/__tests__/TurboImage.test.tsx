@@ -191,6 +191,16 @@ describe('1.x props that 2.0 ignores', () => {
   });
 });
 
+describe('recyclingKey', () => {
+  it('forwards the key to native', () => {
+    expect(nativeProps(render({ recyclingKey: 'post-4812' })).recyclingKey).toBe('post-4812');
+  });
+
+  it("turns expo-image's null into an unset prop", () => {
+    expect(nativeProps(render({ recyclingKey: null })).recyclingKey).toBeUndefined();
+  });
+});
+
 describe('placeholder', () => {
   it('rejects more than one placeholder kind in development', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {}); // React logs the throw

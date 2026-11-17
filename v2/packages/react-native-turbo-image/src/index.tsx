@@ -90,8 +90,14 @@ export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 // TODO: remove in 3.0.
 export type LegacyCachePolicy = 'urlCache' | 'dataCache';
 
-export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | 'tint' | 'source'> & {
+export type TurboImageProps = Omit<
+  NativeProps,
+  'cachePolicy' | 'monochrome' | 'tint' | 'source' | 'recyclingKey'
+> & {
   source: Source;
+  // See the native spec. `null` is accepted and means "no key", so code
+  // written for expo-image (`string | null`) compiles unchanged.
+  recyclingKey?: string | null;
   cachePolicy?: CachePolicy | LegacyCachePolicy;
   // 1.x also accepted RN's numeric colour form (0xRRGGBBAA); RN's colour
   // processing handles both, Codegen's ColorValue just doesn't spell it.
@@ -161,6 +167,7 @@ function TurboImageComponent({
   format: _format,
   isProgressiveImageRenderingEnabled: _progressive,
   indicator,
+  recyclingKey,
   onStart,
   onCompletion,
   ...props
@@ -202,7 +209,9 @@ function TurboImageComponent({
   const needsContainer = rounded || showsIndicator;
   const image = (
     <TurboImageView
-      {...(props as Omit<NativeProps, 'cachePolicy' | 'source'>)}
+      {...(props as Omit<NativeProps, 'cachePolicy' | 'source' | 'recyclingKey'>)}
+      // Codegen strings cannot be null.
+      recyclingKey={recyclingKey ?? undefined}
       // A new object each render is fine: both native views compare the
       // request fields by value before reloading.
       source={toNativeSource(source)}
