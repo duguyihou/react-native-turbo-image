@@ -51,6 +51,23 @@ SourceFields sourceFields(id source) {
   return fields;
 }
 
+// A request for the original image: no processors, and no downscaling,
+// because the module has no view to size a decode for. Prefetch therefore
+// fills the disk cache with the original bytes (which every view variant is
+// derived from) and the memory cache with the full-size image.
+turboimage::ImageRequest coreRequest(const SourceFields &fields, turboimage::CachePolicy policy) {
+  return {
+      .uri = fields.uri,
+      .cacheKey = TIOptionalCacheKey(fields.cacheKey),
+      .cachePolicy = policy,
+      .processing = {},
+      .pixelRatio = 1,
+      .headers = fields.headers,
+      .allowDownscaling = false,
+      .resizeMode = turboimage::ResizeMode::Contain,
+  };
+}
+
 }  // namespace
 
 @interface TurboImageModule () <NativeTurboImageModuleSpec>
@@ -107,8 +124,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
 
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    const auto built =
-        TIMakeImageRequest(fields.uri, fields.cacheKey, policy, {}, 1, fields.headers);
+    const auto built = TIMakeImageRequest(coreRequest(fields, policy));
     if (built.request == nil) {
       finishOne(NO);
       continue;
@@ -132,10 +148,9 @@ RCT_EXPORT_MODULE(TurboImageModule)
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    // Policy and headers are irrelevant for the key; Default resolves it
-    // like a view would.
-    const auto built =
-        TIMakeImageRequest(fields.uri, fields.cacheKey, turboimage::CachePolicy::Default);
+    // The policy is irrelevant for the key; Default resolves it like a
+    // view would.
+    const auto built = TIMakeImageRequest(coreRequest(fields, turboimage::CachePolicy::Default));
     if (built.request != nil) {
       [loader removeCachedImageForKey:built.request.cacheKey];
     }

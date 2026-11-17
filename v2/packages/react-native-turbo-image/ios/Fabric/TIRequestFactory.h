@@ -9,6 +9,7 @@
 
 #import <Foundation/Foundation.h>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -23,13 +24,18 @@ struct TIRequestResult {
   NSString *_Nullable message = nil;
 };
 
-// `processing` and `pixelRatio` feed the core's processor resolution
-// (Processing.h). The cache module passes neither: prefetch/dispose address
-// the original, which every processed variant is derived from.
-TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &cacheKey,
-                                   turboimage::CachePolicy policy,
-                                   const turboimage::ProcessingOptions &processing = {},
-                                   double pixelRatio = 1,
-                                   const std::vector<turboimage::Header> &headers = {});
+// Resolves `request` with the core and converts the result for the seam.
+//
+// `viewPixelSize` is the size of the view the image is for, in pixels. The
+// core decides whether the decode is bounded by it (`DecodeSize::Kind::View`)
+// and this turns that into a concrete size. The cache module has no view
+// and passes none: it also sets `allowDownscaling = false`, so the core
+// never asks for one. A zero size (a view not laid out yet) decodes the
+// original instead of nothing.
+TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &request,
+                                   CGSize viewPixelSize = CGSizeZero);
+
+// JS sends an absent `cacheKey` as an empty string.
+std::optional<std::string> TIOptionalCacheKey(const std::string &cacheKey);
 
 NSString *_Nonnull TIStringFromStd(const std::string &s);

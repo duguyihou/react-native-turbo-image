@@ -172,5 +172,71 @@ INSTANTIATE_TEST_SUITE_P(
         PolicyCase{CachePolicy::CacheOnly, {true, false}, {true, false},
                    false}));
 
+// --- decode size ------------------------------------------------------------
+
+constexpr auto kPhoto = "https://cdn.example.com/photos/harbour.jpg";
+
+DecodeSize decodeOf(const ImageRequest& request) {
+  const auto result = resolveRequest(request);
+  EXPECT_TRUE(result.ok());
+  return result.request->decode;
+}
+
+TEST(ResolveDecodeSize, DefaultsToTheViewAndFitsForContain) {
+  EXPECT_EQ(decodeOf({.uri = kPhoto}),
+            (DecodeSize{.kind = DecodeSize::Kind::View, .width = 0, .fill = false}));
+}
+
+TEST(ResolveDecodeSize, CoverAndStretchMustFillTheView) {
+  for (const auto mode : {ResizeMode::Cover, ResizeMode::Stretch}) {
+    EXPECT_EQ(decodeOf({.uri = kPhoto, .resizeMode = mode}),
+              (DecodeSize{.kind = DecodeSize::Kind::View, .width = 0, .fill = true}));
+  }
+}
+
+TEST(ResolveDecodeSize, CenterDrawsOneToOneSoItNeedsTheOriginal) {
+  EXPECT_EQ(decodeOf({.uri = kPhoto, .resizeMode = ResizeMode::Center}).kind,
+            DecodeSize::Kind::Original);
+}
+
+TEST(ResolveDecodeSize, OptOutDecodesTheOriginal) {
+  EXPECT_EQ(decodeOf({.uri = kPhoto, .allowDownscaling = false}).kind,
+            DecodeSize::Kind::Original);
+  // Even with `resize`: the core then resizes from every source pixel.
+  EXPECT_EQ(decodeOf({.uri = kPhoto,
+                      .processing = {.resize = 120},
+                      .allowDownscaling = false})
+                .kind,
+            DecodeSize::Kind::Original);
+}
+
+TEST(ResolveDecodeSize, ResizeNamesTheWidthInPixels) {
+  // 120 pt on a 3x screen; the view's size and mode no longer matter.
+  EXPECT_EQ(decodeOf({.uri = kPhoto,
+                      .processing = {.resize = 120, .blur = 4},
+                      .pixelRatio = 3,
+                      .resizeMode = ResizeMode::Center}),
+            (DecodeSize{.kind = DecodeSize::Kind::Width, .width = 360, .fill = false}));
+}
+
+TEST(ResolveDecodeSize, BlurAloneNeedsTheOriginal) {
+  // Its radius is in image pixels: the view's size must not change the look.
+  EXPECT_EQ(decodeOf({.uri = kPhoto, .processing = {.blur = 8}}).kind,
+            DecodeSize::Kind::Original);
+}
+
+TEST(ResolveDecodeSize, PerPixelProcessorsStillDecodeAtTheViewSize) {
+  EXPECT_EQ(decodeOf({.uri = kPhoto,
+                      .processing = {.monochrome = 0xffffffff, .tint = 0xff2060c0},
+                      .resizeMode = ResizeMode::Cover}),
+            (DecodeSize{.kind = DecodeSize::Kind::View, .width = 0, .fill = true}));
+}
+
+TEST(ResolveDecodeSize, AppliesToLocalSourcesToo) {
+  // A camera-roll photo is where downsampling saves the most memory.
+  EXPECT_EQ(decodeOf({.uri = "file:///var/mobile/Media/DCIM/IMG_0042.HEIC"}).kind,
+            DecodeSize::Kind::View);
+}
+
 }  // namespace
 }  // namespace turboimage

@@ -57,6 +57,37 @@ bool isValidHeader(const Header& header) {
          std::string::npos;
 }
 
+// The decode target, in order of precedence. Each rule exists because the
+// one below it would change what the app asked for:
+//   1. `allowDownscaling` off: the app wants every pixel.
+//   2. `resize`: the app named the width it wants; nothing larger is needed,
+//      whatever the view's size.
+//   3. `blur` without `resize`: its radius is in pixels of the image, so the
+//      same prop must act on the same bitmap in a small view and a large one.
+//   4. `center`: the image is drawn 1:1, not scaled to the view, so a smaller
+//      decode would draw a smaller image.
+//   5. Otherwise the view's size bounds what can be shown.
+// `monochrome` and `tint` work per pixel, so they are indifferent to rule 5.
+DecodeSize resolveDecodeSize(const ImageRequest& request,
+                             const ProcessingSpec& processing) {
+  const DecodeSize original{
+      .kind = DecodeSize::Kind::Original, .width = 0, .fill = false};
+  if (!request.allowDownscaling) {
+    return original;
+  }
+  if (processing.resizeWidth > 0) {
+    return {.kind = DecodeSize::Kind::Width,
+            .width = processing.resizeWidth,
+            .fill = false};
+  }
+  if (processing.blurRadius > 0 || request.resizeMode == ResizeMode::Center) {
+    return original;
+  }
+  return {.kind = DecodeSize::Kind::View,
+          .width = 0,
+          .fill = request.resizeMode != ResizeMode::Contain};
+}
+
 }  // namespace
 
 std::string canonicalCacheKey(std::string_view uri) {
@@ -105,17 +136,20 @@ ResolveResult resolveRequest(const ImageRequest& request) {
     return {.request = std::nullopt, .error = RequestError::InvalidHeader};
   }
 
+  const ProcessingSpec processing =
+      resolveProcessing(request.processing, request.pixelRatio);
+
   // Every field is spelled out: NDK clang's -Wmissing-field-initializers
   // (-Wextra) rejects partial designated initialisers under -Werror.
   ResolvedRequest resolved{
       .url = request.uri,
       .cacheKey = request.cacheKey.value_or(canonicalCacheKey(request.uri)),
-      .processorKey = processorKey(
-          resolveProcessing(request.processing, request.pixelRatio)),
+      .processorKey = processorKey(processing),
       .headers = request.headers,
       .memory = {.read = true, .write = true},
       .disk = {.read = true, .write = true},
       .allowNetwork = true,
+      .decode = resolveDecodeSize(request, processing),
   };
 
   // Cache-tier matrix. Keep this switch exhaustive (no `default:`) so adding

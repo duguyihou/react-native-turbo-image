@@ -78,7 +78,9 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
                                                        jint cachePolicy, jdouble resize,
                                                        jdouble blur, jlong monochrome,
                                                        jlong tint, jdouble pixelRatio,
-                                                       jobjectArray headers) {
+                                                       jobjectArray headers,
+                                                       jboolean allowDownscaling,
+                                                       jint resizeMode) {
   const auto key = toStdString(env, cacheKey);
   const auto result = turboimage::resolveRequest({
       .uri = toStdString(env, uri),
@@ -90,6 +92,8 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
                      .tint = toArgb(tint)},
       .pixelRatio = pixelRatio,
       .headers = toHeaders(env, headers),
+      .allowDownscaling = allowDownscaling == JNI_TRUE,
+      .resizeMode = static_cast<turboimage::ResizeMode>(resizeMode),
   });
 
   if (!result.ok()) {
@@ -102,11 +106,13 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
   jclass resolvedClass = env->FindClass("com/turboimage/core/ResolvedRequest");
   jmethodID ctor =
       env->GetMethodID(resolvedClass, "<init>",
-                       "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;)V");
+                       "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;IIZ)V");
   return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
                         env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
                         r.disk.read, r.disk.write, r.allowNetwork,
-                        env->NewStringUTF(r.processorKey.c_str()), fromHeaders(env, r.headers));
+                        env->NewStringUTF(r.processorKey.c_str()), fromHeaders(env, r.headers),
+                        static_cast<jint>(r.decode.kind),
+                        static_cast<jint>(r.decode.width), r.decode.fill);
 }
 
 namespace {

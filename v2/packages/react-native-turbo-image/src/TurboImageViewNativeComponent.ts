@@ -113,6 +113,16 @@ export interface NativeProps extends ViewProps {
   monochrome?: ColorValue;
   // Fills the image's opaque area with this colour, keeping transparency.
   tint?: ColorValue;
+  // Decode the image no larger than it is shown: at the view's size, or at
+  // `resize`'s width when that is set. A 12 MP photo in a thumbnail then
+  // costs the thumbnail's memory, not 48 MB. Never upscales. `onSuccess`
+  // reports the decoded size. Not applied with `resizeMode="center"` (drawn
+  // 1:1) or `blur` without `resize` (its radius is in image pixels).
+  //
+  // Set false for a view that is zoomed or grows after the image loaded:
+  // the size is taken when the load starts, and a later, larger layout
+  // does not reload. New in 2.0; expo-image's prop of the same name.
+  allowDownscaling?: CodegenTypes.WithDefault<boolean, true>;
   // Android only (ignored on iOS, as in 1.x): false decodes to a software
   // bitmap instead of a GPU-only hardware bitmap. Slower to draw; needed
   // only by code that reads the pixels or draws to a software canvas.

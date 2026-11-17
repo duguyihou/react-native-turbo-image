@@ -87,6 +87,19 @@ class TurboImageView(
   var allowHardware = true
     set(value) { if (field != value) { field = value; needsReload = true } }
 
+  /**
+   * false decodes the original instead of the view's size. Changing it
+   * reloads, because the image on screen was decoded for the other answer.
+   */
+  var allowDownscaling = true
+    set(value) { if (field != value) { field = value; needsReload = true } }
+
+  // A request prop as well as a drawing one: `contain` needs fewer pixels
+  // than `cover`, and `center` needs them all (the core's decode-size rule),
+  // so an image decoded for one mode can be too small for another.
+  private var resizeMode = TurboImageCore.ResizeMode.CONTAIN
+    set(value) { if (field != value) { field = value; needsReload = true } }
+
   init {
     // Matches the spec default (`contain`, 1.x's default).
     scaleType = ScaleType.FIT_CENTER
@@ -99,13 +112,15 @@ class TurboImageView(
   }
 
   fun setResizeMode(mode: String?) {
-    scaleType =
+    val (scale, core) =
       when (mode) {
-        "cover" -> ScaleType.CENTER_CROP
-        "stretch" -> ScaleType.FIT_XY
-        "center" -> ScaleType.CENTER
-        else -> ScaleType.FIT_CENTER // "contain", the default
+        "cover" -> ScaleType.CENTER_CROP to TurboImageCore.ResizeMode.COVER
+        "stretch" -> ScaleType.FIT_XY to TurboImageCore.ResizeMode.STRETCH
+        "center" -> ScaleType.CENTER to TurboImageCore.ResizeMode.CENTER
+        else -> ScaleType.FIT_CENTER to TurboImageCore.ResizeMode.CONTAIN // the default
       }
+    scaleType = scale
+    resizeMode = core
   }
 
 
@@ -210,7 +225,8 @@ class TurboImageView(
         // `density` is what RN's PixelRatio reports to JS, so `resize` (dp)
         // means the same as in the app's layout maths.
         TurboImageCore.resolve(
-          it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble(), headers)
+          it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble(), headers,
+          allowDownscaling, resizeMode)
       }
         ?: ResolveFailure(errorCode = 1) // EmptyUri, same as the core's code
     when (result) {

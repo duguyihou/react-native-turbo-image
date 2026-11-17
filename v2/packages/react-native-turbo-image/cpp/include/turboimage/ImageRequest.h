@@ -48,6 +48,44 @@ enum class CachePolicy : std::int32_t {
   CacheOnly = 3,
 };
 
+// The JS `resizeMode`. The core needs it for one decision only: how large an
+// image the view needs decoded (`DecodeSize`). Drawing stays with the views.
+// Pinned ABI, like `CachePolicy`.
+enum class ResizeMode : std::int32_t {
+  Contain = 0,
+  Cover = 1,
+  Stretch = 2,
+  Center = 3,
+};
+
+// How large the loader should decode the image. Decoding a 12 MP photo for a
+// 100 pt avatar costs ~48 MB of bitmap for pixels nobody sees; downsampling
+// while decoding (ImageIO thumbnails, BitmapFactory sampling) avoids ever
+// allocating them. The core decides *which* target applies; only the loader
+// knows the view's size, so `View` is resolved by the platform.
+//
+// Every target is an upper bound: images are never upscaled to reach it.
+struct DecodeSize {
+  enum class Kind : std::int32_t {
+    // Decode every pixel of the source.
+    Original = 0,
+    // Decode to the view's size in pixels; see `fill`.
+    View = 1,
+    // Decode to `width` pixels wide, keeping the aspect ratio.
+    Width = 2,
+  };
+
+  Kind kind = Kind::Original;
+  // Kind::Width only: the target width in pixels.
+  std::int32_t width = 0;
+  // Kind::View only. true: the image must cover the view (the larger of the
+  // two scale factors), for `cover` and `stretch`. false: it only has to fit
+  // inside it, for `contain`.
+  bool fill = false;
+
+  friend bool operator==(const DecodeSize&, const DecodeSize&) = default;
+};
+
 // What a loader is allowed to do with one cache tier. This maps 1:1 onto
 // Coil's `CachePolicy` and onto Nuke's `ImageRequest.Options` read/write
 // flags, which is why it is expressed as two booleans instead of a single
@@ -88,6 +126,11 @@ struct ImageRequest {
   // cache entry whoever fetched it. Apps that serve per-user content at one
   // URL must pass a per-user `cacheKey`.
   std::vector<Header> headers;
+  // The JS `allowDownscaling` prop (default true, expo-image's name and
+  // meaning). false always decodes the original, for views that are zoomed
+  // or grow after the image has loaded.
+  bool allowDownscaling = true;
+  ResizeMode resizeMode = ResizeMode::Contain;
 };
 
 struct ResolvedRequest {
@@ -105,6 +148,7 @@ struct ResolvedRequest {
   TierAccess memory;
   TierAccess disk;
   bool allowNetwork = true;
+  DecodeSize decode;
 
   friend bool operator==(const ResolvedRequest&, const ResolvedRequest&) =
       default;

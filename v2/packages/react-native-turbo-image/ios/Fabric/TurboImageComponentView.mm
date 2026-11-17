@@ -43,6 +43,19 @@ turboimage::CachePolicy toCorePolicy(TurboImageViewCachePolicy policy) {
   }
 }
 
+turboimage::ResizeMode toCoreResizeMode(TurboImageViewResizeMode mode) {
+  switch (mode) {
+    case TurboImageViewResizeMode::Cover:
+      return turboimage::ResizeMode::Cover;
+    case TurboImageViewResizeMode::Contain:
+      return turboimage::ResizeMode::Contain;
+    case TurboImageViewResizeMode::Stretch:
+      return turboimage::ResizeMode::Stretch;
+    case TurboImageViewResizeMode::Center:
+      return turboimage::ResizeMode::Center;
+  }
+}
+
 UIViewContentMode toContentMode(TurboImageViewResizeMode mode) {
   switch (mode) {
     case TurboImageViewResizeMode::Cover:
@@ -176,7 +189,12 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
       oldViewProps.cachePolicy != newViewProps.cachePolicy ||
       // Processors change the pixels, so they need a new load (served from
       // the disk original, or memory if this variant is cached).
-      toProcessing(oldViewProps) != toProcessing(newViewProps)) {
+      toProcessing(oldViewProps) != toProcessing(newViewProps) ||
+      // Both decide how large the image is decoded (the core's decode-size
+      // rule): `contain` needs fewer pixels than `cover`, `center` needs
+      // them all. The image on screen may be too small for the new answer.
+      oldViewProps.allowDownscaling != newViewProps.allowDownscaling ||
+      oldViewProps.resizeMode != newViewProps.resizeMode) {
     _needsReload = YES;
   }
   // Not a request prop: a new key alone starts no load, because the image
@@ -324,9 +342,26 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // is no window to ask; RN's own screen scale is what `PixelRatio` reports
   // to JS, so `resize` means the same here as in the app's layout maths.
   const CGFloat pixelRatio = RCTScreenScale();
-  const auto built = TIMakeImageRequest(props.source.uri, props.source.cacheKey,
-                                        toCorePolicy(props.cachePolicy), toProcessing(props),
-                                        pixelRatio, toHeaders(props.source));
+  // The view's size bounds the decode (`allowDownscaling`). Fabric applies
+  // layout metrics before finalizeUpdates, on mount as on update, so the
+  // bounds are this transaction's. The size is taken once, here: a view that
+  // grows later keeps the image it has.
+  // TODO: reload when the view outgrows the decoded image (expo-image does
+  // not either; `allowDownscaling={false}` is the documented way out).
+  const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
+                                          self.bounds.size.height * pixelRatio);
+  const auto built = TIMakeImageRequest(
+      {
+          .uri = props.source.uri,
+          .cacheKey = TIOptionalCacheKey(props.source.cacheKey),
+          .cachePolicy = toCorePolicy(props.cachePolicy),
+          .processing = toProcessing(props),
+          .pixelRatio = pixelRatio,
+          .headers = toHeaders(props.source),
+          .allowDownscaling = props.allowDownscaling,
+          .resizeMode = toCoreResizeMode(props.resizeMode),
+      },
+      viewPixelSize);
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   // Requests the core rejects fail before onStart: no load ever began.
   if (built.request == nil || loader == nil) {

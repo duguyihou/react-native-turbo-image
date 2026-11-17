@@ -31,6 +31,14 @@ object TurboImageCore {
     }
   }
 
+  /** Mirrors `turboimage::ResizeMode`; the ints are a pinned ABI. */
+  enum class ResizeMode(val nativeValue: Int) {
+    CONTAIN(0),
+    COVER(1),
+    STRETCH(2),
+    CENTER(3),
+  }
+
   /** Mirrors `turboimage::LoadErrorCode`; the ints are a pinned ABI. */
   enum class LoadErrorCode(val nativeValue: Int) {
     UNKNOWN(0),
@@ -62,6 +70,11 @@ object TurboImageCore {
     val tint: Int? = null,
   )
 
+  /**
+   * [allowDownscaling] defaults to false here, unlike the view prop: the
+   * cache module resolves without a view, and a prefetch has no view size to
+   * decode to. Views always pass their prop.
+   */
   fun resolve(
     uri: String,
     cacheKey: String?,
@@ -69,6 +82,8 @@ object TurboImageCore {
     processing: Processing = Processing(),
     pixelRatio: Double = 1.0,
     headers: List<Pair<String, String>> = emptyList(),
+    allowDownscaling: Boolean = false,
+    resizeMode: ResizeMode = ResizeMode.CONTAIN,
   ): ResolveResult =
     nativeResolve(
       uri,
@@ -80,6 +95,8 @@ object TurboImageCore {
       processing.tint.toNativeColor(),
       pixelRatio,
       headers.flatMap { (name, value) -> listOf(name, value) }.toTypedArray(),
+      allowDownscaling,
+      resizeMode.nativeValue,
     )
 
   // An ARGB Int widened without sign extension, or -1 for "unset" (JNI side).
@@ -119,6 +136,8 @@ object TurboImageCore {
     tint: Long,
     pixelRatio: Double,
     headers: Array<String>,
+    allowDownscaling: Boolean,
+    resizeMode: Int,
   ): ResolveResult
 
   private external fun nativeCoreVersion(): String
@@ -176,7 +195,30 @@ data class ResolvedRequest(
   val processorKey: String,
   /** Validated headers as alternating names and values (the JNI shape). */
   private val headerFields: Array<String>,
+  private val decodeKind: Int,
+  private val decodeWidth: Int,
+  private val decodeFill: Boolean,
 ) : ResolveResult {
+  /** How large to decode; mirrors `turboimage::DecodeSize`. */
+  sealed interface DecodeSize {
+    /** Every pixel of the source. */
+    data object Original : DecodeSize
+
+    /** The target view's size. [fill]: cover it; otherwise fit inside it. */
+    data class View(val fill: Boolean) : DecodeSize
+
+    /** This many pixels wide, aspect kept. */
+    data class Width(val pixels: Int) : DecodeSize
+  }
+
+  val decode: DecodeSize
+    get() =
+      when (decodeKind) {
+        1 -> DecodeSize.View(decodeFill)
+        2 -> DecodeSize.Width(decodeWidth)
+        else -> DecodeSize.Original
+      }
+
   /** Request headers in order; never part of a cache key. */
   val headers: List<Pair<String, String>>
     get() = headerFields.toList().chunked(2) { (name, value) -> name to value }
@@ -188,10 +230,11 @@ data class ResolvedRequest(
       memoryRead == other.memoryRead && memoryWrite == other.memoryWrite &&
       diskRead == other.diskRead && diskWrite == other.diskWrite &&
       allowNetwork == other.allowNetwork && processorKey == other.processorKey &&
+      decode == other.decode &&
       headerFields.contentEquals(other.headerFields)
 
   override fun hashCode(): Int =
-    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey)
+    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey, decode)
       .hashCode() * 31 + headerFields.contentHashCode()
 }
 

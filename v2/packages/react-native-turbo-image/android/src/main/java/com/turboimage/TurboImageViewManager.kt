@@ -86,6 +86,10 @@ class TurboImageViewManager :
     view.allowHardware = value
   }
 
+  override fun setAllowDownscaling(view: TurboImageView, value: Boolean) {
+    view.allowDownscaling = value
+  }
+
   // iOS-only (VisionKit Live Text). Android has no equivalent system
   // interaction, and 1.x ignored the prop there too.
   override fun setEnableLiveTextInteraction(view: TurboImageView, value: Boolean) = Unit

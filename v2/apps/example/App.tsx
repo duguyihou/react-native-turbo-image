@@ -10,7 +10,7 @@
 //   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"blocked":N,"failed":{...}}
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
   SafeAreaProvider,
   SafeAreaView,
@@ -32,6 +32,15 @@ const URI_SMALL = 'https://picsum.photos/id/1080/600/400';
 const URI_PREFETCH = 'https://picsum.photos/id/1050/600/400';
 // Used only by the processed-variant dispose chain.
 const URI_PROCESSED = 'https://picsum.photos/id/1035/600/400';
+
+// 3000×2000, far larger than any card: the downscaling scenarios' source.
+const URI_OVERSIZED = 'https://picsum.photos/id/1039/3000/2000';
+
+// A card's image is as wide as the window minus the content padding and has
+// the 3:2 shape of every picsum fixture, so a downscaled decode of a larger
+// 3:2 image is exactly the card's size in pixels (give or take rounding).
+const CONTENT_PADDING = 16;
+const CARD_WIDTH_PX = (Dimensions.get('window').width - 2 * CONTENT_PADDING) * PixelRatio.get();
 
 // `resize` is in points/dp and the core converts it with the screen scale,
 // so the processed bitmap is this many pixels wide on either platform.
@@ -55,11 +64,15 @@ type Scenario = {
   enableLiveTextInteraction?: boolean;
   indicator?: TurboImageProps['indicator'];
   allowHardware?: boolean;
+  allowDownscaling?: boolean;
   // Image processors, passed straight through to <TurboImage>.
   processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
   // For expected loads: the exact onSuccess size (in pixels).
   expectSize?: { width: number; height: number };
+  // For expected loads: the onSuccess size, within a couple of pixels (the
+  // two platforms' decoders round a downscaled size differently).
+  expectSizeNear?: { width: number; height: number };
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
   // Mount only after these scenarios have settled.
@@ -223,6 +236,7 @@ const SCENARIOS: Scenario[] = [
       'recycledSameSource',
       'plainAfterProcessed',
       'disposeEvictsVariants',
+      'fullSize',
     ],
     kind: 'clearCaches',
   },
@@ -265,6 +279,27 @@ const SCENARIOS: Scenario[] = [
     expectCode: 'notCached',
     after: 'processedWrite',
     kind: 'dispose',
+  },
+  {
+    id: 'downscaled',
+    title: 'a 3000×2000 photo is decoded at the card size, not in full',
+    source: { uri: URI_OVERSIZED },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSizeNear: { width: CARD_WIDTH_PX, height: (CARD_WIDTH_PX * 2) / 3 },
+  },
+  {
+    id: 'fullSize',
+    title: 'allowDownscaling={false} decodes every pixel, from the disk original',
+    // cacheOnly after `downscaled`: the full-size image is in neither cache
+    // tier as pixels, so this proves the disk kept the original bytes and
+    // not the downscaled image.
+    source: { uri: URI_OVERSIZED },
+    allowDownscaling: false,
+    cachePolicy: 'cacheOnly',
+    expect: 'load',
+    expectSize: { width: 3000, height: 2000 },
+    after: 'downscaled',
   },
   {
     id: 'liveText',
@@ -548,14 +583,19 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       enableLiveTextInteraction={scenario.enableLiveTextInteraction}
       indicator={scenario.indicator}
       allowHardware={scenario.allowHardware}
+      allowDownscaling={scenario.allowDownscaling}
       {...scenario.processing}
       resizeMode="cover"
       onSuccess={(e) => {
         const { width, height } = e.nativeEvent;
+        const near = scenario.expectSizeNear;
         const sizeOk =
-          scenario.expectSize === undefined ||
-          (width === scenario.expectSize.width && height === scenario.expectSize.height);
-        settle(scenario.id, scenario.expect === 'load' && sizeOk, 'load', `${width}×${height}`);
+          (scenario.expectSize === undefined ||
+            (width === scenario.expectSize.width && height === scenario.expectSize.height)) &&
+          (near === undefined ||
+            (Math.abs(width - near.width) <= 2 && Math.abs(height - near.height) <= 2));
+        const detail = near && !sizeOk ? ` (expected ≈${near.width}×${near.height})` : '';
+        settle(scenario.id, scenario.expect === 'load' && sizeOk, 'load', `${width}×${height}${detail}`);
       }}
       onFailure={(e) =>
         settle(
@@ -734,7 +774,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { padding: 16, gap: 16 },
+  content: { padding: CONTENT_PADDING, gap: 16 },
   title: { fontSize: 20, fontWeight: '600' },
   summary: { fontSize: 15, fontFamily: 'Menlo' },
   card: { gap: 8 },

@@ -76,19 +76,34 @@ NSString *TIStringFromStd(const std::string &s) {
              ?: @"";
 }
 
-TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &cacheKey,
-                                   turboimage::CachePolicy policy,
-                                   const turboimage::ProcessingOptions &processing,
-                                   double pixelRatio,
-                                   const std::vector<turboimage::Header> &headers) {
-  const auto result = turboimage::resolveRequest({
-      .uri = uri,
-      .cacheKey = cacheKey.empty() ? std::nullopt : std::optional<std::string>(cacheKey),
-      .cachePolicy = policy,
-      .processing = processing,
-      .pixelRatio = pixelRatio,
-      .headers = headers,
-  });
+std::optional<std::string> TIOptionalCacheKey(const std::string &cacheKey) {
+  return cacheKey.empty() ? std::nullopt : std::optional<std::string>(cacheKey);
+}
+
+namespace {
+
+// The core's decode target as the seam's pixel bound (TIImageRequest.h).
+CGSize TIDecodeSize(const turboimage::DecodeSize &decode, CGSize viewPixelSize) {
+  switch (decode.kind) {
+    case turboimage::DecodeSize::Kind::Original:
+      return CGSizeZero;
+    case turboimage::DecodeSize::Kind::Width:
+      return CGSizeMake(decode.width, 0);
+    case turboimage::DecodeSize::Kind::View:
+      // Rounded up, so a fractional layout never decodes a pixel short. A
+      // view with no area yet has nothing to bound the decode with.
+      return viewPixelSize.width > 0 && viewPixelSize.height > 0
+                 ? CGSizeMake(std::ceil(viewPixelSize.width), std::ceil(viewPixelSize.height))
+                 : CGSizeZero;
+  }
+  return CGSizeZero;
+}
+
+}  // namespace
+
+TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &imageRequest,
+                                   CGSize viewPixelSize) {
+  const auto result = turboimage::resolveRequest(imageRequest);
   if (!result.ok()) {
     return {.request = nil,
             .error = turboimage::LoadErrorCode::InvalidRequest,
@@ -132,6 +147,9 @@ TIRequestResult TIMakeImageRequest(const std::string &uri, const std::string &ca
                                                    allowNetwork:resolved.allowNetwork
                                                    processorKey:TIStringFromStd(resolved.processorKey)
                                                       processor:processor
-                                                        headers:headerPairs];
+                                                        headers:headerPairs
+                                                     decodeSize:TIDecodeSize(resolved.decode,
+                                                                             viewPixelSize)
+                                                     decodeFill:resolved.decode.fill];
   return {.request = request, .error = turboimage::LoadErrorCode::Unknown, .message = nil};
 }

@@ -183,6 +183,16 @@ describe('cachePolicy', () => {
   });
 });
 
+describe('allowDownscaling', () => {
+  it('is left unset by default, so the native default (true) applies', () => {
+    expect(nativeProps(render())).not.toHaveProperty('allowDownscaling');
+  });
+
+  it('passes an opt-out through', () => {
+    expect(nativeProps(render({ allowDownscaling: false })).allowDownscaling).toBe(false);
+  });
+});
+
 describe('1.x props that 2.0 ignores', () => {
   it('does not forward format or isProgressiveImageRenderingEnabled to native', () => {
     const props = nativeProps(render({ format: 'gif', isProgressiveImageRenderingEnabled: false }));

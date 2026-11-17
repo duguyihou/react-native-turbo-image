@@ -5,6 +5,7 @@ import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.widget.ImageView
 import coil3.Image
 import coil3.ImageLoader
@@ -27,13 +28,19 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
+import coil3.size.Dimension
+import coil3.size.Precision
+import coil3.size.Scale
 import coil3.size.Size
+import coil3.size.SizeResolver
 import coil3.transform.Transformation
 import coil3.target.ImageViewTarget
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import android.graphics.Bitmap
@@ -81,6 +88,43 @@ private class CoreProcessingTransformation(private val processorKey: String) : T
       ?: throw IllegalStateException("TurboImage processing failed ($processorKey)")
 }
 
+/**
+ * The size React Native laid the view out at, in pixels, as a Coil size.
+ *
+ * Not Coil's own `ViewSizeResolver`: that reads `LayoutParams` first, and
+ * treats `WRAP_CONTENT` as "no bound". Fabric positions views itself and
+ * leaves them with their parent's default params, which are `WRAP_CONTENT`,
+ * so Coil saw every TurboImage as unbounded and decoded the original (the
+ * smoke scenario `downscaled` reported 3000×2000 for a ~1000 px card).
+ *
+ * Fabric applies props, and so starts loads, before it lays the view out, so
+ * this waits for the first layout pass. A view laid out with no area gets
+ * the original, as on iOS: it shows nothing, but its load must still finish
+ * (and such views are used to warm the cache).
+ */
+private class LaidOutSizeResolver(private val view: View) : SizeResolver {
+  override suspend fun size(): Size {
+    if (view.isLaidOut) return currentSize()
+    return suspendCancellableCoroutine { continuation ->
+      val listener =
+        object : View.OnLayoutChangeListener {
+          override fun onLayoutChange(
+            v: View, left: Int, top: Int, right: Int, bottom: Int,
+            oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
+          ) {
+            view.removeOnLayoutChangeListener(this)
+            continuation.resume(currentSize())
+          }
+        }
+      view.addOnLayoutChangeListener(listener)
+      continuation.invokeOnCancellation { view.removeOnLayoutChangeListener(listener) }
+    }
+  }
+
+  private fun currentSize(): Size =
+    if (view.width > 0 && view.height > 0) Size(view.width, view.height) else Size.ORIGINAL
+}
+
 class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   private val appContext = context.applicationContext
   private val imageLoader: ImageLoader = buildImageLoader(appContext)
@@ -104,15 +148,8 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       ProgressInterceptor.unregister(token)
     }
 
-    // Mechanical translation only; the C++ core already decided policy.
     val coilRequest =
-      ImageRequest.Builder(target.context)
-        .data(request.url)
-        .memoryCacheKey(request.cacheKey)
-        .diskCacheKey(request.cacheKey)
-        .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
-        .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
-        .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
+      request.toCoilRequest(target.context, target)
         .httpHeaders(
           request.networkHeaders().set(ProgressInterceptor.TOKEN_HEADER, token.toString()).build()
         )
@@ -123,7 +160,6 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         // Coil's default is true. When false, a hardware bitmap already in
         // the memory cache is not reused (Coil treats it as a miss).
         .allowHardware(options.allowHardware)
-        .applyProcessing(request)
         .listener(
           onSuccess = { _, result ->
             finish()
@@ -149,13 +185,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   override fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle {
     var finished = false
     val coilRequest =
-      ImageRequest.Builder(appContext)
-        .data(request.url)
-        .memoryCacheKey(request.cacheKey)
-        .diskCacheKey(request.cacheKey)
-        .memoryCachePolicy(tierPolicy(request.memoryRead, request.memoryWrite))
-        .diskCachePolicy(tierPolicy(request.diskRead, request.diskWrite))
-        .networkCachePolicy(if (request.allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
+      request.toCoilRequest(appContext, view = null)
         .httpHeaders(request.networkHeaders().build())
         .listener(
           onSuccess = { _, _ -> if (!finished) { finished = true; onDone(true) } },
@@ -219,17 +249,47 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     }
 
   /**
-   * Processed loads decode at the original size. Otherwise Coil would decode
-   * to the view's size first, and `blur` (in image pixels) and `resize` would
-   * act on a different bitmap than on iOS, where Nuke decodes the original.
-   * TODO: decode-time downsampling to the `resize` width on both platforms
-   * (Nuke thumbnail options, Coil size), to cut peak memory for large photos.
+   * Everything a view load and a prefetch share. Mechanical translation
+   * only; the C++ core already decided policy, keys and decode size.
+   * [view] is the view the image is for; null for a prefetch.
    */
-  private fun ImageRequest.Builder.applyProcessing(request: ResolvedRequest) = apply {
-    if (request.processorKey.isNotEmpty()) {
-      size(Size.ORIGINAL)
-      transformations(CoreProcessingTransformation(request.processorKey))
+  private fun ResolvedRequest.toCoilRequest(context: Context, view: View?): ImageRequest.Builder =
+    ImageRequest.Builder(context)
+      .data(url)
+      .memoryCacheKey(cacheKey)
+      .diskCacheKey(cacheKey)
+      .memoryCachePolicy(tierPolicy(memoryRead, memoryWrite))
+      .diskCachePolicy(tierPolicy(diskRead, diskWrite))
+      .networkCachePolicy(if (allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
+      .apply {
+        applyDecodeSize(decode, view)
+        if (processorKey.isNotEmpty()) {
+          transformations(CoreProcessingTransformation(processorKey))
+        }
+      }
+
+  /**
+   * The core's decode target as Coil sizing. Coil samples while decoding
+   * (`inSampleSize`, then a density scale), so the full bitmap is never
+   * allocated, like ImageIO thumbnails in the Nuke adapter.
+   */
+  private fun ImageRequest.Builder.applyDecodeSize(decode: ResolvedRequest.DecodeSize, view: View?) {
+    when (decode) {
+      ResolvedRequest.DecodeSize.Original -> size(Size.ORIGINAL)
+      is ResolvedRequest.DecodeSize.View -> {
+        // Without a view (prefetch) there is no size to bound the decode
+        // with; the core never asks for a view-sized prefetch anyway.
+        if (view != null) size(LaidOutSizeResolver(view)) else size(Size.ORIGINAL)
+        scale(if (decode.fill) Scale.FILL else Scale.FIT)
+      }
+      is ResolvedRequest.DecodeSize.Width -> {
+        size(Dimension(decode.pixels), Dimension.Undefined)
+        scale(Scale.FIT)
+      }
     }
+    // Every target is an upper bound (core rule): EXACT would scale a
+    // smaller image *up* to it.
+    precision(Precision.INEXACT)
   }
 
   /** The request's headers, in order; `add` keeps repeated names. */

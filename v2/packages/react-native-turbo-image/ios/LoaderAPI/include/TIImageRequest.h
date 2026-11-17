@@ -35,6 +35,15 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
 /// sent twice, like `-[NSMutableURLRequest addValue:forHTTPHeaderField:]`).
 /// Not part of any cache key.
 @property(nonatomic, readonly, copy) NSArray<NSArray<NSString *> *> *headers;
+/// Decode the image no larger than this, in pixels, without ever allocating
+/// the full bitmap (ImageIO thumbnails or similar), and never upscale.
+/// `CGSizeZero`: decode the original. A zero height with a non-zero width:
+/// only the width is bounded. The aspect ratio is always kept; `decodeFill`
+/// says how a two-dimensional bound applies.
+@property(nonatomic, readonly) CGSize decodeSize;
+/// YES: the image must cover `decodeSize` (aspect fill). NO: it only has to
+/// fit inside it (aspect fit). Ignored unless both dimensions are bounded.
+@property(nonatomic, readonly) BOOL decodeFill;
 
 - (instancetype)initWithURL:(NSURL *)url
                    cacheKey:(NSString *)cacheKey
@@ -45,7 +54,9 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
                allowNetwork:(BOOL)allowNetwork
                processorKey:(NSString *)processorKey
                   processor:(nullable TIImageProcessor)processor
-                    headers:(NSArray<NSArray<NSString *> *> *)headers NS_DESIGNATED_INITIALIZER;
+                    headers:(NSArray<NSArray<NSString *> *> *)headers
+                 decodeSize:(CGSize)decodeSize
+                 decodeFill:(BOOL)decodeFill NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;

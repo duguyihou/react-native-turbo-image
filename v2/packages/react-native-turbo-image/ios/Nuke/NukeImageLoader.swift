@@ -46,15 +46,23 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   // `ImagePipeline` is Sendable.
   private let pipeline: ImagePipeline
 
-  // Processor keys seen per cache key, so `removeCachedImage` can evict every
-  // processed variant: Nuke's memory key is (imageID, processors) and its
+  /// One memory entry of a cache key other than the plain original. Nuke's
+  /// memory key is (imageID, thumbnail, processors), so each processed
+  /// variant and each decode size is its own entry.
+  private struct Variant: Hashable {
+    let processorKey: String
+    let thumbnail: ImageRequest.ThumbnailOptions?
+  }
+
+  // Variants seen per cache key, so `removeCachedImage` can evict them all
+  // and the `memoryCacheKey` placeholder can find a downscaled image: Nuke's
   // memory cache cannot be enumerated. Coil can match on the key string
   // instead, so Android needs no such index. Written from `load` (main) and
   // read from the cache module (any thread), hence the lock.
-  // TODO: bound this. It grows by one short string per distinct processed
-  // variant and is only reset by clearMemoryCache.
+  // TODO: bound this. It grows by one small value per distinct (processing,
+  // decode size) of a key and is only reset by dispose and clearMemoryCache.
   private let variantsLock = NSLock()
-  private var variants: [String: Set<String>] = [:]
+  private var variants: [String: Set<Variant>] = [:]
 
   /// Disk tier size. Must equal `DISK_CACHE_BYTES` in the Android adapter.
   static let diskCacheBytes = 150 * 1024 * 1024
@@ -88,10 +96,12 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     progress: TIImageLoadProgress?,
     completion: @escaping TIImageLoadCompletion
   ) -> any TIImageLoadTask {
-    if !request.processorKey.isEmpty {
-      variantsLock.withLock { variants[request.cacheKey, default: []].insert(request.processorKey) }
+    let nukeRequest = Self.makeNukeRequest(from: request)
+    if !request.processorKey.isEmpty || nukeRequest.thumbnail != nil {
+      let variant = Variant(processorKey: request.processorKey, thumbnail: nukeRequest.thumbnail)
+      variantsLock.withLock { _ = variants[request.cacheKey, default: []].insert(variant) }
     }
-    let imageTask = pipeline.imageTask(with: Self.makeNukeRequest(from: request))
+    let imageTask = pipeline.imageTask(with: nukeRequest)
 
     // Progress runs in its own MainActor task. The completion path cancels
     // it *before* calling completion; because both run on the main actor,
@@ -150,19 +160,15 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   }
 
   public func removeCachedImage(forKey cacheKey: String) {
-    let request = Self.keyOnlyRequest(cacheKey)
+    let original = Self.keyOnlyRequest(cacheKey)
     // Decoded image (memory) and processed variants (disk), then the
     // original bytes, which DataCache stores under the data key.
-    pipeline.cache.removeCachedImage(for: request, caches: .all)
-    pipeline.cache.removeCachedData(for: request)
-    // Processed variants live in memory only (originals-only disk policy).
-    let processorKeys = variantsLock.withLock { variants.removeValue(forKey: cacheKey) } ?? []
-    for processorKey in processorKeys {
-      var variant = request
-      // Nuke compares processors by identifier, so a closure-less stand-in
-      // with the same id addresses the entry the real processor wrote.
-      variant.processors = [ImageProcessors.Anonymous(id: Self.processorID(processorKey)) { $0 }]
-      pipeline.cache.removeCachedImage(for: variant, caches: .memory)
+    pipeline.cache.removeCachedImage(for: original, caches: .all)
+    pipeline.cache.removeCachedData(for: original)
+    // Variants live in memory only (originals-only disk policy).
+    let seen = variantsLock.withLock { variants.removeValue(forKey: cacheKey) } ?? []
+    for variant in seen {
+      pipeline.cache.removeCachedImage(for: Self.request(for: variant, of: cacheKey), caches: .memory)
     }
   }
 
@@ -176,7 +182,35 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   }
 
   public func memoryCachedImage(forKey cacheKey: String) -> UIImage? {
-    pipeline.cache.cachedImage(for: Self.keyOnlyRequest(cacheKey), caches: .memory)?.image
+    let cache = pipeline.cache
+    if let image = cache.cachedImage(for: Self.keyOnlyRequest(cacheKey), caches: .memory)?.image {
+      return image
+    }
+    // A view usually stores the image downscaled to its own size, under a
+    // key that includes that size. Any unprocessed size will do for a
+    // placeholder; a blurred or tinted variant must not stand in.
+    let unprocessed = variantsLock.withLock {
+      variants[cacheKey]?.filter { $0.processorKey.isEmpty } ?? []
+    }
+    for variant in unprocessed {
+      let request = Self.request(for: variant, of: cacheKey)
+      if let image = cache.cachedImage(for: request, caches: .memory)?.image {
+        return image
+      }
+    }
+    return nil
+  }
+
+  /// A request that addresses `variant`'s memory entry. Nuke compares
+  /// processors by identifier, so a closure-less stand-in with the same id
+  /// addresses the entry the real processor wrote.
+  private static func request(for variant: Variant, of cacheKey: String) -> ImageRequest {
+    var request = keyOnlyRequest(cacheKey)
+    request.thumbnail = variant.thumbnail
+    if !variant.processorKey.isEmpty {
+      request.processors = [ImageProcessors.Anonymous(id: processorID(variant.processorKey)) { $0 }]
+    }
+    return request
   }
 
   /// Nuke derives both cache keys from `imageID` when it is set, so a request
@@ -243,6 +277,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     var nukeRequest = ImageRequest(urlRequest: urlRequest, options: options)
     // `imageID` keys both Nuke's memory and data caches.
     nukeRequest.imageID = request.cacheKey
+    nukeRequest.thumbnail = thumbnail(for: request)
     // One opaque step; the core owns the algorithms. Nuke folds its id into
     // the memory key (one entry per variant) and, with the default
     // `.storeOriginalData` policy, keeps only the original on disk, which is
@@ -258,6 +293,27 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     }
     return nukeRequest
   }
+
+  /// The seam's decode bound as Nuke thumbnail options: ImageIO decodes
+  /// straight to the smaller size, without allocating the full bitmap, and
+  /// never upscales. Nuke adds the options to the memory key (one entry per
+  /// size) and still stores, and reads, the original bytes on disk.
+  private static func thumbnail(for request: TIImageRequest) -> ImageRequest.ThumbnailOptions? {
+    let size = request.decodeSize
+    guard size.width > 0 else { return nil }
+    guard size.height > 0 else {
+      // Width only. Nuke takes a box; one this tall never binds, so fitting
+      // inside it is fitting the width.
+      return .init(
+        size: CGSize(width: size.width, height: unboundedPixels), unit: .pixels,
+        contentMode: .aspectFit)
+    }
+    return .init(size: size, unit: .pixels, contentMode: request.decodeFill ? .aspectFill : .aspectFit)
+  }
+
+  /// Taller than any image, and exactly representable as the `Float` Nuke
+  /// stores sizes in.
+  private static let unboundedPixels = CGFloat(1 << 30)
 
   private static func processorID(_ processorKey: String) -> String {
     "com.turboimage.\(processorKey)"

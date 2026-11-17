@@ -11,7 +11,9 @@
                allowNetwork:(BOOL)allowNetwork
                processorKey:(NSString *)processorKey
                   processor:(TIImageProcessor)processor
-                    headers:(NSArray<NSArray<NSString *> *> *)headers {
+                    headers:(NSArray<NSArray<NSString *> *> *)headers
+                 decodeSize:(CGSize)decodeSize
+                 decodeFill:(BOOL)decodeFill {
   if ((self = [super init])) {
     _url = [url copy];
     _cacheKey = [cacheKey copy];
@@ -23,6 +25,8 @@
     _processorKey = [processorKey copy];
     _processor = [processor copy];
     _headers = [headers copy];
+    _decodeSize = decodeSize;
+    _decodeFill = decodeFill;
   }
   return self;
 }

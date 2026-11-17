@@ -91,6 +91,9 @@ Pinned values live in `v2/scripts/native-versions.env`.
 Adapters translate a `ResolvedRequest` field by field and make no policy
 decisions of their own. The matrix is covered by parameterised GoogleTests.
 
+The core also decides how large the image is decoded (`ResolvedRequest.decode`,
+§4.5c).
+
 ### 4.2 Consistent cache behaviour
 
 Each adapter needs explicit configuration so both platforms behave the same:
@@ -159,6 +162,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Progress ends at 100%.** A successful load with a known total always ends with a `{total, total}` progress event, via `ProgressThrottle::finish`. Coil can decode a `noCache` response straight from the network stream and stop at the JPEG end marker without reading to EOF, so Android's byte count can end short. The smoke scenario `supersede` caught this intermittently.
 - **Android progress.** Coil has no progress API. The adapter tags each request with a per-load token header (`X-TurboImage-Load`), which an OkHttp interceptor strips and uses to count response bytes. 1.x keyed this on the view tag, which could route an old request's progress into a view's new load.
 - **Known gap.** With Coil's dedup, only the first of N identical concurrent loads reports progress on Android. Nuke reports it to all of them.
+- **`onSuccess` size** is the decoded image's size in pixels, on both platforms. By default that is no larger than the view (§4.5c), so it is the source's intrinsic size only when the source is smaller than the view or `allowDownscaling` is off. The smoke scenarios `downscaled` and `fullSize` assert both cases with a 3000×2000 source.
 - **Tests.** The smoke scenarios `lifecycle` and `supersede` assert these exact sequences on both platforms.
 
 ### 4.4b 1.x prop compatibility
@@ -238,7 +242,7 @@ Order: resize → blur → monochrome → tint, as in 1.x.
 - **The key is the description.** `resolveRequest` normalises the props into a `ProcessingSpec` and encodes it as `ResolvedRequest.processorKey` (`ti1;w=180;b=6;m=ffffffff`), empty when unprocessed. Adapters attach one opaque step identified by that key (Nuke `ImageProcessors.Anonymous(id:)`, a Coil `Transformation` with that `cacheKey`), and the step calls `processImage(pixels, key)`. Nothing else crosses JNI or ObjC, so the cache identity cannot disagree with the pixels. Swift can't call C++, so iOS passes the step as a block on `TIImageRequest`, built by the ObjC++ factory.
 - **Caching.** `cacheKey` still names the original. Both loaders fold the processor id into the *memory* key, giving one memory entry per variant, and keep only the original on disk (Nuke `.storeOriginalData`; Coil keys disk by `diskCacheKey` alone). The smoke scenario `processed` loads a variant with `cacheOnly` from the original another view wrote. `plainAfterProcessed` checks that an unprocessed read still gets the original.
 - **Dispose.** `dispose` evicts every variant. Coil matches memory keys by string, so this comes for free on Android. Nuke's memory cache can't be enumerated, so the iOS adapter records the processor keys it has seen per cache key and evicts each one. `disposeEvictsVariants` fails without that index (verified by disabling it). The `memoryCacheKey` placeholder only uses the unprocessed entry on both platforms.
-- **Decode size.** Processed loads decode the original on both platforms. Coil would otherwise decode at the view's size, so `blur` (in image pixels) would act on a different bitmap than on iOS. TODO: decode-time downsampling to the `resize` width on both platforms.
+- **Decode size.** With `resize`, the image is decoded at the resize width; with `blur` alone, at full size, because the radius is in image pixels and must act on the same bitmap in a small view and a large one (§4.5c).
 - **Cost.** A 12 MP blur takes ~270 ms on an M-series host. It runs on the loaders' background queues. `resize` + blur on a 1200 px result takes ~50 ms.
 - **Not ported.** 1.x's `rounded` also added a circle-crop processor. 2.0 clips with a container (§4.4b), so that processor is redundant. The plan's `borderRadius` processor never existed as a 1.x prop: `UIImage+BorderRadius.swift` was dead code.
 
@@ -257,6 +261,27 @@ The format is detected from the bytes on both platforms, so 1.x's `format` prop 
 - **Processors** apply to the first frame and the result is static, on both platforms (Coil converts animated results to a bitmap for transformations; 1.x Android did the same). TODO: per-frame processing.
 - **User-Agent (Android).** OkHttp's default `okhttp/x` is refused by some hosts (Wikimedia answers 403; 1.x had the same problem), while iOS's CFNetwork default is accepted. The Android client now sends `<App>/<version> TurboImage/<core> (Android <release>)`; `source.headers` can override it.
 - **Tests.** The smoke scenarios `gif`, `apng`, `webp` and `svg` assert loads and intrinsic sizes. Animation was verified with two screenshots a second apart on each platform. There is no event for it.
+
+### 4.5c Decode size (`allowDownscaling`)
+
+New in 2.0, with expo-image's prop name and default (`true`). A 12 MP photo
+decoded in full for a thumbnail costs ~48 MB of bitmap for pixels nobody
+sees. The core picks the target (`ResolvedRequest.decode`), in this order:
+
+| Condition | Decoded at |
+|---|---|
+| `allowDownscaling={false}` | Full size |
+| `resize` set | The resize width |
+| `blur` without `resize`, or `resizeMode="center"` (drawn 1:1) | Full size |
+| Otherwise | The view's size in pixels: covering it for `cover` / `stretch`, fitting inside it for `contain` |
+
+- **An upper bound, never an upscale.** A source smaller than the target is decoded as it is.
+- **Adapters downsample while decoding**, so the full bitmap is never allocated: Nuke thumbnail options (ImageIO) on iOS, Coil's size and scale with `Precision.INEXACT` on Android.
+- **Android needed its own size resolver.** Fabric leaves views with `WRAP_CONTENT` layout params, which Coil's `ViewSizeResolver` reads as "no bound", so every image was decoded in full. `LaidOutSizeResolver` waits for the first layout and uses the laid-out size.
+- **Caching.** The disk keeps the original bytes; each decode size is its own memory entry. The smoke scenario `fullSize` reads all 3000×2000 pixels with `cacheOnly` after `downscaled` loaded the same URL at the card's size.
+- **The size is taken when the load starts.** A view that grows later keeps the image it has. TODO: reload when the view outgrows the decoded image; until then `allowDownscaling={false}` is the way out for zoomable views.
+- **No view, no bound.** `prefetch` and a view laid out with no area decode the original.
+- **`onSuccess`** reports the decoded size (§4.4a).
 
 ### 4.6 View-level fixes found by the smoke test
 
