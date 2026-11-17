@@ -139,9 +139,7 @@ const INDICATOR_DELAY_MS = 150;
 // 'urlCache' needs no mapping: it is a core policy, and honours HTTP
 // Cache-Control on both platforms (1.x did so on iOS only).
 let warnedDataCache = false;
-function resolveCachePolicy(
-  policy: TurboImageProps['cachePolicy']
-): CachePolicy | undefined {
+function resolveCachePolicy(policy: TurboImageProps['cachePolicy']): CachePolicy | undefined {
   if (policy !== 'dataCache') {
     return policy;
   }

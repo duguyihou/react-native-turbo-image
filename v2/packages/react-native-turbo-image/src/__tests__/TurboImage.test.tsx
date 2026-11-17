@@ -220,7 +220,9 @@ describe('placeholder', () => {
   it('rejects more than one placeholder kind in development', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {}); // React logs the throw
     expect(() =>
-      render({ placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', thumbhash: '4AcKPJpwd3dw' } })
+      render({
+        placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', thumbhash: '4AcKPJpwd3dw' },
+      })
     ).toThrow(/choose only one placeholder/);
   });
 
@@ -337,7 +339,10 @@ describe('indicator', () => {
   });
 
   it.each([
-    ['a placeholder is given', { indicator, placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' } }],
+    [
+      'a placeholder is given',
+      { indicator, placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' } },
+    ],
     ['the indicator is an empty object (1.x quirk)', { indicator: {} }],
     ['no indicator is given', {}],
   ])('is off when %s: no spinner, no container, handlers untouched', (_case, props) => {

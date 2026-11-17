@@ -90,10 +90,7 @@ export interface NativeProps extends ViewProps {
   >;
   // 'contain' is 1.x's default (React Native's <Image> defaults to 'cover');
   // kept for compatibility, see docs/migration-plan.md.
-  resizeMode?: CodegenTypes.WithDefault<
-    'cover' | 'contain' | 'stretch' | 'center',
-    'contain'
-  >;
+  resizeMode?: CodegenTypes.WithDefault<'cover' | 'contain' | 'stretch' | 'center', 'contain'>;
   // Identifies what this view is showing, for lists that reuse views
   // (FlashList). When a request prop changes, the image already on screen
   // stays until the new one has loaded, unless this key changed with it:
@@ -144,6 +141,4 @@ export interface NativeProps extends ViewProps {
   onCompletion?: CodegenTypes.DirectEventHandler<CompletionEvent>;
 }
 
-export default codegenNativeComponent<NativeProps>(
-  'TurboImageView'
-) as HostComponent<NativeProps>;
+export default codegenNativeComponent<NativeProps>('TurboImageView') as HostComponent<NativeProps>;

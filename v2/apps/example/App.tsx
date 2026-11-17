@@ -11,10 +11,7 @@
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Dimensions, PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  SafeAreaProvider,
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
 import type { TurboImageProps } from 'react-native-turbo-image';
 
@@ -540,16 +537,21 @@ function validateLoad(events: Recorded[]): string | null {
   const types = events.map((e) => e.type);
   if (types[0] !== 'start') return 'first event is not start';
   const last = events[events.length - 1];
-  if (last?.type !== 'completion' || last.state !== 'completed') return 'does not end with completion:completed';
+  if (last?.type !== 'completion' || last.state !== 'completed')
+    return 'does not end with completion:completed';
   if (types[types.length - 2] !== 'success') return 'success is not right before completion';
-  const progress = events.filter((e): e is Extract<Recorded, { type: 'progress' }> => e.type === 'progress');
+  const progress = events.filter(
+    (e): e is Extract<Recorded, { type: 'progress' }> => e.type === 'progress'
+  );
   if (progress.length === 0) return 'no progress events for a network load';
   for (let i = 1; i < progress.length; i++) {
     if (progress[i]!.completed < progress[i - 1]!.completed) return 'progress went backwards';
   }
   const final = progress[progress.length - 1]!;
-  if (final.total > 0 && final.completed !== final.total) return 'last progress is not completed == total';
-  if (types.some((t, i) => t === 'progress' && i > types.indexOf('success'))) return 'progress after success';
+  if (final.total > 0 && final.completed !== final.total)
+    return 'last progress is not completed == total';
+  if (types.some((t, i) => t === 'progress' && i > types.indexOf('success')))
+    return 'progress after success';
   return null;
 }
 
@@ -592,7 +594,8 @@ function SupersedeProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       const cancelAt = all.findIndex((x) => x.type === 'completion' && x.state === 'cancelled');
       let problem: string | null = null;
       if (cancelAt < 0) problem = 'first load did not complete as cancelled';
-      else if (all.some((x) => x.type === 'success' && x.source === URI_LARGE)) problem = 'superseded load reported success';
+      else if (all.some((x) => x.type === 'success' && x.source === URI_LARGE))
+        problem = 'superseded load reported success';
       else problem = validateLoad(all.slice(cancelAt + 1));
       settle(scenario.id, problem === null, 'load', problem ?? describe(all));
     }
@@ -633,7 +636,9 @@ function RecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle
           ? setPhase('gap')
           : settle(scenario.id, true, 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`)
       }
-      onFailure={(e) => settle(scenario.id, false, 'error', `${e.nativeEvent.code}: ${e.nativeEvent.error}`)}
+      onFailure={(e) =>
+        settle(scenario.id, false, 'error', `${e.nativeEvent.code}: ${e.nativeEvent.error}`)
+      }
     />
   );
 }
@@ -663,7 +668,12 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
           (near === undefined ||
             (Math.abs(width - near.width) <= 2 && Math.abs(height - near.height) <= 2));
         const detail = near && !sizeOk ? ` (expected ≈${near.width}×${near.height})` : '';
-        settle(scenario.id, scenario.expect === 'load' && sizeOk, 'load', `${width}×${height}${detail}`);
+        settle(
+          scenario.id,
+          scenario.expect === 'load' && sizeOk,
+          'load',
+          `${width}×${height}${detail}`
+        );
       }}
       onFailure={(e) =>
         settle(
@@ -692,7 +702,8 @@ function CacheThenView({
   const [ready, setReady] = useState(false);
   useEffect(() => {
     before().then(
-      (ok) => (ok ? setReady(true) : settle(scenario.id, false, 'error', 'module call returned false')),
+      (ok) =>
+        ok ? setReady(true) : settle(scenario.id, false, 'error', 'module call returned false'),
       (e) => settle(scenario.id, false, 'error', `module call rejected: ${e}`)
     );
     // Run once per mount.
@@ -743,7 +754,9 @@ function PrefetchInvalidProbe({ scenario, settle }: { scenario: Scenario; settle
 // Which of those step 3 was is not visible in the events, so the probe then
 // asks the fixture server what it received (`expectHits`).
 function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
-  const [phase, setPhase] = useState<'first' | 'clearing' | 'cacheOnly' | 'again' | 'counting'>('first');
+  const [phase, setPhase] = useState<'first' | 'clearing' | 'cacheOnly' | 'again' | 'counting'>(
+    'first'
+  );
   const fail = (what: string) => settle(scenario.id, false, 'error', `${phase}: ${what}`);
   useEffect(() => {
     if (phase === 'clearing') {
@@ -759,11 +772,20 @@ function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
         .then(
           (hits: { count: number; conditional: number }) => {
             const want = scenario.expectHits;
-            const ok = want !== undefined && hits.count === want.count && hits.conditional === want.conditional;
+            const ok =
+              want !== undefined &&
+              hits.count === want.count &&
+              hits.conditional === want.conditional;
             const saw = `${hits.count} request(s), ${hits.conditional} conditional`;
-            settle(scenario.id, ok, 'load', ok ? saw : `${saw}; expected ${want?.count}, ${want?.conditional}`);
+            settle(
+              scenario.id,
+              ok,
+              'load',
+              ok ? saw : `${saw}; expected ${want?.count}, ${want?.conditional}`
+            );
           },
-          (e) => settle(scenario.id, false, 'error', `could not read the server's request count: ${e}`)
+          (e) =>
+            settle(scenario.id, false, 'error', `could not read the server's request count: ${e}`)
         );
     }
     // oxlint-disable-next-line react/exhaustive-deps
@@ -803,9 +825,19 @@ const PROBES = {
   urlCache: UrlCacheProbe,
 } as const;
 
-function ScenarioCard({ scenario, result, settle }: { scenario: Scenario; result?: Result; settle: Settle }) {
+function ScenarioCard({
+  scenario,
+  result,
+  settle,
+}: {
+  scenario: Scenario;
+  result?: Result;
+  settle: Settle;
+}) {
   const Probe = scenario.kind ? PROBES[scenario.kind] : PlainImage;
-  const status = result ? `${result.ok ? 'PASS' : 'FAIL'} · ${result.outcome}: ${result.detail}` : 'running…';
+  const status = result
+    ? `${result.ok ? 'PASS' : 'FAIL'} · ${result.outcome}: ${result.detail}`
+    : 'running…';
   return (
     <View style={styles.card}>
       <Text style={styles.label}>
@@ -854,7 +886,9 @@ export default function App() {
     // smoke scripts run release builds, so the result has to go out as an
     // error there. Debug keeps console.log to avoid a LogBox error toast.
     const report = __DEV__ ? console.log : console.error;
-    report(`TURBOIMAGE_SMOKE ${JSON.stringify({ pass, passed, total: SCENARIOS.length, blocked, failed })}`);
+    report(
+      `TURBOIMAGE_SMOKE ${JSON.stringify({ pass, passed, total: SCENARIOS.length, blocked, failed })}`
+    );
   }, [settled, results]);
 
   useEffect(() => {
@@ -869,7 +903,11 @@ export default function App() {
           const waitingFor = [s.after ?? []].flat().filter((dep) => !prev[dep]);
           next[s.id] ??=
             waitingFor.length > 0
-              ? { ok: false, outcome: 'blocked', detail: `never ran; waiting for ${waitingFor.join(', ')}` }
+              ? {
+                  ok: false,
+                  outcome: 'blocked',
+                  detail: `never ran; waiting for ${waitingFor.join(', ')}`,
+                }
               : { ok: false, outcome: 'timeout', detail: '' };
         }
         return next;
@@ -891,7 +929,12 @@ export default function App() {
               : `running ${Object.keys(results).length}/${SCENARIOS.length}`}
           </Text>
           {mounted.map((scenario) => (
-            <ScenarioCard key={scenario.id} scenario={scenario} result={results[scenario.id]} settle={settle} />
+            <ScenarioCard
+              key={scenario.id}
+              scenario={scenario}
+              result={results[scenario.id]}
+              settle={settle}
+            />
           ))}
         </ScrollView>
       </SafeAreaView>

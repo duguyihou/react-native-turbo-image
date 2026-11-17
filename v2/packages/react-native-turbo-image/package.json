@@ -9,10 +9,7 @@
     "url": "git+https://github.com/duguyihou/react-native-turbo-image.git",
     "directory": "v2/packages/react-native-turbo-image"
   },
-  "main": "src/index.tsx",
-  "react-native": "src/index.tsx",
   "source": "src/index.tsx",
-  "types": "src/index.tsx",
   "files": [
     "src",
     "cpp/include",
@@ -27,16 +24,15 @@
     "TurboImage.podspec",
     "!**/__tests__"
   ],
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "react-native": "src/index.tsx",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
     "vendor:nuke": "bash ../../scripts/build-nuke-xcframework.sh",
     "goldens:placeholder": "node cpp/tests/tools/generate-placeholder-goldens.mjs > cpp/tests/PlaceholderGoldens.inc"
-  },
-  "peerDependencies": {
-    "react": "*",
-    "react-native": ">=0.88.0"
   },
   "devDependencies": {
     "@babel/core": "7.29.13",
@@ -52,6 +48,10 @@
     "react-test-renderer": "19.3.0",
     "thumbhash": "0.1.1",
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": ">=0.88.0"
   },
   "codegenConfig": {
     "name": "TurboImageSpec",

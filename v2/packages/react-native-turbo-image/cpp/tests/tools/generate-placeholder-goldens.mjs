@@ -33,7 +33,7 @@ function syntheticRgba(w, h, withAlpha) {
       const i = (y * w + x) * 4;
       out[i] = Math.round((255 * x) / (w - 1));
       out[i + 1] = Math.round((255 * y) / (h - 1));
-      out[i + 2] = Math.round(255 * ((x + y) % 7) / 6);
+      out[i + 2] = Math.round((255 * ((x + y) % 7)) / 6);
       out[i + 3] = withAlpha ? Math.round((255 * (x + y)) / (w + h - 2)) : 255;
     }
   }
@@ -68,13 +68,18 @@ const blurhashCases = [
   { name: 'readme_wide', hash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj', w: 40, h: 24 },
   // Encoded here from the synthetic image: 1x1 (DC only) and 9x9 (maximum).
   { name: 'dc_only', hash: encodeBlurhash(syntheticRgba(16, 16, false), 16, 16, 1, 1), w: 8, h: 8 },
-  { name: 'max_components', hash: encodeBlurhash(syntheticRgba(32, 32, false), 32, 32, 9, 9), w: 32, h: 32 },
+  {
+    name: 'max_components',
+    hash: encodeBlurhash(syntheticRgba(32, 32, false), 32, 32, 9, 9),
+    w: 32,
+    h: 32,
+  },
 ];
 lines.push('inline const BlurhashGolden kBlurhashGoldens[] = {');
 for (const c of blurhashCases) {
   const rgba = decodeBlurhash(c.hash, c.w, c.h);
   lines.push(
-    `    {"${c.name}", R"(${c.hash})", ${c.w}, ${c.h}, 0x${fnv1a(rgba).toString(16).padStart(8, '0')}u, ${emitSpots(spots(rgba, c.w, c.h))}},`,
+    `    {"${c.name}", R"(${c.hash})", ${c.w}, ${c.h}, 0x${fnv1a(rgba).toString(16).padStart(8, '0')}u, ${emitSpots(spots(rgba, c.w, c.h))}},`
   );
 }
 lines.push('};', '');
@@ -92,7 +97,7 @@ for (const c of thumbhashCases) {
   const base64 = Buffer.from(hash).toString('base64');
   const { w, h, rgba } = thumbHashToRGBA(hash);
   lines.push(
-    `    {"${c.name}", "${base64}", ${w}, ${h}, 0x${fnv1a(rgba).toString(16).padStart(8, '0')}u, ${emitSpots(spots(rgba, w, h))}},`,
+    `    {"${c.name}", "${base64}", ${w}, ${h}, 0x${fnv1a(rgba).toString(16).padStart(8, '0')}u, ${emitSpots(spots(rgba, w, h))}},`
   );
 }
 lines.push('};');
