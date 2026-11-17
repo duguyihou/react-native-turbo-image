@@ -4,7 +4,16 @@ import type { ColorValue } from 'react-native';
 
 import NativeTurboImageModule from './NativeTurboImageModule';
 import TurboImageView from './TurboImageViewNativeComponent';
-import type { NativeHeader, NativeProps, NativeSource } from './TurboImageViewNativeComponent';
+import type {
+  CompletionEvent,
+  FailureEvent,
+  NativeHeader,
+  NativeProps,
+  NativeSource,
+  ProgressEvent,
+  StartEvent,
+  SuccessEvent,
+} from './TurboImageViewNativeComponent';
 
 export type {
   CompletionEvent,
@@ -17,6 +26,17 @@ export type {
 
 // 1.x's `source.headers` forms: a record, [name, value] pairs, or a fetch
 // `Headers` object (anything with forEach(value, name)).
+// 1.x's exported type names, kept so `import type { Success } from
+// 'react-native-turbo-image'` still compiles. TODO: remove in 3.0.
+export type Start = StartEvent;
+export type Progress = ProgressEvent;
+export type Success = SuccessEvent;
+export type Failure = FailureEvent;
+export type Completion = CompletionEvent;
+export type ResizeMode = NonNullable<NativeProps['resizeMode']>;
+export type IndicatorStyle = NonNullable<Indicator['style']>;
+export type Format = 'svg' | 'gif' | 'apng';
+
 export type HeadersInput =
   | Readonly<Record<string, string>>
   | ReadonlyArray<readonly [string, string]>
@@ -87,7 +107,12 @@ export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | '
    * @deprecated Ignored. 1.x needed it to pick a GIF/APNG/SVG decoder; 2.0
    * detects the format from the image bytes on both platforms.
    */
-  format?: 'svg' | 'gif' | 'apng' | string;
+  format?: Format | string;
+  /**
+   * @deprecated Ignored, as it effectively was in 1.x: 1.x never enabled
+   * progressive decoding in its Nuke pipeline, so the prop had no effect.
+   */
+  isProgressiveImageRenderingEnabled?: boolean;
 };
 
 export type Indicator = {
@@ -132,8 +157,9 @@ function TurboImageComponent({
   rounded,
   style,
   source,
-  // Accepted for 1.x compatibility and dropped; see the type's note.
+  // Accepted for 1.x compatibility and dropped; see the type's notes.
   format: _format,
+  isProgressiveImageRenderingEnabled: _progressive,
   indicator,
   onStart,
   onCompletion,

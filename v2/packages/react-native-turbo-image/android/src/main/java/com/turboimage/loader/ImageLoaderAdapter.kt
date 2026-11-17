@@ -21,11 +21,20 @@ import com.turboimage.core.ResolvedRequest
  */
 interface ImageLoaderAdapter {
   /**
-   * @param fadeMillis cross-fade from the current drawable to the result;
+   * How to decode and show one load. These are view-level choices, not part
+   * of the request's identity, so they are not in [ResolvedRequest] and never
+   * affect cache keys.
+   *
+   * @property fadeMillis cross-fade from the current drawable to the result;
    *   0 disables it. Adapters must skip it for memory-cache hits (the rule
    *   the iOS view applies too).
+   * @property allowHardware false forces a software bitmap, for callers that
+   *   read pixels or draw to a software canvas (e.g. shared-element
+   *   transitions). Android-only; iOS has no equivalent distinction.
    */
-  fun load(target: ImageView, request: ResolvedRequest, fadeMillis: Int, listener: Listener): LoadHandle
+  data class DisplayOptions(val fadeMillis: Int = 300, val allowHardware: Boolean = true)
+
+  fun load(target: ImageView, request: ResolvedRequest, options: DisplayOptions, listener: Listener): LoadHandle
 
   // Cache management, backing TurboImageModule. Keys are
   // `ResolvedRequest.cacheKey`s from the core, so views and the module agree.

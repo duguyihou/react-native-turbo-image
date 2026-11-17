@@ -24,6 +24,7 @@ import coil3.network.httpHeaders
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
 import coil3.size.Size
@@ -87,7 +88,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   override fun load(
     target: ImageView,
     request: ResolvedRequest,
-    fadeMillis: Int,
+    options: ImageLoaderAdapter.DisplayOptions,
     listener: ImageLoaderAdapter.Listener,
   ): LoadHandle {
     // `finished` enforces the seam contract on the main thread: no progress
@@ -118,7 +119,10 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .target(KeepCurrentImageTarget(target))
         // Coil's crossfade already skips memory-cache hits (the seam rule)
         // and fades from the target's current drawable, i.e. the placeholder.
-        .crossfade(fadeMillis)
+        .crossfade(options.fadeMillis)
+        // Coil's default is true. When false, a hardware bitmap already in
+        // the memory cache is not reused (Coil treats it as a miss).
+        .allowHardware(options.allowHardware)
         .applyProcessing(request)
         .listener(
           onSuccess = { _, result ->

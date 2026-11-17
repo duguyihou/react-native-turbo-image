@@ -54,6 +54,7 @@ type Scenario = {
   rounded?: boolean;
   enableLiveTextInteraction?: boolean;
   indicator?: TurboImageProps['indicator'];
+  allowHardware?: boolean;
   // Image processors, passed straight through to <TurboImage>.
   processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
@@ -354,6 +355,17 @@ const SCENARIOS: Scenario[] = [
     expectSize: { width: 120, height: 80 },
   },
   {
+    id: 'softwareBitmap',
+    title: 'allowHardware={false} still loads (Android: software bitmap)',
+    // The bitmap's config is not visible from JS; it was checked once with
+    // a temporary log (HARDWARE by default, ARGB_8888 with this prop).
+    source: { uri: 'https://picsum.photos/id/1016/600/400' },
+    allowHardware: false,
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSize: { width: 600, height: 400 },
+  },
+  {
     id: 'indicatorEvents',
     title: 'indicator: app handlers still get every event, in order',
     // The spinner is driven by onStart/onCompletion inside <TurboImage>;
@@ -535,6 +547,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       cachePolicy={scenario.cachePolicy}
       enableLiveTextInteraction={scenario.enableLiveTextInteraction}
       indicator={scenario.indicator}
+      allowHardware={scenario.allowHardware}
       {...scenario.processing}
       resizeMode="cover"
       onSuccess={(e) => {

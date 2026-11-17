@@ -42,13 +42,15 @@ builds, and the CI matrix.
 | `resize`, `blur`, `monochrome`, `tint` processors | **Core C++** pixel ops; adapters attach one opaque step keyed by the core's `processorKey` | ✅ done (RFC §4.5a). Variants are separate memory entries over one disk original; `dispose` evicts all of them. 1.x's `borderRadius` processor never existed, and `rounded`'s circle crop is replaced by the clipping container |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop; Swift target `TurboImageLiveText` behind the ObjC `TILiveTextInteraction` seam | ✅ done (RFC §4.4b). One interaction per view (1.x stacked one per load); toggling off detaches at once. Visual Look Up needs iOS 17 |
 | `indicator` (activity spinner while loading) | JS: `<ActivityIndicator>` over the native view, driven by `onStart`/`onCompletion` | ✅ done (RFC §4.4b). No native code. Appears only after 150 ms, so cache hits never flash it. Hidden when a `placeholder` is given (1.x Android's rule) |
-| `allowHardware` (Android) | Not yet placed | Coil 3 still has `allowHardware`; processed loads already use software bitmaps |
-| `isProgressiveImageRenderingEnabled` (iOS) | Not yet placed | Nuke 13 progressive decoding; Coil has no equivalent |
+| `allowHardware` (Android) | Android-only native prop; a display option on the loader seam, not part of the request | ✅ done. Checked once by log: `HARDWARE` by default, `ARGB_8888` with `allowHardware={false}` |
+| `isProgressiveImageRenderingEnabled` (iOS) | Accepted and ignored | ✅ nothing to port: 1.x never enabled progressive decoding in its Nuke pipeline (off by default in Nuke 12.8.0), so the prop had no effect. Real progressive rendering would be a new, iOS-only feature (Coil has none) |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
 | GIF, APNG, SVG | Adapter decoders, chosen by content | ✅ done (RFC §4.5b). ImageIO on iOS (drops Gifu and APNGKit), `coil-gif` + LINE `apng-drawable` on Android. SVG keeps 1.x's private CoreSVG on iOS by decision; `coil-svg` on Android. `format` is ignored |
-| Video thumbnails (1.x Android `coil-video`) | Not yet placed | Missing from this plan until now. iOS 1.x had no equivalent |
+| Video thumbnails (1.x Android `coil-video`) | Not ported | ✅ nothing to port: 1.x declared the dependency but never registered `VideoFrameDecoder`, so it never worked |
 | Local assets / `require()` sources | Core scheme handling | ✅ done (RFC §4.1). `require()` is new in 2.0 (1.x only took `{ uri }`); `file://`, `content://`, `android.resource://` are explicit now (1.x loaded them by accident). Local sources skip the disk tier and load under `cacheOnly` |
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
+
+**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening, tracked in `SESSION.md`: a JS test runner for `src/index.tsx`, the unexplained smoke flakiness, Android SVG sharpness, self-hosted smoke fixtures, and the first run of `v2-ci.yml` on hosted runners (Phase 1).
 
 ### Phase 3: promote `v2/` to the repository root
 1. Tag the final 1.x release and create a `1.x` maintenance branch.
@@ -72,6 +74,7 @@ builds, and the CI matrix.
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- `isProgressiveImageRenderingEnabled` is ignored (it had no effect in 1.x either).
 - `indicator` appears only for loads that take longer than 150 ms, and is never shown together with a `placeholder` (1.x iOS showed whichever prop was set last).
 - `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.
 - Local sources (`file://`, `content://`, `android.resource://`) are never copied into the disk cache, and `cacheOnly` does not block them.

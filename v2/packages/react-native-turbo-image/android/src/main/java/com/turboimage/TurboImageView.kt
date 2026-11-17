@@ -72,6 +72,10 @@ class TurboImageView(
   /** Cross-fade duration in ms; 0 disables it. 1.x default. */
   var fadeDuration = 300
 
+  /** 1.x prop: false decodes to a software bitmap. Changing it reloads. */
+  var allowHardware = true
+    set(value) { if (field != value) { field = value; needsReload = true } }
+
   init {
     // Matches the spec default (`contain`, 1.x's default).
     scaleType = ScaleType.FIT_CENTER
@@ -196,7 +200,7 @@ class TurboImageView(
       loader.load(
         this as ImageView,
         request,
-        fadeDuration,
+        ImageLoaderAdapter.DisplayOptions(fadeMillis = fadeDuration, allowHardware = allowHardware),
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) {
             if (handle !== thisHandle) return
