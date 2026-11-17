@@ -35,6 +35,13 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
 /// sent twice, like `-[NSMutableURLRequest addValue:forHTTPHeaderField:]`).
 /// Not part of any cache key.
 @property(nonatomic, readonly, copy) NSArray<NSArray<NSString *> *> *headers;
+/// YES for `cachePolicy="urlCache"`: this request's disk tier is an HTTP
+/// cache, and `diskCacheRead`/`diskCacheWrite` describe access to that. It
+/// must be a store of its own, keyed by `url`, that obeys the response's
+/// `Cache-Control` (freshness, revalidation, `no-store`). The key-addressed
+/// disk cache that `cacheKey` names must be neither read nor written.
+/// `cacheKey` still keys the memory tier.
+@property(nonatomic, readonly) BOOL httpCache;
 /// Decode the image no larger than this, in pixels, without ever allocating
 /// the full bitmap (ImageIO thumbnails or similar), and never upscale.
 /// `CGSizeZero`: decode the original. A zero height with a non-zero width:
@@ -55,6 +62,7 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
                processorKey:(NSString *)processorKey
                   processor:(nullable TIImageProcessor)processor
                     headers:(NSArray<NSArray<NSString *> *> *)headers
+                  httpCache:(BOOL)httpCache
                  decodeSize:(CGSize)decodeSize
                  decodeFill:(BOOL)decodeFill NS_DESIGNATED_INITIALIZER;
 

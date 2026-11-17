@@ -12,6 +12,7 @@
                processorKey:(NSString *)processorKey
                   processor:(TIImageProcessor)processor
                     headers:(NSArray<NSArray<NSString *> *> *)headers
+                  httpCache:(BOOL)httpCache
                  decodeSize:(CGSize)decodeSize
                  decodeFill:(BOOL)decodeFill {
   if ((self = [super init])) {
@@ -25,6 +26,7 @@
     _processorKey = [processorKey copy];
     _processor = [processor copy];
     _headers = [headers copy];
+    _httpCache = httpCache;
     _decodeSize = decodeSize;
     _decodeFill = decodeFill;
   }

@@ -75,7 +75,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
 `cpp/include/turboimage/ImageRequest.h` is the single definition of:
 
 - **Validation**: empty URIs and unsupported schemes are rejected, and so are header names that are not RFC 9110 tokens and header values containing CR, LF or NUL (`InvalidHeader`, reported to JS as `invalidRequest`). Passing such a header on would allow header injection; dropping it silently would hide an auth bug.
-- **Schemes.** Remote: `http`, `https`. Local: `file`, `content`, `android.resource`. The core doesn't know the platform, so an Android-only scheme on iOS fails in the loader (as `network`). Local sources never use the disk tier (copying a local file into the cache only costs space) and are always readable: reading one is not a network request, so `cacheOnly` still loads it. The memory tier follows the policy as usual. Both rules are applied after the policy matrix, so all four policies agree.
+- **Schemes.** Remote: `http`, `https`. Local: `file`, `content`, `android.resource`. The core doesn't know the platform, so an Android-only scheme on iOS fails in the loader (as `network`). Local sources never use the disk tier (copying a local file into the cache only costs space) and are always readable: reading one is not a network request, so `cacheOnly` still loads it. The memory tier follows the policy as usual. Both rules are applied after the policy matrix, so every policy agrees (a local source under `urlCache` has no HTTP cache either).
 - **`require()` sources.** JS resolves them with RN's `Image.resolveAssetSource`, which picks the `@2x`/`@3x` file. That gives a dev-server URL in development, a `file://` bundle URL in iOS release builds, and a bare resource name (`src_assets_logo`) in Android release builds. The Android view and module map such names to `android.resource://<package>/<id>` (`SourceUris.kt`, RN's naming rule) before the core sees them, and an unknown name stays schemeless, so the core rejects it. Smoke scenario `requireAsset` loads a bundled PNG with `cacheOnly` in release builds on both platforms.
 - **Headers** (`source.headers`, 1.x's record, pairs or `Headers` forms, normalised in JS to `[{name, value}]` because Codegen props can't express a dictionary): sent in order by both adapters, and by `prefetch`. They are **not** part of the cache key, as in 1.x: a URL is one entry whoever fetched it. Nor are they part of the in-flight identity: concurrent loads of one key are coalesced (Nuke task coalescing, Coil dedup) whatever their headers. Apps that serve per-user content at one URL must pass a per-user `cacheKey`, which separates both. The smoke scenarios `headersSent` / `headersChangeResponse` use httpbin's `Accept`-dependent `/image` (200 vs 406) to prove the header reaches the server, and `headerInjection` checks the rejection.
 - **Cache key**: an explicit `cacheKey`, otherwise the canonical URI with the scheme and host lower-cased and the fragment dropped. Adapters use this key for **both** the memory and disk tiers (Nuke `imageID`; Coil `memoryCacheKey` + `diskCacheKey`).
@@ -87,6 +87,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
 | `memoryOnly` | ✓ / ✓ | ✗ / ✗ | ✓ |
 | `noCache` | ✗ / ✗ | ✗ / ✗ | ✓ |
 | `cacheOnly` | ✓ / ✗ | ✓ / ✗ | ✗ |
+| `urlCache` | ✓ / ✓ | ✓ / ✓, but of the HTTP cache (`httpCache`, §4.2a) | ✓ |
 
 Adapters translate a `ResolvedRequest` field by field and make no policy
 decisions of their own. The matrix is covered by parameterised GoogleTests.
@@ -103,15 +104,14 @@ Each adapter needs explicit configuration so both platforms behave the same:
 | Loader instance | Dedicated `ImagePipeline`, **not** `.shared` | Dedicated `ImageLoader` built on `coil-core`, **not** the `coil` singleton |
 | Memory tier | Own `ImageCache()`, so `withDataCache` doesn't fall back to `ImageCache.shared` | `MemoryCache` at 25% of the app's memory |
 | Disk tier | `DataCache` holding original bytes, 150 MB | `DiskCache` in `cacheDir/turboimage`, 150 MB |
-| HTTP cache | Disabled (`urlCache = nil`). `Cache-Control` is ignored | OkHttp has no `Cache`; `CacheStrategy.DEFAULT` serves disk hits without consulting `Cache-Control` |
+| HTTP cache | Disabled for the disk tier above (`urlCache = nil`): `Cache-Control` is ignored. Only `urlCache` requests use one (§4.2a) | OkHttp has no `Cache`; `CacheStrategy.DEFAULT` serves disk hits without consulting `Cache-Control`. Only `urlCache` requests differ (§4.2a) |
 | Network fetcher | `DataLoader` / `URLSession` | Explicit `OkHttpNetworkFetcherFactory` with its own `OkHttpClient` (15 s connect, 30 s read) |
 | Concurrent request dedup | Task coalescing (default, set explicitly) | `DeDupeConcurrentRequestStrategy` (`@ExperimentalCoilApi`) |
 
 Decision: TurboImage's disk cache is authoritative and HTTP freshness headers
-are ignored on both platforms. That matches 1.x and is the only policy both
-loaders support identically today. A `respectHttpHeaders` mode, which would
-need Coil's `coil-network-cache-control` and a `URLCache`-backed Nuke
-configuration, is a TODO.
+are ignored on both platforms, for every policy but one. Apps that need the
+server to control freshness opt in per image with `cachePolicy="urlCache"`
+(§4.2a).
 
 Coil's dedup strategy is experimental API. We opt in because without it,
 Android would issue N network requests for N identical concurrent views where
@@ -119,6 +119,26 @@ iOS issues one. If Coil changes or removes the API, the fallback is
 `ConcurrentRequestStrategy.UNCOORDINATED`, which is still correct, only less
 efficient. CI compiles against the pinned version, so a source break would
 show up there.
+
+### 4.2a The HTTP cache (`cachePolicy="urlCache"`)
+
+1.x's name. In 1.x it honoured HTTP headers on iOS only; in 2.0 it is a core
+policy (`CachePolicy::UrlCache`) and does so on both platforms. The core sets
+`ResolvedRequest.httpCache`, which tells the adapter that this request's disk
+tier is an HTTP cache:
+
+| | iOS (Nuke) | Android (Coil) |
+|---|---|---|
+| Store | A `URLCache` of TurboImage's own (150 MB, disk only), behind a second `ImagePipeline` | The same Coil `DiskCache`, under a `turboimage-http:<url>` key |
+| Freshness rules | `URLSession`'s protocol cache policy | Coil's `CacheControlCacheStrategy` (`coil-network-cache-control`, `@ExperimentalCoilApi`), chosen per request by a delegating strategy |
+
+- **Contract.** An entry is served while `Cache-Control` / `Expires` say it is fresh, is revalidated when stale (`If-None-Match`, a 304 carries no body), and is never stored for `no-store`.
+- **A store of its own, keyed by URL.** HTTP caches know nothing of `cacheKey`. Nothing is read from or written to the key-addressed disk cache, so a later `cacheOnly` load does not see what a `urlCache` load stored, and the reverse. Mixing them would let a keyed read serve an expired image.
+- **Why a second pipeline on iOS.** Nuke's `DataCache` sits in front of the data loader and has no notion of freshness. Not `URLCache.shared`, so the host app's networking cannot fill or clear it.
+- **The memory tier is shared and unchanged**: keyed by `cacheKey`, and it never expires within a process. A list must not refetch on every scroll. So freshness is checked when an image is not in memory, not on every mount.
+- **Cache module.** `dispose` and `clearDiskCache` also evict from the HTTP cache (by URL).
+- **Limit (iOS).** `URLCache` does not store a response larger than 5% of its capacity, 7.5 MB here; such an image is refetched every time.
+- **Tests.** The core matrix is in GoogleTest. The smoke scenario `urlCache` loads with `urlCache`, clears memory, expects `cacheOnly` to miss (`notCached`), then loads with `urlCache` again. Whether a load reached the network is not visible from JS, so the three header cases were checked once by hand against a logging server, on both platforms (2026-11-17): `max-age=3600` gave one request for two loads, `no-store` two unconditional requests, and `no-cache` + `ETag` a 200 followed by a conditional 304. TODO: that harness is not in the repository or CI.
 
 ### 4.3 Threading and ownership contracts
 
@@ -171,7 +191,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 |---|---|---|
 | `resizeMode` default `contain` | Spec default `contain` | React Native's `<Image>` defaults to `cover`; kept as `contain` so 1.x layouts don't change |
 | `cachePolicy` `'dataCache'` | Mapped to `'default'` in JS | Same behaviour (RFC §4.2); warns in development |
-| `cachePolicy` `'urlCache'` | Mapped to `'default'` in JS | **Behaviour differs**: HTTP `Cache-Control` is no longer honoured; warns in development |
+| `cachePolicy` `'urlCache'` | A core policy (§4.2a) | Honours HTTP `Cache-Control`, as on 1.x iOS. **Behaviour differs on Android**, which now does the same |
 | `showPlaceholderOnFailure` (default `false`) | Native prop, same default | When false, the placeholder is removed on failure, including a decode that finishes after the failure |
 | `fadeDuration` (default 300 ms) | Native prop, same default | Skipped for memory-cache hits on both platforms: Coil's crossfade rule, mirrored on iOS through a `fromMemoryCache` flag on the seam completion |
 | `rounded` | JS clipping container | Same approach as 1.x. Android's `ImageView` content isn't clipped by RN's border drawing, so a container keeps both platforms identical |

@@ -121,6 +121,9 @@ dependencies {
   // (mirrors the dedicated Nuke pipeline on iOS).
   implementation "io.coil-kt.coil3:coil-core:${coilVersion}"
   implementation "io.coil-kt.coil3:coil-network-okhttp:${coilVersion}"
+  // HTTP freshness and revalidation for `cachePolicy="urlCache"`; the other
+  // policies keep Coil's default strategy, which ignores Cache-Control.
+  implementation "io.coil-kt.coil3:coil-network-cache-control:${coilVersion}"
   // Animated GIF/WebP/HEIF (AnimatedImageDecoder on API 28+, GifDecoder below)
   // and SVG (AndroidSVG). Same version as Coil, like iOS's single Nuke pin.
   implementation "io.coil-kt.coil3:coil-gif:${coilVersion}"

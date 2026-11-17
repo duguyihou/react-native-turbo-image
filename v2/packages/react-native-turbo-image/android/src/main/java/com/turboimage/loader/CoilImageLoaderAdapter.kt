@@ -7,10 +7,12 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.ImageView
+import coil3.Extras
 import coil3.Image
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.annotation.ExperimentalCoilApi
+import coil3.getExtra
 import coil3.disk.DiskCache
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
@@ -21,10 +23,14 @@ import coil3.network.CacheStrategy
 import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.HttpException
 import coil3.network.NetworkHeaders
+import coil3.network.NetworkRequest
+import coil3.network.NetworkResponse
+import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.httpHeaders
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.Options
 import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.request.transformations
@@ -51,9 +57,11 @@ import android.graphics.Bitmap
  * Cross-platform cache contract (RFC rule 3, mirrored in NukeImageLoader.swift):
  *  * the disk tier is TurboImage's own Coil DiskCache of original bytes, the
  *    same size as Nuke's DataCache,
- *  * HTTP caching is off: OkHttp gets no `Cache`, and Coil's
+ *  * HTTP freshness is ignored there: OkHttp gets no `Cache`, and Coil's
  *    `CacheStrategy.DEFAULT` serves disk hits without consulting
  *    `Cache-Control`, which matches Nuke's `withDataCache` (`urlCache = nil`),
+ *  * except for `cachePolicy="urlCache"` requests (`ResolvedRequest.httpCache`),
+ *    whose disk tier is an HTTP cache: see [PolicyCacheStrategy],
  *  * concurrent requests for the same cache key are de-duplicated, which
  *    matches Nuke's default task coalescing.
  */
@@ -123,6 +131,47 @@ private class LaidOutSizeResolver(private val view: View) : SizeResolver {
 
   private fun currentSize(): Size =
     if (view.width > 0 && view.height > 0) Size(view.width, view.height) else Size.ORIGINAL
+}
+
+/**
+ * Picks the disk-cache rules per request. Coil takes one strategy per
+ * fetcher factory, but the choice is a property of the request (the core's
+ * `httpCache`), so this one delegates on a request extra:
+ *
+ *  * keyed requests: `CacheStrategy.DEFAULT`, where a disk entry is always
+ *    valid and nothing is revalidated;
+ *  * HTTP-cache requests: Coil's `CacheControlCacheStrategy`, which serves an
+ *    entry only while `Cache-Control`/`Expires` say it is fresh, revalidates
+ *    a stale one with `If-None-Match`/`If-Modified-Since`, and refuses to
+ *    store `no-store`. That is what `URLCache` does for Nuke on iOS.
+ *
+ * The two kinds never see each other's entries: the adapter gives HTTP-cache
+ * requests their own disk key (see `diskKey`).
+ */
+@OptIn(ExperimentalCoilApi::class)
+private class PolicyCacheStrategy : CacheStrategy {
+  private val keyed = CacheStrategy.DEFAULT
+  private val http = CacheControlCacheStrategy()
+
+  private fun strategyFor(options: Options) = if (options.getExtra(HTTP_CACHE)) http else keyed
+
+  override suspend fun read(
+    cacheResponse: NetworkResponse,
+    networkRequest: NetworkRequest,
+    options: Options,
+  ) = strategyFor(options).read(cacheResponse, networkRequest, options)
+
+  override suspend fun write(
+    cacheResponse: NetworkResponse?,
+    networkRequest: NetworkRequest,
+    networkResponse: NetworkResponse,
+    options: Options,
+  ) = strategyFor(options).write(cacheResponse, networkRequest, networkResponse, options)
+
+  companion object {
+    /** Set on requests whose disk tier is the HTTP cache. */
+    val HTTP_CACHE = Extras.Key(default = false)
+  }
 }
 
 class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
@@ -207,9 +256,11 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   private fun memoryKeysFor(cacheKey: String) =
     imageLoader.memoryCache?.keys?.filter { it.key == cacheKey }.orEmpty()
 
-  override fun remove(cacheKey: String) {
-    memoryKeysFor(cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
-    imageLoader.diskCache?.remove(cacheKey)
+  override fun remove(request: ResolvedRequest) {
+    memoryKeysFor(request.cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
+    // Both disk namespaces, whichever policy stored the image.
+    imageLoader.diskCache?.remove(request.cacheKey)
+    imageLoader.diskCache?.remove(httpDiskKey(request.url))
   }
 
   override fun clearMemoryCache() {
@@ -257,11 +308,13 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     ImageRequest.Builder(context)
       .data(url)
       .memoryCacheKey(cacheKey)
-      .diskCacheKey(cacheKey)
+      .diskCacheKey(diskKey())
       .memoryCachePolicy(tierPolicy(memoryRead, memoryWrite))
       .diskCachePolicy(tierPolicy(diskRead, diskWrite))
       .networkCachePolicy(if (allowNetwork) CachePolicy.ENABLED else CachePolicy.DISABLED)
       .apply {
+        // Read back by PolicyCacheStrategy, which then applies HTTP freshness.
+        if (httpCache) extras[PolicyCacheStrategy.HTTP_CACHE] = true
         applyDecodeSize(decode, view)
         if (processorKey.isNotEmpty()) {
           transformations(CoreProcessingTransformation(processorKey))
@@ -291,6 +344,17 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     // smaller image *up* to it.
     precision(Precision.INEXACT)
   }
+
+  /**
+   * HTTP-cache entries live in the same Coil DiskCache under their own
+   * prefix and are keyed by URL, the way iOS's URLCache is a separate store
+   * keyed by URL. The prefix cannot collide with a keyed entry: `cacheKey`
+   * defaults to an http(s) URL, and an app would have to choose this exact
+   * string as its explicit key.
+   */
+  private fun ResolvedRequest.diskKey() = if (httpCache) httpDiskKey(url) else cacheKey
+
+  private fun httpDiskKey(url: String) = "turboimage-http:$url"
 
   /** The request's headers, in order; `add` keeps repeated names. */
   private fun ResolvedRequest.networkHeaders(): NetworkHeaders.Builder =
@@ -371,7 +435,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
           add(
             OkHttpNetworkFetcherFactory(
               callFactory = { okHttpClient },
-              cacheStrategy = { CacheStrategy.DEFAULT },
+              cacheStrategy = { PolicyCacheStrategy() },
               concurrentRequestStrategy = { DeDupeConcurrentRequestStrategy() },
             )
           )

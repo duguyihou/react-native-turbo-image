@@ -117,13 +117,23 @@ TEST_P(ResolveRequestLocalPolicy, NeverUsesDiskAndIsAlwaysReadable) {
 
 INSTANTIATE_TEST_SUITE_P(AllPolicies, ResolveRequestLocalPolicy,
                          ::testing::Values(CachePolicy::Default, CachePolicy::MemoryOnly,
-                                           CachePolicy::NoCache, CachePolicy::CacheOnly));
+                                           CachePolicy::NoCache, CachePolicy::CacheOnly,
+                                           CachePolicy::UrlCache));
+
+TEST(ResolveRequestLocal, HasNoHttpCache) {
+  // A local file has no HTTP response to take freshness from.
+  const auto result = resolveRequest(
+      {.uri = "file:///tmp/logo.png", .cachePolicy = CachePolicy::UrlCache});
+  ASSERT_TRUE(result.ok());
+  EXPECT_FALSE(result.request->httpCache);
+}
 
 TEST(ParseCachePolicy, AcceptsExactlyTheJsNames) {
   EXPECT_EQ(parseCachePolicy("default"), CachePolicy::Default);
   EXPECT_EQ(parseCachePolicy("memoryOnly"), CachePolicy::MemoryOnly);
   EXPECT_EQ(parseCachePolicy("noCache"), CachePolicy::NoCache);
   EXPECT_EQ(parseCachePolicy("cacheOnly"), CachePolicy::CacheOnly);
+  EXPECT_EQ(parseCachePolicy("urlCache"), CachePolicy::UrlCache);
   // 1.x names are mapped in JS, never sent to native.
   EXPECT_EQ(parseCachePolicy("dataCache"), std::nullopt);
   EXPECT_EQ(parseCachePolicy(""), std::nullopt);
@@ -149,6 +159,8 @@ struct PolicyCase {
   TierAccess memory;
   TierAccess disk;
   bool allowNetwork;
+  // Whether `disk` means the HTTP cache instead of the keyed disk cache.
+  bool httpCache;
 };
 
 class ResolveRequestPolicy : public ::testing::TestWithParam<PolicyCase> {};
@@ -161,16 +173,32 @@ TEST_P(ResolveRequestPolicy, MapsToTierAccess) {
   EXPECT_EQ(result.request->memory, c.memory);
   EXPECT_EQ(result.request->disk, c.disk);
   EXPECT_EQ(result.request->allowNetwork, c.allowNetwork);
+  EXPECT_EQ(result.request->httpCache, c.httpCache);
 }
 
 INSTANTIATE_TEST_SUITE_P(
     AllPolicies, ResolveRequestPolicy,
     ::testing::Values(
-        PolicyCase{CachePolicy::Default, {true, true}, {true, true}, true},
-        PolicyCase{CachePolicy::MemoryOnly, {true, true}, {false, false}, true},
-        PolicyCase{CachePolicy::NoCache, {false, false}, {false, false}, true},
-        PolicyCase{CachePolicy::CacheOnly, {true, false}, {true, false},
-                   false}));
+        PolicyCase{CachePolicy::Default, {true, true}, {true, true}, true, false},
+        PolicyCase{CachePolicy::MemoryOnly, {true, true}, {false, false}, true,
+                   false},
+        PolicyCase{CachePolicy::NoCache, {false, false}, {false, false}, true,
+                   false},
+        PolicyCase{CachePolicy::CacheOnly, {true, false}, {true, false}, false,
+                   false},
+        PolicyCase{CachePolicy::UrlCache, {true, true}, {true, true}, true,
+                   true}));
+
+TEST(ResolveRequestHttpCache, KeepsTheExplicitKeyForTheMemoryTier) {
+  // The HTTP cache is keyed by URL; `cacheKey` still names the memory entry.
+  const auto result = resolveRequest({.uri = "https://cdn.example.com/a.png?sig=1",
+                                      .cacheKey = "avatar-42",
+                                      .cachePolicy = CachePolicy::UrlCache});
+  ASSERT_TRUE(result.ok());
+  EXPECT_TRUE(result.request->httpCache);
+  EXPECT_EQ(result.request->cacheKey, "avatar-42");
+  EXPECT_EQ(result.request->url, "https://cdn.example.com/a.png?sig=1");
+}
 
 // --- decode size ------------------------------------------------------------
 

@@ -63,18 +63,21 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
                                  completion:(TIImageLoadCompletion)completion;
 
 // Cache management, backing the TurboImageModule (prefetch/dispose/clear*).
-// Every key is a `turboimage::ResolvedRequest::cacheKey`, i.e. already
-// resolved by the core, so views and the module agree on keys.
+// Every request and key is already resolved by the core
+// (`turboimage::ResolvedRequest`), so views and the module agree on keys.
 
 /// Loads `request` into the caches without displaying it. `completion` is
 /// called once on the main thread (not at all after cancel).
 - (id<TIImageLoadTask>)prefetchRequest:(TIImageRequest *)request
                             completion:(void (^)(BOOL succeeded))completion;
 
-/// Evicts the image and its original bytes from memory and disk.
-- (void)removeCachedImageForKey:(NSString *)cacheKey;
+/// Evicts the image `request` names from memory (every processed and sized
+/// variant), from the key-addressed disk cache, and from the HTTP cache.
+/// Only the request's `cacheKey` and `url` matter; its policy does not.
+- (void)removeCachedImageForRequest:(TIImageRequest *)request;
 
 - (void)clearMemoryCache;
+/// Empties both disk stores: the key-addressed cache and the HTTP cache.
 - (void)clearDiskCache;
 
 /// Synchronous memory-cache lookup, for the `memoryCacheKey` placeholder.

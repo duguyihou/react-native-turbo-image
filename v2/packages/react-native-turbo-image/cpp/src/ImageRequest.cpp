@@ -149,6 +149,7 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       .memory = {.read = true, .write = true},
       .disk = {.read = true, .write = true},
       .allowNetwork = true,
+      .httpCache = false,
       .decode = resolveDecodeSize(request, processing),
   };
 
@@ -171,12 +172,17 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       resolved.memory.write = false;
       resolved.disk.write = false;
       break;
+    case CachePolicy::UrlCache:
+      resolved.httpCache = true;
+      break;
   }
   // Applied after the matrix so every policy agrees on local sources: the
   // policy still governs the memory tier, never the disk or the "network".
+  // A local file has no HTTP response, so there is no HTTP cache either.
   if (isLocal) {
     resolved.disk = {.read = false, .write = false};
     resolved.allowNetwork = true;
+    resolved.httpCache = false;
   }
 
   return {.request = std::move(resolved), .error = RequestError::None};
@@ -187,6 +193,7 @@ std::optional<CachePolicy> parseCachePolicy(std::string_view js) {
   if (js == "memoryOnly") return CachePolicy::MemoryOnly;
   if (js == "noCache") return CachePolicy::NoCache;
   if (js == "cacheOnly") return CachePolicy::CacheOnly;
+  if (js == "urlCache") return CachePolicy::UrlCache;
   return std::nullopt;
 }
 

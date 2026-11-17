@@ -148,11 +148,11 @@ RCT_EXPORT_MODULE(TurboImageModule)
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    // The policy is irrelevant for the key; Default resolves it like a
-    // view would.
+    // The policy is irrelevant for the key and the URL; Default resolves
+    // them like a view would.
     const auto built = TIMakeImageRequest(coreRequest(fields, turboimage::CachePolicy::Default));
     if (built.request != nil) {
-      [loader removeCachedImageForKey:built.request.cacheKey];
+      [loader removeCachedImageForRequest:built.request];
     }
   }
   resolve(nil);

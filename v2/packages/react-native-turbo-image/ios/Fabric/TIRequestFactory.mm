@@ -148,6 +148,7 @@ TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &imageRequest,
                                                    processorKey:TIStringFromStd(resolved.processorKey)
                                                       processor:processor
                                                         headers:headerPairs
+                                                      httpCache:resolved.httpCache
                                                      decodeSize:TIDecodeSize(resolved.decode,
                                                                              viewPixelSize)
                                                      decodeFill:resolved.decode.fill];

@@ -77,8 +77,14 @@ export interface NativeProps extends ViewProps {
   placeholder?: NativePlaceholder;
   // These string unions mirror `turboimage::CachePolicy`; the native side
   // converts them to the pinned integer values in cpp/include.
+  //
+  // 'urlCache' is the only policy that obeys HTTP `Cache-Control`: its disk
+  // tier is the platform's HTTP cache (keyed by URL, entries expire and are
+  // revalidated, `no-store` is never stored), separate from the disk cache
+  // the other policies share. So a 'cacheOnly' load does not see what a
+  // 'urlCache' load stored on disk. The memory cache is shared by all.
   cachePolicy?: CodegenTypes.WithDefault<
-    'default' | 'memoryOnly' | 'noCache' | 'cacheOnly',
+    'default' | 'memoryOnly' | 'noCache' | 'cacheOnly' | 'urlCache',
     'default'
   >;
   // 'contain' is 1.x's default (React Native's <Image> defaults to 'cover');

@@ -44,7 +44,12 @@ private final class NukeLoadTask: NSObject, TIImageLoadTask, @unchecked Sendable
 @objc(TurboImageNukeLoader)
 public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendable {
   // `ImagePipeline` is Sendable.
+  /// Every policy but `urlCache`: disk tier = `DataCache`, keyed by `cacheKey`.
   private let pipeline: ImagePipeline
+  /// `urlCache` requests (`TIImageRequest.httpCache`): disk tier = `urlCache`.
+  private let httpPipeline: ImagePipeline
+  /// The HTTP cache behind `httpPipeline`. Kept to evict from and clear it.
+  private let urlCache: URLCache
 
   /// One memory entry of a cache key other than the plain original. Nuke's
   /// memory key is (imageID, thumbnail, processors), so each processed
@@ -76,19 +81,56 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     //   * HTTP caching disabled (`withDataCache` sets `urlCache = nil`), so
     //     `Cache-Control` headers do not affect hits on either platform,
     //   * concurrent requests for the same key are coalesced (Nuke default).
-    var configuration = ImagePipeline.Configuration.withDataCache(
-      name: "com.turboimage.DataCache",
-      sizeLimit: Self.diskCacheBytes
-    )
-    // `withDataCache` reuses `ImageCache.shared`; give TurboImage its own
-    // memory tier so the host app cannot evict or poison it.
-    configuration.imageCache = ImageCache()
+    // Not `ImageCache.shared`: TurboImage gets its own memory tier, so the
+    // host app cannot evict or poison it. Both pipelines share it, because
+    // the memory tier is one cache whatever the disk policy (core rule).
+    let imageCache = ImageCache()
+    pipeline = Self.makePipeline(
+      .withDataCache(name: "com.turboimage.DataCache", sizeLimit: Self.diskCacheBytes),
+      imageCache: imageCache)
+
+    // `cachePolicy="urlCache"`: a second pipeline whose only disk tier is an
+    // HTTP cache. URLSession then does what the policy promises: it serves
+    // an entry while `Cache-Control`/`Expires` say it is fresh, revalidates
+    // a stale one (`If-None-Match`, a 304 costs no body), and never stores
+    // `no-store`. Coil's `CacheControlCacheStrategy` does the same on Android.
+    //
+    // A pipeline of its own because Nuke's `DataCache` sits in front of the
+    // loader and has no notion of freshness: sharing one would serve expired
+    // images. And a `URLCache` of its own, rather than `URLCache.shared` or
+    // Nuke's, so the host app's networking cannot fill or clear it.
+    //
+    // No memory capacity: decoded images are in `imageCache` already.
+    // URLCache does not store a response larger than 5% of its disk capacity
+    // (7.5 MB here); such an image is refetched every time.
+    let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+    urlCache = URLCache(
+      memoryCapacity: 0,
+      diskCapacity: Self.diskCacheBytes,
+      directory: cachesDirectory?.appendingPathComponent("com.turboimage.URLCache", isDirectory: true))
+    let sessionConfiguration = URLSessionConfiguration.default
+    sessionConfiguration.urlCache = urlCache
+    httpPipeline = Self.makePipeline(
+      ImagePipeline.Configuration(dataLoader: DataLoader(configuration: sessionConfiguration)),
+      imageCache: imageCache)
+    super.init()
+  }
+
+  /// What both pipelines have in common; they differ only in their disk tier.
+  private static func makePipeline(
+    _ base: ImagePipeline.Configuration, imageCache: ImageCache
+  ) -> ImagePipeline {
+    var configuration = base
+    configuration.imageCache = imageCache
     configuration.isTaskCoalescingEnabled = true
     // Animated GIF/APNG/WebP and SVG, chosen by content (NukeDecoders.swift).
     configuration.makeImageDecoder = { TurboImageDecoders.make($0) }
     // Skips decompression for animated and SVG images (NukeDecoders.swift).
-    pipeline = ImagePipeline(configuration: configuration, delegate: TurboImagePipelineDelegate())
-    super.init()
+    return ImagePipeline(configuration: configuration, delegate: TurboImagePipelineDelegate())
+  }
+
+  private func pipeline(for request: TIImageRequest) -> ImagePipeline {
+    request.httpCache ? httpPipeline : pipeline
   }
 
   public func loadImage(
@@ -101,7 +143,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
       let variant = Variant(processorKey: request.processorKey, thumbnail: nukeRequest.thumbnail)
       variantsLock.withLock { _ = variants[request.cacheKey, default: []].insert(variant) }
     }
-    let imageTask = pipeline.imageTask(with: nukeRequest)
+    let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
 
     // Progress runs in its own MainActor task. The completion path cancels
     // it *before* calling completion; because both run on the main actor,
@@ -149,7 +191,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     var nukeRequest = Self.makeNukeRequest(from: request)
     // Prefetches yield to on-screen loads.
     nukeRequest.priority = .low
-    let imageTask = pipeline.imageTask(with: nukeRequest)
+    let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
     let completionBox = UncheckedSendable(completion)
     let task = Task { @MainActor in
       let succeeded = (try? await imageTask.response) != nil
@@ -159,17 +201,22 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     return NukeLoadTask(imageTask: imageTask, task: task, progressTask: nil)
   }
 
-  public func removeCachedImage(forKey cacheKey: String) {
+  public func removeCachedImage(for request: TIImageRequest) {
+    let cacheKey = request.cacheKey
     let original = Self.keyOnlyRequest(cacheKey)
     // Decoded image (memory) and processed variants (disk), then the
     // original bytes, which DataCache stores under the data key.
     pipeline.cache.removeCachedImage(for: original, caches: .all)
     pipeline.cache.removeCachedData(for: original)
-    // Variants live in memory only (originals-only disk policy).
+    // Variants live in memory only (originals-only disk policy). The memory
+    // cache is shared, so one pipeline's view of it reaches every entry.
     let seen = variantsLock.withLock { variants.removeValue(forKey: cacheKey) } ?? []
     for variant in seen {
       pipeline.cache.removeCachedImage(for: Self.request(for: variant, of: cacheKey), caches: .memory)
     }
+    // The HTTP cache is keyed by URL. Headers are not part of that identity
+    // here (core rule), so a bare request addresses the entry.
+    urlCache.removeCachedResponse(for: URLRequest(url: request.url))
   }
 
   public func clearMemoryCache() {
@@ -179,6 +226,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
 
   public func clearDiskCache() {
     pipeline.cache.removeAll(caches: .disk)
+    urlCache.removeAllCachedResponses()
   }
 
   public func memoryCachedImage(forKey cacheKey: String) -> UIImage? {
@@ -273,6 +321,14 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     var urlRequest = URLRequest(url: request.url)
     for pair in request.headers where pair.count == 2 {
       urlRequest.addValue(pair[1], forHTTPHeaderField: pair[0])
+    }
+    // HTTP-cache requests run on `httpPipeline`, where the disk tier is the
+    // session's URLCache and the Nuke disk options above address nothing.
+    // The protocol policy (the default) is what honours `Cache-Control`.
+    // URLSession has no per-request "do not store", so a write-only or
+    // read-only HTTP tier cannot be expressed; the core never asks for one.
+    if request.httpCache && !request.diskCacheRead {
+      urlRequest.cachePolicy = .reloadIgnoringLocalCacheData
     }
     var nukeRequest = ImageRequest(urlRequest: urlRequest, options: options)
     // `imageID` keys both Nuke's memory and data caches.

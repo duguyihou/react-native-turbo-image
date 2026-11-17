@@ -35,6 +35,8 @@ const URI_PROCESSED = 'https://picsum.photos/id/1035/600/400';
 
 // 3000×2000, far larger than any card: the downscaling scenarios' source.
 const URI_OVERSIZED = 'https://picsum.photos/id/1039/3000/2000';
+// Used only by the urlCache scenario (picsum sends a long max-age).
+const URI_HTTP_CACHED = 'https://picsum.photos/id/1060/600/400';
 
 // A card's image is as wide as the window minus the content padding and has
 // the 3:2 shape of every picsum fixture, so a downscaled decode of a larger
@@ -85,7 +87,8 @@ type Scenario = {
     | 'prefetch'
     | 'prefetchInvalid'
     | 'dispose'
-    | 'clearCaches';
+    | 'clearCaches'
+    | 'urlCache';
 };
 
 const SCENARIOS: Scenario[] = [
@@ -300,6 +303,17 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
     expectSize: { width: 3000, height: 2000 },
     after: 'downscaled',
+  },
+  {
+    id: 'urlCache',
+    title: 'urlCache loads through the HTTP cache, which cacheOnly cannot see',
+    source: { uri: URI_HTTP_CACHED },
+    cachePolicy: 'urlCache',
+    expect: 'load',
+    // The probe clears the memory cache, which `memoryCacheKeyPlaceholder`
+    // and others read; `clearCaches` already runs after all of those.
+    after: 'clearCaches',
+    kind: 'urlCache',
   },
   {
     id: 'liveText',
@@ -666,6 +680,48 @@ function PrefetchInvalidProbe({ scenario, settle }: { scenario: Scenario; settle
   return <View style={styles.image} />;
 }
 
+// The HTTP cache is a store of its own (RFC §4.2a). Three loads of one URL:
+//   1. `urlCache` loads it (network, stored in the HTTP cache);
+//   2. with the memory cache cleared, `cacheOnly` must miss: the keyed disk
+//      cache was never written;
+//   3. `urlCache` loads it again (from the HTTP cache while it is fresh).
+// Whether step 3 skipped the network is not visible from JS; that was
+// checked against a logging server (RFC §4.2a).
+function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  const [phase, setPhase] = useState<'first' | 'clearing' | 'cacheOnly' | 'again'>('first');
+  const fail = (what: string) => settle(scenario.id, false, 'error', `${phase}: ${what}`);
+  useEffect(() => {
+    if (phase === 'clearing') {
+      TurboImage.clearMemoryCache().then(
+        () => setPhase('cacheOnly'),
+        (e) => settle(scenario.id, false, 'error', `clearMemoryCache rejected: ${e}`)
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+  if (phase === 'clearing') {
+    return <View style={styles.image} />;
+  }
+  return (
+    <TurboImage
+      key={phase}
+      style={styles.image}
+      source={scenario.source}
+      cachePolicy={phase === 'cacheOnly' ? 'cacheOnly' : 'urlCache'}
+      resizeMode="cover"
+      onSuccess={(e) => {
+        if (phase === 'first') setPhase('clearing');
+        else if (phase === 'cacheOnly') fail('cacheOnly found the image in the keyed disk cache');
+        else settle(scenario.id, true, 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`);
+      }}
+      onFailure={(e) => {
+        if (phase === 'cacheOnly' && e.nativeEvent.code === 'notCached') setPhase('again');
+        else fail(`${e.nativeEvent.code}: ${e.nativeEvent.error}`);
+      }}
+    />
+  );
+}
+
 const PROBES = {
   prefetch: PrefetchProbe,
   prefetchInvalid: PrefetchInvalidProbe,
@@ -674,6 +730,7 @@ const PROBES = {
   recycle: RecycleProbe,
   lifecycle: LifecycleProbe,
   supersede: SupersedeProbe,
+  urlCache: UrlCacheProbe,
 } as const;
 
 function ScenarioCard({ scenario, result, settle }: { scenario: Scenario; result?: Result; settle: Settle }) {

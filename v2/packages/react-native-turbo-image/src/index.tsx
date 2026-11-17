@@ -86,9 +86,10 @@ function toNativeSource(source: Source): NativeSource {
 // 2.0's cache policies, owned by the C++ core (cpp/include/turboimage).
 export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 
-// 1.x policy names, still accepted so apps can upgrade without edits.
+// 1.x policy name, still accepted so apps can upgrade without edits. 1.x's
+// other name, 'urlCache', is a real 2.0 policy again (see the native spec).
 // TODO: remove in 3.0.
-export type LegacyCachePolicy = 'urlCache' | 'dataCache';
+export type LegacyCachePolicy = 'dataCache';
 
 export type TurboImageProps = Omit<
   NativeProps,
@@ -133,26 +134,21 @@ export type Indicator = {
 // cause no extra React render at all.
 const INDICATOR_DELAY_MS = 150;
 
-// Maps 1.x names onto 2.0 policies.
-//   * 'dataCache' was 1.x iOS's aggressive data cache; 2.0's 'default' is
-//     exactly that on both platforms (RFC §4.2).
-//   * 'urlCache' respected HTTP Cache-Control on iOS. 2.0 deliberately
-//     ignores HTTP freshness on both platforms, so it also maps to 'default',
-//     with a development-time warning because behaviour can differ.
-const warned = new Set<string>();
+// Maps 1.x's 'dataCache' onto 2.0: it was 1.x iOS's aggressive data cache,
+// and 2.0's 'default' is exactly that on both platforms (RFC §4.2).
+// 'urlCache' needs no mapping: it is a core policy, and honours HTTP
+// Cache-Control on both platforms (1.x did so on iOS only).
+let warnedDataCache = false;
 function resolveCachePolicy(
   policy: TurboImageProps['cachePolicy']
 ): CachePolicy | undefined {
-  if (policy !== 'urlCache' && policy !== 'dataCache') {
+  if (policy !== 'dataCache') {
     return policy;
   }
-  if (__DEV__ && !warned.has(policy)) {
-    warned.add(policy);
+  if (__DEV__ && !warnedDataCache) {
+    warnedDataCache = true;
     console.warn(
-      policy === 'urlCache'
-        ? "TurboImage: cachePolicy 'urlCache' is deprecated and now behaves like 'default'; " +
-            'HTTP Cache-Control headers are no longer honoured. See the 2.0 migration guide.'
-        : "TurboImage: cachePolicy 'dataCache' is deprecated; use 'default' (same behaviour)."
+      "TurboImage: cachePolicy 'dataCache' is deprecated; use 'default' (same behaviour)."
     );
   }
   return 'default';

@@ -36,17 +36,22 @@ interface ImageLoaderAdapter {
 
   fun load(target: ImageView, request: ResolvedRequest, options: DisplayOptions, listener: Listener): LoadHandle
 
-  // Cache management, backing TurboImageModule. Keys are
-  // `ResolvedRequest.cacheKey`s from the core, so views and the module agree.
+  // Cache management, backing TurboImageModule. Requests are resolved by the
+  // core, like a view's, so views and the module agree on every key.
 
   /** Loads into the caches without a view; [onDone] once on the main thread. */
   fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
 
-  /** Evicts the entry from memory and disk. */
-  fun remove(cacheKey: String)
+  /**
+   * Evicts the image [request] names from memory (every processed and sized
+   * variant), from the key-addressed disk cache, and from the HTTP cache.
+   * Only the request's `cacheKey` and `url` matter; its policy does not.
+   */
+  fun remove(request: ResolvedRequest)
 
   fun clearMemoryCache()
 
+  /** Empties both disk stores: the key-addressed cache and the HTTP cache. */
   fun clearDiskCache()
 
   /** Synchronous memory lookup for the `memoryCacheKey` placeholder. Main thread. */

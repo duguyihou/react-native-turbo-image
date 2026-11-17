@@ -73,7 +73,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       val loader = TurboImageLoaders.get(context)
       for (i in 0 until sources.size()) {
         // Policy is irrelevant for the key; DEFAULT resolves it like a view.
-        resolve(sources, i, TurboImageCore.CachePolicy.DEFAULT)?.let { loader.remove(it.cacheKey) }
+        resolve(sources, i, TurboImageCore.CachePolicy.DEFAULT)?.let { loader.remove(it) }
       }
       promise.resolve(null)
     }

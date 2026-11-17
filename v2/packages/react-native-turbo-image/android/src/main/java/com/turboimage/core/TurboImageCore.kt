@@ -17,7 +17,8 @@ object TurboImageCore {
     DEFAULT(0),
     MEMORY_ONLY(1),
     NO_CACHE(2),
-    CACHE_ONLY(3);
+    CACHE_ONLY(3),
+    URL_CACHE(4);
 
     companion object {
       /**
@@ -195,6 +196,12 @@ data class ResolvedRequest(
   val processorKey: String,
   /** Validated headers as alternating names and values (the JNI shape). */
   private val headerFields: Array<String>,
+  /**
+   * The disk tier is the HTTP cache (`cachePolicy="urlCache"`): keyed by
+   * [url], obeying `Cache-Control`, and separate from the disk cache
+   * [cacheKey] addresses. See `ResolvedRequest::httpCache` in the core.
+   */
+  val httpCache: Boolean,
   private val decodeKind: Int,
   private val decodeWidth: Int,
   private val decodeFill: Boolean,
@@ -230,11 +237,11 @@ data class ResolvedRequest(
       memoryRead == other.memoryRead && memoryWrite == other.memoryWrite &&
       diskRead == other.diskRead && diskWrite == other.diskWrite &&
       allowNetwork == other.allowNetwork && processorKey == other.processorKey &&
-      decode == other.decode &&
+      httpCache == other.httpCache && decode == other.decode &&
       headerFields.contentEquals(other.headerFields)
 
   override fun hashCode(): Int =
-    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey, decode)
+    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey, httpCache, decode)
       .hashCode() * 31 + headerFields.contentHashCode()
 }
 

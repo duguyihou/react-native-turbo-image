@@ -40,6 +40,8 @@ turboimage::CachePolicy toCorePolicy(TurboImageViewCachePolicy policy) {
       return turboimage::CachePolicy::NoCache;
     case TurboImageViewCachePolicy::CacheOnly:
       return turboimage::CachePolicy::CacheOnly;
+    case TurboImageViewCachePolicy::UrlCache:
+      return turboimage::CachePolicy::UrlCache;
   }
 }
 

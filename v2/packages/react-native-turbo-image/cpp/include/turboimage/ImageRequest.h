@@ -46,6 +46,11 @@ enum class CachePolicy : std::int32_t {
   NoCache = 2,
   // Serve from memory or disk only; never start a network request.
   CacheOnly = 3,
+  // Memory as usual, but the disk tier is the platform's HTTP cache, which
+  // obeys the response's `Cache-Control` (freshness, revalidation with
+  // ETag/Last-Modified, `no-store`). 1.x's name and, on iOS, 1.x's behaviour.
+  // See `ResolvedRequest::httpCache` for what this means for adapters.
+  UrlCache = 4,
 };
 
 // The JS `resizeMode`. The core needs it for one decision only: how large an
@@ -98,7 +103,7 @@ struct TierAccess {
 };
 
 // Parses the JS spelling ('default' | 'memoryOnly' | 'noCache' |
-// 'cacheOnly'). Unknown or empty strings yield std::nullopt; callers treat
+// 'cacheOnly' | 'urlCache'). Unknown or empty strings yield std::nullopt; callers treat
 // that as Default (Codegen already defaults the view prop). One parser so
 // views and the cache module cannot disagree.
 [[nodiscard]] std::optional<CachePolicy> parseCachePolicy(std::string_view js);
@@ -148,6 +153,20 @@ struct ResolvedRequest {
   TierAccess memory;
   TierAccess disk;
   bool allowNetwork = true;
+  // true: this request's disk tier is the HTTP cache, and `disk` describes
+  // access to that. It is a store of its own, not the key-addressed disk
+  // cache the other policies use:
+  //   * it is keyed by `url` (HTTP caches know nothing of `cacheKey`, which
+  //     still keys the memory tier),
+  //   * an entry is served only while the response's `Cache-Control` /
+  //     `Expires` say it is fresh, is revalidated when stale, and is never
+  //     stored for `no-store`,
+  //   * nothing is read from or written to the key-addressed disk cache, so
+  //     a later `cacheOnly` load does not see what this request stored.
+  // The memory tier holds decoded images and never expires within a process;
+  // that is deliberate (a list must not refetch on every scroll) and the
+  // same on both platforms.
+  bool httpCache = false;
   DecodeSize decode;
 
   friend bool operator==(const ResolvedRequest&, const ResolvedRequest&) =

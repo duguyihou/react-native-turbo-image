@@ -150,7 +150,7 @@ describe('source', () => {
 });
 
 describe('cachePolicy', () => {
-  it.each(['default', 'memoryOnly', 'noCache', 'cacheOnly'] as const)(
+  it.each(['default', 'memoryOnly', 'noCache', 'cacheOnly', 'urlCache'] as const)(
     'passes the 2.0 policy %s through',
     (cachePolicy) => {
       expect(nativeProps(render({ cachePolicy })).cachePolicy).toBe(cachePolicy);
@@ -161,25 +161,30 @@ describe('cachePolicy', () => {
     expect(nativeProps(render()).cachePolicy).toBeUndefined();
   });
 
-  it.each(['urlCache', 'dataCache'] as const)("maps 1.x's %s to default", (cachePolicy) => {
+  it("maps 1.x's dataCache to default", () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(nativeProps(render({ cachePolicy })).cachePolicy).toBe('default');
+    expect(nativeProps(render({ cachePolicy: 'dataCache' })).cachePolicy).toBe('default');
   });
 
-  it('warns once per legacy name, not once per use', () => {
-    // The "already warned" set is module state, so use a fresh copy of the
+  it('does not warn for urlCache: it honours Cache-Control again', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    render({ cachePolicy: 'urlCache' });
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns once for the legacy name, not once per use', () => {
+    // The "already warned" flag is module state, so use a fresh copy of the
     // module. The statics need no React, which keeps the isolated registry
     // from clashing with the test renderer's React instance.
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.isolateModules(() => {
       const fresh = require('../index') as typeof import('../index');
-      fresh.TurboImage.prefetch([AVATAR], 'urlCache');
-      fresh.TurboImage.prefetch([AVATAR], 'urlCache');
       fresh.TurboImage.prefetch([AVATAR], 'dataCache');
+      fresh.TurboImage.prefetch([AVATAR], 'dataCache');
+      fresh.TurboImage.prefetch([AVATAR], 'urlCache');
     });
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(warn.mock.calls[0]?.[0]).toMatch(/'urlCache' is deprecated/);
-    expect(warn.mock.calls[1]?.[0]).toMatch(/'dataCache' is deprecated/);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toMatch(/'dataCache' is deprecated/);
   });
 });
 
