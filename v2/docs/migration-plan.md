@@ -24,7 +24,7 @@ builds, and the CI matrix.
 
 ### Phase 1: CI green and lifecycle hardening
 - [ ] Run `v2-ci.yml` on GitHub-hosted runners and fix any differences from the local runs (runner Xcode version, NDK install, emulator).
-- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios at the time, 35 now, release builds).
+- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios at the time, 38 now, release builds).
 - [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
 - [x] Cross-platform `onFailure.code` taxonomy (RFC §4.4).
 - [x] RN 0.89.0-rc.1 evaluation, scripted (`scripts/eval-rn-version.sh`) and run in CI (non-blocking).
@@ -52,7 +52,7 @@ builds, and the CI matrix.
 | — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
 
-**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening, tracked in `SESSION.md`: self-hosted smoke fixtures, Android SVG at full size, and the first run of `v2-ci.yml` on hosted runners (Phase 1).
+**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening, tracked in `SESSION.md`: Android SVG at full size, and the first run of `v2-ci.yml` on hosted runners (Phase 1).
 
 ### Phase 3: promote `v2/` to the repository root
 1. Tag the final 1.x release and create a `1.x` maintenance branch.

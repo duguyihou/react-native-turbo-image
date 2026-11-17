@@ -5,6 +5,10 @@
 # data (so caches start cold), launches it, and waits for the single
 # `TURBOIMAGE_SMOKE {...}` line App.tsx logs once every scenario settles.
 #
+# The app loads its fixtures from scripts/fixture-server.py, started here on
+# the host. `adb reverse` maps the device's localhost port to the host's, so
+# the app uses the same URLs as on the iOS simulator.
+#
 # Env: SMOKE_SCREENSHOT=<png path> saves a screenshot after the run.
 # Usage: scripts/smoke-android.sh [path/to/app.apk]
 # Exit: 0 when the app reports pass=true, 1 otherwise (including timeout).
@@ -26,7 +30,13 @@ if [[ ! -x "${adb}" ]]; then
   adb="adb"
 fi
 
+# shellcheck source=./fixture-server.sh source-path=SCRIPTDIR
+source "${script_dir}/fixture-server.sh"
+trap 'kill ${fixture_server_pid} 2> /dev/null || true' EXIT
+start_fixture_server
+
 "${adb}" wait-for-device
+"${adb}" reverse "tcp:${fixture_server_port}" "tcp:${fixture_server_port}" > /dev/null
 "${adb}" install -r "${apk}" > /dev/null
 # Cold caches every run: the cacheMiss scenario depends on it.
 "${adb}" shell pm clear "${package}" > /dev/null
@@ -58,9 +68,12 @@ if [[ "${line}" == *'"pass":true'* ]]; then
   echo "PASS (android)"
 else
   echo "FAIL (android)" >&2
-  # Every network scenario fails or times out when the host's connection
-  # drops, which looks like a product bug. Say what the host sees right now.
-  host_status="$(curl -s -o /dev/null -m 5 -w '%{http_code}' https://picsum.photos/id/1/10/10 || true)"
-  echo "host network check (picsum.photos): HTTP ${host_status:-none} (000 = unreachable)" >&2
+  # What the fixture server received says whether a failing load reached the
+  # host at all, and with which headers. A server that was already running
+  # logs wherever it was told to, not here.
+  if [[ -n "${fixture_server_log}" ]]; then
+    echo "last requests seen by the fixture server (${fixture_server_log}):" >&2
+    tail -n 25 "${fixture_server_log}" >&2 || true
+  fi
   exit 1
 fi

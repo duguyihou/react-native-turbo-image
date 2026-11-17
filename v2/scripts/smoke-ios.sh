@@ -6,6 +6,9 @@
 # scenario settles. In Release, React Native forwards console.error to
 # os_log, which is where we read it from.
 #
+# The app loads its fixtures from scripts/fixture-server.py, started here on
+# the host; the simulator shares the host's loopback interface.
+#
 # Env: SMOKE_SCREENSHOT=<png path> saves a screenshot after the run.
 # Usage: scripts/smoke-ios.sh [path/to/App.app] [simulator-udid]
 # Exit: 0 when the app reports pass=true, 1 otherwise (including timeout).
@@ -29,6 +32,12 @@ if [[ "${app}/main.jsbundle" -nt "${newest_artifact}" ]]; then
 fi
 assert_fresh_build "${newest_artifact}" ios
 
+# shellcheck source=./fixture-server.sh source-path=SCRIPTDIR
+source "${script_dir}/fixture-server.sh"
+log_pid=""
+trap 'kill ${log_pid} ${fixture_server_pid} 2> /dev/null || true' EXIT
+start_fixture_server
+
 # Default to the first available iPhone simulator.
 udid="${2:-$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')}"
 if [[ -z "${udid}" ]]; then
@@ -42,7 +51,7 @@ xcrun simctl uninstall "${udid}" "${bundle_id}" 2> /dev/null || true
 xcrun simctl install "${udid}" "${app}"
 
 log_file="$(mktemp "${v2_root}/tmp-smoke-ios.XXXXXX")"
-trap 'kill "${log_pid}" 2> /dev/null || true; rm -f "${log_file}"' EXIT
+trap 'kill ${log_pid} ${fixture_server_pid} 2> /dev/null || true; rm -f "${log_file}"' EXIT
 xcrun simctl spawn "${udid}" log stream --style compact \
   --predicate 'eventMessage CONTAINS "TURBOIMAGE_SMOKE"' > "${log_file}" 2>&1 &
 log_pid=$!
@@ -73,9 +82,12 @@ if [[ "${line}" == *'"pass":true'* ]]; then
   echo "PASS (ios)"
 else
   echo "FAIL (ios)" >&2
-  # Every network scenario fails or times out when the host's connection
-  # drops, which looks like a product bug. Say what the host sees right now.
-  host_status="$(curl -s -o /dev/null -m 5 -w '%{http_code}' https://picsum.photos/id/1/10/10 || true)"
-  echo "host network check (picsum.photos): HTTP ${host_status:-none} (000 = unreachable)" >&2
+  # What the fixture server received says whether a failing load reached the
+  # host at all, and with which headers. A server that was already running
+  # logs wherever it was told to, not here.
+  if [[ -n "${fixture_server_log}" ]]; then
+    echo "last requests seen by the fixture server (${fixture_server_log}):" >&2
+    tail -n 25 "${fixture_server_log}" >&2 || true
+  fi
   exit 1
 fi

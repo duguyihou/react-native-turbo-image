@@ -87,7 +87,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
 - **Validation**: empty URIs and unsupported schemes are rejected, and so are header names that are not RFC 9110 tokens and header values containing CR, LF or NUL (`InvalidHeader`, reported to JS as `invalidRequest`). Passing such a header on would allow header injection; dropping it silently would hide an auth bug.
 - **Schemes.** Remote: `http`, `https`. Local: `file`, `content`, `android.resource`. The core doesn't know the platform, so an Android-only scheme on iOS fails in the loader (as `network`). Local sources never use the disk tier (copying a local file into the cache only costs space) and are always readable: reading one is not a network request, so `cacheOnly` still loads it. The memory tier follows the policy as usual. Both rules are applied after the policy matrix, so every policy agrees (a local source under `urlCache` has no HTTP cache either).
 - **`require()` sources.** JS resolves them with RN's `Image.resolveAssetSource`, which picks the `@2x`/`@3x` file. That gives a dev-server URL in development, a `file://` bundle URL in iOS release builds, and a bare resource name (`src_assets_logo`) in Android release builds. The Android view and module map such names to `android.resource://<package>/<id>` (`SourceUris.kt`, RN's naming rule) before the core sees them, and an unknown name stays schemeless, so the core rejects it. Smoke scenario `requireAsset` loads a bundled PNG with `cacheOnly` in release builds on both platforms.
-- **Headers** (`source.headers`, 1.x's record, pairs or `Headers` forms, normalised in JS to `[{name, value}]` because Codegen props can't express a dictionary): sent in order by both adapters, and by `prefetch`. They are **not** part of the cache key, as in 1.x: a URL is one entry whoever fetched it. Nor are they part of the in-flight identity: concurrent loads of one key are coalesced (Nuke task coalescing, Coil dedup) whatever their headers. Apps that serve per-user content at one URL must pass a per-user `cacheKey`, which separates both. The smoke scenarios `headersSent` / `headersChangeResponse` use httpbin's `Accept`-dependent `/image` (200 vs 406) to prove the header reaches the server, and `headerInjection` checks the rejection.
+- **Headers** (`source.headers`, 1.x's record, pairs or `Headers` forms, normalised in JS to `[{name, value}]` because Codegen props can't express a dictionary): sent in order by both adapters, and by `prefetch`. They are **not** part of the cache key, as in 1.x: a URL is one entry whoever fetched it. Nor are they part of the in-flight identity: concurrent loads of one key are coalesced (Nuke task coalescing, Coil dedup) whatever their headers. Apps that serve per-user content at one URL must pass a per-user `cacheKey`, which separates both. The smoke scenarios `headersSent` / `headersChangeResponse` use the fixture server's `Accept`-dependent `/accept/png` (200 vs 406) to prove the header reaches the server, and `headerInjection` checks the rejection.
 - **Cache key**: an explicit `cacheKey`, otherwise the canonical URI with the scheme and host lower-cased and the fragment dropped. Adapters use this key for **both** the memory and disk tiers (Nuke `imageID`; Coil `memoryCacheKey` + `diskCacheKey`).
 - **Cache policy → tier access matrix**:
 
@@ -148,7 +148,7 @@ tier is an HTTP cache:
 - **The memory tier is shared and unchanged**: keyed by `cacheKey`, and it never expires within a process. A list must not refetch on every scroll. So freshness is checked when an image is not in memory, not on every mount.
 - **Cache module.** `dispose` and `clearDiskCache` also evict from the HTTP cache (by URL).
 - **Limit (iOS).** `URLCache` does not store a response larger than 5% of its capacity, 7.5 MB here; such an image is refetched every time.
-- **Tests.** The core matrix is in GoogleTest. The smoke scenario `urlCache` loads with `urlCache`, clears memory, expects `cacheOnly` to miss (`notCached`), then loads with `urlCache` again. Whether a load reached the network is not visible from JS, so the three header cases were checked once by hand against a logging server, on both platforms (2026-11-17): `max-age=3600` gave one request for two loads, `no-store` two unconditional requests, and `no-cache` + `ETag` a 200 followed by a conditional 304. TODO: that harness is not in the repository or CI.
+- **Tests.** The core matrix is in GoogleTest. The smoke scenario `urlCache` loads with `urlCache`, clears memory, expects `cacheOnly` to miss (`notCached`), then loads with `urlCache` again. Whether a load reached the network is not visible in the events, so each of the three scenarios then asks the fixture server what it received (§8): `urlCache` (`max-age=3600`) must have caused one request for its two loads, `urlCacheNoStore` two unconditional requests, and `urlCacheRevalidate` (`no-cache` + `ETag`) a 200 followed by a conditional 304.
 
 ### 4.3 Threading and ownership contracts
 
@@ -289,7 +289,7 @@ The format is detected from the bytes on both platforms, so 1.x's `format` prop 
 - **Timing.** Per-frame delays are kept by repeating frames on the uniform `UIImage` timeline (repeats share a bitmap). Delays ≤ 10 ms play at 100 ms, the browser rule Android's decoder also follows.
 - **Memory.** iOS decodes every frame up front. Animations over 64 MB decoded fall back to their first frame. Android decodes lazily and has no such limit. TODO: a lazily decoding animated view on iOS.
 - **Processors** apply to the first frame and the result is static, on both platforms (Coil converts animated results to a bitmap for transformations; 1.x Android did the same). TODO: per-frame processing.
-- **User-Agent (Android).** OkHttp's default `okhttp/x` is refused by some hosts (Wikimedia answers 403; 1.x had the same problem), while iOS's CFNetwork default is accepted. The Android client now sends `<App>/<version> TurboImage/<core> (Android <release>)`; `source.headers` can override it.
+- **User-Agent (Android).** OkHttp's default `okhttp/x` is refused by some hosts (Wikimedia answers 403; 1.x had the same problem), while iOS's CFNetwork default is accepted. The smoke scenario `userAgent` loads from a route that answers 403 to that default. The Android client now sends `<App>/<version> TurboImage/<core> (Android <release>)`; `source.headers` can override it.
 - **Tests.** The smoke scenarios `gif`, `apng`, `webp` and `svg` assert loads and intrinsic sizes. Animation was verified with two screenshots a second apart on each platform. There is no event for it.
 
 ### 4.5c Decode size (`allowDownscaling`)
@@ -430,7 +430,18 @@ backed by a non-blocking CI job.
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 35 scenarios in
+
+Every remote fixture comes from `scripts/fixture-server.py`, which the smoke
+scripts start on the host (Python 3, standard library only). The simulator
+shares the host's loopback; the emulator reaches it through `adb reverse`, so
+both platforms load the same `http://localhost:8765` URLs.
+
+- **Why local.** The suite used to load from six third-party hosts. A slow or changed host looked like a product bug, and a public host cannot answer by request header, send chosen `Cache-Control` headers, send slowly on purpose, or say how many requests arrived.
+- **Fixtures** are generated by `scripts/generate-fixtures.py` and committed (`apps/example/fixtures/`, about 410 KB), so the repository carries no third-party artwork and every asserted size is stated in one place.
+- **Trade-off: no TLS.** The suite no longer makes an HTTPS request. TLS is the platform's, not TurboImage's, but a regression in how the adapters configure their HTTP clients for HTTPS would now go unseen. TODO: one opt-in scenario against a real host.
+- **Cleartext.** The Android example allows cleartext HTTP to `localhost` and `10.0.2.2` only (`network_security_config.xml`); iOS already allows local networking.
+
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 38 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -453,7 +464,8 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 35 scenarios in
 - a `require()` asset under `cacheOnly`,
 - `allowHardware={false}`,
 - decode size: a 3000×2000 source decoded at the card's size, then in full with `allowDownscaling={false}` from the disk original,
-- `urlCache`: stored in the HTTP cache, where `cacheOnly` cannot see it,
+- `urlCache`: stored in the HTTP cache, where `cacheOnly` cannot see it, and the requests the server received for a fresh, a `no-store` and a revalidated response,
+- the Android `User-Agent`,
 - the indicator chaining the app's own `onStart` / `onCompletion` handlers.
 
 The result line is compact (`passed`, `total`, failures only), because iOS `os_log` truncates messages at about 1 KB.
@@ -465,7 +477,7 @@ Three of the failing scenarios set `showPlaceholderOnFailure` and carry a blurha
 
 Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27). Test and
 scenario counts are those of the suite when each row was verified: the smoke
-suite had 7 scenarios, then 17, and has 35 now (§8). Rows dated 2026-11-17
+suite had 7 scenarios, then 17, and has 38 now (§8). Rows dated 2026-11-17
 were re-run that day. The SwiftPM and RN 0.89 rows have not been re-run since
 the suite had 7.
 
@@ -480,8 +492,8 @@ the suite had 7.
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 35/35 (2026-11-17) |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 35/35 (2026-11-17) |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 38/38 (2026-11-17) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 38/38 (2026-11-17) |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |

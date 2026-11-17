@@ -18,28 +18,42 @@ import {
 import { TurboImage } from 'react-native-turbo-image';
 import type { TurboImageProps } from 'react-native-turbo-image';
 
-// Distinct picsum ids so scenarios never share cache entries by accident.
-const URI_A = 'https://picsum.photos/id/1025/600/400';
-const URI_NEVER_LOADED = 'https://picsum.photos/id/1043/600/400';
-const URI_KEYED_1 = 'https://picsum.photos/id/1062/600/400';
-const URI_KEYED_2 = 'https://picsum.photos/id/1074/600/400';
-const URI_LIFECYCLE = 'https://picsum.photos/id/1084/600/400';
-// Large enough (~1 MB) that it is still downloading when JS reacts to
-// onStart, so the supersede scenario can cancel it mid-flight.
-const URI_LARGE = 'https://picsum.photos/id/1069/3000/2000';
-const URI_SMALL = 'https://picsum.photos/id/1080/600/400';
+// Every remote fixture comes from scripts/fixture-server.py, which the smoke
+// scripts start on the host. The iOS simulator shares the host's loopback;
+// the Android emulator reaches it through `adb reverse`. Nothing depends on
+// a third-party host, and the server can do what a public one cannot: answer
+// by request header, send chosen Cache-Control headers, send slowly, and
+// report how many requests actually arrived (`/__hits`).
+// The port must match scripts/fixture-server.sh.
+const BASE = 'http://localhost:8765';
+
+// Part of the URLs whose requests the server counts, so a count never
+// includes an earlier run against a server that was left running.
+const RUN = Date.now().toString(36);
+
+// One 600×400 JPEG under any name: a distinct name is a distinct URL, so
+// scenarios never share cache entries by accident.
+const photo = (name: string) => `${BASE}/photo/${name}.jpg`;
+const URI_A = photo('a');
+const URI_NEVER_LOADED = photo('never-loaded');
+const URI_KEYED_1 = photo('keyed-1');
+const URI_KEYED_2 = photo('keyed-2');
+// `/slow/` bodies arrive in small timed writes: several progress events for
+// the lifecycle scenarios, and a large load that is still downloading when
+// JS reacts to onStart, so the supersede scenario can cancel it mid-flight.
+const URI_LIFECYCLE = `${BASE}/slow/photo/lifecycle.jpg`;
+const URI_LARGE = `${BASE}/slow/large/superseded.jpg`;
+const URI_SMALL = photo('small');
 // Used only by the cache-module scenarios (prefetch → dispose chain).
-const URI_PREFETCH = 'https://picsum.photos/id/1050/600/400';
+const URI_PREFETCH = photo('prefetch');
 // Used only by the processed-variant dispose chain.
-const URI_PROCESSED = 'https://picsum.photos/id/1035/600/400';
+const URI_PROCESSED = photo('processed');
 
 // 3000×2000, far larger than any card: the downscaling scenarios' source.
-const URI_OVERSIZED = 'https://picsum.photos/id/1039/3000/2000';
-// Used only by the urlCache scenario (picsum sends a long max-age).
-const URI_HTTP_CACHED = 'https://picsum.photos/id/1060/600/400';
+const URI_OVERSIZED = `${BASE}/large/oversized.jpg`;
 
 // A card's image is as wide as the window minus the content padding and has
-// the 3:2 shape of every picsum fixture, so a downscaled decode of a larger
+// the 3:2 shape of every photo fixture, so a downscaled decode of a larger
 // 3:2 image is exactly the card's size in pixels (give or take rounding).
 const CONTENT_PADDING = 16;
 const CARD_WIDTH_PX = (Dimensions.get('window').width - 2 * CONTENT_PADDING) * PixelRatio.get();
@@ -77,6 +91,9 @@ type Scenario = {
   expectSizeNear?: { width: number; height: number };
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
+  // For the urlCache probe: the requests the server must have seen for the
+  // source after its two loads, and how many of them were conditional.
+  expectHits?: { count: number; conditional: number };
   // Mount only after these scenarios have settled.
   after?: string | string[];
   // Scenarios that need more than one load render a probe instead.
@@ -119,7 +136,7 @@ const SCENARIOS: Scenario[] = [
     title: 'memoryCacheKey placeholder shows the photo loaded above',
     // The source can never load (cacheOnly miss); the placeholder is the
     // `network` scenario's image, taken from the memory cache.
-    source: { uri: 'https://picsum.photos/id/1036/600/400' },
+    source: { uri: photo('never-loaded-2') },
     placeholder: { memoryCacheKey: URI_A },
     showPlaceholderOnFailure: true,
     cachePolicy: 'cacheOnly',
@@ -148,7 +165,7 @@ const SCENARIOS: Scenario[] = [
     title: 'cacheOnly hits the entry written above (fragment ignored)',
     // Upper-case host and a fragment: the core's canonical key must map it
     // to the entry `network` wrote.
-    source: { uri: URI_A.replace('picsum.photos', 'PICSUM.photos') + '#thumb' },
+    source: { uri: URI_A.replace('localhost', 'LOCALHOST') + '#thumb' },
     cachePolicy: 'cacheOnly',
     expect: 'load',
     after: 'network',
@@ -191,7 +208,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'legacyDataCache',
     title: "1.x cachePolicy 'dataCache' + rounded still work",
-    source: { uri: 'https://picsum.photos/id/1011/600/400' },
+    source: { uri: photo('legacy') },
     cachePolicy: 'dataCache',
     rounded: true,
     expect: 'load',
@@ -304,15 +321,39 @@ const SCENARIOS: Scenario[] = [
     expectSize: { width: 3000, height: 2000 },
     after: 'downscaled',
   },
+  // The HTTP cache obeys the response's Cache-Control (RFC §4.2a). Each
+  // probe loads its URL twice with the memory cache cleared in between, then
+  // asks the server what it saw. Sequential: every probe clears the memory
+  // cache, which `memoryCacheKeyPlaceholder` and others read, so the chain
+  // starts after `clearCaches`, which already runs after all of those.
   {
     id: 'urlCache',
-    title: 'urlCache loads through the HTTP cache, which cacheOnly cannot see',
-    source: { uri: URI_HTTP_CACHED },
+    title: 'urlCache: a fresh response is fetched once (max-age)',
+    source: { uri: `${BASE}/cache/fresh/${RUN}.jpg` },
     cachePolicy: 'urlCache',
     expect: 'load',
-    // The probe clears the memory cache, which `memoryCacheKeyPlaceholder`
-    // and others read; `clearCaches` already runs after all of those.
+    expectHits: { count: 1, conditional: 0 },
     after: 'clearCaches',
+    kind: 'urlCache',
+  },
+  {
+    id: 'urlCacheNoStore',
+    title: 'urlCache: no-store is fetched in full every time',
+    source: { uri: `${BASE}/cache/nostore/${RUN}.jpg` },
+    cachePolicy: 'urlCache',
+    expect: 'load',
+    expectHits: { count: 2, conditional: 0 },
+    after: 'urlCache',
+    kind: 'urlCache',
+  },
+  {
+    id: 'urlCacheRevalidate',
+    title: 'urlCache: no-cache is revalidated with its ETag (304)',
+    source: { uri: `${BASE}/cache/revalidate/${RUN}.jpg` },
+    cachePolicy: 'urlCache',
+    expect: 'load',
+    expectHits: { count: 2, conditional: 1 },
+    after: 'urlCacheNoStore',
     kind: 'urlCache',
   },
   {
@@ -321,25 +362,25 @@ const SCENARIOS: Scenario[] = [
     // Asserts the load succeeds with the interaction attached, which
     // exercises the runtime lookup of the Swift class. Whether VisionKit
     // found the text is visible in a screenshot (the Live Text button).
-    source: { uri: 'https://dummyimage.com/600x400/ffffff/000000.png&text=TurboImage+Live+Text' },
+    source: { uri: `${BASE}/text.png` },
     enableLiveTextInteraction: true,
     cachePolicy: 'default',
     expect: 'load',
   },
-  // httpbin's /image answers according to the Accept header (406 when it
+  // `/accept/png` answers according to the Accept header (406 when it
   // cannot), so the outcome proves the header reached the server. noCache
   // because headers deliberately do not key the cache (RFC §4.1).
   {
     id: 'headersSent',
     title: 'source.headers reach the server (Accept: image/png → 200)',
-    source: { uri: 'https://httpbin.org/image', headers: { Accept: 'image/png' } },
+    source: { uri: `${BASE}/accept/png`, headers: { Accept: 'image/png' } },
     cachePolicy: 'noCache',
     expect: 'load',
   },
   {
     id: 'headersChangeResponse',
     title: 'a different header changes the response (Accept: JSON → 406)',
-    source: { uri: 'https://httpbin.org/image', headers: [['Accept', 'application/json']] },
+    source: { uri: `${BASE}/accept/png`, headers: [['Accept', 'application/json']] },
     cachePolicy: 'noCache',
     expect: 'error',
     expectCode: 'network',
@@ -351,7 +392,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'headerInjection',
     title: 'a header value with CR/LF is rejected by the core',
-    source: { uri: 'https://httpbin.org/image', headers: { 'X-Test': 'a\r\nX-Injected: 1' } },
+    source: { uri: `${BASE}/accept/png`, headers: { 'X-Test': 'a\r\nX-Injected: 1' } },
     cachePolicy: 'noCache',
     expect: 'error',
     expectCode: 'invalidRequest',
@@ -362,17 +403,15 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'gif',
     title: 'animated GIF',
-    source: { uri: 'https://upload.wikimedia.org/wikipedia/commons/2/2c/Rotating_earth_%28large%29.gif' },
+    source: { uri: `${BASE}/anim.gif` },
     cachePolicy: 'default',
     expect: 'load',
-    expectSize: { width: 400, height: 400 },
+    expectSize: { width: 120, height: 120 },
   },
   {
     id: 'apng',
     title: 'animated PNG (APNG)',
-    source: {
-      uri: 'https://upload.wikimedia.org/wikipedia/commons/1/14/Animated_PNG_example_bouncing_beach_ball.png',
-    },
+    source: { uri: `${BASE}/anim.png` },
     cachePolicy: 'default',
     expect: 'load',
     expectSize: { width: 100, height: 100 },
@@ -380,15 +419,24 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'webp',
     title: 'animated WebP',
-    source: { uri: 'https://www.gstatic.com/webp/animated/1.webp' },
+    source: { uri: `${BASE}/anim.webp` },
     cachePolicy: 'default',
     expect: 'load',
-    expectSize: { width: 300, height: 225 },
+    expectSize: { width: 160, height: 120 },
   },
   {
     id: 'svg',
     title: 'SVG (size is the view size on Android, the canvas on iOS)',
-    source: { uri: 'https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/android.svg' },
+    source: { uri: `${BASE}/logo.svg` },
+    cachePolicy: 'default',
+    expect: 'load',
+  },
+  {
+    id: 'userAgent',
+    title: "the User-Agent is not OkHttp's default, which some CDNs refuse",
+    // `/ua/` answers 403 to `okhttp/x`, as Wikimedia does (RFC §4.5b). iOS
+    // sends CFNetwork's User-Agent and passes either way.
+    source: { uri: `${BASE}/ua/photo.jpg` },
     cachePolicy: 'default',
     expect: 'load',
   },
@@ -408,7 +456,7 @@ const SCENARIOS: Scenario[] = [
     title: 'allowHardware={false} still loads (Android: software bitmap)',
     // The bitmap's config is not visible from JS; it was checked once with
     // a temporary log (HARDWARE by default, ARGB_8888 with this prop).
-    source: { uri: 'https://picsum.photos/id/1016/600/400' },
+    source: { uri: photo('software') },
     allowHardware: false,
     cachePolicy: 'default',
     expect: 'load',
@@ -420,7 +468,7 @@ const SCENARIOS: Scenario[] = [
     // The spinner is driven by onStart/onCompletion inside <TurboImage>;
     // this checks the app's own handlers are still called around it. That
     // the spinner is drawn was checked by screenshot on a slow load.
-    source: { uri: 'https://picsum.photos/id/1015/600/400' },
+    source: { uri: `${BASE}/slow/photo/indicator.jpg` },
     indicator: { style: 'large', color: '#e63946' },
     cachePolicy: 'noCache',
     expect: 'load',
@@ -681,14 +729,15 @@ function PrefetchInvalidProbe({ scenario, settle }: { scenario: Scenario; settle
 }
 
 // The HTTP cache is a store of its own (RFC §4.2a). Three loads of one URL:
-//   1. `urlCache` loads it (network, stored in the HTTP cache);
+//   1. `urlCache` loads it (network; stored in the HTTP cache if allowed);
 //   2. with the memory cache cleared, `cacheOnly` must miss: the keyed disk
 //      cache was never written;
-//   3. `urlCache` loads it again (from the HTTP cache while it is fresh).
-// Whether step 3 skipped the network is not visible from JS; that was
-// checked against a logging server (RFC §4.2a).
+//   3. `urlCache` loads it again: from the HTTP cache, from the network, or
+//      revalidated, depending on the response's Cache-Control.
+// Which of those step 3 was is not visible in the events, so the probe then
+// asks the fixture server what it received (`expectHits`).
 function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
-  const [phase, setPhase] = useState<'first' | 'clearing' | 'cacheOnly' | 'again'>('first');
+  const [phase, setPhase] = useState<'first' | 'clearing' | 'cacheOnly' | 'again' | 'counting'>('first');
   const fail = (what: string) => settle(scenario.id, false, 'error', `${phase}: ${what}`);
   useEffect(() => {
     if (phase === 'clearing') {
@@ -697,6 +746,20 @@ function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
         (e) => settle(scenario.id, false, 'error', `clearMemoryCache rejected: ${e}`)
       );
     }
+    if (phase === 'counting') {
+      const path = uriOf(scenario.source).slice(BASE.length);
+      fetch(`${BASE}/__hits?path=${encodeURIComponent(path)}`)
+        .then((response) => response.json())
+        .then(
+          (hits: { count: number; conditional: number }) => {
+            const want = scenario.expectHits;
+            const ok = want !== undefined && hits.count === want.count && hits.conditional === want.conditional;
+            const saw = `${hits.count} request(s), ${hits.conditional} conditional`;
+            settle(scenario.id, ok, 'load', ok ? saw : `${saw}; expected ${want?.count}, ${want?.conditional}`);
+          },
+          (e) => settle(scenario.id, false, 'error', `could not read the server's request count: ${e}`)
+        );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
   if (phase === 'clearing') {
@@ -704,15 +767,16 @@ function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
   }
   return (
     <TurboImage
-      key={phase}
+      // The image stays mounted while the server is asked.
+      key={phase === 'counting' ? 'again' : phase}
       style={styles.image}
       source={scenario.source}
       cachePolicy={phase === 'cacheOnly' ? 'cacheOnly' : 'urlCache'}
       resizeMode="cover"
-      onSuccess={(e) => {
+      onSuccess={() => {
         if (phase === 'first') setPhase('clearing');
         else if (phase === 'cacheOnly') fail('cacheOnly found the image in the keyed disk cache');
-        else settle(scenario.id, true, 'load', `${e.nativeEvent.width}×${e.nativeEvent.height}`);
+        else if (phase === 'again') setPhase('counting');
       }}
       onFailure={(e) => {
         if (phase === 'cacheOnly' && e.nativeEvent.code === 'notCached') setPhase('again');
