@@ -1,8 +1,10 @@
 # Native dependency compatibility matrix
 
-Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16.
+Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16; rows that say 35/35 or 90/90 on 2026-11-17.
 
 Legend: ✅ verified by building (and running, where noted) · 🟡 builds, needs more verification · 🔬 evaluation only · ❌ incompatible · — not applicable
+
+Smoke results are recorded as passed/total of the suite when the row was verified. "7/7" rows date from the 7-scenario suite and have not been re-run against today's 35 scenarios (RFC §8).
 
 ## Production baseline (TurboImage 2.0.0-alpha.0)
 
@@ -11,13 +13,13 @@ Legend: ✅ verified by building (and running, where noted) · 🟡 builds, need
 | React Native | 0.88.1 | Node ≥ 22.11, New Architecture | ✅ example runs on iOS and Android |
 | Nuke (SwiftPM) | 13.2.3 (`exact:`) | iOS 15, Swift tools 6.0 | ✅ standalone + in app via RN SPM |
 | Nuke (CocoaPods) | 13.2.3, vendored xcframework | Same tag, built by `build-nuke-xcframework.sh` | ✅ example runs |
-| Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug run; R8 release smoke test 7/7 |
+| Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`, `coil-network-cache-control`, `coil-gif`, `coil-svg`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug run; R8 release smoke test 35/35 |
 | Kotlin (app) | 2.4.21 | — | ✅ |
 | AGP | 9.2.1 (from RN) | Gradle 9.4.1, JDK 17 | ✅ |
 | Android NDK | 27.1.12297006 | — | ✅ (16 KB page alignment set) |
 | compileSdk / targetSdk / minSdk | 37 / 36 / 24 | — | ✅ |
 | C++ standard | C++20 | Apple Clang (Xcode 27.2), NDK Clang, CMake ≥ 3.22 | ✅ |
-| GoogleTest | 1.17.0 | — | ✅ 27/27 on host (Apple Clang) and on the Android arm64 emulator |
+| GoogleTest | 1.17.0 | — | ✅ 90/90 on host (Apple Clang) and on the Android arm64 emulator |
 | Bun | 1.3.13, hoisted linker | — | ✅ |
 | react-native-safe-area-context (example only) | 5.11.1 | — | ✅ |
 | Xcode | 27.2 (local) | Swift tools ≥ 6.2 for Package.swift | ✅ |
@@ -47,7 +49,7 @@ Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 | iOS integration | CocoaPods | RN SwiftPM (0.88 preview) |
 |---|---|---|
 | Debug, simulator | ✅ runs | ✅ runs |
-| Release, simulator | ✅ smoke test 7/7 | ✅ smoke test 7/7 |
+| Release, simulator | ✅ smoke test 35/35 | ✅ smoke test 7/7 |
 | Device (arm64) | 🟡 compiles and links (unsigned Release); not run | 🟡 compiles and links (unsigned Release); not run |
 | `use_frameworks! :linkage => :static` | 🟡 not yet built | — |
 
@@ -56,8 +58,10 @@ Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 See RFC §4.2. Things to re-verify on every Nuke or Coil bump:
 
 - [ ] `imageID` (Nuke) and `memoryCacheKey`/`diskCacheKey` (Coil) still key both tiers.
-- [ ] HTTP caching is still disabled (`withDataCache` sets `urlCache = nil`; `CacheStrategy.DEFAULT` semantics).
+- [ ] HTTP caching is still disabled for keyed requests (`withDataCache` sets `urlCache = nil`; `CacheStrategy.DEFAULT` semantics).
+- [ ] `urlCache` still obeys `Cache-Control` on both platforms (RFC §4.2a). Coil's `CacheControlCacheStrategy` is `@ExperimentalCoilApi`; the smoke test cannot see the network, so re-run the logging-server check.
+- [ ] Decode-time downscaling still holds (RFC §4.5c): the smoke scenarios `downscaled` and `fullSize`.
 - [ ] Coil's `DeDupeConcurrentRequestStrategy` still exists. It is `@ExperimentalCoilApi`.
 - [ ] Cancellation drops callbacks (`ImageTask.cancel` / `Disposable.dispose`).
 - [ ] Error classification still holds. The smoke test's `cacheMiss` expects `notCached` (Nuke `dataMissingInCache`; Coil's synthetic 504).
-- [ ] The R8 mapping keeps `com.turboimage.core.{ResolvedRequest,ResolveFailure,TurboImageCore}` (CI asserts this).
+- [ ] The R8 mapping keeps `com.turboimage.core.{ResolvedRequest,ResolveFailure,PlaceholderPixels,TurboImageCore}` (CI asserts this).

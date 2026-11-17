@@ -22,8 +22,9 @@ export type NativeSource = Readonly<{
   headers?: ReadonlyArray<NativeHeader>;
 }>;
 
-// Shown until the image loads, and kept if it fails. Decoded by the shared
-// C++ core off the main thread. Provide at most one (validated in JS).
+// Shown until the image loads. If the load fails it is removed, unless
+// `showPlaceholderOnFailure` is set. Decoded by the shared C++ core off the
+// main thread. Provide at most one (validated in JS, development only).
 export type NativePlaceholder = Readonly<{
   blurhash?: string;
   // Base64, as produced by `thumbhash`'s rgbaToThumbHash + base64 encoding.

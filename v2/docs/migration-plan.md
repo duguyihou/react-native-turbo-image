@@ -24,7 +24,7 @@ builds, and the CI matrix.
 
 ### Phase 1: CI green and lifecycle hardening
 - [ ] Run `v2-ci.yml` on GitHub-hosted runners and fix any differences from the local runs (runner Xcode version, NDK install, emulator).
-- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios, release builds).
+- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios at the time, 35 now, release builds).
 - [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
 - [x] Cross-platform `onFailure.code` taxonomy (RFC §4.4).
 - [x] RN 0.89.0-rc.1 evaluation, scripted (`scripts/eval-rn-version.sh`) and run in CI (non-blocking).
@@ -34,8 +34,8 @@ builds, and the CI matrix.
 ### Phase 2: pipeline parity with 1.x (ordered by usage)
 | 1.x feature | 2.0 home | Notes |
 |---|---|---|
-| `cachePolicy` `urlCache`/`dataCache` | JS compatibility shim | ✅ both map to `'default'`, with development warnings; `urlCache` no longer honours HTTP headers (RFC §4.4b) |
-| `resizeMode` default, `showPlaceholderOnFailure`, `fadeDuration`, `rounded` | Native props + JS | ✅ 1.x defaults kept (RFC §4.4b) |
+| `cachePolicy` `urlCache`/`dataCache` | `urlCache`: a core policy backed by an HTTP cache on both platforms. `dataCache`: JS compatibility shim | ✅ done. `urlCache` honours `Cache-Control` (freshness, revalidation, `no-store`), now on Android too; its disk store is separate from the keyed one (RFC §4.2a). `dataCache` maps to `'default'` with a development warning (RFC §4.4b) |
+| `resizeMode` default, `showPlaceholderOnFailure`, `fadeDuration`, `rounded` | Native props + JS | ✅ 1.x defaults kept, except `fadeDuration`: 300 ms on both platforms (1.x Android: 100 ms), and it now also applies over a placeholder (RFC §4.4b) |
 | `cacheKey` | ✅ done | |
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ done. Blurhash and thumbhash are byte-exact vs. the references; `memoryCacheKey` is a memory lookup via the seam |
@@ -49,6 +49,8 @@ builds, and the CI matrix.
 | Video thumbnails (1.x Android `coil-video`) | Not ported | ✅ nothing to port: 1.x declared the dependency but never registered `VideoFrameDecoder`, so it never worked |
 | Local assets / `require()` sources | Core scheme handling | ✅ done (RFC §4.1). `require()` is new in 2.0 (1.x only took `{ uri }`); `file://`, `content://`, `android.resource://` are explicit now (1.x loaded them by accident). Local sources skip the disk tier and load under `cacheOnly` |
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
+| — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
+| — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
 
 **Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening, tracked in `SESSION.md`: the Android "no progress events" smoke flake, Android SVG sharpness, self-hosted smoke fixtures, and the first run of `v2-ci.yml` on hosted runners (Phase 1).
 
@@ -71,9 +73,15 @@ builds, and the CI matrix.
 - Old Architecture is no longer supported.
 - Requires RN ≥ 0.88 and **Kotlin ≥ 2.3** (Coil 3.6.3).
 - tvOS support is dropped until requested (1.x listed it in the podspec).
-- `cachePolicy` values are renamed (with a shim during 2.x).
-- HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
+- `cachePolicy` `dataCache` is renamed `default` (with a shim during 2.x).
+- HTTP `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`, which honours them on both platforms (1.x: iOS only). What `urlCache` stores on disk is not visible to `cacheOnly`, and the reverse.
+- Images are decoded no larger than their view by default, and `onSuccess` reports that decoded size, not the source's. A view that is zoomed, or grows after the image loaded, needs `allowDownscaling={false}`.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- When `source` (or a processor prop) changes, the previous image stays on screen until the new one has loaded; 1.x blanked the view. Lists that reuse views (FlashList) must pass a `recyclingKey`, such as the row's id, or a reused row briefly shows the previous row's image.
+- `fadeDuration` defaults to 300 ms on Android too (1.x Android: 100 ms). Set `fadeDuration={100}` to keep the old timing.
+- The fade now runs when a placeholder is set, cross-fading from the placeholder to the image. 1.x forced it to 0 in that case; set `fadeDuration={0}` to keep that.
+- Passing more than one placeholder kind throws only in development builds; in release builds native picks one. 1.x threw in every build.
+- `showPlaceholderOnFailure` without a `placeholder` is a no-op. 1.x threw.
 - `isProgressiveImageRenderingEnabled` is ignored (it had no effect in 1.x either).
 - `indicator` appears only for loads that take longer than 150 ms, and is never shown together with a `placeholder` (1.x iOS showed whichever prop was set last).
 - `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.

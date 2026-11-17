@@ -13,9 +13,10 @@ TurboImage 2.0 is a New Architecture-only rewrite. It has four parts:
 - **replaceable loader adapters**: Nuke 13.2.3 on iOS and Coil 3.6.3 on Android,
 - a **Bun-workspace monorepo** under `v2/` that builds with SwiftPM (or CocoaPods), Gradle and CMake.
 
-This RFC fixes the toolchain baseline and the module boundaries. It does not
-design the full image pipeline. Pipeline work starts only after the minimal
-example builds on both platforms, a gate that has now been met (§9).
+This RFC fixes the toolchain baseline and the module boundaries. Pipeline work
+was held back until the minimal example built on both platforms. That gate has
+been met (§9), and the port of the 1.x pipeline that followed is recorded in
+§4.2a and §4.4–§4.5c.
 
 ## 2. Goals and non-goals
 
@@ -26,11 +27,20 @@ Goals:
 3. SwiftPM is the preferred iOS integration, and CocoaPods behaves the same during the migration.
 4. Every production dependency is pinned. Pre-releases are evaluated in separate CI jobs.
 
-Non-goals for this milestone (TODO, pipeline milestone):
+Non-goals:
 
-- the 1.x feature set: placeholders (blurhash/thumbhash), processors, GIF/APNG/SVG, prefetch, cache-management APIs, progress events,
 - tvOS, visionOS and macOS targets,
 - the Old Architecture and the interop layer.
+
+The 1.x feature set (placeholders, processors, GIF/APNG/SVG, prefetch,
+cache-management APIs, progress events) was a non-goal of the toolchain
+milestone this RFC started as. It was ported once the gate was met and is now
+in scope: §4.2a, §4.4–§4.5c, and Phase 2 of `docs/migration-plan.md`. Six
+things went beyond 1.x parity along the way, each recorded where it is
+specified: `require()` sources (§4.1), the `memoryOnly` / `noCache` /
+`cacheOnly` policies (§4.1), `urlCache` honouring HTTP headers on Android as
+well as iOS (§4.2a), `recyclingKey` (§4.4d), the Android `User-Agent` (§4.5b),
+and `allowDownscaling` (§4.5c).
 
 ## 3. Technology baseline
 
@@ -53,7 +63,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
 ## 4. Architecture
 
 ```
-            JS  <TurboImage source placeholder cachePolicy resizeMode resize blur monochrome tint on{…}>
+            JS  <TurboImage source placeholder cachePolicy resizeMode recyclingKey allowDownscaling resize blur monochrome tint on{…}>
                          │  Codegen (TurboImageSpec)
         ┌────────────────┴─────────────────┐
   iOS   │ TurboImageComponentView (ObjC++) │   TurboImageView/Manager (Kotlin)   Android
@@ -193,7 +203,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 | `cachePolicy` `'dataCache'` | Mapped to `'default'` in JS | Same behaviour (RFC §4.2); warns in development |
 | `cachePolicy` `'urlCache'` | A core policy (§4.2a) | Honours HTTP `Cache-Control`, as on 1.x iOS. **Behaviour differs on Android**, which now does the same |
 | `showPlaceholderOnFailure` (default `false`) | Native prop, same default | When false, the placeholder is removed on failure, including a decode that finishes after the failure |
-| `fadeDuration` (default 300 ms) | Native prop, same default | Skipped for memory-cache hits on both platforms: Coil's crossfade rule, mirrored on iOS through a `fromMemoryCache` flag on the seam completion |
+| `fadeDuration` (default 300 ms on iOS, 100 ms on Android) | Native prop, default 300 ms on both | **Behaviour differs.** Android's default rises from 100 ms (Coil's) to 300 ms so both platforms agree. 1.x also forced the fade to 0 whenever a placeholder was set; 2.0 cross-fades from the placeholder to the image. Skipped for memory-cache hits on both platforms: Coil's crossfade rule, mirrored on iOS through a `fromMemoryCache` flag on the seam completion |
 | `rounded` | JS clipping container | Same approach as 1.x. Android's `ImageView` content isn't clipped by RN's border drawing, so a container keeps both platforms identical |
 | `indicator` | JS only: an `<ActivityIndicator>` over the native view | Driven by `onStart` / `onCompletion` (which ends every started load: success, failure or cancelled), so both platforms behave identically with no native code. The spinner appears only if the load is still running after 150 ms: cache hits finish within a frame or two, and a spinner that short reads as flicker. Such loads also cause no extra React render. Not shown when a `placeholder` is given (1.x Android's rule). The app's own handlers are chained (smoke scenario `indicatorEvents`). Using it wraps the image in a container `View`, like `rounded` |
 | `allowHardware` (default `true`) | Android-only native prop; ignored on iOS | `false` forces a software bitmap for code that reads pixels or draws to a software canvas. It is a `DisplayOptions` field on the Android loader seam, next to the fade duration: a view-level choice, not part of `ResolvedRequest`, so it never affects cache keys. Changing it reloads; Coil does not reuse a cached hardware bitmap for such a request |
@@ -234,11 +244,11 @@ decides what a view shows while a *new* load runs, after a request prop
 `cpp/include/turboimage/Placeholder.h` is the only decoder, replacing four
 1.x ports (Swift and Kotlin × blurhash and thumbhash).
 
-- **Exactness.** The decoders are ports of npm `blurhash` 2.0.5 and `thumbhash` 0.1.1. GoogleTest goldens come from those references (`cpp/tests/tools/generate-placeholder-goldens.mjs`, pinned devDependencies), and the C++ output matches them **byte for byte**. That holds on macOS arm64 (Apple Clang) and on the Android arm64 emulator (NDK Clang, bionic `libm`, `scripts/test-core-android.sh`). CI adds Linux GCC and Android x86_64.
+- **Exactness.** The decoders are ports of npm `blurhash` 2.0.5 and `thumbhash` 0.1.1. GoogleTest goldens come from those references (`cpp/tests/tools/generate-placeholder-goldens.mjs`, pinned devDependencies), and the C++ output matches them **byte for byte**. That holds on macOS arm64 (Apple Clang) and on the Android arm64 emulator (NDK Clang, bionic `libm`, `scripts/test-core-android.sh`). CI adds Linux GCC, Linux Clang and Android x86_64.
 - **FP contraction.** `#pragma STDC FP_CONTRACT OFF` is required. Clang fuses `a*b + c` into FMA by default on arm64, which rounds differently and would make the platforms disagree.
 - **Untrusted input.** Lengths and alphabets are validated. The JS thumbhash reference reads past the end of a truncated hash; the port returns `nullopt` instead.
 - **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main behind a generation counter plus a "final image shown" flag. 1.x had no such guard and could show a stale placeholder after `source` changed.
-- **Lifetime.** The placeholder is shown until the image loads and **kept on failure**, on both platforms. Android needed a Coil target subclass for this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
+- **Lifetime.** The placeholder is shown until the image loads. On failure it is removed by default and kept only with `showPlaceholderOnFailure` (1.x's rule, §4.4b), on both platforms. Android needed a Coil target subclass so that the view decides this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
 - **`memoryCacheKey`.** This is a synchronous memory-cache lookup through the seam (`memoryCachedImageForKey:` / `memoryCachedDrawable`), keyed by the core's `canonicalCacheKey`, so it matches what a view stored. Coil keys memory entries by key *plus* extras (e.g. the resolved size), so the Android adapter matches on the key string across the key set.
 
 ### 4.5a Processors (resize, blur, monochrome, tint)
@@ -323,7 +333,7 @@ Rules:
 - **Public API**: the only public headers are `ios/LoaderAPI/include/*.h`, which are plain ObjC. No Nuke type and no C++ type appears in any public header or in the JS API.
 - **No Swift/C++ interop**: Swift never imports C++. The ObjC++ view converts core results into `TIImageRequest`. This avoids `-cxx-interoperability-mode`, which would spread to every target that imports the Swift module.
 - **Adapter lookup by name**: `TIImageLoaderRegistry` finds the default adapter with `NSClassFromString(@"TurboImageNukeLoader")`. Importing the Swift adapter from the seam would invert the layering and create a SwiftPM cycle. The trade-off is that a name typo fails at runtime, not at link time; the example app exercises this lookup in CI. Apps can replace the adapter with `TIImageLoaderRegistry.sharedLoader = …`.
-- **CocoaPods equivalence**: `TurboImage.podspec` compiles the same four trees into one pod. The sources are written to work under both: `#if canImport(TurboImageLoaderAPI)`, quoted seam includes, and `cpp/include` on the header search path. Swift 6 mode, C++20 and the Nuke tag are the same in both.
+- **CocoaPods equivalence**: `TurboImage.podspec` compiles the same five trees into one pod. The sources are written to work under both: `#if canImport(TurboImageLoaderAPI)`, quoted seam includes, and `cpp/include` on the header search path. Swift 6 mode, C++20 and the Nuke tag are the same in both.
 
 ### 4.8 Android layout
 
@@ -420,7 +430,7 @@ backed by a non-blocking CI job.
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
 (`scripts/smoke-{ios,android}.sh`) against release builds with cold caches.
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 17 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 35 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -435,21 +445,34 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 17 scenarios in
 - the placeholder being removed on failure by default,
 - the 1.x `dataCache` name together with `rounded`,
 - the `memoryCacheKey` placeholder,
-- the cache module: prefetch then `cacheOnly`, dispose, clearing both tiers, and prefetch of an invalid source.
+- the cache module: prefetch then `cacheOnly`, dispose, clearing both tiers, and prefetch of an invalid source,
+- processors: a processed variant read with `cacheOnly` from another view's original, a plain read after a processed one, and dispose evicting every variant,
+- Live Text (iOS; a plain load on Android),
+- request headers: sent, changing the response, and an injection attempt rejected,
+- formats: GIF, APNG, animated WebP and SVG,
+- a `require()` asset under `cacheOnly`,
+- `allowHardware={false}`,
+- decode size: a 3000×2000 source decoded at the card's size, then in full with `allowDownscaling={false}` from the disk original,
+- `urlCache`: stored in the HTTP cache, where `cacheOnly` cannot see it,
+- the indicator chaining the app's own `onStart` / `onCompletion` handlers.
 
 The result line is compact (`passed`, `total`, failures only), because iOS `os_log` truncates messages at about 1 KB.
 
-The failing scenarios carry blurhash and thumbhash placeholders, which must stay visible (`SMOKE_SCREENSHOT=…`). The Android job also runs the core goldens on the emulator (`scripts/test-core-android.sh`).
+Three of the failing scenarios set `showPlaceholderOnFailure` and carry a blurhash, thumbhash or `memoryCacheKey` placeholder, which must stay visible; a fourth leaves the prop off and must end blank (`SMOKE_SCREENSHOT=…`). The Android job also runs the core goldens on the emulator (`scripts/test-core-android.sh`).
 
 
 ## 9. Gate status: the minimal example builds and runs
 
-Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
+Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27). Test and
+scenario counts are those of the suite when each row was verified: the smoke
+suite had 7 scenarios, then 17, and has 35 now (§8). Rows dated 2026-11-17
+were re-run that day. The SwiftPM and RN 0.89 rows have not been re-run since
+the suite had 7.
 
 | Check | Result |
 |---|---|
-| C++ core, 27 GoogleTests (host CMake) | ✅ pass |
-| C++ core, 27 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages) | ✅ pass |
+| C++ core, 90 GoogleTests (host CMake, 2026-11-17) | ✅ pass |
+| C++ core, 90 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-17) | ✅ pass |
 | iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
@@ -457,8 +480,8 @@ Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27):
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 17/17 |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 17/17 |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 35/35 (2026-11-17) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 35/35 (2026-11-17) |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |

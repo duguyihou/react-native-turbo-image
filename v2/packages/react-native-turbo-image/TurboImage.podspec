@@ -5,7 +5,8 @@ package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 # CocoaPods path for TurboImage 2.0, kept during the SwiftPM migration.
 #
 # Behaviour must match Package.swift (RFC rule 6):
-#   * same source trees (cpp/, ios/LoaderAPI, ios/Nuke, ios/Fabric),
+#   * same source trees (cpp/, ios/LoaderAPI, ios/Nuke, ios/LiveText,
+#     ios/Fabric),
 #   * same public headers (ios/LoaderAPI/include only; C++ stays private so
 #     the module stays importable from Swift),
 #   * same Nuke tag (scripts/native-versions.env), delivered as a vendored

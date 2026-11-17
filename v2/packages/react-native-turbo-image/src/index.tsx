@@ -192,7 +192,13 @@ function TurboImageComponent({
   };
 
   // Same rule as 1.x: one placeholder kind at a time. Native would silently
-  // pick one; failing loudly in development is kinder.
+  // pick one; failing loudly in development is kinder. Unlike 1.x this does
+  // not throw in release builds: a wrong placeholder is not worth a crash.
+  //
+  // Intentionally omitted: 1.x also threw for `showPlaceholderOnFailure`
+  // without a placeholder. That combination is harmless (there is nothing to
+  // keep), so 2.0 accepts it. Both are listed under "Breaking changes" in
+  // docs/migration-plan.md.
   if (__DEV__ && props.placeholder) {
     const kinds = Object.values(props.placeholder).filter(Boolean).length;
     if (kinds > 1) {
