@@ -41,7 +41,7 @@ builds, and the CI matrix.
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ done. Blurhash and thumbhash are byte-exact vs. the references; `memoryCacheKey` is a memory lookup via the seam |
 | `resize`, `blur`, `monochrome`, `tint` processors | **Core C++** pixel ops; adapters attach one opaque step keyed by the core's `processorKey` | ✅ done (RFC §4.5a). Variants are separate memory entries over one disk original; `dispose` evicts all of them. 1.x's `borderRadius` processor never existed, and `rounded`'s circle crop is replaced by the clipping container |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop; Swift target `TurboImageLiveText` behind the ObjC `TILiveTextInteraction` seam | ✅ done (RFC §4.4b). One interaction per view (1.x stacked one per load); toggling off detaches at once. Visual Look Up needs iOS 17 |
-| `indicator` (activity spinner while loading) | Not yet placed | Missing from this plan until now. Could live in JS, driven by `onStart`/`onCompletion` |
+| `indicator` (activity spinner while loading) | JS: `<ActivityIndicator>` over the native view, driven by `onStart`/`onCompletion` | ✅ done (RFC §4.4b). No native code. Appears only after 150 ms, so cache hits never flash it. Hidden when a `placeholder` is given (1.x Android's rule) |
 | `allowHardware` (Android) | Not yet placed | Coil 3 still has `allowHardware`; processed loads already use software bitmaps |
 | `isProgressiveImageRenderingEnabled` (iOS) | Not yet placed | Nuke 13 progressive decoding; Coil has no equivalent |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
@@ -72,6 +72,7 @@ builds, and the CI matrix.
 - `cachePolicy` values are renamed (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored on both platforms. In 1.x, iOS `urlCache` respected them.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
+- `indicator` appears only for loads that take longer than 150 ms, and is never shown together with a `placeholder` (1.x iOS showed whichever prop was set last).
 - `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.
 - Local sources (`file://`, `content://`, `android.resource://`) are never copied into the disk cache, and `cacheOnly` does not block them.
 - `format` is ignored: formats are detected from the bytes. Gifu and APNGKit are no longer dependencies.

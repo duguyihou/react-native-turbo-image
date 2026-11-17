@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import type { ColorValue } from 'react-native';
 
 import NativeTurboImageModule from './NativeTurboImageModule';
@@ -72,18 +73,34 @@ export type LegacyCachePolicy = 'urlCache' | 'dataCache';
 export type TurboImageProps = Omit<NativeProps, 'cachePolicy' | 'monochrome' | 'tint' | 'source'> & {
   source: Source;
   cachePolicy?: CachePolicy | LegacyCachePolicy;
-  // 1.x also accepted processColor() output (a number); RN's colour
+  // 1.x also accepted RN's numeric colour form (0xRRGGBBAA); RN's colour
   // processing handles both, Codegen's ColorValue just doesn't spell it.
   monochrome?: ColorValue | number;
   tint?: ColorValue | number;
   // 1.x prop: clip the image to a circle/pill.
   rounded?: boolean;
+  // 1.x prop: an activity spinner while the image loads. Not shown when a
+  // `placeholder` is given (1.x Android's rule; on 1.x iOS whichever prop
+  // was set last won).
+  indicator?: Indicator;
   /**
    * @deprecated Ignored. 1.x needed it to pick a GIF/APNG/SVG decoder; 2.0
    * detects the format from the image bytes on both platforms.
    */
   format?: 'svg' | 'gif' | 'apng' | string;
 };
+
+export type Indicator = {
+  style?: 'medium' | 'large';
+  color?: ColorValue | number;
+};
+
+// A load that finishes sooner than this never shows the spinner. Memory and
+// disk hits complete within a frame or two; a spinner that appears and
+// vanishes that fast reads as flicker (1.x avoided it only because Nuke and
+// Coil resolved memory hits synchronously). As a side effect such loads
+// cause no extra React render at all.
+const INDICATOR_DELAY_MS = 150;
 
 // Maps 1.x names onto 2.0 policies.
 //   * 'dataCache' was 1.x iOS's aggressive data cache; 2.0's 'default' is
@@ -117,8 +134,34 @@ function TurboImageComponent({
   source,
   // Accepted for 1.x compatibility and dropped; see the type's note.
   format: _format,
+  indicator,
+  onStart,
+  onCompletion,
   ...props
 }: TurboImageProps) {
+  // The spinner is plain React: an <ActivityIndicator> over the native view,
+  // driven by the load events, so it is identical on both platforms and
+  // needs no native code. `onCompletion` ends every load that `onStart`
+  // began (success, failure or cancelled), so those two events suffice.
+  //
+  // 1.x quirk kept: an empty object (`indicator={{}}`) means no indicator.
+  const showsIndicator =
+    indicator != null && Object.keys(indicator).length > 0 && !props.placeholder;
+  const [spinning, setSpinning] = useState(false);
+  const spinTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(spinTimer.current), []);
+
+  const handleStart: NativeProps['onStart'] = (event) => {
+    clearTimeout(spinTimer.current);
+    spinTimer.current = setTimeout(() => setSpinning(true), INDICATOR_DELAY_MS);
+    return onStart?.(event);
+  };
+  const handleCompletion: NativeProps['onCompletion'] = (event) => {
+    clearTimeout(spinTimer.current);
+    setSpinning(false); // no re-render if it never started spinning
+    return onCompletion?.(event);
+  };
+
   // Same rule as 1.x: one placeholder kind at a time. Native would silently
   // pick one; failing loudly in development is kinder.
   if (__DEV__ && props.placeholder) {
@@ -130,24 +173,42 @@ function TurboImageComponent({
     }
   }
 
+  const needsContainer = rounded || showsIndicator;
   const image = (
     <TurboImageView
       {...(props as Omit<NativeProps, 'cachePolicy' | 'source'>)}
       // A new object each render is fine: both native views compare the
       // request fields by value before reloading.
       source={toNativeSource(source)}
-      style={rounded ? StyleSheet.absoluteFill : style}
+      style={needsContainer ? StyleSheet.absoluteFill : style}
       cachePolicy={resolveCachePolicy(cachePolicy)}
+      // Without an indicator the app's handlers go straight through.
+      onStart={showsIndicator ? handleStart : onStart}
+      onCompletion={showsIndicator ? handleCompletion : onCompletion}
     />
   );
-  if (!rounded) {
+  if (!needsContainer) {
     return image;
   }
   // The same approach as 1.x: clip in a container. The native image view
   // itself does not clip to borderRadius on Android (ImageView content is not
   // clipped by RN's border drawing), so a clipping container keeps both
-  // platforms identical.
-  return <View style={[style, styles.rounded]}>{image}</View>;
+  // platforms identical. The container must not come and go with the
+  // spinner: that would remount the native view and restart the load.
+  return (
+    <View style={[style, rounded && styles.rounded]}>
+      {image}
+      {showsIndicator && spinning && (
+        <ActivityIndicator
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+          // RN's 'small' is UIKit's `.medium` style, which is 1.x's 'medium'.
+          size={indicator.style === 'large' ? 'large' : 'small'}
+          color={indicator.color as ColorValue | undefined}
+        />
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

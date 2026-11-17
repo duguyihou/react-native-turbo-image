@@ -53,6 +53,7 @@ type Scenario = {
   showPlaceholderOnFailure?: boolean;
   rounded?: boolean;
   enableLiveTextInteraction?: boolean;
+  indicator?: TurboImageProps['indicator'];
   // Image processors, passed straight through to <TurboImage>.
   processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
@@ -353,6 +354,18 @@ const SCENARIOS: Scenario[] = [
     expectSize: { width: 120, height: 80 },
   },
   {
+    id: 'indicatorEvents',
+    title: 'indicator: app handlers still get every event, in order',
+    // The spinner is driven by onStart/onCompletion inside <TurboImage>;
+    // this checks the app's own handlers are still called around it. That
+    // the spinner is drawn was checked by screenshot on a slow load.
+    source: { uri: 'https://picsum.photos/id/1015/600/400' },
+    indicator: { style: 'large', color: '#e63946' },
+    cachePolicy: 'noCache',
+    expect: 'load',
+    kind: 'lifecycle',
+  },
+  {
     id: 'lifecycle',
     title: 'events: start → progress… → success → completion',
     source: { uri: URI_LIFECYCLE },
@@ -447,6 +460,7 @@ function LifecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       style={styles.image}
       source={scenario.source}
       cachePolicy={scenario.cachePolicy}
+      indicator={scenario.indicator}
       {...recorder(uriOf(scenario.source), push)}
     />
   );
@@ -520,6 +534,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       rounded={scenario.rounded}
       cachePolicy={scenario.cachePolicy}
       enableLiveTextInteraction={scenario.enableLiveTextInteraction}
+      indicator={scenario.indicator}
       {...scenario.processing}
       resizeMode="cover"
       onSuccess={(e) => {
