@@ -74,6 +74,9 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}' }
       - run: bun install --frozen-lockfile
+      # oxlint and oxfmt, pinned in package.json: cheap, so they run first.
+      - run: bun run lint
+      - run: bun run format:check
       - run: bun run typecheck
       - run: bun run test
 

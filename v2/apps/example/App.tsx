@@ -570,6 +570,9 @@ function LifecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       source={scenario.source}
       cachePolicy={scenario.cachePolicy}
       indicator={scenario.indicator}
+      // `push` reads the ref, but only when an event fires: `recorder` wraps
+      // it in handlers and never calls it during render.
+      // oxlint-disable-next-line react/refs
       {...recorder(uriOf(scenario.source), push)}
     />
   );
@@ -599,6 +602,9 @@ function SupersedeProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       style={styles.image}
       source={{ uri }}
       cachePolicy={scenario.cachePolicy}
+      // `push` reads the ref, but only when an event fires: `recorder` wraps
+      // it in handlers and never calls it during render.
+      // oxlint-disable-next-line react/refs
       {...recorder(uri, push)}
     />
   );
@@ -690,7 +696,7 @@ function CacheThenView({
       (e) => settle(scenario.id, false, 'error', `module call rejected: ${e}`)
     );
     // Run once per mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, []);
   if (!ready) {
     return <View style={styles.image} />;
@@ -723,7 +729,7 @@ function PrefetchInvalidProbe({ scenario, settle }: { scenario: Scenario; settle
       (ok) => settle(scenario.id, ok === false, 'error', `prefetch resolved ${ok}`),
       (e) => settle(scenario.id, false, 'error', `prefetch rejected: ${e}`)
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, []);
   return <View style={styles.image} />;
 }
@@ -760,7 +766,7 @@ function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
           (e) => settle(scenario.id, false, 'error', `could not read the server's request count: ${e}`)
         );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, [phase]);
   if (phase === 'clearing') {
     return <View style={styles.image} />;

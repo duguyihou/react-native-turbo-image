@@ -420,7 +420,7 @@ backed by a non-blocking CI job.
 |---|---|---|---|
 | `versions` | ubuntu | ✓ | Manifests match `native-versions.env`; shellcheck |
 | `core` | ubuntu, macOS | ✓ | C++20 core + GoogleTest on GCC/Clang and Apple Clang |
-| `js` | ubuntu | ✓ | Codegen spec and example typecheck |
+| `js` | ubuntu | ✓ | oxlint and oxfmt (`bun run lint`, `format:check`); Codegen spec and example typecheck; Jest |
 | `android (debug, release)` | ubuntu | ✓ | Gradle + NDK + CMake + Kotlin 2.4; release = R8 + JNI keep rules |
 | `ios-cocoapods` | macOS | ✓ | Pinned Nuke xcframework + podspec + Fabric |
 | `ios-spm-standalone` | macOS | ✓ | Package.swift layering without an app |

@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "ignorePatterns": [
+    "tmp/**",
+    ".spm-trial/**",
+    "**/build/**",
+    "**/ios/**",
+    "**/android/**",
+    "**/*.md",
+    "**/*.inc",
+    "bun.lock"
+  ]
+}
