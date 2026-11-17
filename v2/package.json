@@ -8,6 +8,7 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter react-native-turbo-image test",
     "test:core": "bun run --filter react-native-turbo-image test:core",
     "check:versions": "bash scripts/check-native-versions.sh",
     "vendor:nuke": "bash scripts/build-nuke-xcframework.sh",

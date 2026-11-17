@@ -50,7 +50,7 @@ builds, and the CI matrix.
 | Local assets / `require()` sources | Core scheme handling | ✅ done (RFC §4.1). `require()` is new in 2.0 (1.x only took `{ uri }`); `file://`, `content://`, `android.resource://` are explicit now (1.x loaded them by accident). Local sources skip the disk tier and load under `cacheOnly` |
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
 
-**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening, tracked in `SESSION.md`: a JS test runner for `src/index.tsx`, the unexplained smoke flakiness, Android SVG sharpness, self-hosted smoke fixtures, and the first run of `v2-ci.yml` on hosted runners (Phase 1).
+**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening, tracked in `SESSION.md`: the Android "no progress events" smoke flake, Android SVG sharpness, self-hosted smoke fixtures, and the first run of `v2-ci.yml` on hosted runners (Phase 1).
 
 ### Phase 3: promote `v2/` to the repository root
 1. Tag the final 1.x release and create a `1.x` maintenance branch.

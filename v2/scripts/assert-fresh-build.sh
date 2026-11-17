@@ -32,8 +32,13 @@ assert_fresh_build() {
   esac
 
   # Sources that end up in the binary: the library's JS and C++, this
-  # platform's native code, and the example app's JS. Build outputs are
-  # excluded.
+  # platform's native code, and the example app's JS. Build outputs and unit
+  # tests (src/__tests__, never bundled) are excluded.
+  #
+  # The comparison is by modification time. A source rewritten with identical
+  # content looks newer, but the build tools compare content and leave the
+  # artifact alone, so the check then fails although the artifact is
+  # current. That is the safe direction; rebuild or restore the timestamp.
   local newer
   newer="$(find \
     "${v2_root}/packages/react-native-turbo-image/src" \
@@ -41,7 +46,8 @@ assert_fresh_build() {
     "${v2_root}/packages/react-native-turbo-image/cpp/src" \
     "${v2_root}/packages/react-native-turbo-image/${platform_sources}" \
     "${v2_root}/apps/example/App.tsx" \
-    -path '*/vendor' -prune -o -type f -newer "${artifact}" -print -quit)"
+    -path '*/vendor' -prune -o -path '*/__tests__' -prune -o \
+    -type f -newer "${artifact}" -print -quit)"
 
   if [[ -n "${newer}" ]]; then
     echo "FAIL: ${artifact} is older than ${newer#"${v2_root}"/}; rebuild before running the smoke test." >&2

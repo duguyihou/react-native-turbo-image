@@ -53,15 +53,19 @@ jobs:
       - run: ctest --test-dir build/core --output-on-failure
 
   js:
-    name: TypeScript
+    name: TypeScript and JS tests
     needs: versions
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
         with: { bun-version: '${{ env.BUN_VERSION }}' }
+      # Jest runs on Node, not Bun (the React Native preset targets Node).
+      - uses: actions/setup-node@v5
+        with: { node-version: '${{ env.NODE_VERSION }}' }
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
+      - run: bun run test
 
   android:
     name: Android example (${{ matrix.variant }})

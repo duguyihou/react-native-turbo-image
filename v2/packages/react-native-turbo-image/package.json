@@ -29,6 +29,7 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "test": "jest",
     "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
     "vendor:nuke": "bash ../../scripts/build-nuke-xcframework.sh",
     "goldens:placeholder": "node cpp/tests/tools/generate-placeholder-goldens.mjs > cpp/tests/PlaceholderGoldens.inc"
@@ -38,12 +39,19 @@
     "react-native": ">=0.88.0"
   },
   "devDependencies": {
+    "@babel/core": "7.29.13",
+    "@jest/globals": "29.7.0",
+    "@react-native/babel-preset": "0.88.1",
+    "@react-native/jest-preset": "0.88.1",
     "@types/react": "^19.2.0",
+    "@types/react-test-renderer": "19.1.0",
+    "blurhash": "2.0.5",
+    "jest": "29.7.0",
     "react": "19.3.0",
     "react-native": "0.88.1",
-    "typescript": "^6.0.3",
-    "blurhash": "2.0.5",
-    "thumbhash": "0.1.1"
+    "react-test-renderer": "19.3.0",
+    "thumbhash": "0.1.1",
+    "typescript": "^6.0.3"
   },
   "codegenConfig": {
     "name": "TurboImageSpec",
