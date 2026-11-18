@@ -16,7 +16,6 @@
     "cpp/src",
     "cpp/CMakeLists.txt",
     "ios",
-    "!ios/vendor",
     "android",
     "!android/build",
     "!android/.cxx",
@@ -27,8 +26,13 @@
   "main": "src/index.tsx",
   "types": "src/index.tsx",
   "react-native": "src/index.tsx",
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "prepack": "bash ../../scripts/check-pack.sh",
     "test": "jest",
     "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
     "vendor:nuke": "bash ../../scripts/build-nuke-xcframework.sh",
