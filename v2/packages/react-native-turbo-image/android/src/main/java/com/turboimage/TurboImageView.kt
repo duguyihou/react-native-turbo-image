@@ -65,6 +65,17 @@ class TurboImageView(
   // load runs. It stands in for the placeholder, so no placeholder may
   // replace it (same rule as the iOS view).
   private var showingPreviousImage = false
+  // The load in flight, if any: a token made before the adapter is called,
+  // null again once the load succeeds, fails or is cancelled. A callback acts
+  // only while its own token is still here.
+  //
+  // Not the adapter's [LoadHandle]: a memory-cache hit calls back inside
+  // `loader.load()`, before that handle exists. Comparing handles let such a
+  // callback through (both sides null) and then stored a handle for a load
+  // that had already finished, so the next reload reported a second,
+  // "cancelled" onCompletion for it.
+  private var inFlight: Any? = null
+  // Cancels [inFlight]; null when nothing is in flight.
   private var handle: LoadHandle? = null
   // Mirrors the iOS view: once the loaded image is shown, a late placeholder
   // must not replace it, and a newer decode supersedes an older one.
@@ -196,12 +207,9 @@ class TurboImageView(
     needsReload = false
     // A load still in flight is superseded: tell JS it was cancelled, so
     // every onStart is matched by exactly one onCompletion (as on iOS).
-    if (handle != null) {
-      cancel()
-      emitCompletion("cancelled")
-    } else {
-      cancel()
-    }
+    val superseded = inFlight != null
+    cancel()
+    if (superseded) emitCompletion("cancelled")
     // What stays on screen while this load runs (expo-image's rule):
     //   * same `recyclingKey`: the previous image, so a changed source or
     //     processor swaps (and cross-fades) without a blank frame in between;
@@ -242,24 +250,26 @@ class TurboImageView(
   private fun startLoad(request: ResolvedRequest) {
     emit("topStart") { putString("state", "running") }
 
-    // Capture the handle identity so a late callback from a replaced load
-    // cannot touch this view (same guard as the iOS view).
-    var thisHandle: LoadHandle? = null
-    thisHandle =
+    // Capture this load's identity so a late callback from a replaced load
+    // cannot touch this view (same guard as the iOS view). See [inFlight].
+    val thisLoad = Any()
+    inFlight = thisLoad
+    val thisHandle =
       loader.load(
         this as ImageView,
         request,
         ImageLoaderAdapter.DisplayOptions(fadeMillis = fadeDuration, allowHardware = allowHardware),
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) {
-            if (handle !== thisHandle) return
+            if (inFlight !== thisLoad) return
             lastProgressTotal = total
             if (!progressThrottle.shouldReport(completed, total)) return
             emitProgress(completed, total)
           }
 
           override fun onSuccess(width: Int, height: Int) {
-            if (handle !== thisHandle) return
+            if (inFlight !== thisLoad) return
+            inFlight = null
             handle = null
             showingFinalImage = true
             showingPreviousImage = false
@@ -277,7 +287,8 @@ class TurboImageView(
           }
 
           override fun onError(code: Int, message: String) {
-            if (handle !== thisHandle) return
+            if (inFlight !== thisLoad) return
+            inFlight = null
             handle = null
             emitFailure(code, message)
             onLoadFailed()
@@ -285,12 +296,14 @@ class TurboImageView(
           }
         },
       )
-    handle = thisHandle
+    // Already finished if the callback ran inside `load()`: nothing to cancel.
+    if (inFlight === thisLoad) handle = thisHandle
   }
 
   fun cancel() {
     handle?.cancel()
     handle = null
+    inFlight = null
     ++placeholderGeneration // drop any decode still in flight
   }
 

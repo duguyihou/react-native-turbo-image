@@ -57,13 +57,19 @@ class TurboImageModule(private val context: ReactApplicationContext) :
           finishOne(false)
           continue
         }
+        // A prefetch already in the memory cache calls back inside
+        // `prefetch()`, before `handle` is assigned. `done` records that, so
+        // a finished handle (which pins the decoded bitmap through Coil's
+        // result) is never added to the set with nothing left to remove it.
+        var done = false
         var handle: LoadHandle? = null
         handle =
           loader.prefetch(request) { succeeded ->
+            done = true
             handle?.let { prefetches.remove(it) }
             finishOne(succeeded)
           }
-        prefetches.add(handle)
+        if (!done) prefetches.add(handle)
       }
     }
   }
