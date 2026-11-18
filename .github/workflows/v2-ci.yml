@@ -349,3 +349,11 @@ jobs:
           cd "$EVAL_DIR/apps/example/ios" && pod install
           cd .. && bun run build:ios:release
           bash "$EVAL_DIR/scripts/smoke-ios.sh"
+      # The copy's smoke scripts save their failure logs under the copy.
+      - name: Keep the smoke test's failure log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-failure-rn-eval-${{ matrix.platform }}
+          path: v2/tmp/eval-rn-*/tmp/smoke-*-failure-*.log
+          if-no-files-found: ignore
