@@ -79,7 +79,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       // Policy is irrelevant for the key; DEFAULT resolves it like a view.
       val requests =
         (0 until sources.size()).mapNotNull { resolve(sources, it, TurboImageCore.CachePolicy.DEFAULT) }
-      TurboImageLoaders.get(context).remove(requests) { promise.resolve(null) }
+      TurboImageLoaders.get(context).remove(requests) { settle(promise, it) }
     }
   }
 
@@ -92,8 +92,26 @@ class TurboImageModule(private val context: ReactApplicationContext) :
 
   override fun clearDiskCache(promise: Promise) {
     UiThreadUtil.runOnUiThread {
-      TurboImageLoaders.get(context).clearDiskCache { promise.resolve(null) }
+      TurboImageLoaders.get(context).clearDiskCache { settle(promise, it) }
     }
+  }
+
+  // A disk cache that could not be written to is the only way these calls
+  // fail. Android only: on iOS the removal is staged and cannot fail here.
+  private fun settle(promise: Promise, failure: Throwable?) {
+    if (failure == null) promise.resolve(null)
+    else promise.reject("disk", failure.message ?: "Disk cache operation failed", failure)
+  }
+
+  // The module is going away (reload, or the host is destroyed): stop the
+  // prefetches it started. Their promises are left unsettled on purpose; the
+  // JS runtime they belong to is being torn down too.
+  override fun invalidate() {
+    UiThreadUtil.runOnUiThread {
+      prefetches.forEach { it.cancel() }
+      prefetches.clear()
+    }
+    super.invalidate()
   }
 
   companion object {

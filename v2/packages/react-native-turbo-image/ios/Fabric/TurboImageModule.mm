@@ -5,6 +5,7 @@
 
 #import "TurboImageModule.h"
 
+#import <React/RCTInvalidating.h>
 #import <TurboImageSpec/TurboImageSpec.h>
 
 #include <turboimage/ImageRequest.h>
@@ -70,7 +71,7 @@ turboimage::ImageRequest coreRequest(const SourceFields &fields, turboimage::Cac
 
 }  // namespace
 
-@interface TurboImageModule () <NativeTurboImageModuleSpec>
+@interface TurboImageModule () <NativeTurboImageModuleSpec, RCTInvalidating>
 @end
 
 @implementation TurboImageModule {
@@ -139,6 +140,26 @@ RCT_EXPORT_MODULE(TurboImageModule)
                           finishOne(succeeded);
                         }];
     [prefetches addObject:task];
+  }
+}
+
+// The module is going away (reload, or the host is destroyed): stop the
+// prefetches it started. Their promises are left unsettled on purpose; the
+// JS runtime they belong to is being torn down too.
+- (void)invalidate {
+  // `_prefetches` is main-thread only, and nothing promises which thread
+  // this arrives on. The set is captured, not `self` (see prefetch).
+  NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
+  void (^cancelAll)(void) = ^{
+    for (id<TIImageLoadTask> task in prefetches) {
+      [task cancel];
+    }
+    [prefetches removeAllObjects];
+  };
+  if (NSThread.isMainThread) {
+    cancelAll();
+  } else {
+    dispatch_async(dispatch_get_main_queue(), cancelAll);
   }
 }
 

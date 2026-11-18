@@ -278,6 +278,9 @@ export const TurboImage = Object.assign(TurboImageComponent, {
       sources.map(toNativeSource),
       resolveCachePolicy(cachePolicy) ?? 'default'
     ),
+  // `dispose` and `clearDiskCache` reject (code 'disk') if the disk cache
+  // could not be written to. Android only: iOS stages the removal and has
+  // no failure to report.
   dispose: (sources: CacheSource[]): Promise<void> =>
     NativeTurboImageModule.dispose(sources.map(toNativeSource)),
   clearMemoryCache: (): Promise<void> => NativeTurboImageModule.clearMemoryCache(),

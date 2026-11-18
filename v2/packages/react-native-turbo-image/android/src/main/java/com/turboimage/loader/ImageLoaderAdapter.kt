@@ -52,21 +52,21 @@ interface ImageLoaderAdapter {
    * Hence the callback, where iOS's `removeCachedImageForRequest:` simply
    * returns: Nuke's `DataCache` only stages a removal (hidden from reads at
    * once, deleted later on its own queue), so that call never blocks.
-   * [onDone] fires once on the main thread, when everything is gone.
-   * Failures to delete are logged by the adapter but not reported here: an
-   * entry that could not be removed is the same to the caller as one a
-   * concurrent load has just written back.
+   * [onDone] fires once on the main thread: with null when everything is
+   * gone, or with the I/O failure that stopped the disk work (the memory
+   * entries are evicted either way). iOS has no such failure to report: a
+   * staged removal cannot fail in the caller.
    */
-  fun remove(requests: List<ResolvedRequest>, onDone: () -> Unit)
+  fun remove(requests: List<ResolvedRequest>, onDone: (Throwable?) -> Unit)
 
   fun clearMemoryCache()
 
   /**
    * Empties both disk stores: the key-addressed cache and the HTTP cache.
    * Same threading as [remove]: called on the main thread, works off it,
-   * [onDone] once on the main thread.
+   * [onDone] once on the main thread, with the failure if there was one.
    */
-  fun clearDiskCache(onDone: () -> Unit)
+  fun clearDiskCache(onDone: (Throwable?) -> Unit)
 
   /** Synchronous memory lookup for the `memoryCacheKey` placeholder. Main thread. */
   fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable?

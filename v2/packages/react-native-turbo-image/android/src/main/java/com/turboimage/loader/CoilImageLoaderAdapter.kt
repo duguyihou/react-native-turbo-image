@@ -314,7 +314,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   private fun memoryKeysFor(cacheKey: String) =
     imageLoader.memoryCache?.keys?.filter { it.key == cacheKey }.orEmpty()
 
-  override fun remove(requests: List<ResolvedRequest>, onDone: () -> Unit) {
+  override fun remove(requests: List<ResolvedRequest>, onDone: (Throwable?) -> Unit) {
     onDiskThread(
       work = {
         for (request in requests) {
@@ -326,11 +326,12 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       // Memory after disk, not before: a view that reloads in between would
       // otherwise read the disk copy back into memory, and the entry would
       // outlive the call that removed it.
-      thenOnMain = {
+      // Also when the disk work failed: whatever can still be evicted is.
+      thenOnMain = { failure ->
         for (request in requests) {
           memoryKeysFor(request.cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
         }
-        onDone()
+        onDone(failure)
       },
     )
   }
@@ -340,21 +341,20 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
    * Coil's `DiskCache` is thread-safe but synchronous: `remove` and `clear`
    * write the journal and delete files, and the first access opens the cache.
    *
-   * [thenOnMain] runs even if [work] throws, so the caller's promise always
-   * settles. The failure is logged but not passed on; see
-   * [ImageLoaderAdapter.remove] for why the caller is not told.
+   * [thenOnMain] always runs, so the caller's promise always settles: with
+   * null when [work] finished, with what it threw otherwise.
    */
-  private fun onDiskThread(work: () -> Unit, thenOnMain: () -> Unit) {
+  private fun onDiskThread(work: () -> Unit, thenOnMain: (Throwable?) -> Unit) {
     diskExecutor.execute {
-      try {
-        work()
-      } catch (e: Exception) {
-        // Deliberately not rethrown (see above), but never silent: a cache
-        // that cannot be written to is worth a line in logcat.
-        Log.w(LOG_TAG, "Disk cache operation failed", e)
-      } finally {
-        mainHandler.post(thenOnMain)
-      }
+      val failure =
+        try {
+          work()
+          null
+        } catch (e: Exception) {
+          Log.w(LOG_TAG, "Disk cache operation failed", e)
+          e
+        }
+      mainHandler.post { thenOnMain(failure) }
     }
   }
 
@@ -362,7 +362,7 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     imageLoader.memoryCache?.clear()
   }
 
-  override fun clearDiskCache(onDone: () -> Unit) {
+  override fun clearDiskCache(onDone: (Throwable?) -> Unit) {
     onDiskThread(work = { imageLoader.diskCache?.clear() }, thenOnMain = onDone)
   }
 
