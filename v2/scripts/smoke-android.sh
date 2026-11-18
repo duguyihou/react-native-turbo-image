@@ -43,6 +43,24 @@ start_fixture_server
 "${adb}" logcat -c
 "${adb}" shell am start -n "${package}/.MainActivity" > /dev/null
 
+# Keeps what a failed run leaves on the device. The suite fails now and then
+# for reasons outside the app (once: cache files vanishing under it on an
+# emulator at 94% of /data), and `logcat -c` at the next run erases the
+# evidence. Free space is recorded because Android empties app caches when
+# /data runs low.
+save_failure_log() {
+  local out
+  out="${v2_root}/tmp/smoke-android-failure-$(date +%Y%m%d-%H%M%S).log"
+  mkdir -p "${v2_root}/tmp"
+  {
+    echo "${line:-no TURBOIMAGE_SMOKE line}"
+    "${adb}" shell df /data
+    "${adb}" shell dumpsys devicestoragemonitor
+    "${adb}" logcat -d
+  } > "${out}" 2>&1 || true
+  echo "device log saved to ${out}" >&2
+}
+
 line=""
 for ((elapsed = 0; elapsed < timeout_s; elapsed += 2)); do
   line="$("${adb}" logcat -d -s ReactNativeJS:V | grep -o 'TURBOIMAGE_SMOKE .*' || true)"
@@ -55,6 +73,7 @@ done
 if [[ -z "${line}" ]]; then
   echo "FAIL: no TURBOIMAGE_SMOKE line within ${timeout_s}s" >&2
   "${adb}" logcat -d | grep -E 'FATAL|AndroidRuntime|turboimage' | tail -20 >&2 || true
+  save_failure_log
   exit 1
 fi
 
@@ -75,5 +94,6 @@ else
     echo "last requests seen by the fixture server (${fixture_server_log}):" >&2
     tail -n 25 "${fixture_server_log}" >&2 || true
   fi
+  save_failure_log
   exit 1
 fi

@@ -89,5 +89,12 @@ else
     echo "last requests seen by the fixture server (${fixture_server_log}):" >&2
     tail -n 25 "${fixture_server_log}" >&2 || true
   fi
+  # Keep the result: callers often filter this script's output, and the next
+  # run reinstalls the app. (The log stream above is filtered to the result
+  # line, so there is no wider device log to save, unlike on Android.)
+  failure_log="${v2_root}/tmp/smoke-ios-failure-$(date +%Y%m%d-%H%M%S).log"
+  mkdir -p "${v2_root}/tmp"
+  echo "${line}" > "${failure_log}"
+  echo "result saved to ${failure_log}" >&2
   exit 1
 fi
