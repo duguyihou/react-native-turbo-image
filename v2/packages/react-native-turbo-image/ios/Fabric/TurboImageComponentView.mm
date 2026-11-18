@@ -162,6 +162,10 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   int64_t _lastProgressTotal;
   // Created on first use; nil while Live Text is off or unsupported.
   id<TILiveTextInteraction> _liveText;
+  // Set by prepareForRecycle, consumed by the next updateProps: this view's
+  // own state was reset to the spec defaults, so that is what the incoming
+  // props must be compared with. See updateProps.
+  BOOL _recycled;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -182,8 +186,18 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps {
-  const auto &oldViewProps = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  // Fabric keeps `_props` across a recycle and remounts the view with
+  // `oldProps:nullptr`, so `_props` is still the previous life's props here.
+  // The base class needs exactly that: it diffs against `_props` to undo
+  // what the previous life set on the UIView (accessibility, opacity, ...).
+  // This view's own state was instead reset by prepareForRecycle, so its
+  // props are compared with the defaults. Comparing them with `_props` would
+  // leave a recycled view blank when it gets the same source as before
+  // (smoke scenario `recycledSameSource`).
+  const auto &oldViewProps =
+      *std::static_pointer_cast<const TurboImageViewProps>(_recycled ? defaultViewProps() : _props);
   const auto &newViewProps = *std::static_pointer_cast<const TurboImageViewProps>(props);
+  _recycled = NO;
 
   if (oldViewProps.source.uri != newViewProps.source.uri ||
       oldViewProps.source.cacheKey != newViewProps.source.cacheKey ||
@@ -480,11 +494,14 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _recyclingKeyChanged = NO;
   _loadFailed = NO;
   ++_placeholderGeneration;  // drop any decode still in flight
-  // Fabric does not reset `_props` on recycle, and remounts a recycled view
-  // with `oldProps:nullptr`. updateProps diffs against `_props`, so without
-  // this a recycled view given the same source as its previous life would
-  // never reload and stay blank (smoke scenario `recycledSameSource`).
-  _props = defaultViewProps();
+  // Back to the spec default, like the image above: the next updateProps
+  // compares this view's props with the defaults (see `_recycled`).
+  _imageView.contentMode = UIViewContentModeScaleAspectFit;
+  // `_props` is deliberately left alone. It belongs to the base class, which
+  // diffs the next life's props against it; replacing it with the defaults
+  // made a recycled view keep the previous life's accessibilityLabel,
+  // testID, opacity and shadow whenever the new life left them unset.
+  _recycled = YES;
 }
 
 #pragma mark - Events
