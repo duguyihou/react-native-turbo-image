@@ -505,7 +505,7 @@ the suite had 7.
    - disposes on detach and restarts on reattach,
    - stops restarting after our explicit `dispose()`.
 
-   Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. A restart after a completed load re-fires Coil's listener, but the view's handle-identity guard drops it, so `onSuccess` fires once per request. TODO: a long, fast-scrolling list stress test before enabling recycling.
+   Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. Coil also restarts a request that has already completed, and its target repaints whatever the view's own guards say. So the adapter disposes each request as soon as it succeeds or fails, and only an in-flight load is ever restarted: `onSuccess` fires once per request, a failed load is not retried behind the view's back, and a `noCache` source is not downloaded again on reattach. TODO: a long, fast-scrolling list stress test before enabling recycling.
 2. ~~Context lifecycle.~~ **Resolved; this RFC was wrong.** Fabric builds each `ThemedReactContext` on top of the root view's context, which is the Activity (`FabricUIManager.startSurface`). Coil's `getLifecycle()` walks the `ContextWrapper` chain, so it finds the Activity. Requests therefore wait for `STARTED` and are disposed on `ON_DESTROY`, without TurboImage doing anything.
 3. ~~`cacheOnly` race in the example.~~ **Resolved.** The example is now a deterministic smoke test: scenarios that depend on the cache mount only after the load they depend on has settled.
 4. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.

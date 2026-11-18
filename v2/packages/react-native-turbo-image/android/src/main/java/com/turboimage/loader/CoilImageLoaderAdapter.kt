@@ -30,6 +30,7 @@ import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.httpHeaders
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.CachePolicy
+import coil3.request.Disposable
 import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.request.allowHardware
@@ -207,6 +208,28 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
       ProgressInterceptor.unregister(token)
     }
 
+    // Coil keeps a view's last request, finished or not, and enqueues it
+    // again every time the view is reattached to a window (FlatList's
+    // removeClippedSubviews, react-native-screens). That restart is wanted
+    // while a load is in flight, since Coil cancels it on detach. For a load
+    // that has completed it is wrong:
+    //   * a failed load would retry behind the view's back, and could paint
+    //     an image JS was told had failed;
+    //   * a view whose source was since cleared would get the old image
+    //     back (the target paints regardless of the view's own guards);
+    //   * a `noCache` source would download again on every reattach.
+    // So a completed load is disposed, which is how Coil is told to forget a
+    // request. It leaves the drawable alone.
+    var completed = false
+    var disposable: Disposable? = null
+    fun complete() {
+      finish()
+      completed = true
+      // Null when a memory-cache hit completes inside `enqueue` below, before
+      // the disposable exists; that case is disposed right after `enqueue`.
+      disposable?.dispose()
+    }
+
     val coilRequest =
       request.toCoilRequest(target.context, target)
         .httpHeaders(
@@ -221,23 +244,28 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
         .allowHardware(options.allowHardware)
         .listener(
           onSuccess = { _, result ->
-            finish()
+            complete()
             listener.onSuccess(result.image.width, result.image.height)
           },
           onError = { _, result ->
-            finish()
+            complete()
             listener.onError(classify(result.throwable, request), result.throwable.message ?: "Unknown error")
           },
+          // Not `complete()`: this is Coil cancelling on detach (or before the
+          // first attach), and the request must survive to restart on attach.
           onCancel = { finish() },
         )
         .build()
 
-    val disposable = imageLoader.enqueue(coilRequest)
+    val enqueued = imageLoader.enqueue(coilRequest)
+    disposable = enqueued
+    if (completed) enqueued.dispose()
     // `dispose()` cancels the job and clears the ViewTarget, so no listener
-    // fires afterwards (RFC §Open questions 1).
+    // fires afterwards (RFC §Open questions 1). A no-op once Coil has moved
+    // on to another request for this view, so safe after completion too.
     return LoadHandle {
       finish()
-      disposable.dispose()
+      enqueued.dispose()
     }
   }
 
