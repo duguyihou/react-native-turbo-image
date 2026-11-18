@@ -113,23 +113,40 @@ private class CoreProcessingTransformation(private val processorKey: String) : T
  * this waits for the first layout pass. A view laid out with no area gets
  * the original, as on iOS: it shows nothing, but its load must still finish
  * (and such views are used to warm the cache).
+ *
+ * The wait ends after one turn of the main loop even if no layout pass came.
+ * `View.isLaidOut` is cleared every time a view is attached to or detached
+ * from a window, and React Native lays a view out only when its frame
+ * changes. So a view that a `removeClippedSubviews` parent (every FlatList
+ * on Android) took out and put back is "not laid out" for good, and a load
+ * that started or restarted then would wait for a pass that never comes.
+ * Fabric lays a new view out in the same mount transaction that attaches
+ * it, which is before anything posted from here can run, so the first load
+ * still sees its real size.
  */
 private class LaidOutSizeResolver(private val view: View) : SizeResolver {
   override suspend fun size(): Size {
     if (view.isLaidOut) return currentSize()
     return suspendCancellableCoroutine { continuation ->
+      lateinit var stopWaiting: () -> Unit
+      val proceed = Runnable {
+        stopWaiting()
+        if (continuation.isActive) continuation.resume(currentSize())
+      }
       val listener =
         object : View.OnLayoutChangeListener {
           override fun onLayoutChange(
             v: View, left: Int, top: Int, right: Int, bottom: Int,
             oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int,
-          ) {
-            view.removeOnLayoutChangeListener(this)
-            continuation.resume(currentSize())
-          }
+          ) = proceed.run()
         }
+      stopWaiting = {
+        view.removeOnLayoutChangeListener(listener)
+        view.removeCallbacks(proceed)
+      }
       view.addOnLayoutChangeListener(listener)
-      continuation.invokeOnCancellation { view.removeOnLayoutChangeListener(listener) }
+      view.post(proceed)
+      continuation.invokeOnCancellation { stopWaiting() }
     }
   }
 
