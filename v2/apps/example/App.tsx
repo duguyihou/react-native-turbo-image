@@ -10,6 +10,7 @@
 //   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"blocked":N,"failed":{...}}
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentRef } from 'react';
 import { Dimensions, PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
@@ -53,7 +54,8 @@ const URI_OVERSIZED = `${BASE}/large/oversized.jpg`;
 // the 3:2 shape of every photo fixture, so a downscaled decode of a larger
 // 3:2 image is exactly the card's size in pixels (give or take rounding).
 const CONTENT_PADDING = 16;
-const CARD_WIDTH_PX = (Dimensions.get('window').width - 2 * CONTENT_PADDING) * PixelRatio.get();
+const CARD_WIDTH = Dimensions.get('window').width - 2 * CONTENT_PADDING;
+const CARD_WIDTH_PX = CARD_WIDTH * PixelRatio.get();
 
 // `resize` is in points/dp and the core converts it with the screen scale,
 // so the processed bitmap is this many pixels wide on either platform.
@@ -96,6 +98,8 @@ type Scenario = {
   // Scenarios that need more than one load render a probe instead.
   kind?:
     | 'recycle'
+    | 'reattach'
+    | 'syncReload'
     | 'lifecycle'
     | 'supersede'
     | 'prefetch'
@@ -201,6 +205,30 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
     after: 'network',
     kind: 'recycle',
+  },
+  // A view that scrolls out of a `removeClippedSubviews` list is detached
+  // from its window on Android and attached again when it scrolls back. Coil
+  // restarts a view's last request on attach, which for a finished load
+  // would fetch a noCache image again, or retry a failure JS already heard
+  // about. The server's request count shows whether it did.
+  {
+    id: 'reattachLoaded',
+    title: 'a loaded noCache image is not fetched again when reattached',
+    source: { uri: `${BASE}/photo/reattach-${RUN}.jpg` },
+    cachePolicy: 'noCache',
+    expect: 'load',
+    expectHits: { count: 1, conditional: 0 },
+    kind: 'reattach',
+  },
+  {
+    id: 'reattachFailed',
+    title: 'a failed load is not retried when the view is reattached',
+    source: { uri: `${BASE}/missing/reattach-${RUN}.jpg` },
+    cachePolicy: 'default',
+    expect: 'error',
+    expectCode: 'network',
+    expectHits: { count: 1, conditional: 0 },
+    kind: 'reattach',
   },
   {
     id: 'legacyDataCache',
@@ -352,6 +380,21 @@ const SCENARIOS: Scenario[] = [
     expectHits: { count: 2, conditional: 1 },
     after: 'urlCacheNoStore',
     kind: 'urlCache',
+  },
+  {
+    id: 'syncReload',
+    title: 'memory-cache hits on a mounted view: one completion per start',
+    // One view, four sources in a row: A, B, A, B. The last two are in the
+    // memory cache at this view's size, so on Android the loader calls back
+    // before `load()` has returned. That once left a finished load looking
+    // in flight, and the next change of source reported it as cancelled.
+    // After the urlCache chain, which is the last thing to clear the memory
+    // cache: a clear between the steps would turn the hits into fetches.
+    source: { uri: photo('sync-a') },
+    cachePolicy: 'default',
+    expect: 'load',
+    after: 'urlCacheRevalidate',
+    kind: 'syncReload',
   },
   {
     id: 'liveText',
@@ -643,6 +686,118 @@ function RecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle
   );
 }
 
+// How long a detached view stays detached, and how long after it is back a
+// request it should not have made is given to reach the server.
+const DETACHED_MS = 300;
+const REATTACH_SETTLE_MS = 1200;
+
+// Loads the scenario's source, scrolls the image out of a
+// `removeClippedSubviews` scroll view and back, then checks that the load
+// reported exactly one outcome and the server saw `expectHits` requests.
+// Android removes the clipped image from its parent, which detaches it from
+// the window; iOS keeps it attached, so there this is a plain load.
+function ReattachProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const outcomes = useRef<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const onOutcome = (outcome: string) => {
+    outcomes.current.push(outcome);
+    setLoaded(true);
+  };
+  useEffect(() => {
+    if (!loaded) return;
+    scroll.current?.scrollTo({ x: 2 * CARD_WIDTH, animated: false });
+    const back = setTimeout(() => scroll.current?.scrollTo({ x: 0, animated: false }), DETACHED_MS);
+    const count = setTimeout(() => {
+      const path = uriOf(scenario.source).slice(BASE.length);
+      fetch(`${BASE}/__hits?path=${encodeURIComponent(path)}`)
+        .then((response) => response.json())
+        .then(
+          (hits: { count: number }) => {
+            const want = scenario.expect === 'load' ? 'load' : `error:${scenario.expectCode}`;
+            const saw = `${outcomes.current.join(', ')}; ${hits.count} request(s)`;
+            const ok =
+              outcomes.current.length === 1 &&
+              outcomes.current[0] === want &&
+              hits.count === scenario.expectHits?.count;
+            settle(scenario.id, ok, scenario.expect, ok ? saw : `${saw}; expected one ${want}`);
+          },
+          (e) =>
+            settle(scenario.id, false, 'error', `could not read the server's request count: ${e}`)
+        );
+    }, DETACHED_MS + REATTACH_SETTLE_MS);
+    return () => {
+      clearTimeout(back);
+      clearTimeout(count);
+    };
+    // Runs once, when the load has settled.
+    // oxlint-disable-next-line react/exhaustive-deps
+  }, [loaded]);
+  return (
+    <ScrollView
+      ref={scroll}
+      style={styles.reattachScroll}
+      horizontal
+      removeClippedSubviews
+      scrollEnabled={false}
+    >
+      {/* A direct child of the content view: only those are clipped. */}
+      <TurboImage
+        style={styles.reattachImage}
+        source={scenario.source}
+        cachePolicy={scenario.cachePolicy}
+        onSuccess={() => onOutcome('load')}
+        onFailure={(e) => onOutcome(`error:${e.nativeEvent.code}`)}
+      />
+      <View style={styles.reattachFiller} />
+    </ScrollView>
+  );
+}
+
+// One mounted view through four sources, each set when the one before has
+// completed. Nothing is ever superseded, so every start must be answered by
+// exactly one completion, and none of them may say `cancelled`.
+const SYNC_RELOAD_SOURCES = [photo('sync-a'), photo('sync-b'), photo('sync-a'), photo('sync-b')];
+
+function SyncReloadProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  const [step, setStep] = useState(0);
+  const events = useRef<Recorded[]>([]);
+  const uri = SYNC_RELOAD_SOURCES[step]!;
+  const push = (e: Recorded) => {
+    events.current.push(e);
+    if (e.type !== 'completion' || e.state !== 'completed') return;
+    if (step + 1 < SYNC_RELOAD_SOURCES.length) {
+      setStep(step + 1);
+      return;
+    }
+    const all = events.current;
+    const count = (type: Recorded['type']) => all.filter((x) => x.type === type).length;
+    const succeeded = all.flatMap((x) => (x.type === 'success' ? [x.source] : []));
+    let problem: string | null = null;
+    if (all.some((x) => x.type === 'completion' && x.state !== 'completed'))
+      problem = 'a load that was never superseded did not complete as completed';
+    else if (count('start') !== SYNC_RELOAD_SOURCES.length)
+      problem = `${count('start')} starts for ${SYNC_RELOAD_SOURCES.length} loads`;
+    else if (count('completion') !== count('start'))
+      problem = `${count('completion')} completions for ${count('start')} starts`;
+    else if (succeeded.join() !== SYNC_RELOAD_SOURCES.join())
+      problem = 'the loads did not succeed in the order they were asked for';
+    settle(scenario.id, problem === null, 'load', problem ?? describe(all));
+  };
+  return (
+    <TurboImage
+      style={styles.image}
+      source={{ uri }}
+      cachePolicy={scenario.cachePolicy}
+      resizeMode="cover"
+      // `push` reads the ref, but only when an event fires: `recorder` wraps
+      // it in handlers and never calls it during render.
+      // oxlint-disable-next-line react/refs
+      {...recorder(uri, push)}
+    />
+  );
+}
+
 function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
   return (
     <TurboImage
@@ -820,6 +975,8 @@ const PROBES = {
   dispose: DisposeProbe,
   clearCaches: ClearCachesProbe,
   recycle: RecycleProbe,
+  reattach: ReattachProbe,
+  syncReload: SyncReloadProbe,
   lifecycle: LifecycleProbe,
   supersede: SupersedeProbe,
   urlCache: UrlCacheProbe,
@@ -950,4 +1107,10 @@ const styles = StyleSheet.create({
   card: { gap: 8 },
   label: { fontSize: 12, fontFamily: 'Menlo' },
   image: { width: '100%', aspectRatio: 3 / 2, backgroundColor: '#ddd' },
+  // Explicit sizes: a horizontal scroll view has no height of its own to
+  // give an `aspectRatio` child.
+  reattachScroll: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3 },
+  reattachImage: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3, backgroundColor: '#ddd' },
+  // Wide enough to scroll the image two card widths out of the clip rect.
+  reattachFiller: { width: 3 * CARD_WIDTH },
 });
