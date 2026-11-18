@@ -313,8 +313,16 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
   __weak __typeof(self) weakSelf = self;
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-    const auto rgba = turboimage::decodePlaceholder(blurhash, thumbhash);
-    UIImage *placeholder = rgba ? imageFromRgba(*rgba) : nil;
+    // A C++ exception that leaves this block terminates the app, and the
+    // decode allocates. A placeholder is optional: without memory for it,
+    // the view simply shows none.
+    UIImage *placeholder = nil;
+    try {
+      const auto rgba = turboimage::decodePlaceholder(blurhash, thumbhash);
+      placeholder = rgba ? imageFromRgba(*rgba) : nil;
+    } catch (...) {
+      NSLog(@"TurboImage: placeholder decode failed with a C++ exception");
+    }
     dispatch_async(dispatch_get_main_queue(), ^{
       __typeof(self) strongSelf = weakSelf;
       if (strongSelf == nil || placeholder == nil ||

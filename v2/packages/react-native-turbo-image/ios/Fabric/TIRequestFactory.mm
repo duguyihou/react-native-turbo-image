@@ -1,6 +1,8 @@
 #import "TIRequestFactory.h"
 
 #include <cmath>
+#include <exception>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -12,7 +14,10 @@ namespace {
 // bakes in the EXIF orientation, so the core always sees upright pixels; the
 // result keeps the input's scale so its size in points is unchanged (unless
 // `resize` changed it on purpose).
-UIImage *TIProcessImage(UIImage *image, const std::string &key) {
+//
+// May throw: the pixel buffer and the core's working copies are plain C++
+// allocations. Callers go through TIProcessImage below.
+UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
   // Processors apply to still images. An animated image is processed as its
   // first frame and becomes static, which is also what Coil does with
   // transformations on Android (and what 1.x Android did).
@@ -31,12 +36,15 @@ UIImage *TIProcessImage(UIImage *image, const std::string &key) {
       .width = width,
       .height = height,
       .pixels = std::vector<std::uint8_t>(static_cast<std::size_t>(width) * height * 4)};
-  CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+  // Owned by a guard, not released by hand: `processImage` below can throw
+  // while this is still needed for the result.
+  const std::unique_ptr<CGColorSpace, void (*)(CGColorSpaceRef)> colorSpaceOwner(
+      CGColorSpaceCreateWithName(kCGColorSpaceSRGB), CGColorSpaceRelease);
+  CGColorSpaceRef colorSpace = colorSpaceOwner.get();
   CGContextRef context = CGBitmapContextCreate(
       rgba.pixels.data(), width, height, 8, static_cast<size_t>(width) * 4, colorSpace,
       kCGBitmapByteOrder32Big | kCGImageAlphaPremultipliedLast);
   if (context == nullptr) {
-    CGColorSpaceRelease(colorSpace);
     return nil;
   }
   // UIKit draws top-down; CG contexts are bottom-up.
@@ -49,7 +57,6 @@ UIImage *TIProcessImage(UIImage *image, const std::string &key) {
 
   const auto processed = turboimage::processImage(std::move(rgba), key);
   if (!processed) {
-    CGColorSpaceRelease(colorSpace);
     return nil;
   }
   NSData *data = [NSData dataWithBytes:processed->pixels.data() length:processed->pixels.size()];
@@ -65,8 +72,24 @@ UIImage *TIProcessImage(UIImage *image, const std::string &key) {
                             : nil;
   CGImageRelease(cgImage);
   CGDataProviderRelease(provider);
-  CGColorSpaceRelease(colorSpace);
   return result;
+}
+
+// The exception barrier for processing. This runs inside a block on the
+// loader's processing queue, and a C++ exception that leaves a block
+// terminates the app. Processing a large image needs several copies of it,
+// so running out of memory here is a failed load (nil: the loader reports a
+// processing failure), not a crash.
+UIImage *TIProcessImage(UIImage *image, const std::string &key) {
+  try {
+    return TIProcessImageUnguarded(image, key);
+  } catch (const std::exception &e) {
+    NSLog(@"TurboImage: processing failed: %s", e.what());
+    return nil;
+  } catch (...) {
+    NSLog(@"TurboImage: processing failed with an unknown C++ exception");
+    return nil;
+  }
 }
 
 }  // namespace

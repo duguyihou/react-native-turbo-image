@@ -1,6 +1,7 @@
 package com.turboimage.core
 
 import android.graphics.Bitmap
+import android.util.Log
 import java.nio.ByteBuffer
 
 /**
@@ -170,8 +171,18 @@ object TurboImageCore {
 
   private external fun nativeShouldReportProgress(state: LongArray, completed: Long, total: Long): Boolean
 
+  /**
+   * Null when neither hash decodes, and also when the core ran out of memory:
+   * a placeholder is optional, and this runs on an executor thread, where a
+   * thrown error would take the app down.
+   */
   fun decodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels? =
-    nativeDecodePlaceholder(blurhash, thumbhash)
+    try {
+      nativeDecodePlaceholder(blurhash, thumbhash)
+    } catch (e: OutOfMemoryError) {
+      Log.w("TurboImage", "Placeholder decode ran out of memory", e)
+      null
+    }
 
   private external fun nativeDecodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels?
 }

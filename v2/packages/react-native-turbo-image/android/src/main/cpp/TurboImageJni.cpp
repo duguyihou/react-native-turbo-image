@@ -6,11 +6,20 @@
 //
 // Threading: `turboimage::resolveRequest` is pure (see ImageRequest.h), so
 // this may be called from any thread. Kotlin calls it on the UI thread.
+//
+// Exceptions: a C++ exception that unwinds into the JVM aborts the process,
+// so every entry point runs its body through `guarded` below, which turns it
+// into a Java exception. The core reports bad input through return values;
+// what can throw is allocation (a blur of a large bitmap needs several
+// copies of it), and Kotlin can handle a Java OutOfMemoryError.
 
 #include <jni.h>
 
+#include <exception>
+#include <new>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "turboimage/ImageRequest.h"
 #include "turboimage/Placeholder.h"
@@ -19,11 +28,49 @@
 
 namespace {
 
+// Thrown when a JNI call failed and left its own Java exception pending.
+// No further JNI calls are allowed in that state, so this unwinds to
+// `guarded`, which returns to the JVM and lets that exception propagate.
+struct JavaExceptionPending {};
+
+void throwJava(JNIEnv* env, const char* className, const char* message) {
+  if (env->ExceptionCheck()) {
+    return;  // Keep the first exception.
+  }
+  jclass exceptionClass = env->FindClass(className);
+  if (exceptionClass != nullptr) {
+    env->ThrowNew(exceptionClass, message);
+  }
+  // Otherwise FindClass left a NoClassDefFoundError pending, which will do.
+}
+
+// Runs `body` and returns its result. If it throws, a Java exception is left
+// pending and `fallback` is returned (the JVM ignores the return value of a
+// native method that raised).
+template <typename Result, typename Body>
+Result guarded(JNIEnv* env, Result fallback, Body&& body) noexcept {
+  try {
+    return body();
+  } catch (const JavaExceptionPending&) {
+    // Already pending.
+  } catch (const std::bad_alloc&) {
+    throwJava(env, "java/lang/OutOfMemoryError", "TurboImage: the C++ core ran out of memory");
+  } catch (const std::exception& e) {
+    throwJava(env, "java/lang/RuntimeException", e.what());
+  } catch (...) {
+    throwJava(env, "java/lang/RuntimeException", "TurboImage: unknown C++ exception");
+  }
+  return fallback;
+}
+
 std::string toStdString(JNIEnv* env, jstring value) {
   if (value == nullptr) {
     return {};
   }
   const char* chars = env->GetStringUTFChars(value, nullptr);
+  if (chars == nullptr) {
+    throw JavaExceptionPending{};  // OutOfMemoryError from the JVM.
+  }
   std::string out(chars);
   env->ReleaseStringUTFChars(value, chars);
   return out;
@@ -81,38 +128,40 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
                                                        jobjectArray headers,
                                                        jboolean allowDownscaling,
                                                        jint resizeMode) {
-  const auto key = toStdString(env, cacheKey);
-  const auto result = turboimage::resolveRequest({
-      .uri = toStdString(env, uri),
-      .cacheKey = key.empty() ? std::nullopt : std::optional<std::string>(key),
-      .cachePolicy = static_cast<turboimage::CachePolicy>(cachePolicy),
-      .processing = {.resize = resize,
-                     .blur = blur,
-                     .monochrome = toArgb(monochrome),
-                     .tint = toArgb(tint)},
-      .pixelRatio = pixelRatio,
-      .headers = toHeaders(env, headers),
-      .allowDownscaling = allowDownscaling == JNI_TRUE,
-      .resizeMode = static_cast<turboimage::ResizeMode>(resizeMode),
+  return guarded(env, static_cast<jobject>(nullptr), [&]() -> jobject {
+    const auto key = toStdString(env, cacheKey);
+    const auto result = turboimage::resolveRequest({
+        .uri = toStdString(env, uri),
+        .cacheKey = key.empty() ? std::nullopt : std::optional<std::string>(key),
+        .cachePolicy = static_cast<turboimage::CachePolicy>(cachePolicy),
+        .processing = {.resize = resize,
+                       .blur = blur,
+                       .monochrome = toArgb(monochrome),
+                       .tint = toArgb(tint)},
+        .pixelRatio = pixelRatio,
+        .headers = toHeaders(env, headers),
+        .allowDownscaling = allowDownscaling == JNI_TRUE,
+        .resizeMode = static_cast<turboimage::ResizeMode>(resizeMode),
+    });
+
+    if (!result.ok()) {
+      jclass failureClass = env->FindClass("com/turboimage/core/ResolveFailure");
+      jmethodID ctor = env->GetMethodID(failureClass, "<init>", "(I)V");
+      return env->NewObject(failureClass, ctor, static_cast<jint>(result.error));
+    }
+
+    const auto& r = *result.request;
+    jclass resolvedClass = env->FindClass("com/turboimage/core/ResolvedRequest");
+    jmethodID ctor =
+        env->GetMethodID(resolvedClass, "<init>",
+                         "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;ZIIZ)V");
+    return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
+                          env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
+                          r.disk.read, r.disk.write, r.allowNetwork,
+                          env->NewStringUTF(r.processorKey.c_str()), fromHeaders(env, r.headers),
+                          r.httpCache, static_cast<jint>(r.decode.kind),
+                          static_cast<jint>(r.decode.width), r.decode.fill);
   });
-
-  if (!result.ok()) {
-    jclass failureClass = env->FindClass("com/turboimage/core/ResolveFailure");
-    jmethodID ctor = env->GetMethodID(failureClass, "<init>", "(I)V");
-    return env->NewObject(failureClass, ctor, static_cast<jint>(result.error));
-  }
-
-  const auto& r = *result.request;
-  jclass resolvedClass = env->FindClass("com/turboimage/core/ResolvedRequest");
-  jmethodID ctor =
-      env->GetMethodID(resolvedClass, "<init>",
-                       "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;ZIIZ)V");
-  return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
-                        env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
-                        r.disk.read, r.disk.write, r.allowNetwork,
-                        env->NewStringUTF(r.processorKey.c_str()), fromHeaders(env, r.headers),
-                        r.httpCache, static_cast<jint>(r.decode.kind),
-                        static_cast<jint>(r.decode.width), r.decode.fill);
 }
 
 namespace {
@@ -140,12 +189,14 @@ extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeProcess(JNIEnv* env, jobject /* this */,
                                                        jbyteArray rgba, jint width, jint height,
                                                        jstring processorKey) {
-  turboimage::RgbaImage image{.width = width, .height = height, .pixels = {}};
-  image.pixels.resize(static_cast<std::size_t>(env->GetArrayLength(rgba)));
-  env->GetByteArrayRegion(rgba, 0, static_cast<jsize>(image.pixels.size()),
-                          reinterpret_cast<jbyte*>(image.pixels.data()));
-  const auto processed = turboimage::processImage(std::move(image), toStdString(env, processorKey));
-  return processed ? toPixels(env, *processed) : nullptr;
+  return guarded(env, static_cast<jobject>(nullptr), [&]() -> jobject {
+    turboimage::RgbaImage image{.width = width, .height = height, .pixels = {}};
+    image.pixels.resize(static_cast<std::size_t>(env->GetArrayLength(rgba)));
+    env->GetByteArrayRegion(rgba, 0, static_cast<jsize>(image.pixels.size()),
+                            reinterpret_cast<jbyte*>(image.pixels.data()));
+    const auto processed = turboimage::processImage(std::move(image), toStdString(env, processorKey));
+    return processed ? toPixels(env, *processed) : nullptr;
+  });
 }
 
 // Returns `com.turboimage.core.PlaceholderPixels` (premultiplied RGBA, the
@@ -155,9 +206,11 @@ extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeDecodePlaceholder(JNIEnv* env, jobject /* this */,
                                                                  jstring blurhash,
                                                                  jstring thumbhash) {
-  const auto image =
-      turboimage::decodePlaceholder(toStdString(env, blurhash), toStdString(env, thumbhash));
-  return image ? toPixels(env, *image) : nullptr;
+  return guarded(env, static_cast<jobject>(nullptr), [&]() -> jobject {
+    const auto image =
+        turboimage::decodePlaceholder(toStdString(env, blurhash), toStdString(env, thumbhash));
+    return image ? toPixels(env, *image) : nullptr;
+  });
 }
 
 // The throttle's state lives in a Kotlin LongArray(3) owned by the view, so
@@ -166,16 +219,18 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeShouldReportProgress(JNIEnv* env, jobject /* this */,
                                                                     jlongArray state,
                                                                     jlong completed, jlong total) {
-  jlong fields[3];
-  env->GetLongArrayRegion(state, 0, 3, fields);
-  turboimage::ProgressThrottle throttle{
-      .lastPercent = fields[0], .lastReportedBytes = fields[1], .reportedCompletion = fields[2]};
-  const bool report = throttle.shouldReport(completed, total);
-  fields[0] = throttle.lastPercent;
-  fields[1] = throttle.lastReportedBytes;
-  fields[2] = throttle.reportedCompletion;
-  env->SetLongArrayRegion(state, 0, 3, fields);
-  return report ? JNI_TRUE : JNI_FALSE;
+  return guarded(env, static_cast<jboolean>(JNI_FALSE), [&]() -> jboolean {
+    jlong fields[3];
+    env->GetLongArrayRegion(state, 0, 3, fields);
+    turboimage::ProgressThrottle throttle{
+        .lastPercent = fields[0], .lastReportedBytes = fields[1], .reportedCompletion = fields[2]};
+    const bool report = throttle.shouldReport(completed, total);
+    fields[0] = throttle.lastPercent;
+    fields[1] = throttle.lastReportedBytes;
+    fields[2] = throttle.reportedCompletion;
+    env->SetLongArrayRegion(state, 0, 3, fields);
+    return report ? JNI_TRUE : JNI_FALSE;
+  });
 }
 
 // Same LongArray state as nativeShouldReportProgress; see
@@ -183,41 +238,51 @@ Java_com_turboimage_core_TurboImageCore_nativeShouldReportProgress(JNIEnv* env, 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeFinishProgress(JNIEnv* env, jobject /* this */,
                                                               jlongArray state, jlong total) {
-  jlong fields[3];
-  env->GetLongArrayRegion(state, 0, 3, fields);
-  turboimage::ProgressThrottle throttle{
-      .lastPercent = fields[0], .lastReportedBytes = fields[1], .reportedCompletion = fields[2]};
-  const bool report = throttle.finish(total);
-  fields[0] = throttle.lastPercent;
-  fields[1] = throttle.lastReportedBytes;
-  fields[2] = throttle.reportedCompletion;
-  env->SetLongArrayRegion(state, 0, 3, fields);
-  return report ? JNI_TRUE : JNI_FALSE;
+  return guarded(env, static_cast<jboolean>(JNI_FALSE), [&]() -> jboolean {
+    jlong fields[3];
+    env->GetLongArrayRegion(state, 0, 3, fields);
+    turboimage::ProgressThrottle throttle{
+        .lastPercent = fields[0], .lastReportedBytes = fields[1], .reportedCompletion = fields[2]};
+    const bool report = throttle.finish(total);
+    fields[0] = throttle.lastPercent;
+    fields[1] = throttle.lastReportedBytes;
+    fields[2] = throttle.reportedCompletion;
+    env->SetLongArrayRegion(state, 0, 3, fields);
+    return report ? JNI_TRUE : JNI_FALSE;
+  });
 }
 
 // -1 for unknown/empty, else a `turboimage::CachePolicy` value.
 extern "C" JNIEXPORT jint JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeParseCachePolicy(JNIEnv* env, jobject /* this */,
                                                                 jstring js) {
-  const auto policy = turboimage::parseCachePolicy(toStdString(env, js));
-  return policy ? static_cast<jint>(*policy) : -1;
+  return guarded(env, static_cast<jint>(-1), [&]() -> jint {
+    const auto policy = turboimage::parseCachePolicy(toStdString(env, js));
+    return policy ? static_cast<jint>(*policy) : -1;
+  });
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeCanonicalCacheKey(JNIEnv* env, jobject /* this */,
                                                                  jstring uri) {
-  return env->NewStringUTF(turboimage::canonicalCacheKey(toStdString(env, uri)).c_str());
+  return guarded(env, static_cast<jstring>(nullptr), [&]() -> jstring {
+    return env->NewStringUTF(turboimage::canonicalCacheKey(toStdString(env, uri)).c_str());
+  });
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeLoadErrorCodeName(JNIEnv* env, jobject /* this */,
                                                                  jint code) {
-  const auto name = turboimage::loadErrorCodeName(static_cast<turboimage::LoadErrorCode>(code));
-  return env->NewStringUTF(std::string(name).c_str());
+  return guarded(env, static_cast<jstring>(nullptr), [&]() -> jstring {
+    const auto name = turboimage::loadErrorCodeName(static_cast<turboimage::LoadErrorCode>(code));
+    return env->NewStringUTF(std::string(name).c_str());
+  });
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeCoreVersion(JNIEnv* env, jobject /* this */) {
-  const auto version = turboimage::coreVersion();
-  return env->NewStringUTF(std::string(version).c_str());
+  return guarded(env, static_cast<jstring>(nullptr), [&]() -> jstring {
+    const auto version = turboimage::coreVersion();
+    return env->NewStringUTF(std::string(version).c_str());
+  });
 }
