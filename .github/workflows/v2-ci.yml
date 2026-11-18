@@ -58,7 +58,7 @@ jobs:
       CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v5
-      - run: cmake -S packages/react-native-turbo-image/cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON
+      - run: cmake -S packages/react-native-turbo-image/cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON
       - run: cmake --build build/core -j
       - run: ctest --test-dir build/core --output-on-failure
 

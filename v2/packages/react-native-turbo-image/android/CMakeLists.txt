@@ -15,6 +15,11 @@ add_subdirectory(
 
 add_library(turboimage SHARED src/main/cpp/TurboImageJni.cpp)
 target_link_libraries(turboimage PRIVATE turboimage_core)
-target_compile_options(turboimage PRIVATE -Wall -Wextra -Werror)
+target_compile_options(turboimage PRIVATE -Wall -Wextra)
+# Same switch as the core (see ../cpp/CMakeLists.txt for why it is off in an
+# app's build). Set from Gradle with `turboImage.warningsAsErrors=true`.
+if(TURBOIMAGE_WARNINGS_AS_ERRORS)
+  target_compile_options(turboimage PRIVATE -Werror)
+endif()
 # 16 KB page-size alignment, required for Play on Android 15+ devices.
 target_link_options(turboimage PRIVATE "-Wl,-z,max-page-size=16384")

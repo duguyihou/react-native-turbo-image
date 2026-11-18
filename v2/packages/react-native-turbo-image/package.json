@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit",
     "prepack": "bash ../../scripts/check-pack.sh",
     "test": "jest",
-    "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
+    "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
     "vendor:nuke": "bash ../../scripts/build-nuke-xcframework.sh",
     "goldens:placeholder": "node cpp/tests/tools/generate-placeholder-goldens.mjs > cpp/tests/PlaceholderGoldens.inc"
   },

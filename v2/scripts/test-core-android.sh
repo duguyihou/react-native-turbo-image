@@ -34,7 +34,7 @@ build_dir="${v2_root}/tmp/core-android-${abi}"
 cmake -S "${v2_root}/packages/react-native-turbo-image/cpp" -B "${build_dir}" \
   -DCMAKE_TOOLCHAIN_FILE="${ndk}/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI="${abi}" -DANDROID_PLATFORM=24 -DANDROID_STL=c++_static \
-  -DTURBOIMAGE_BUILD_TESTS=ON > /dev/null
+  -DTURBOIMAGE_BUILD_TESTS=ON -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON > /dev/null
 cmake --build "${build_dir}" -j > /dev/null
 
 remote="/data/local/tmp/turboimage_core_tests"

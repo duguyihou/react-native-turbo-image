@@ -10,8 +10,12 @@
 // Same reason as Placeholder.cpp: the box sizes come from a sqrt and a
 // division, and a fused multiply-add would round differently on arm64. All
 // per-pixel work is integer arithmetic, so this is the only floating point
-// that could make the platforms disagree.
+// that could make the platforms disagree. Clang only, as there: GCC does
+// not know the pragma (a warning, so an error where warnings are errors)
+// and does not contract in strict ISO mode anyway.
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
+#endif
 
 namespace turboimage {
 

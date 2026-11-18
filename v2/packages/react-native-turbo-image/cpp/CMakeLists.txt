@@ -6,7 +6,8 @@
 #   1. Standalone (host machine, CI): builds the library + GoogleTest suite.
 #        cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON
 #   2. Android: `android/CMakeLists.txt` pulls it in with add_subdirectory()
-#      and links it into the JNI library. Tests are off there.
+#      and links it into the JNI library. Tests are off there, and so is
+#      TURBOIMAGE_WARNINGS_AS_ERRORS unless the app asks for it.
 #   3. iOS does NOT use CMake. Package.swift and the podspec compile the same
 #      `src/` and `include/` trees directly. If you add a source file here,
 #      nothing else needs to change on iOS because both manifests glob
@@ -17,6 +18,11 @@ cmake_minimum_required(VERSION 3.22)
 project(TurboImageCore VERSION 2.0.0 LANGUAGES CXX)
 
 option(TURBOIMAGE_BUILD_TESTS "Build the GoogleTest suite" OFF)
+# Off by default because apps compile this with their own NDK: a compiler
+# newer than the ones this was written against may warn about code that is
+# fine, and that must not break an app's build. This repository turns it on
+# everywhere it builds the core (the core tests, the example app, CI).
+option(TURBOIMAGE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 add_library(turboimage_core STATIC
   src/ImageRequest.cpp
@@ -35,7 +41,10 @@ set_target_properties(turboimage_core PROPERTIES
   POSITION_INDEPENDENT_CODE ON   # linked into an Android .so
 )
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-  target_compile_options(turboimage_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  target_compile_options(turboimage_core PRIVATE -Wall -Wextra -Wpedantic)
+  if(TURBOIMAGE_WARNINGS_AS_ERRORS)
+    target_compile_options(turboimage_core PRIVATE -Werror)
+  endif()
 endif()
 
 if(TURBOIMAGE_BUILD_TESTS)

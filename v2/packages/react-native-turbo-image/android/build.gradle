@@ -76,6 +76,12 @@ android {
     externalNativeBuild {
       cmake {
         arguments "-DANDROID_STL=c++_shared"
+        // Warnings in the C++ are errors only where asked for: this
+        // repository's example app sets the property; an app compiling
+        // with a newer NDK must not fail on a warning (cpp/CMakeLists.txt).
+        if (rootProject.findProperty("turboImage.warningsAsErrors") == "true") {
+          arguments "-DTURBOIMAGE_WARNINGS_AS_ERRORS=ON"
+        }
         // Honour the app's `-PreactNativeArchitectures=...`. The RN Gradle
         // plugin narrows ABIs only for the app module; without this, the
         // library compiles the core for all four ABIs on every build.
