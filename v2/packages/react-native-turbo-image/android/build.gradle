@@ -6,8 +6,8 @@
 //   * Kotlin: Coil 3.6.3 is compiled with Kotlin 2.4.10. A Kotlin compiler
 //     only reads metadata up to one minor version ahead, so the host app's
 //     Kotlin must be >= 2.3. RN 0.88's template ships 2.2.0, so apps have to
-//     bump `kotlinVersion`. We fail fast below instead of letting the build
-//     die later with an opaque "incompatible metadata" error.
+//     raise it. We fail fast below instead of letting the build die later
+//     with a wall of "incompatible metadata" errors in some other library.
 //   * Shared C++ core is built with CMake from ../cpp (RFC rule 4).
 
 buildscript {
@@ -41,14 +41,6 @@ def majorMinor = { String v ->
   def parts = v.tokenize(".-")
   parts[0].toInteger() * 1000 + parts[1].toInteger()
 }
-def appKotlin = getExtOrDefault("kotlinVersion").toString()
-if (majorMinor(appKotlin) < majorMinor(minimumKotlinForCoil)) {
-  throw new GradleException(
-    "react-native-turbo-image requires kotlinVersion >= ${minimumKotlinForCoil} " +
-    "(Coil ${coilVersion} is compiled with Kotlin 2.4). Found ${appKotlin}. " +
-    "Set `kotlinVersion` in android/build.gradle `ext {}`."
-  )
-}
 
 def reactNativeArchitectures() {
   def value = rootProject.findProperty("reactNativeArchitectures")
@@ -63,6 +55,26 @@ if (project.extensions.findByName("kotlin") == null) {
   apply plugin: "kotlin-android"
 }
 apply plugin: "com.facebook.react"
+
+// The Kotlin that matters is the compiler's, which is the Kotlin Gradle
+// plugin's version, and that comes from the app's buildscript classpath.
+// `rootProject.ext.kotlinVersion` is only a convention: React Native's
+// template declares the plugin without a version, so raising the ext
+// property alone leaves the compiler where it was. Checking the property
+// let exactly that through, and the build then failed in whichever library
+// compiled first. So ask the plugin, and fall back to the property only if
+// no applied plugin reports a version.
+def kotlinPlugin = project.plugins.find { it.metaClass.respondsTo(it, "getPluginVersion") }
+def appKotlin = (kotlinPlugin?.pluginVersion ?: getExtOrDefault("kotlinVersion")).toString()
+if (majorMinor(appKotlin) < majorMinor(minimumKotlinForCoil)) {
+  throw new GradleException(
+    "react-native-turbo-image requires Kotlin >= ${minimumKotlinForCoil} " +
+    "(Coil ${coilVersion} is compiled with Kotlin 2.4), but this build uses the Kotlin " +
+    "Gradle plugin ${appKotlin}. In android/build.gradle, set `kotlinVersion` in `ext {}` " +
+    "and give the plugin that version: " +
+    "classpath(\"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlinVersion\")."
+  )
+}
 
 android {
   namespace "com.turboimage"

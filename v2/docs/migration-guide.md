@@ -16,17 +16,22 @@ For app developers. The reasons behind each change are in the [RFC](rfc/0001-tur
 
 If your app is still on the Old Architecture, stay on 1.x until it has moved.
 
-The Kotlin floor comes from Coil 3.6.3. React Native 0.88's app template ships Kotlin 2.2.0, so most apps have to raise it in `android/build.gradle`:
+The Kotlin floor comes from Coil 3.6.3. React Native 0.88's app template ships Kotlin 2.2, so most apps have to raise it in `android/build.gradle`. Change both lines: the template declares the Kotlin Gradle plugin without a version, so setting `kotlinVersion` alone leaves the compiler at 2.2.
 
-```groovy
-buildscript {
-  ext {
-    kotlinVersion = "2.4.21"
+```diff
+  buildscript {
+    ext {
+-     kotlinVersion = "2.2.0"
++     kotlinVersion = "2.4.21"
+    }
+    dependencies {
+-     classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
++     classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+    }
   }
-}
 ```
 
-An app on an older Kotlin fails at Gradle configuration with a message that names the version it found.
+An app whose Kotlin compiler is too old fails at Gradle configuration with a message that names the version it found.
 
 ## 2. Install
 
