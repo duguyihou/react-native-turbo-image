@@ -1,0 +1,15 @@
+{
+  // Declarations only, for the published package (`prepack`). Metro compiles
+  // the TypeScript in `src` itself, so no JavaScript is built; without these
+  // files an app's `tsc` would type-check our source under the app's own
+  // compiler options.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "lib/typescript"
+  },
+  "exclude": ["src/__tests__"]
+}

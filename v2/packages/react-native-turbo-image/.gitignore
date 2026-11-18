@@ -5,3 +5,4 @@ Package.resolved
 build/
 android/build/
 android/.cxx/
+lib/

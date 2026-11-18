@@ -38,8 +38,10 @@ if [[ "${vendored_version}" != "${NUKE_VERSION}" ]]; then
   fail "vendored Nuke is ${vendored_version}, but native-versions.env pins ${NUKE_VERSION}."
 fi
 
-# npm only picks these up from the package directory itself.
-for file in LICENSE README.md; do
+# LICENSE and README: npm only picks these up from the package directory
+# itself. The declarations are what `types` in package.json points at;
+# `prepack` builds them just before this runs.
+for file in LICENSE README.md lib/typescript/index.d.ts; do
   if [[ ! -f "${pkg}/${file}" ]]; then
     echo "check-pack: ${file} is missing from the package directory." >&2
     exit 1

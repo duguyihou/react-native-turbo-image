@@ -12,6 +12,7 @@
   "source": "src/index.tsx",
   "files": [
     "src",
+    "lib",
     "cpp/include",
     "cpp/src",
     "cpp/CMakeLists.txt",
@@ -24,15 +25,24 @@
     "!**/__tests__"
   ],
   "main": "src/index.tsx",
-  "types": "src/index.tsx",
+  "types": "lib/typescript/index.d.ts",
   "react-native": "src/index.tsx",
+  "exports": {
+    ".": {
+      "source": "./src/index.tsx",
+      "types": "./lib/typescript/index.d.ts",
+      "default": "./src/index.tsx"
+    },
+    "./package.json": "./package.json"
+  },
   "publishConfig": {
     "access": "public",
     "tag": "next"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "prepack": "bash ../../scripts/check-pack.sh",
+    "build:types": "tsc -p tsconfig.build.json",
+    "prepack": "bun run build:types && bash ../../scripts/check-pack.sh",
     "test": "jest",
     "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
     "vendor:nuke": "bash ../../scripts/build-nuke-xcframework.sh",
