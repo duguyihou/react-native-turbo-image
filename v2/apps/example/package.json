@@ -9,10 +9,10 @@
     "typecheck": "tsc --noEmit",
     "pods": "cd ios && pod install",
     "build:android": "cd android && ./gradlew assembleDebug --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "build:android:release": "cd android && ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=arm64-v8a",
+    "build:android:release": "bash ../../scripts/build-stamped.sh android android/app/build/outputs/apk/release/app-release.apk -- bash -c 'cd android && ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=arm64-v8a'",
     "codegen:ios": "node ../../node_modules/react-native/scripts/generate-codegen-artifacts.js -p . -o ios -t ios",
     "build:ios": "bun run codegen:ios && xcodebuild -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build",
-    "build:ios:release": "bun run codegen:ios && xcodebuild -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build",
+    "build:ios:release": "bash ../../scripts/build-stamped.sh ios ios/build/Build/Products/Release-iphonesimulator/TurboImageExample.app -- bash -c \"bun run codegen:ios && xcodebuild -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build\"",
     "smoke:android": "bash ../../scripts/smoke-android.sh",
     "smoke:ios": "bash ../../scripts/smoke-ios.sh"
   },

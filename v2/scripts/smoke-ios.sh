@@ -30,7 +30,7 @@ newest_artifact="${app}/TurboImageExample"
 if [[ "${app}/main.jsbundle" -nt "${newest_artifact}" ]]; then
   newest_artifact="${app}/main.jsbundle"
 fi
-assert_fresh_build "${newest_artifact}" ios
+assert_fresh_build "${newest_artifact}" ios "${app}.sources-sha256"
 
 # shellcheck source=./fixture-server.sh source-path=SCRIPTDIR
 source "${script_dir}/fixture-server.sh"
