@@ -74,10 +74,17 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 /// Evicts the image `request` names from memory (every processed and sized
 /// variant), from the key-addressed disk cache, and from the HTTP cache.
 /// Only the request's `cacheKey` and `url` matter; its policy does not.
+///
+/// Main thread, so it must not do disk I/O in the caller: the entry has to
+/// be gone for the next read when this returns, with the files deleted
+/// later. That is why it takes no completion block where the Android seam's
+/// `remove` takes `onDone`: Coil's disk cache deletes in the calling thread,
+/// Nuke's `DataCache` stages the removal and returns.
 - (void)removeCachedImageForRequest:(TIImageRequest *)request;
 
 - (void)clearMemoryCache;
 /// Empties both disk stores: the key-addressed cache and the HTTP cache.
+/// Same threading rule as `removeCachedImageForRequest:`.
 - (void)clearDiskCache;
 
 /// Synchronous memory-cache lookup, for the `memoryCacheKey` placeholder.

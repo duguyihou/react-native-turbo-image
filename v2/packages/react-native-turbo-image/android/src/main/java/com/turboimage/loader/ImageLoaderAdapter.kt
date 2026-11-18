@@ -47,10 +47,13 @@ interface ImageLoaderAdapter {
    * variant), from the key-addressed disk cache, and from the HTTP cache.
    * Only a request's `cacheKey` and `url` matter; its policy does not.
    *
-   * Called on the main thread, but the disk work must not run there (journal
-   * writes and file deletes), which is why this takes a callback where iOS's
-   * `removeCachedImageForRequest:` returns. [onDone] fires once on the main
-   * thread, when everything is gone. Failures to delete are not reported: an
+   * Called on the main thread, but the disk work must not run there: Coil's
+   * `DiskCache` writes its journal and deletes files in the calling thread.
+   * Hence the callback, where iOS's `removeCachedImageForRequest:` simply
+   * returns: Nuke's `DataCache` only stages a removal (hidden from reads at
+   * once, deleted later on its own queue), so that call never blocks.
+   * [onDone] fires once on the main thread, when everything is gone.
+   * Failures to delete are logged by the adapter but not reported here: an
    * entry that could not be removed is the same to the caller as one a
    * concurrent load has just written back.
    */

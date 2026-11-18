@@ -6,6 +6,7 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import coil3.Extras
@@ -340,14 +341,17 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
    * write the journal and delete files, and the first access opens the cache.
    *
    * [thenOnMain] runs even if [work] throws, so the caller's promise always
-   * settles; see [ImageLoaderAdapter.remove] for why the failure is dropped.
+   * settles. The failure is logged but not passed on; see
+   * [ImageLoaderAdapter.remove] for why the caller is not told.
    */
   private fun onDiskThread(work: () -> Unit, thenOnMain: () -> Unit) {
     diskExecutor.execute {
       try {
         work()
-      } catch (_: Exception) {
-        // Deliberately not rethrown or reported (see above).
+      } catch (e: Exception) {
+        // Deliberately not rethrown (see above), but never silent: a cache
+        // that cannot be written to is worth a line in logcat.
+        Log.w(LOG_TAG, "Disk cache operation failed", e)
       } finally {
         mainHandler.post(thenOnMain)
       }
@@ -460,6 +464,8 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     }
 
   companion object {
+    private const val LOG_TAG = "TurboImage"
+
     private val mainHandler = Handler(Looper.getMainLooper())
 
     // One thread, so removals and clears run in the order JS asked for them.

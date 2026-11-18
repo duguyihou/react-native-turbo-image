@@ -178,8 +178,9 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
     _imageView = [[UIImageView alloc] initWithFrame:self.bounds];
     _imageView.clipsToBounds = YES;
-    // Matches the spec default (`contain`, 1.x's default).
-    _imageView.contentMode = UIViewContentModeScaleAspectFit;
+    // The spec default (`contain`, 1.x's default), read from the default
+    // props so the two cannot drift apart.
+    _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);
     self.contentView = _imageView;
   }
   return self;
@@ -496,11 +497,14 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   ++_placeholderGeneration;  // drop any decode still in flight
   // Back to the spec default, like the image above: the next updateProps
   // compares this view's props with the defaults (see `_recycled`).
-  _imageView.contentMode = UIViewContentModeScaleAspectFit;
+  _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);
   // `_props` is deliberately left alone. It belongs to the base class, which
   // diffs the next life's props against it; replacing it with the defaults
   // made a recycled view keep the previous life's accessibilityLabel,
-  // testID, opacity and shadow whenever the new life left them unset.
+  // testID and shadow whenever the new life left them unset. (Not opacity:
+  // the base class re-applies that one on every update.) Checked once with
+  // a temporary log of `accessibilityLabel` and `layer.shadowOpacity` across
+  // a recycle; no smoke scenario can see either from JS.
   _recycled = YES;
 }
 
