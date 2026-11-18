@@ -31,8 +31,8 @@ export type NativePlaceholder = Readonly<{
   thumbhash?: string;
   // Show an image already in the *memory* cache (e.g. a thumbnail shown on
   // the previous screen) while this one loads. Pass the URI (or explicit
-  // cacheKey) that image was loaded with; it is canonicalised by the core
-  // exactly like a source, so keys always agree.
+  // cacheKey) that image was loaded with: the core tries the key as written
+  // (an explicit cacheKey) and then in canonical form (a URI).
   memoryCacheKey?: string;
 }>;
 

@@ -5,6 +5,7 @@ New Architecture-only rewrite of `react-native-turbo-image`. 1.x continues at th
 - Architecture and decisions: [`docs/rfc/0001-turbo-image-2-native-toolchain.md`](docs/rfc/0001-turbo-image-2-native-toolchain.md)
 - Dependency matrix: [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md)
 - React Native SwiftPM assessment: [`docs/spm-assessment.md`](docs/spm-assessment.md)
+- Migrating an app from 1.x: [`docs/migration-guide.md`](docs/migration-guide.md)
 - Migration plan from 1.x: [`docs/migration-plan.md`](docs/migration-plan.md)
 
 ## Quick start

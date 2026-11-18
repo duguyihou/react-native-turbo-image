@@ -61,7 +61,7 @@ builds, and the CI matrix.
 
 ### Phase 4: release
 - `2.0.0-beta.N` on npm under the `next` tag. The tarball includes `ios/vendor/Nuke.xcframework`, built in CI from the pinned tag. A `prepack` hook should fail if the vendored version doesn't match.
-- Publish a migration guide for app developers:
+- Publish a migration guide for app developers (drafted: [`migration-guide.md`](migration-guide.md)):
   - Requirements: New Architecture, RN ≥ 0.88, **Kotlin ≥ 2.3**, iOS 15.1.
   - Prop renames and the `cachePolicy` mapping.
   - The pod name changes from `react-native-turbo-image` to `TurboImage`. Autolinking handles this, but apps that reference the pod name directly need updating.
@@ -69,6 +69,8 @@ builds, and the CI matrix.
 - 2.0.0 once Phase 2 parity and both iOS integration paths are green in CI.
 
 ## Breaking changes for apps (draft)
+
+The complete list, kept as the record of what changed. [`migration-guide.md`](migration-guide.md) is the version written for app developers.
 
 - Old Architecture is no longer supported.
 - Requires RN ≥ 0.88 and **Kotlin ≥ 2.3** (Coil 3.6.3).
@@ -90,7 +92,7 @@ builds, and the CI matrix.
 - `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.
 - Local sources (`file://`, `content://`, `android.resource://`) are never copied into the disk cache, and `cacheOnly` does not block them.
 - `format` is ignored: formats are detected from the bytes. Gifu and APNGKit are no longer dependencies.
-- SVG on iOS still uses Apple's private CoreSVG framework, as in 1.x. Apps should know this is private-API use that App Review could flag.
+- SVG on iOS still uses Apple's private CoreSVG framework, as in 1.x. Apps should know this is private-API use that App Review could flag. It is the technique SDWebImageSVGCoder uses, with the same run-time lookup, so a removed symbol fails the load instead of crashing.
 - Processors on an animated image now produce a static image on iOS too (1.x iOS ignored the processors and animated the raw data).
 - On iOS, animations larger than 64 MB decoded show only their first frame.
 - On Android, image requests now send a descriptive `User-Agent` (`<App>/<version> TurboImage/<version> (Android <release>)`) instead of OkHttp's default.
