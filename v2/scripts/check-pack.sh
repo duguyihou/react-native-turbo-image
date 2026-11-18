@@ -48,4 +48,11 @@ for file in LICENSE README.md lib/typescript/index.d.ts; do
   fi
 done
 
+# The package's LICENSE is a copy (npm does not follow a link out of the
+# package directory), so make sure it has not drifted from the original.
+if ! cmp -s "${pkg}/LICENSE" "${v2_root}/../LICENSE"; then
+  echo "check-pack: LICENSE differs from the repository's; copy the root LICENSE over it." >&2
+  exit 1
+fi
+
 echo "check-pack: ok (Nuke ${vendored_version})"

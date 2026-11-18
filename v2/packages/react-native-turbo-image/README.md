@@ -4,9 +4,10 @@ Performant image component for React Native, backed by
 [Nuke](https://github.com/kean/Nuke) on iOS and
 [Coil](https://github.com/coil-kt/coil) on Android.
 
-> **2.0 is in development.** This is a pre-release of the New
-> Architecture-only rewrite, published under the `next` tag. The stable 1.x
-> line is what `npm install react-native-turbo-image` gives you.
+> **2.0 is in development and not on npm yet.** This is the New
+> Architecture-only rewrite. `npm install react-native-turbo-image` gives you
+> the stable 1.x line; pre-releases of 2.0 will be published under the `next`
+> tag.
 
 ## Requirements
 
@@ -15,6 +16,8 @@ Performant image component for React Native, backed by
 - Android `minSdk` 24, Kotlin 2.3 or newer
 
 ## Installation
+
+Once a pre-release is out:
 
 ```sh
 npm install react-native-turbo-image@next
