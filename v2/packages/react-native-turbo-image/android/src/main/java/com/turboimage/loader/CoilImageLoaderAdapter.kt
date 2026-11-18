@@ -511,9 +511,11 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     private fun buildImageLoader(context: Context): ImageLoader {
       // Explicit client rather than RN's shared OkHttpClientProvider so that
       // TurboImage's network behaviour does not change with the host app's
-      // interceptors. TODO: expose an opt-in hook for auth headers/cookies.
+      // interceptors. Cookies are the exception (see ReactCookieJar).
+      // TODO: expose an opt-in hook for default headers or an interceptor.
       val okHttpClient =
         OkHttpClient.Builder()
+          .cookieJar(ReactCookieJar())
           // Application interceptor: sees the token header before the
           // network layer, strips it, and counts response bytes.
           .addInterceptor(ProgressInterceptor())

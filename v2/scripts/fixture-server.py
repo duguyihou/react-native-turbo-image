@@ -21,6 +21,8 @@ with it a cache entry, of its own):
   /accept/png                  200 only if `Accept` allows image/png, else 406
   /ua/<name>.jpg               403 for OkHttp's default User-Agent, as some
                                  CDNs answer it
+  /cookie/set                  200 with Set-Cookie, for the app's `fetch`
+  /cookie/photo/<name>.jpg     200 only if that cookie comes back, else 403
   /cache/fresh/<name>.jpg      Cache-Control: max-age=3600
   /cache/nostore/<name>.jpg    Cache-Control: no-store
   /cache/revalidate/<name>.jpg Cache-Control: no-cache + ETag (304 when matched)
@@ -43,6 +45,8 @@ from urllib.parse import parse_qs, urlsplit
 
 FIXTURES = pathlib.Path(__file__).resolve().parent.parent / "apps/example/fixtures"
 ETAG = '"fixture-v1"'
+# A session cookie as a login endpoint would set one.
+COOKIE = "turboimage_smoke=1"
 
 # Bytes per write and the pause between writes for /slow/ bodies. The large
 # photo (~370 KB) then takes about two seconds: long enough to be cancelled
@@ -113,6 +117,13 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get("User-Agent", "").startswith("okhttp/"):
                 return self.reply(403, b"", "text/plain")
             return self.reply(200, *PHOTO)
+        if path == "/cookie/set":
+            return self.reply(200, b"ok", "text/plain", {"Set-Cookie": f"{COOKIE}; Path=/cookie"})
+        if path.startswith("/cookie/photo/"):
+            sent = [c.strip() for c in self.headers.get("Cookie", "").split(";")]
+            if COOKIE in sent:
+                return self.reply(200, *PHOTO)
+            return self.reply(403, b"", "text/plain")
         for prefix, headers in CACHE_HEADERS.items():
             if path.startswith(prefix):
                 if "ETag" in headers and validator == ETAG:

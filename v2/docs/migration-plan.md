@@ -48,7 +48,7 @@ builds, and the CI matrix.
 | GIF, APNG, SVG | Adapter decoders, chosen by content | ✅ done (RFC §4.5b). ImageIO on iOS (drops Gifu and APNGKit), `coil-gif` + LINE `apng-drawable` on Android. SVG keeps 1.x's private CoreSVG on iOS by decision; `coil-svg` on Android. `format` is ignored |
 | Video thumbnails (1.x Android `coil-video`) | Not ported | ✅ nothing to port: 1.x declared the dependency but never registered `VideoFrameDecoder`, so it never worked |
 | Local assets / `require()` sources | Core scheme handling | ✅ done (RFC §4.1). `require()` is new in 2.0 (1.x only took `{ uri }`); `file://`, `content://`, `android.resource://` are explicit now (1.x loaded them by accident). Local sources skip the disk tier and load under `cacheOnly` |
-| `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). App-wide hook (cookies) is a TODO |
+| `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). Cookies are shared with React Native's networking on both platforms (new on Android). An app-wide hook for default headers is a TODO |
 | — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
 
@@ -97,6 +97,6 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 - On iOS, animations larger than 64 MB decoded show only their first frame.
 - On Android, image requests now send a descriptive `User-Agent` (`<App>/<version> TurboImage/<version> (Android <release>)`) instead of OkHttp's default.
 - A `source.headers` entry with CR/LF/NUL in its value or a non-token name now fails the load with `invalidRequest` instead of being sent.
-- Android no longer inherits React Native's shared `OkHttpClient`, so cookies set through RN's networking are not sent with image requests.
+- On Android, image requests now send and store cookies through React Native's cookie store, as iOS always has through the shared `HTTPCookieStorage`. 1.x Android sent none: it built its own `OkHttpClient` with no cookie jar.
 - `TurboImage.prefetch` resolves `false` when any source fails (1.x always resolved `true`).
 - `blur`, `monochrome` and `tint` are now one cross-platform implementation, so results differ slightly from 1.x on both platforms. `blur` is σ in pixels of the (resized) image. On Android it now applies to the original-size decode, not the view-size one, so the same value looks weaker on large photos; pair it with `resize`. A `monochrome` colour's alpha is now its intensity.

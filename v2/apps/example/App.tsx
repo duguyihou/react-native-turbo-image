@@ -113,6 +113,7 @@ type Scenario = {
     | 'supersede'
     | 'prefetch'
     | 'prefetchInvalid'
+    | 'cookie'
     | 'dispose'
     | 'clearCaches'
     | 'urlCache';
@@ -506,6 +507,19 @@ const SCENARIOS: Scenario[] = [
     source: { uri: `${BASE}/ua/photo.jpg` },
     cachePolicy: 'default',
     expect: 'load',
+  },
+  {
+    id: 'cookie',
+    title: "a cookie set through React Native's fetch is sent with the image request",
+    // `/cookie/set` answers the app's `fetch` with Set-Cookie, as a login
+    // endpoint would; `/cookie/photo/` answers 403 without that cookie. iOS
+    // shares `HTTPCookieStorage` between the two; on Android the adapter's
+    // client reads React Native's cookie store. noCache, so the request is
+    // made on every run.
+    source: { uri: `${BASE}/cookie/photo/session.jpg` },
+    cachePolicy: 'noCache',
+    expect: 'load',
+    kind: 'cookie',
   },
   {
     id: 'requireAsset',
@@ -959,6 +973,13 @@ const PrefetchProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView {...p} before={() => TurboImage.prefetch([p.scenario.source])} />
 );
 
+const CookieProbe = (p: { scenario: Scenario; settle: Settle }) => (
+  <CacheThenView
+    {...p}
+    before={() => fetch(`${BASE}/cookie/set`, { credentials: 'include' }).then((r) => r.ok)}
+  />
+);
+
 const DisposeProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView {...p} before={() => TurboImage.dispose([p.scenario.source]).then(() => true)} />
 );
@@ -1058,6 +1079,7 @@ const PROBES = {
   prefetch: PrefetchProbe,
   prefetchInvalid: PrefetchInvalidProbe,
   dispose: DisposeProbe,
+  cookie: CookieProbe,
   clearCaches: ClearCachesProbe,
   recycle: RecycleProbe,
   reattach: ReattachProbe,
