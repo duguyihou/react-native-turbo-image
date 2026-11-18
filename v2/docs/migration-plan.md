@@ -83,6 +83,9 @@ builds, and the CI matrix.
 - Passing more than one placeholder kind throws only in development builds; in release builds native picks one. 1.x threw in every build.
 - `showPlaceholderOnFailure` without a `placeholder` is a no-op. 1.x threw.
 - `isProgressiveImageRenderingEnabled` is ignored (it had no effect in 1.x either).
+- `ref` gives the image view itself unless `rounded` or `indicator` is set, in which case it gives the container around it. 1.x always gave the container. Both are the view that carries `style`, so measuring is unaffected.
+- Other `View` props (`testID`, accessibility props, `onLayout`) go to the image view, as in 1.x. With `rounded` or `indicator` that is the view inside the container.
+- Switching `rounded` or `indicator` on or off for a mounted image adds or removes the container, which remounts the image view and restarts its load. 1.x always had the container.
 - `indicator` appears only for loads that take longer than 150 ms, and is never shown together with a `placeholder` (1.x iOS showed whichever prop was set last).
 - `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.
 - Local sources (`file://`, `content://`, `android.resource://`) are never copied into the disk cache, and `cacheOnly` does not block them.

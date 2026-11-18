@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ComponentRef, Ref } from 'react';
 import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import type { ColorValue } from 'react-native';
 
@@ -95,6 +96,13 @@ export type TurboImageProps = Omit<
   NativeProps,
   'cachePolicy' | 'monochrome' | 'tint' | 'source' | 'recyclingKey'
 > & {
+  /**
+   * The outermost native view: the image view itself, or the container
+   * around it when `rounded` or `indicator` needs one (always the container
+   * in 1.x). Either way it is the view that has `style`, so measuring it
+   * gives the image's frame.
+   */
+  ref?: Ref<TurboImageInstance>;
   source: Source;
   // See the native spec. `null` is accepted and means "no key", so code
   // written for expo-image (`string | null`) compiles unchanged.
@@ -121,6 +129,9 @@ export type TurboImageProps = Omit<
    */
   isProgressiveImageRenderingEnabled?: boolean;
 };
+
+/** What a `ref` on `<TurboImage>` receives: a native view, as for `<View>`. */
+export type TurboImageInstance = ComponentRef<typeof View>;
 
 export type Indicator = {
   style?: 'medium' | 'large';
@@ -153,6 +164,10 @@ function resolveCachePolicy(policy: TurboImageProps['cachePolicy']): CachePolicy
 }
 
 function TurboImageComponent({
+  // Taken out of `props` so it goes to one view only. Since React 19 a
+  // function component gets `ref` as a prop, and left in the spread below it
+  // would always land on the inner image view.
+  ref,
   cachePolicy,
   rounded,
   style,
@@ -210,6 +225,7 @@ function TurboImageComponent({
   const image = (
     <TurboImageView
       {...(props as Omit<NativeProps, 'cachePolicy' | 'source' | 'recyclingKey'>)}
+      ref={needsContainer ? undefined : ref}
       // Codegen strings cannot be null.
       recyclingKey={recyclingKey ?? undefined}
       // A new object each render is fine: both native views compare the
@@ -231,7 +247,7 @@ function TurboImageComponent({
   // platforms identical. The container must not come and go with the
   // spinner: that would remount the native view and restart the load.
   return (
-    <View style={[style, rounded && styles.rounded]}>
+    <View ref={ref} style={[style, rounded && styles.rounded]}>
       {image}
       {showsIndicator && spinning && (
         <ActivityIndicator

@@ -3,7 +3,7 @@
 // by mocks, so these tests assert the props and arguments native *receives*.
 
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act } from 'react';
+import { act, createRef } from 'react';
 import type { ComponentType } from 'react';
 import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
 import { create } from 'react-test-renderer';
@@ -11,7 +11,7 @@ import type { ReactTestRenderer } from 'react-test-renderer';
 
 import NativeTurboImageModule from '../NativeTurboImageModule';
 import { TurboImage } from '../index';
-import type { TurboImageProps } from '../index';
+import type { TurboImageInstance, TurboImageProps } from '../index';
 
 // Stands in for the Fabric view: renders a host element named
 // 'TurboImageView' carrying the exact props native would get, and counts
@@ -256,6 +256,42 @@ describe('layout', () => {
     const renderer = render({ style, indicator: { style: 'medium' } });
     expect(nativeProps(renderer).style).toBe(StyleSheet.absoluteFill);
     expect(StyleSheet.flatten(renderer.root.findByType(View).props.style)).toEqual(style);
+  });
+});
+
+// The test renderer has no native views; this stands in for one and says
+// which host element a ref was attached to.
+const createNodeMock = (element: { type: unknown }) => ({ hostType: element.type });
+
+function refOf(props: Partial<TurboImageProps>) {
+  const ref = createRef<TurboImageInstance>();
+  act(() => {
+    create(<TurboImage ref={ref} source={AVATAR} {...props} />, { createNodeMock });
+  });
+  return ref.current as unknown as { hostType?: string } | null;
+}
+
+describe('ref', () => {
+  it('is the native image view when there is no container', () => {
+    expect(refOf({})?.hostType).toBe('TurboImageView');
+  });
+
+  const withContainer: Array<[string, Partial<TurboImageProps>]> = [
+    ['rounded', { rounded: true }],
+    ['indicator', { indicator: { style: 'medium' } }],
+  ];
+  it.each(withContainer)('is the container when %s adds one, as in 1.x', (_name, props) => {
+    // React Native's Jest preset mocks <View>, so the container's instance
+    // is that mock's and not a node from createNodeMock. What matters is
+    // that there is one, and that it is not the image view.
+    const instance = refOf(props);
+    expect(instance).not.toBeNull();
+    expect(instance?.hostType).not.toBe('TurboImageView');
+  });
+
+  it('does not also reach the image view inside a container', () => {
+    const renderer = render({ rounded: true, ref: createRef<TurboImageInstance>() });
+    expect(nativeProps(renderer).ref).toBeUndefined();
   });
 });
 
