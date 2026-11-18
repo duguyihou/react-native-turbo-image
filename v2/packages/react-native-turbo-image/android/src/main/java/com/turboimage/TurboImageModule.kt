@@ -76,12 +76,10 @@ class TurboImageModule(private val context: ReactApplicationContext) :
 
   override fun dispose(sources: ReadableArray, promise: Promise) {
     UiThreadUtil.runOnUiThread {
-      val loader = TurboImageLoaders.get(context)
-      for (i in 0 until sources.size()) {
-        // Policy is irrelevant for the key; DEFAULT resolves it like a view.
-        resolve(sources, i, TurboImageCore.CachePolicy.DEFAULT)?.let { loader.remove(it) }
-      }
-      promise.resolve(null)
+      // Policy is irrelevant for the key; DEFAULT resolves it like a view.
+      val requests =
+        (0 until sources.size()).mapNotNull { resolve(sources, it, TurboImageCore.CachePolicy.DEFAULT) }
+      TurboImageLoaders.get(context).remove(requests) { promise.resolve(null) }
     }
   }
 
@@ -94,8 +92,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
 
   override fun clearDiskCache(promise: Promise) {
     UiThreadUtil.runOnUiThread {
-      TurboImageLoaders.get(context).clearDiskCache()
-      promise.resolve(null)
+      TurboImageLoaders.get(context).clearDiskCache { promise.resolve(null) }
     }
   }
 

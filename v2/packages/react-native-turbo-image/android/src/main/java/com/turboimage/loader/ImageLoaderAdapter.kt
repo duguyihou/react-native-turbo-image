@@ -43,16 +43,27 @@ interface ImageLoaderAdapter {
   fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
 
   /**
-   * Evicts the image [request] names from memory (every processed and sized
+   * Evicts the images [requests] name from memory (every processed and sized
    * variant), from the key-addressed disk cache, and from the HTTP cache.
-   * Only the request's `cacheKey` and `url` matter; its policy does not.
+   * Only a request's `cacheKey` and `url` matter; its policy does not.
+   *
+   * Called on the main thread, but the disk work must not run there (journal
+   * writes and file deletes), which is why this takes a callback where iOS's
+   * `removeCachedImageForRequest:` returns. [onDone] fires once on the main
+   * thread, when everything is gone. Failures to delete are not reported: an
+   * entry that could not be removed is the same to the caller as one a
+   * concurrent load has just written back.
    */
-  fun remove(request: ResolvedRequest)
+  fun remove(requests: List<ResolvedRequest>, onDone: () -> Unit)
 
   fun clearMemoryCache()
 
-  /** Empties both disk stores: the key-addressed cache and the HTTP cache. */
-  fun clearDiskCache()
+  /**
+   * Empties both disk stores: the key-addressed cache and the HTTP cache.
+   * Same threading as [remove]: called on the main thread, works off it,
+   * [onDone] once on the main thread.
+   */
+  fun clearDiskCache(onDone: () -> Unit)
 
   /** Synchronous memory lookup for the `memoryCacheKey` placeholder. Main thread. */
   fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable?

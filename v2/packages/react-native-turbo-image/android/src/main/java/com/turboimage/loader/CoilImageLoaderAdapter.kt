@@ -46,6 +46,8 @@ import coil3.target.ImageViewTarget
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import java.io.IOException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -294,19 +296,53 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   private fun memoryKeysFor(cacheKey: String) =
     imageLoader.memoryCache?.keys?.filter { it.key == cacheKey }.orEmpty()
 
-  override fun remove(request: ResolvedRequest) {
-    memoryKeysFor(request.cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
-    // Both disk namespaces, whichever policy stored the image.
-    imageLoader.diskCache?.remove(request.cacheKey)
-    imageLoader.diskCache?.remove(httpDiskKey(request.url))
+  override fun remove(requests: List<ResolvedRequest>, onDone: () -> Unit) {
+    onDiskThread(
+      work = {
+        for (request in requests) {
+          // Both disk namespaces, whichever policy stored the image.
+          imageLoader.diskCache?.remove(request.cacheKey)
+          imageLoader.diskCache?.remove(httpDiskKey(request.url))
+        }
+      },
+      // Memory after disk, not before: a view that reloads in between would
+      // otherwise read the disk copy back into memory, and the entry would
+      // outlive the call that removed it.
+      thenOnMain = {
+        for (request in requests) {
+          memoryKeysFor(request.cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
+        }
+        onDone()
+      },
+    )
+  }
+
+  /**
+   * Runs blocking disk-cache [work] off the main thread, then [thenOnMain].
+   * Coil's `DiskCache` is thread-safe but synchronous: `remove` and `clear`
+   * write the journal and delete files, and the first access opens the cache.
+   *
+   * [thenOnMain] runs even if [work] throws, so the caller's promise always
+   * settles; see [ImageLoaderAdapter.remove] for why the failure is dropped.
+   */
+  private fun onDiskThread(work: () -> Unit, thenOnMain: () -> Unit) {
+    diskExecutor.execute {
+      try {
+        work()
+      } catch (_: Exception) {
+        // Deliberately not rethrown or reported (see above).
+      } finally {
+        mainHandler.post(thenOnMain)
+      }
+    }
   }
 
   override fun clearMemoryCache() {
     imageLoader.memoryCache?.clear()
   }
 
-  override fun clearDiskCache() {
-    imageLoader.diskCache?.clear()
+  override fun clearDiskCache(onDone: () -> Unit) {
+    onDiskThread(work = { imageLoader.diskCache?.clear() }, thenOnMain = onDone)
   }
 
   override fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable? {
@@ -408,6 +444,12 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
 
   companion object {
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // One thread, so removals and clears run in the order JS asked for them.
+    private val diskExecutor: ExecutorService =
+      Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "TurboImageDiskCache").apply { isDaemon = true }
+      }
 
     /** The extra `transformations()` adds to memory keys (Coil 3 imageRequests.kt). */
     private const val TRANSFORMATIONS_EXTRA = "coil#transformations"
