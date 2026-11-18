@@ -217,8 +217,31 @@ jobs:
       - name: Pack the package (dry run)
         working-directory: v2/packages/react-native-turbo-image
         run: npm pack --dry-run
-      - working-directory: v2/apps/example/ios
-        run: pod install
+      # `pod install` downloads React Native's prebuilt core and dependencies
+      # from repo.reactnative.dev and Hermes through CocoaPods, and one failed
+      # download aborts the install. React Native keeps what it downloaded in
+      # ~/Library/Caches/ReactNative and copies from there when the file is
+      # present (the log says "Cache hit: copying ..."); CocoaPods does the
+      # same for Hermes in its own cache. Restoring both removes the
+      # downloads from every run but the first after a version change.
+      - name: Cache React Native's pod downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/ReactNative
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pod-downloads-${{ hashFiles('v2/bun.lock', 'v2/apps/example/ios/Podfile.lock') }}
+      # Still three tries: a cache miss downloads as before, and a network
+      # blip should not fail the job.
+      - name: pod install
+        working-directory: v2/apps/example/ios
+        run: |
+          for attempt in 1 2 3; do
+            if pod install; then exit 0; fi
+            echo "pod install failed (attempt ${attempt} of 3)" >&2
+            sleep 15
+          done
+          exit 1
       - working-directory: v2/apps/example
         run: bun run build:ios:release
       - name: On-simulator smoke test (Release)
@@ -343,10 +366,26 @@ jobs:
           disable-animations: true
           working-directory: v2
           script: bash "$EVAL_DIR/scripts/smoke-android.sh"
+      # As in the CocoaPods job, keyed on the evaluated version instead.
+      - name: Cache React Native's pod downloads
+        if: matrix.platform == 'ios'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/ReactNative
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-pod-downloads-eval-${{ env.EVAL_RN_VERSION }}
       - name: Build iOS Release and smoke test
         if: matrix.platform == 'ios'
         run: |
-          cd "$EVAL_DIR/apps/example/ios" && pod install
+          cd "$EVAL_DIR/apps/example/ios"
+          # Same three tries as the CocoaPods job, for the same download.
+          for attempt in 1 2 3; do
+            if pod install; then break; fi
+            echo "pod install failed (attempt ${attempt} of 3)" >&2
+            if [[ "${attempt}" == 3 ]]; then exit 1; fi
+            sleep 15
+          done
           cd .. && bun run build:ios:release
           bash "$EVAL_DIR/scripts/smoke-ios.sh"
       # The copy's smoke scripts save their failure logs under the copy.
