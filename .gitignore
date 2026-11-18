@@ -81,3 +81,6 @@ example/ios/.xcode.env.local
 
 # Local scratch output (see CLAUDE.md)
 /tmp/
+
+# Working notes on deferred issues; local only.
+/SESSION.md
