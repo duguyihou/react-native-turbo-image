@@ -11,7 +11,7 @@
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentRef } from 'react';
-import { Dimensions, PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, FlatList, PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
 import type { TurboImageProps } from 'react-native-turbo-image';
@@ -99,6 +99,7 @@ type Scenario = {
   kind?:
     | 'recycle'
     | 'reattach'
+    | 'flatList'
     | 'syncReload'
     | 'lifecycle'
     | 'supersede'
@@ -229,6 +230,14 @@ const SCENARIOS: Scenario[] = [
     expectCode: 'network',
     expectHits: { count: 1, conditional: 0 },
     kind: 'reattach',
+  },
+  {
+    id: 'flatListRows',
+    title: 'every visible row of a FlatList loads',
+    source: { uri: photo('list-row-0') },
+    cachePolicy: 'default',
+    expect: 'load',
+    kind: 'flatList',
   },
   {
     id: 'legacyDataCache',
@@ -447,6 +456,16 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'default',
     expect: 'load',
     expectSize: { width: 120, height: 120 },
+  },
+  {
+    id: 'gifDownscaled',
+    title: 'a 1500×1000 animated GIF is decoded at the card size too',
+    // Animated images go through a decoder of their own on iOS, which used
+    // to keep every frame at full size whatever the view's size.
+    source: { uri: `${BASE}/anim-large.gif` },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSizeNear: { width: CARD_WIDTH_PX, height: (CARD_WIDTH_PX * 2) / 3 },
   },
   {
     id: 'apng',
@@ -686,29 +705,44 @@ function RecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle
   );
 }
 
-// How long a detached view stays detached, and how long after it is back a
-// request it should not have made is given to reach the server.
+// How long a detached view stays detached, and how long after it is back
+// the sentinel load starts (the scroll that reattaches it is a native
+// command, so "back" is a few frames after the call).
 const DETACHED_MS = 300;
-const REATTACH_SETTLE_MS = 1200;
+const REATTACHED_MS = 150;
 
 // Loads the scenario's source, scrolls the image out of a
 // `removeClippedSubviews` scroll view and back, then checks that the load
 // reported exactly one outcome and the server saw `expectHits` requests.
 // Android removes the clipped image from its parent, which detaches it from
 // the window; iOS keeps it attached, so there this is a plain load.
+//
+// "No second request" is not judged by waiting a fixed time. Once the image
+// is back, a sentinel image is loaded through the same loader; a request the
+// reattach should not have made was started before the sentinel's, so it has
+// reached the server by the time the sentinel's load has finished.
 function ReattachProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const outcomes = useRef<string[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [phase, setPhase] = useState<'loading' | 'away' | 'sentinel' | 'counting'>('loading');
   const onOutcome = (outcome: string) => {
     outcomes.current.push(outcome);
-    setLoaded(true);
+    setPhase((current) => (current === 'loading' ? 'away' : current));
   };
   useEffect(() => {
-    if (!loaded) return;
-    scroll.current?.scrollTo({ x: 2 * CARD_WIDTH, animated: false });
-    const back = setTimeout(() => scroll.current?.scrollTo({ x: 0, animated: false }), DETACHED_MS);
-    const count = setTimeout(() => {
+    if (phase === 'away') {
+      scroll.current?.scrollTo({ x: 2 * CARD_WIDTH, animated: false });
+      const back = setTimeout(
+        () => scroll.current?.scrollTo({ x: 0, animated: false }),
+        DETACHED_MS
+      );
+      const sentinel = setTimeout(() => setPhase('sentinel'), DETACHED_MS + REATTACHED_MS);
+      return () => {
+        clearTimeout(back);
+        clearTimeout(sentinel);
+      };
+    }
+    if (phase === 'counting') {
       const path = uriOf(scenario.source).slice(BASE.length);
       fetch(`${BASE}/__hits?path=${encodeURIComponent(path)}`)
         .then((response) => response.json())
@@ -725,32 +759,75 @@ function ReattachProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
           (e) =>
             settle(scenario.id, false, 'error', `could not read the server's request count: ${e}`)
         );
-    }, DETACHED_MS + REATTACH_SETTLE_MS);
-    return () => {
-      clearTimeout(back);
-      clearTimeout(count);
-    };
-    // Runs once, when the load has settled.
+    }
+    return undefined;
     // oxlint-disable-next-line react/exhaustive-deps
-  }, [loaded]);
+  }, [phase]);
   return (
-    <ScrollView
-      ref={scroll}
+    <View>
+      <ScrollView
+        ref={scroll}
+        style={styles.reattachScroll}
+        horizontal
+        removeClippedSubviews
+        scrollEnabled={false}
+      >
+        {/* A direct child of the content view: only those are clipped. */}
+        <TurboImage
+          style={styles.reattachImage}
+          source={scenario.source}
+          cachePolicy={scenario.cachePolicy}
+          onSuccess={() => onOutcome('load')}
+          onFailure={(e) => onOutcome(`error:${e.nativeEvent.code}`)}
+        />
+        <View style={styles.reattachFiller} />
+      </ScrollView>
+      {(phase === 'sentinel' || phase === 'counting') && (
+        <TurboImage
+          style={styles.sentinel}
+          source={{ uri: photo(`sentinel-${scenario.id}-${RUN}`) }}
+          cachePolicy="noCache"
+          onSuccess={() => setPhase('counting')}
+          onFailure={() => setPhase('counting')}
+        />
+      )}
+    </View>
+  );
+}
+
+// A real FlatList, which clips its rows' views on Android by default
+// (`removeClippedSubviews`). Every visible row must load: a row's view that
+// was taken out of its parent and put back before its load could size itself
+// used to wait for a layout pass that never came.
+const LIST_ROWS = [0, 1, 2].map((row) => photo(`list-row-${row}`));
+
+function FlatListProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  const loaded = useRef(new Set<string>());
+  return (
+    <FlatList
       style={styles.reattachScroll}
       horizontal
-      removeClippedSubviews
       scrollEnabled={false}
-    >
-      {/* A direct child of the content view: only those are clipped. */}
-      <TurboImage
-        style={styles.reattachImage}
-        source={scenario.source}
-        cachePolicy={scenario.cachePolicy}
-        onSuccess={() => onOutcome('load')}
-        onFailure={(e) => onOutcome(`error:${e.nativeEvent.code}`)}
-      />
-      <View style={styles.reattachFiller} />
-    </ScrollView>
+      data={LIST_ROWS}
+      keyExtractor={(uri) => uri}
+      renderItem={({ item: uri }) => (
+        <TurboImage
+          style={styles.listRow}
+          source={{ uri }}
+          cachePolicy={scenario.cachePolicy}
+          resizeMode="cover"
+          onSuccess={() => {
+            loaded.current.add(uri);
+            if (loaded.current.size === LIST_ROWS.length) {
+              settle(scenario.id, true, 'load', `${LIST_ROWS.length} rows`);
+            }
+          }}
+          onFailure={(e) =>
+            settle(scenario.id, false, 'error', `${e.nativeEvent.code}: ${e.nativeEvent.error}`)
+          }
+        />
+      )}
+    />
   );
 }
 
@@ -976,6 +1053,7 @@ const PROBES = {
   clearCaches: ClearCachesProbe,
   recycle: RecycleProbe,
   reattach: ReattachProbe,
+  flatList: FlatListProbe,
   syncReload: SyncReloadProbe,
   lifecycle: LifecycleProbe,
   supersede: SupersedeProbe,
@@ -1111,6 +1189,9 @@ const styles = StyleSheet.create({
   // give an `aspectRatio` child.
   reattachScroll: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3 },
   reattachImage: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3, backgroundColor: '#ddd' },
+  // Out of the layout, so the card keeps its height when it appears.
+  sentinel: { position: 'absolute', width: 8, height: 8, opacity: 0 },
+  listRow: { width: CARD_WIDTH / 3, height: (CARD_WIDTH * 2) / 3, backgroundColor: '#ddd' },
   // Wide enough to scroll the image two card widths out of the clip rect.
   reattachFiller: { width: 3 * CARD_WIDTH },
 });

@@ -221,6 +221,10 @@ def main() -> None:
     steps = 8
     (OUT / "anim-120x120.gif").write_bytes(
         gif(120, 120, PALETTE, [ball_frame(120, 120, s, steps) for s in range(steps)], delay_cs=10))
+    # Larger than any card, so the downscaling scenario has something to
+    # shrink. Two frames keep the pure-Python LZW quick and the file small.
+    (OUT / "anim-1500x1000.gif").write_bytes(
+        gif(1500, 1000, PALETTE, [ball_frame(1500, 1000, s, 2) for s in range(2)], delay_cs=50))
     (OUT / "anim-100x100.png").write_bytes(
         apng(100, 100, [rgb_rows(100, ball_frame(100, 100, s, steps)) for s in range(steps)], delay_ms=100))
 

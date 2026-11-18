@@ -17,6 +17,7 @@ with it a cache entry, of its own):
   /slow/large/<name>.jpg         events, and a load still running when JS reacts
   /text.png /logo.svg          Live Text image; SVG
   /anim.gif /anim.png /anim.webp   animated GIF, APNG, WebP
+  /anim-large.gif              1500x1000 animated GIF (two frames)
   /accept/png                  200 only if `Accept` allows image/png, else 406
   /ua/<name>.jpg               403 for OkHttp's default User-Agent, as some
                                  CDNs answer it
@@ -60,6 +61,7 @@ EXACT = {
     "/text.png": (fixture("text-600x400.png"), "image/png"),
     "/logo.svg": (fixture("logo.svg"), "image/svg+xml"),
     "/anim.gif": (fixture("anim-120x120.gif"), "image/gif"),
+    "/anim-large.gif": (fixture("anim-1500x1000.gif"), "image/gif"),
     "/anim.png": (fixture("anim-100x100.png"), "image/png"),
     "/anim.webp": (fixture("anim-160x120.webp"), "image/webp"),
 }
