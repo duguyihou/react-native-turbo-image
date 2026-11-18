@@ -9,6 +9,11 @@
 // analysis for an image that has since been replaced is dropped; and turning
 // the prop off removes the interaction instead of waiting for the next load.
 
+// tvOS has no VisionKit and no Live Text, so this file compiles to nothing
+// there. `TIMakeLiveTextInteraction` then finds no class and returns nil,
+// which makes `enableLiveTextInteraction` a no-op on Apple TV.
+#if os(iOS)
+
 import UIKit
 import VisionKit
 
@@ -75,3 +80,5 @@ public final class LiveTextInteraction: NSObject, TILiveTextInteraction {
     imageView = nil
   }
 }
+
+#endif  // os(iOS)

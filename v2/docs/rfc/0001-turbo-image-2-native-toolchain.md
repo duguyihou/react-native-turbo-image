@@ -29,7 +29,7 @@ Goals:
 
 Non-goals:
 
-- tvOS, visionOS and macOS targets,
+- visionOS and macOS targets (tvOS was a non-goal too until it was added on 2026-11-18, as the iOS code built for a second platform; see the compatibility matrix),
 - the Old Architecture and the interop layer.
 
 The 1.x feature set (placeholders, processors, GIF/APNG/SVG, prefetch,

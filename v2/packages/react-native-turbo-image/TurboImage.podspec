@@ -24,7 +24,10 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/duguyihou/react-native-turbo-image"
   s.license      = package["license"]
   s.authors      = package["author"]
-  s.platforms    = { :ios => min_ios_version_supported }
+  # tvOS takes React Native's iOS floor, as react-native-tvos does for its own
+  # pods (it has no separate tvOS constant). Under stock React Native the
+  # tvOS entry is inert: no tvOS target exists to install into.
+  s.platforms    = { :ios => min_ios_version_supported, :tvos => min_ios_version_supported }
   s.source       = { :git => "https://github.com/duguyihou/react-native-turbo-image.git", :tag => "v#{s.version}" }
   s.swift_version = "6.0"
 
@@ -37,8 +40,9 @@ Pod::Spec.new do |s|
     "ios/Fabric/**/*.{h,mm}",
   ]
   # Live Text (ios/LiveText). VisionKit exists on every supported iOS; its
-  # image-analysis classes are iOS 16+ and gated at runtime.
-  s.frameworks = "VisionKit"
+  # image-analysis classes are iOS 16+ and gated at runtime. tvOS has no
+  # VisionKit, and the Live Text source compiles to nothing there.
+  s.ios.frameworks = "VisionKit"
   s.public_header_files = "ios/LoaderAPI/include/*.h"
   s.private_header_files = ["cpp/include/**/*.h", "ios/Fabric/**/*.h"]
 

@@ -74,7 +74,7 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 
 - Old Architecture is no longer supported.
 - Requires RN ≥ 0.88 and **Kotlin ≥ 2.3** (Coil 3.6.3).
-- tvOS support is dropped until requested (1.x listed it in the podspec).
+- tvOS needs react-native-tvos 0.88 or newer and tvOS 15.1 (1.x listed tvOS 13 in the podspec). `enableLiveTextInteraction` is a no-op there.
 - `cachePolicy` `dataCache` is renamed `default` (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`, which honours them on both platforms (1.x: iOS only). What `urlCache` stores on disk is not visible to `cacheOnly`, and the reverse.
 - Images are decoded no larger than their view by default, and `onSuccess` reports that decoded size, not the source's. A view that is zoomed, or grows after the image loaded, needs `allowDownscaling={false}`.

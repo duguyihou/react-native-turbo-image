@@ -12,7 +12,8 @@ Smoke results are recorded as passed/total of the suite when the row was verifie
 |---|---|---|---|
 | React Native | 0.88.1 | Node ≥ 22.11, New Architecture | ✅ example runs on iOS and Android |
 | Nuke (SwiftPM) | 13.2.3 (`exact:`) | iOS 15, Swift tools 6.0 | ✅ standalone + in app via RN SPM |
-| Nuke (CocoaPods) | 13.2.3, vendored xcframework | Same tag, built by `build-nuke-xcframework.sh` | ✅ example runs |
+| Nuke (CocoaPods) | 13.2.3, vendored xcframework | Same tag, built by `build-nuke-xcframework.sh`; iOS and tvOS slices | ✅ example runs |
+| react-native-tvos (tvOS) | 0.88.1-0 | tvOS 15.1; app from `@react-native-tvos/template-tv` 0.83.0-0, the newest published | 🟡 2026-11-18: the packed library builds into a Release app for the tvOS simulator and device SDKs (`test-packed-install.sh tvos`), and the SwiftPM package builds standalone for tvOS. Never run: no tvOS simulator runtime was installed. Android TV not tried |
 | Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`, `coil-network-cache-control`, `coil-gif`, `coil-svg`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug run; R8 release smoke test 38/38 |
 | Kotlin (app) | 2.4.21 | — | ✅ |
 | AGP | 9.2.1 (from RN) | Gradle 9.4.1, JDK 17 | ✅ |
@@ -37,7 +38,7 @@ RN 0.89 app-side changes, none of them in TurboImage itself:
 
 - Apps must add `@react-native/community-cli-plugin` as a devDependency. `bundle` moved there, and release bundling fails without it.
 - `DefaultReactActivityDelegate(activity, name, fabricEnabled)` is removed. The example now uses the two-argument form, which also works on 0.88.
-- npm/Bun warn that `0.89.0-rc.1` doesn't satisfy the library's `react-native >=0.88.0` peer range (semver excludes prereleases). This is harmless.
+- The library's `react-native` peer range is `*` since 2026-11-18, so a pre-release no longer raises a peer warning. The earlier `>=0.88.0` excluded every pre-release by semver's rules, and every react-native-tvos version is one (`0.88.1-0`), which made `npm install` fail outright for Apple TV apps.
 
 Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 

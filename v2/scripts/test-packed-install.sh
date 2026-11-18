@@ -12,19 +12,25 @@
 # resolve modules from the workspace's node_modules and hide a missing
 # dependency.
 #
-# Needs network (the template and its dependencies come from npm), a booted
-# simulator for ios, and a connected device or emulator for android.
+# `tvos` does the same against react-native-tvos, the fork Apple TV apps
+# use in place of React Native (see step 2 for how its app is put together).
 #
-# Usage: scripts/test-packed-install.sh <ios|android> [work-dir]
+# Needs network (the template and its dependencies come from npm), a booted
+# simulator for ios, a booted Apple TV simulator for tvos, and a connected
+# device or emulator for android.
+#
+# Usage: scripts/test-packed-install.sh <ios|tvos|android> [work-dir]
 #        work-dir defaults to a new temporary directory; it is left in place
 #        so a failed run can be inspected.
-# Exit:  0 when the app reports a loaded image, 1 otherwise.
+# Exit:  0 when the app reports a loaded image, 1 otherwise. tvos only: 3
+#        when the app built but no Apple TV simulator is booted to run it on
+#        (Xcode does not install the tvOS runtime by default).
 
 set -euo pipefail
 
 platform="${1:-}"
-if [[ "${platform}" != "ios" && "${platform}" != "android" ]]; then
-  echo "usage: $0 <ios|android> [work-dir]" >&2
+if [[ "${platform}" != "ios" && "${platform}" != "tvos" && "${platform}" != "android" ]]; then
+  echo "usage: $0 <ios|tvos|android> [work-dir]" >&2
   exit 2
 fi
 
@@ -33,6 +39,12 @@ v2_root="$(cd "${script_dir}/.." && pwd)"
 pkg="${v2_root}/packages/react-native-turbo-image"
 # shellcheck source=./native-versions.env source-path=SCRIPTDIR
 source "${script_dir}/native-versions.env"
+
+# react-native-tvos numbers its releases <React Native version>-<revision>.
+# Its app template is published less often than the fork itself, so the
+# newest one is older than the React Native we test against.
+tvos_fork_version="${REACT_NATIVE_VERSION}-0"
+tvos_template_version="0.83.0-0"
 
 work="${2:-$(mktemp -d "${TMPDIR:-/tmp}/turboimage-packed-install.XXXXXX")}"
 mkdir -p "${work}"
@@ -66,6 +78,31 @@ cp -R "${work}/template/package/template" "${app}"
 mv "${app}/_gitignore" "${app}/.gitignore"
 mv "${app}/_watchmanconfig" "${app}/.watchmanconfig"
 mv "${app}/ios/_xcode.env" "${app}/ios/.xcode.env"
+
+if [[ "${platform}" == "tvos" ]]; then
+  # An Apple TV app is the same app with a tvOS Xcode project and Podfile,
+  # and with `react-native` installed from the fork. Take the native project
+  # from the tvOS template and keep everything else (dependency versions,
+  # TypeScript and Babel setup) from the React Native template above, so the
+  # JavaScript side matches the React Native version under test.
+  (cd "${work}/template" \
+    && mkdir tv \
+    && npm pack --silent --pack-destination tv "@react-native-tvos/template-tv@${tvos_template_version}" > /dev/null \
+    && tar -xzf tv/*.tgz -C tv)
+  rm -rf "${app}/ios"
+  cp -R "${work}/template/tv/package/template/ios" "${app}/ios"
+  mv "${app}/ios/_xcode.env" "${app}/ios/.xcode.env"
+  # The fork is installed under React Native's name, as its README directs.
+  # `@react-native/new-app-screen` goes because it pins the exact upstream
+  # version as a peer, which the fork's version can never equal; the app
+  # written below does not use it.
+  sed -i.bak -E \
+    -e "s|\"react-native\": \"${REACT_NATIVE_VERSION}\"|\"react-native\": \"npm:react-native-tvos@${tvos_fork_version}\"|" \
+    -e '/@react-native\/new-app-screen/d' \
+    "${app}/package.json"
+  rm "${app}/package.json.bak"
+  grep -q "npm:react-native-tvos@${tvos_fork_version}" "${app}/package.json"
+fi
 
 # The one Android change the migration guide asks of every app: the template
 # ships a Kotlin older than Coil needs. Both lines matter. The template
@@ -129,7 +166,11 @@ TSX
 # Type-check the app against the package's built declarations, as a
 # consumer's `tsc` would.
 (cd "${app}" && npx tsc --noEmit)
-echo "Installed into a new React Native ${REACT_NATIVE_VERSION} app; types check"
+if [[ "${platform}" == "tvos" ]]; then
+  echo "Installed into a new react-native-tvos ${tvos_fork_version} app; types check"
+else
+  echo "Installed into a new React Native ${REACT_NATIVE_VERSION} app; types check"
+fi
 
 # --- 3. build, run, wait for the report -------------------------------------
 
@@ -152,22 +193,38 @@ if [[ "${platform}" == "android" ]]; then
   done
   "${adb}" uninstall com.helloworld > /dev/null || true
 else
-  udid="$(xcrun simctl list devices booted | grep -m1 -oE '[0-9A-F-]{36}' || true)"
-  if [[ -z "${udid}" ]]; then
-    echo "FAIL: no booted simulator" >&2
-    exit 1
+  # Both kinds of simulator can be booted at once; take one of the right kind.
+  if [[ "${platform}" == "tvos" ]]; then
+    sdk="appletvsimulator"
+    udid="$(xcrun simctl list devices booted | grep 'Apple TV' | grep -m1 -oE '[0-9A-F-]{36}' || true)"
+    destination="${udid:+id=${udid}}"
+    # Without a simulator the build is still worth having: it compiles and
+    # links the Fabric view against the fork, which nothing else does.
+    destination="${destination:-generic/platform=tvOS Simulator}"
+  else
+    sdk="iphonesimulator"
+    udid="$(xcrun simctl list devices booted | grep -v 'Apple TV' | grep -m1 -oE '[0-9A-F-]{36}' || true)"
+    if [[ -z "${udid}" ]]; then
+      echo "FAIL: no booted simulator" >&2
+      exit 1
+    fi
+    destination="id=${udid}"
   fi
   (cd "${app}/ios" && pod install > "${work}/pod-install.log" 2>&1) || {
     tail -n 20 "${work}/pod-install.log" >&2
     exit 1
   }
   xcodebuild -workspace "${app}/ios/HelloWorld.xcworkspace" -scheme HelloWorld \
-    -configuration Release -sdk iphonesimulator -destination "id=${udid}" \
+    -configuration Release -sdk "${sdk}" -destination "${destination}" \
     -derivedDataPath "${app}/ios/build" build > "${work}/xcodebuild.log" 2>&1 || {
     grep -E "error:" "${work}/xcodebuild.log" | head -n 20 >&2
     exit 1
   }
-  built="${app}/ios/build/Build/Products/Release-iphonesimulator/HelloWorld.app"
+  if [[ -z "${udid}" ]]; then
+    echo "BUILT, NOT RUN (tvos, packed install): no booted Apple TV simulator" >&2
+    exit 3
+  fi
+  built="${app}/ios/build/Build/Products/Release-${sdk}/HelloWorld.app"
   bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "${built}/Info.plist")"
   xcrun simctl uninstall "${udid}" "${bundle_id}" 2> /dev/null || true
   xcrun simctl install "${udid}" "${built}"

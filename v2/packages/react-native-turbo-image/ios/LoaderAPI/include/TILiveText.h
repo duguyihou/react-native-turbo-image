@@ -30,7 +30,7 @@ NS_SWIFT_UI_ACTOR
 @end
 
 /// Returns a new interaction from the bundled implementation, or nil if it
-/// is unsupported here or not linked. Main thread.
+/// is unsupported here (always the case on tvOS) or not linked. Main thread.
 FOUNDATION_EXPORT id<TILiveTextInteraction> _Nullable TIMakeLiveTextInteraction(void)
     NS_SWIFT_UI_ACTOR;
 

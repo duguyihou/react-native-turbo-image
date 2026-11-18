@@ -265,6 +265,13 @@ jobs:
       - working-directory: v2/packages/react-native-turbo-image
         env: { TURBOIMAGE_SPM_STANDALONE: '1' }
         run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
+      # The only tvOS check in CI: core, seam and Nuke adapter, without the
+      # Fabric view. Building the view needs a react-native-tvos app, which
+      # scripts/test-packed-install.sh does locally.
+      - name: Build for tvOS
+        working-directory: v2/packages/react-native-turbo-image
+        env: { TURBOIMAGE_SPM_STANDALONE: '1' }
+        run: xcodebuild -scheme TurboImage -destination 'generic/platform=tvOS Simulator' build
 
   ios-spm-app:
     name: iOS example (RN SwiftPM, preview)

@@ -45,7 +45,9 @@ import PackageDescription
 let nukeVersion: Version = Context.environment["TURBOIMAGE_EVAL_NUKE_VERSION"]
   .flatMap { Version($0) } ?? "13.2.3"
 // Nuke 14 raises its floor to iOS 16; 13.x supports React Native's 15.1.
+// react-native-tvos uses the same floor for tvOS, and so does Nuke.
 let iosDeploymentTarget = nukeVersion.major >= 14 ? "16.0" : "15.1"
+let tvosDeploymentTarget = iosDeploymentTarget
 
 // MARK: - React Native detection
 
@@ -103,7 +105,8 @@ var targets: [Target] = [
     dependencies: ["TurboImageLoaderAPI"],
     path: "ios/LiveText",
     swiftSettings: [.swiftLanguageMode(.v6)],
-    linkerSettings: [.linkedFramework("VisionKit")]
+    // tvOS has no VisionKit; the target's one source file is empty there.
+    linkerSettings: [.linkedFramework("VisionKit", .when(platforms: [.iOS]))]
   ),
 ]
 
@@ -144,7 +147,7 @@ if isInsideReactNativeApp {
 
 let package = Package(
   name: "TurboImage",
-  platforms: [.iOS(iosDeploymentTarget)],
+  platforms: [.iOS(iosDeploymentTarget), .tvOS(tvosDeploymentTarget)],
   products: [
     // The autolinker links the product named after `swiftpmConfig.name`.
     .library(name: "TurboImage", targets: productTargets),

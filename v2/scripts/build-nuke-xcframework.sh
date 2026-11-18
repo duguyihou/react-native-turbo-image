@@ -29,31 +29,37 @@ mkdir -p "${work_dir}" "${out_dir}"
 git clone --quiet --depth 1 --branch "${nuke_tag}" \
   https://github.com/kean/Nuke.git "${work_dir}/src"
 
-# iOS device + simulator only. tvOS/visionOS are TODO until the RN example
-# targets them.
-for destination in "generic/platform=iOS" "generic/platform=iOS Simulator"; do
-  slug="${destination//[^A-Za-z]/_}"
+# One slice per platform the podspec declares (iOS and tvOS), device and
+# simulator each. visionOS is a TODO until the library targets it.
+destinations=(
+  "generic/platform=iOS"
+  "generic/platform=iOS Simulator"
+  "generic/platform=tvOS"
+  "generic/platform=tvOS Simulator"
+)
+# With debug symbols: Nuke is a dynamic framework inside the app, and without
+# its dSYMs a crash in it cannot be symbolicated. They roughly triple the
+# size of the vendored directory.
+create_args=()
+for destination in "${destinations[@]}"; do
+  archive="${work_dir}/${destination//[^A-Za-z]/_}.xcarchive"
   xcodebuild archive \
     -project "${work_dir}/src/Nuke.xcodeproj" \
     -scheme Nuke \
     -configuration Release \
     -destination "${destination}" \
-    -archivePath "${work_dir}/${slug}.xcarchive" \
+    -archivePath "${archive}" \
     SKIP_INSTALL=NO \
     BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
     -quiet
+  create_args+=(
+    -framework "${archive}/Products/Library/Frameworks/Nuke.framework"
+    -debug-symbols "${archive}/dSYMs/Nuke.framework.dSYM"
+  )
 done
 
 rm -rf "${out_dir}/Nuke.xcframework"
-# With debug symbols: Nuke is a dynamic framework inside the app, and without
-# its dSYMs a crash in it cannot be symbolicated. They roughly triple the
-# size of the vendored directory.
-xcodebuild -create-xcframework \
-  -framework "${work_dir}/generic_platform_iOS.xcarchive/Products/Library/Frameworks/Nuke.framework" \
-  -debug-symbols "${work_dir}/generic_platform_iOS.xcarchive/dSYMs/Nuke.framework.dSYM" \
-  -framework "${work_dir}/generic_platform_iOS_Simulator.xcarchive/Products/Library/Frameworks/Nuke.framework" \
-  -debug-symbols "${work_dir}/generic_platform_iOS_Simulator.xcarchive/dSYMs/Nuke.framework.dSYM" \
-  -output "${out_dir}/Nuke.xcframework"
+xcodebuild -create-xcframework "${create_args[@]}" -output "${out_dir}/Nuke.xcframework"
 
 echo "${nuke_tag}" > "${out_dir}/Nuke.version"
 echo "Built Nuke ${nuke_tag} → ${out_dir}/Nuke.xcframework"

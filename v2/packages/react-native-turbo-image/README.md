@@ -13,6 +13,7 @@ Performant image component for React Native, backed by
 
 - React Native 0.88 or newer, New Architecture only
 - iOS 15.1 or newer
+- tvOS 15.1 or newer, with react-native-tvos 0.88 or newer (Live Text is iOS only)
 - Android `minSdk` 24, Kotlin 2.3 or newer
 
 ## Installation
