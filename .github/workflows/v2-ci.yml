@@ -5,6 +5,10 @@
 # preview SwiftPM tooling separately from production (RFC rule 8).
 #
 # The 1.x workflow (ci.yml) is untouched and keeps covering the repo root.
+#
+# Actions: GitHub's own (`actions/*`) are referenced by major version;
+# everyone else's are pinned to a commit, with the release it belongs to in
+# a comment, because a tag can be moved to different code.
 name: v2 CI
 
 on:
@@ -14,13 +18,22 @@ on:
     branches: [main]
     paths: ['v2/**', '.github/workflows/v2-ci.yml']
 
+# The jobs only read the repository.
+permissions:
+  contents: read
+
 concurrency:
   group: v2-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push to a pull request replaces the run in progress. On `main`
+  # every commit keeps its own result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
     working-directory: v2
+    # Named explicitly so every `run:` gets `-eo pipefail`: with the implicit
+    # default, a failing command in front of a pipe goes unnoticed.
+    shell: bash
 
 env:
   # Keep in sync with v2/scripts/native-versions.env and the RFC matrix.
@@ -33,13 +46,14 @@ jobs:
   versions:
     name: Pinned versions agree
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
       - run: bash scripts/check-native-versions.sh
       - run: shellcheck -x scripts/*.sh
 
   core:
-    name: C++ core (${{ matrix.os }}, ${{ matrix.cc }})
+    name: C++ core (${{ matrix.os }}, ${{ matrix.cc }}, ${{ matrix.build }})
     needs: versions
     strategy:
       fail-fast: false
@@ -47,18 +61,28 @@ jobs:
         # Three compilers, not just two runners (RFC §8): the placeholder
         # goldens are byte-exact, and GCC, Clang and Apple Clang differ in
         # exactly the floating-point defaults that could break that.
+        # Release, because that is the optimisation level apps ship and the
+        # one where the compilers' floating-point choices show. One more leg
+        # runs the same tests unoptimised under ASan and UBSan.
         include:
-          - { os: ubuntu-latest, cc: gcc, cxx: g++ }
-          - { os: ubuntu-latest, cc: clang, cxx: clang++ }
+          - { os: ubuntu-latest, cc: gcc, cxx: g++, build: Release, sanitize: 'OFF' }
+          - { os: ubuntu-latest, cc: clang, cxx: clang++, build: Release, sanitize: 'OFF' }
           # `clang` on macOS is Apple Clang.
-          - { os: macos-latest, cc: clang, cxx: clang++ }
+          - { os: macos-latest, cc: clang, cxx: clang++, build: Release, sanitize: 'OFF' }
+          - { os: ubuntu-latest, cc: clang, cxx: clang++, build: Debug, sanitize: 'ON' }
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v5
-      - run: cmake -S packages/react-native-turbo-image/cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON
+      - run: >-
+          cmake -S packages/react-native-turbo-image/cpp -B build/core
+          -DCMAKE_BUILD_TYPE=${{ matrix.build }}
+          -DTURBOIMAGE_BUILD_TESTS=ON
+          -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON
+          -DTURBOIMAGE_SANITIZE=${{ matrix.sanitize }}
       - run: cmake --build build/core -j
       - run: ctest --test-dir build/core --output-on-failure
 
@@ -66,9 +90,10 @@ jobs:
     name: TypeScript and JS tests
     needs: versions
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       # Jest runs on Node, not Bun (the React Native preset targets Node).
       - uses: actions/setup-node@v5
@@ -89,19 +114,23 @@ jobs:
         # release = R8-optimised build; exercises consumer-rules.pro.
         variant: [debug, release]
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}' }
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
       - run: bun install --frozen-lockfile
       - name: Install pinned NDK
         run: |
           source scripts/native-versions.env
+          # `yes` is killed by SIGPIPE when sdkmanager is done reading, which
+          # pipefail would report as this step failing.
+          set +o pipefail
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${ANDROID_NDK_VERSION}" > /dev/null
       - name: Build
         working-directory: v2/apps/example/android
@@ -129,7 +158,7 @@ jobs:
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
       - name: On-device smoke test (R8 release)
         if: matrix.variant == 'release'
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 35
           arch: x86_64
@@ -140,15 +169,23 @@ jobs:
           script: |
             bash scripts/test-core-android.sh
             bash scripts/smoke-android.sh
+      - name: Keep the smoke test's failure log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-failure-android
+          path: v2/tmp/smoke-*-failure-*.log
+          if-no-files-found: ignore
 
   ios-cocoapods:
     name: iOS example (CocoaPods)
     needs: [core, js]
     runs-on: macos-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}' }
@@ -156,17 +193,30 @@ jobs:
       - name: Build pinned Nuke.xcframework
         run: bash scripts/build-nuke-xcframework.sh
       - run: bash scripts/check-native-versions.sh
+      # What `npm publish` would upload: runs the `prepack` guard and fails if
+      # the tarball could not be packed with the xcframework built above.
+      - name: Pack the package (dry run)
+        working-directory: v2/packages/react-native-turbo-image
+        run: npm pack --dry-run
       - working-directory: v2/apps/example/ios
         run: pod install
       - working-directory: v2/apps/example
         run: bun run build:ios:release
       - name: On-simulator smoke test (Release)
         run: bash scripts/smoke-ios.sh
+      - name: Keep the smoke test's failure log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-failure-ios
+          path: v2/tmp/smoke-*-failure-*.log
+          if-no-files-found: ignore
 
   ios-spm-standalone:
     name: iOS SwiftPM package (standalone)
     needs: core
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
@@ -180,10 +230,11 @@ jobs:
     continue-on-error: true
     needs: [core, js]
     runs-on: macos-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}' }
@@ -205,6 +256,7 @@ jobs:
     continue-on-error: true
     needs: core
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
@@ -223,13 +275,14 @@ jobs:
       matrix:
         platform: [android, ios]
     runs-on: ${{ matrix.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+    timeout-minutes: 75
     env:
       EVAL_RN_VERSION: 0.89.0-rc.1
     steps:
       - uses: actions/checkout@v5
       - if: matrix.platform == 'ios'
         run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}' }
@@ -240,7 +293,12 @@ jobs:
       - if: matrix.platform == 'ios'
         run: bash scripts/build-nuke-xcframework.sh
       - name: Prepare workspace copy on RN ${{ env.EVAL_RN_VERSION }}
-        run: echo "EVAL_DIR=$(bash scripts/eval-rn-version.sh "$EVAL_RN_VERSION" | tail -1)" >> "$GITHUB_ENV"
+        # Assigned first, not expanded inside `echo`: a command substitution
+        # in an argument hides the script's exit status, and the job went on
+        # with an empty EVAL_DIR.
+        run: |
+          eval_dir="$(bash scripts/eval-rn-version.sh "$EVAL_RN_VERSION" | tail -1)"
+          echo "EVAL_DIR=${eval_dir}" >> "$GITHUB_ENV"
       - name: Build Android release
         if: matrix.platform == 'android'
         run: |
@@ -258,7 +316,7 @@ jobs:
       # build: the copy's own script, so it checks the copy's APK.
       - name: On-device smoke test (Android R8 release)
         if: matrix.platform == 'android'
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 35
           arch: x86_64

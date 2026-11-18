@@ -23,6 +23,14 @@ option(TURBOIMAGE_BUILD_TESTS "Build the GoogleTest suite" OFF)
 # fine, and that must not break an app's build. This repository turns it on
 # everywhere it builds the core (the core tests, the example app, CI).
 option(TURBOIMAGE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+# For the core's own test runs (CI has a leg for it). Directory-wide, and
+# set before GoogleTest is fetched, so the test binary and everything linked
+# into it are instrumented alike.
+option(TURBOIMAGE_SANITIZE "Build with AddressSanitizer and UBSan" OFF)
+if(TURBOIMAGE_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()
 
 add_library(turboimage_core STATIC
   src/ImageRequest.cpp
