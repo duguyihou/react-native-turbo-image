@@ -26,7 +26,29 @@ enum TurboImageDecoders {
   /// here: a partial GIF would get Nuke's static decoder for good. Every task
   /// gets a dispatcher instead, which decides on the complete bytes.
   static func make(_ context: ImageDecodingContext) -> (any ImageDecoding)? {
-    ContentDecoder(fallback: ImageDecoders.Default(context: context))
+    ContentDecoder(
+      fallback: ImageDecoders.Default(context: context),
+      bound: context.request.userInfo[DecodeBound.userInfoKey] as? DecodeBound)
+  }
+}
+
+/// The request's decode bound in pixels (`TIImageRequest.decodeSize`), handed
+/// to the decoders through `ImageRequest.userInfo`. A zero height means
+/// "width only".
+struct DecodeBound: Sendable {
+  static let userInfoKey = ImageRequest.UserInfoKey("com.turboimage.decodeBound")
+
+  let size: CGSize
+  let fill: Bool
+
+  /// How much an image of `width` × `height` pixels shrinks to meet the
+  /// bound; 1 when it already does. Never above 1: decoding does not upscale.
+  func scale(forWidth width: Int, height: Int) -> CGFloat {
+    guard width > 0, height > 0, size.width > 0 else { return 1 }
+    let horizontal = size.width / CGFloat(width)
+    guard size.height > 0 else { return min(horizontal, 1) }
+    let vertical = size.height / CGFloat(height)
+    return min(fill ? max(horizontal, vertical) : min(horizontal, vertical), 1)
   }
 }
 
@@ -36,13 +58,15 @@ struct ContentDecoder: ImageDecoding {
   /// Nuke's decoder for this context, if it recognised the data; it keeps
   /// the incremental state for previews.
   let fallback: ImageDecoders.Default?
+  /// Nil when the request asked for the original size.
+  let bound: DecodeBound?
 
   func decode(_ data: Data) throws -> ImageContainer {
     if SVGDecoder.isSVG(data) {
       return try SVGDecoder().decode(data)
     }
     if AnimatedImageDecoder.isAnimated(data) {
-      return try AnimatedImageDecoder().decode(data)
+      return try AnimatedImageDecoder(bound: bound).decode(data)
     }
     return try (fallback ?? ImageDecoders.Default()).decode(data)
   }
@@ -67,8 +91,13 @@ final class TurboImagePipelineDelegate: ImagePipeline.Delegate {
 // MARK: - Animated images
 
 struct AnimatedImageDecoder: ImageDecoding {
+  /// Frames are decoded no larger than the request's bound, like a still
+  /// image (which Nuke's default decoder downscales from `thumbnail`).
+  let bound: DecodeBound?
+
   /// Every frame is decoded up front (UIImageView needs them all), so an
-  /// animation larger than this is shown as its first frame instead.
+  /// animation larger than this, at the size it is decoded at, is shown as
+  /// its first frame instead.
   /// Android's AnimatedImageDrawable decodes frames lazily and has no such
   /// limit. TODO: a lazily decoding animated view would lift this.
   static let maxDecodedBytes = 64 * 1024 * 1024
@@ -99,17 +128,37 @@ struct AnimatedImageDecoder: ImageDecoding {
       throw ImageDecodingError.unknown
     }
     let count = CGImageSourceGetCount(source)
-    let frameBytes = first.width * first.height * 4
+    // The size the frames are decoded at. ImageIO takes the bound as the
+    // longer side of the result.
+    let scale = bound?.scale(forWidth: first.width, height: first.height) ?? 1
+    let longerSide = Int((CGFloat(max(first.width, first.height)) * scale).rounded(.up))
+    let makeFrame: (Int) -> CGImage? = { index in
+      guard scale < 1 else {
+        let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+        return CGImageSourceCreateImageAtIndex(source, index, options)
+      }
+      let options =
+        [
+          kCGImageSourceCreateThumbnailFromImageAlways: true,
+          kCGImageSourceThumbnailMaxPixelSize: longerSide,
+          kCGImageSourceShouldCacheImmediately: true,
+        ] as CFDictionary
+      return CGImageSourceCreateThumbnailAtIndex(source, index, options)
+    }
+
+    let frameBytes =
+      Int((CGFloat(first.width) * scale).rounded(.up))
+      * Int((CGFloat(first.height) * scale).rounded(.up)) * 4
     guard count > 1, frameBytes > 0, frameBytes * count <= Self.maxDecodedBytes else {
       // Too large to hold every frame: the first frame, like Nuke would.
-      return ImageContainer(image: UIImage(cgImage: first), type: Self.assetType(source))
+      return ImageContainer(
+        image: UIImage(cgImage: makeFrame(0) ?? first), type: Self.assetType(source))
     }
 
     var frames: [UIImage] = []
     var delays: [Int] = []  // centiseconds
     for index in 0..<count {
-      let options = [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
-      guard let frame = CGImageSourceCreateImageAtIndex(source, index, options) else { continue }
+      guard let frame = makeFrame(index) else { continue }
       frames.append(UIImage(cgImage: frame))
       delays.append(Self.delayCentiseconds(source, index))
     }
@@ -178,9 +227,9 @@ struct SVGDecoder: ImageDecoding {
   /// Cheap content sniff: optional BOM, whitespace, XML declaration,
   /// comments or doctype, then an `<svg` element near the start.
   static func isSVG(_ data: Data) -> Bool {
-    let head = data.prefix(4096)
-    guard let text = String(data: head, encoding: .utf8) ?? String(data: head, encoding: .ascii)
-    else { return false }
+    // Lossy on purpose: the 4096-byte cut can split a UTF-8 character, and a
+    // strict decode would then fail for the whole prefix.
+    let text = String(decoding: data.prefix(4096), as: UTF8.self)
     let trimmed = text.drop { $0 == "\u{FEFF}" || $0.isWhitespace }
     return trimmed.hasPrefix("<") && text.contains("<svg")
   }

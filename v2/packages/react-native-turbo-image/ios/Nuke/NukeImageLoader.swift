@@ -334,6 +334,14 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // `imageID` keys both Nuke's memory and data caches.
     nukeRequest.imageID = request.cacheKey
     nukeRequest.thumbnail = thumbnail(for: request)
+    // The same bound again, in a form TurboImage's own decoders can read:
+    // Nuke applies `thumbnail` only in its default decoder and keeps the
+    // numbers inside it private (NukeDecoders.swift, AnimatedImageDecoder).
+    // `userInfo` is not part of any cache key; `thumbnail` already is.
+    if request.decodeSize.width > 0 {
+      nukeRequest.userInfo[DecodeBound.userInfoKey] = DecodeBound(
+        size: request.decodeSize, fill: request.decodeFill)
+    }
     // One opaque step; the core owns the algorithms. Nuke folds its id into
     // the memory key (one entry per variant) and, with the default
     // `.storeOriginalData` policy, keeps only the original on disk, which is
