@@ -57,6 +57,14 @@ const CONTENT_PADDING = 16;
 const CARD_WIDTH = Dimensions.get('window').width - 2 * CONTENT_PADDING;
 const CARD_WIDTH_PX = CARD_WIDTH * PixelRatio.get();
 
+// What a 600×400 photo fixture is decoded to in a card: itself, unless the
+// card is narrower than 600 px, in which case the default downscaling brings
+// it to the card's size. Phones have cards wider than that, but the default
+// emulator on CI has a 320 dp, 1× screen (288 px cards), where expecting
+// 600×400 outright failed.
+const PHOTO_SCALE = Math.min(1, CARD_WIDTH_PX / 600);
+const PHOTO_DECODED = { width: 600 * PHOTO_SCALE, height: 400 * PHOTO_SCALE };
+
 // `resize` is in points/dp and the core converts it with the screen scale,
 // so the processed bitmap is this many pixels wide on either platform.
 const RESIZE_DP = 60;
@@ -312,7 +320,7 @@ const SCENARIOS: Scenario[] = [
     source: { uri: URI_A },
     cachePolicy: 'cacheOnly',
     expect: 'load',
-    expectSize: { width: 600, height: 400 },
+    expectSizeNear: PHOTO_DECODED,
     after: 'processed',
   },
   {
@@ -519,7 +527,7 @@ const SCENARIOS: Scenario[] = [
     allowHardware: false,
     cachePolicy: 'default',
     expect: 'load',
-    expectSize: { width: 600, height: 400 },
+    expectSizeNear: PHOTO_DECODED,
   },
   {
     id: 'indicatorEvents',
