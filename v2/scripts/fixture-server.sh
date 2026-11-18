@@ -24,8 +24,17 @@ start_fixture_server() {
   v2_root="$(cd "${script_dir}/.." && pwd)"
   url="http://127.0.0.1:${fixture_server_port}/__ping"
 
-  if curl -s -o /dev/null -m 2 "${url}"; then
+  # Only this server answers /__ping with "ok". Anything else on the port
+  # would serve the app 404s, and every scenario would fail for a reason that
+  # has nothing to do with the app.
+  local reply
+  reply="$(curl -s -m 2 "${url}" || true)"
+  if [[ "${reply}" == "ok" ]]; then
     return 0
+  fi
+  if [[ -n "${reply}" ]] || curl -s -o /dev/null -m 2 "${url}"; then
+    echo "FAIL: port ${fixture_server_port} is taken by something that is not the fixture server" >&2
+    return 1
   fi
 
   fixture_server_log="${v2_root}/tmp/fixture-server.log"
@@ -38,7 +47,7 @@ start_fixture_server() {
 
   local attempt
   for ((attempt = 0; attempt < 50; attempt++)); do
-    if curl -s -o /dev/null -m 2 "${url}"; then
+    if [[ "$(curl -s -m 2 "${url}" || true)" == "ok" ]]; then
       return 0
     fi
     # Exited already: the port is taken by something else, or python3 is

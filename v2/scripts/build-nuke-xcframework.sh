@@ -45,9 +45,14 @@ for destination in "generic/platform=iOS" "generic/platform=iOS Simulator"; do
 done
 
 rm -rf "${out_dir}/Nuke.xcframework"
+# With debug symbols: Nuke is a dynamic framework inside the app, and without
+# its dSYMs a crash in it cannot be symbolicated. They roughly triple the
+# size of the vendored directory.
 xcodebuild -create-xcframework \
   -framework "${work_dir}/generic_platform_iOS.xcarchive/Products/Library/Frameworks/Nuke.framework" \
+  -debug-symbols "${work_dir}/generic_platform_iOS.xcarchive/dSYMs/Nuke.framework.dSYM" \
   -framework "${work_dir}/generic_platform_iOS_Simulator.xcarchive/Products/Library/Frameworks/Nuke.framework" \
+  -debug-symbols "${work_dir}/generic_platform_iOS_Simulator.xcarchive/dSYMs/Nuke.framework.dSYM" \
   -output "${out_dir}/Nuke.xcframework"
 
 echo "${nuke_tag}" > "${out_dir}/Nuke.version"

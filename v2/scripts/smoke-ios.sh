@@ -39,7 +39,9 @@ trap 'kill ${log_pid} ${fixture_server_pid} 2> /dev/null || true' EXIT
 start_fixture_server
 
 # Default to the first available iPhone simulator.
-udid="${2:-$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}')}"
+# `|| true`: with no match grep fails, and under `set -e -o pipefail` that
+# would end the script here, before the message below.
+udid="${2:-$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}' || true)}"
 if [[ -z "${udid}" ]]; then
   echo "FAIL: no available iPhone simulator" >&2
   exit 1

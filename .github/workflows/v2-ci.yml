@@ -104,6 +104,14 @@ jobs:
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run test
+      # The C++ placeholder tests compare against goldens generated from the
+      # reference JS decoders. Regenerate them and fail if the committed file
+      # is not what the generator produces.
+      - name: Placeholder goldens are up to date
+        working-directory: v2/packages/react-native-turbo-image
+        run: |
+          bun run goldens:placeholder
+          git diff --exit-code -- cpp/tests/PlaceholderGoldens.inc
 
   android:
     name: Android example (${{ matrix.variant }})
