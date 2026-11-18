@@ -35,6 +35,17 @@ defaults:
     # default, a failing command in front of a pipe goes unnoticed.
     shell: bash
 
+# Runners. The iOS jobs need Xcode 27 (XCODE_VERSION below), which GitHub
+# hosts only on the `xcode-27` image for now: `macos-latest` is macOS 26 and
+# stops at Xcode 26.x. Move them back to `macos-latest` once that image
+# carries Xcode 27. The core's macOS leg stays on `macos-latest`; it only
+# needs an Apple Clang.
+#
+# setup-node: `package-manager-cache: false` because v5 turns caching on by
+# itself when a package.json names a package manager. The root one names
+# Yarn (for 1.x), v2 installs with Bun, and the job then fails in the
+# post-step that tries to save a Yarn cache that was never filled.
+
 env:
   # Keep in sync with v2/scripts/native-versions.env and the RFC matrix.
   BUN_VERSION: 1.3.13
@@ -97,7 +108,7 @@ jobs:
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       # Jest runs on Node, not Bun (the React Native preset targets Node).
       - uses: actions/setup-node@v5
-        with: { node-version: '${{ env.NODE_VERSION }}' }
+        with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
       # oxlint and oxfmt, pinned in package.json: cheap, so they run first.
       - run: bun run lint
@@ -128,7 +139,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
-        with: { node-version: '${{ env.NODE_VERSION }}' }
+        with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
@@ -188,7 +199,7 @@ jobs:
   ios-cocoapods:
     name: iOS example (CocoaPods)
     needs: [core, js]
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
@@ -196,7 +207,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
-        with: { node-version: '${{ env.NODE_VERSION }}' }
+        with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
       - name: Build pinned Nuke.xcframework
         run: bash scripts/build-nuke-xcframework.sh
@@ -223,7 +234,7 @@ jobs:
   ios-spm-standalone:
     name: iOS SwiftPM package (standalone)
     needs: core
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -237,7 +248,7 @@ jobs:
     # RN 0.88's SwiftPM integration is a preview: tracked, not gating.
     continue-on-error: true
     needs: [core, js]
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
@@ -245,7 +256,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
-        with: { node-version: '${{ env.NODE_VERSION }}' }
+        with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
       - name: Convert a copy of the example to SwiftPM
         run: |
@@ -263,7 +274,7 @@ jobs:
     name: Evaluate Nuke 14 (pre-release)
     continue-on-error: true
     needs: core
-    runs-on: macos-latest
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -282,7 +293,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: [android, ios]
-    runs-on: ${{ matrix.platform == 'ios' && 'macos-latest' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.platform == 'ios' && 'xcode-27' || 'ubuntu-latest' }}
     timeout-minutes: 75
     env:
       EVAL_RN_VERSION: 0.89.0-rc.1
@@ -293,7 +304,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
       - uses: actions/setup-node@v5
-        with: { node-version: '${{ env.NODE_VERSION }}' }
+        with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - if: matrix.platform == 'android'
         uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
