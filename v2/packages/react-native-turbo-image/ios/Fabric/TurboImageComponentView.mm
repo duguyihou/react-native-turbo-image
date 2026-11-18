@@ -338,14 +338,65 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   });
 }
 
+#pragma mark - Loading
+
+// One load, start to finish. Each step is a method below, in this order.
 - (void)startLoad {
-  // A load still in flight is superseded: tell JS it was cancelled, so every
-  // onStart is matched by exactly one onCompletion.
-  if (_task != nil) {
-    [_task cancel];
-    _task = nil;
-    [self emitCompletion:@"cancelled"];
+  [self cancelInFlightLoad];
+  [self resetStateForNewLoad];
+
+  const TIRequestResult built = [self makeRequest];
+  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+  // Requests the core rejects fail before onStart: no load ever began.
+  if (built.request == nil || loader == nil) {
+    [self emitFailure:built.request == nil ? built.error : turboimage::LoadErrorCode::Unknown
+              message:built.request == nil ? built.message
+                                           : @"No TurboImage loader adapter is linked"];
+    [self applyFailureToPlaceholder];
+    [self emitCompletion:@"completed"];
+    return;
   }
+  NSString *source = built.request.url.absoluteString;
+
+  [self emitStart];
+
+  // The adapter drops callbacks after cancel, but guard by identity as well:
+  // if a newer load replaced this one, its callbacks are stale. The blocks do
+  // only that check; what a callback means for the view is in the handlers.
+  __weak __typeof(self) weakSelf = self;
+  __block id<TIImageLoadTask> thisTask = nil;
+  thisTask = [loader loadImageWithRequest:built.request
+      progress:^(int64_t completed, int64_t total) {
+        __typeof(self) strongSelf = weakSelf;
+        if (strongSelf != nil && strongSelf->_task == thisTask) {
+          [strongSelf loadDidProgress:completed total:total];
+        }
+      }
+      completion:^(UIImage *image, BOOL fromMemoryCache, NSError *error) {
+        __typeof(self) strongSelf = weakSelf;
+        if (strongSelf != nil && strongSelf->_task == thisTask) {
+          strongSelf->_task = nil;
+          [strongSelf loadDidFinishWithImage:image
+                             fromMemoryCache:fromMemoryCache
+                                       error:error
+                                      source:source];
+        }
+      }];
+  _task = thisTask;
+}
+
+// A load still in flight is superseded: tell JS it was cancelled, so every
+// onStart is matched by exactly one onCompletion.
+- (void)cancelInFlightLoad {
+  if (_task == nil) {
+    return;
+  }
+  [_task cancel];
+  _task = nil;
+  [self emitCompletion:@"cancelled"];
+}
+
+- (void)resetStateForNewLoad {
   // What stays on screen while this load runs (expo-image's rule):
   //   * same `recyclingKey`: the previous image, so a changed source or
   //     processor swaps (and cross-fades) without a blank frame in between;
@@ -364,9 +415,12 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   [_liveText detach];
   _progressThrottle = turboimage::ProgressThrottle{};
   _lastProgressTotal = -1;
+}
 
+// Turns the current props and the view's size into a seam request, through
+// the same factory as the cache module, so prefetched keys always match.
+- (TIRequestResult)makeRequest {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  // Same factory as the cache module, so prefetched keys always match.
   // Fabric applies props (and so starts loads) before mounting, when there
   // is no window to ask; RN's own screen scale is what `PixelRatio` reports
   // to JS, so `resize` means the same here as in the app's layout maths.
@@ -379,7 +433,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // not either; `allowDownscaling={false}` is the documented way out).
   const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
                                           self.bounds.size.height * pixelRatio);
-  const auto built = TIMakeImageRequest(
+  return TIMakeImageRequest(
       {
           .uri = props.source.uri,
           .cacheKey = TIOptionalCacheKey(props.source.cacheKey),
@@ -391,66 +445,40 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
           .resizeMode = toCoreResizeMode(props.resizeMode),
       },
       viewPixelSize);
-  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
-  // Requests the core rejects fail before onStart: no load ever began.
-  if (built.request == nil || loader == nil) {
-    [self emitFailure:built.request == nil ? built.error : turboimage::LoadErrorCode::Unknown
-              message:built.request == nil ? built.message
-                                           : @"No TurboImage loader adapter is linked"];
-    [self applyFailureToPlaceholder];
-    [self emitCompletion:@"completed"];
-    return;
+}
+
+- (void)loadDidProgress:(int64_t)completed total:(int64_t)total {
+  _lastProgressTotal = total;
+  if (_progressThrottle.shouldReport(completed, total)) {
+    [self emitProgress:completed total:(total > 0 ? total : -1)];
   }
-  TIImageRequest *request = built.request;
-  NSString *source = request.url.absoluteString;
+}
 
-  [self emitStart];
-
-  // The adapter drops callbacks after cancel, but guard by identity as well:
-  // if a newer load replaced this one, its callbacks are stale.
-  __weak __typeof(self) weakSelf = self;
-  __block id<TIImageLoadTask> thisTask = nil;
-  thisTask = [loader loadImageWithRequest:request
-      progress:^(int64_t completed, int64_t total) {
-        __typeof(self) strongSelf = weakSelf;
-        if (strongSelf == nil || strongSelf->_task != thisTask) {
-          return;
-        }
-        strongSelf->_lastProgressTotal = total;
-        if (!strongSelf->_progressThrottle.shouldReport(completed, total)) {
-          return;
-        }
-        [strongSelf emitProgress:completed total:(total > 0 ? total : -1)];
-      }
-      completion:^(UIImage *image, BOOL fromMemoryCache, NSError *error) {
-        __typeof(self) strongSelf = weakSelf;
-        if (strongSelf == nil || strongSelf->_task != thisTask) {
-          return;
-        }
-        strongSelf->_task = nil;
-        if (image != nil) {
-          strongSelf->_showingFinalImage = YES;
-          strongSelf->_showingPreviousImage = NO;
-          // A successful load ends progress at 100% (core rule, see finish()).
-          const int64_t total = strongSelf->_lastProgressTotal;
-          if (strongSelf->_progressThrottle.finish(total)) {
-            [strongSelf emitProgress:total total:total];
-          }
-          [strongSelf showFinalImage:image animated:!fromMemoryCache];
-          [strongSelf updateLiveText];
-          [strongSelf emitSuccess:image.size source:source];
-        } else {
-          [strongSelf applyFailureToPlaceholder];
-          // The seam guarantees TIImageLoadErrorDomain; anything else is an
-          // adapter bug, reported as unknown.
-          const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
-                                ? static_cast<turboimage::LoadErrorCode>(error.code)
-                                : turboimage::LoadErrorCode::Unknown;
-          [strongSelf emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
-        }
-        [strongSelf emitCompletion:@"completed"];
-      }];
-  _task = thisTask;
+// `image` is nil when the load failed; `error` then says why.
+- (void)loadDidFinishWithImage:(UIImage *)image
+               fromMemoryCache:(BOOL)fromMemoryCache
+                         error:(NSError *)error
+                        source:(NSString *)source {
+  if (image != nil) {
+    _showingFinalImage = YES;
+    _showingPreviousImage = NO;
+    // A successful load ends progress at 100% (core rule, see finish()).
+    if (_progressThrottle.finish(_lastProgressTotal)) {
+      [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
+    }
+    [self showFinalImage:image animated:!fromMemoryCache];
+    [self updateLiveText];
+    [self emitSuccess:image.size source:source];
+  } else {
+    [self applyFailureToPlaceholder];
+    // The seam guarantees TIImageLoadErrorDomain; anything else is an
+    // adapter bug, reported as unknown.
+    const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
+                          ? static_cast<turboimage::LoadErrorCode>(error.code)
+                          : turboimage::LoadErrorCode::Unknown;
+    [self emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
+  }
+  [self emitCompletion:@"completed"];
 }
 
 // Cross-fades from whatever is shown (placeholder, previous image or

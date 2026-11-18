@@ -69,7 +69,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   private let variantsLock = NSLock()
   private var variants: [String: Set<Variant>] = [:]
 
-  /// Disk tier size. Must equal `DISK_CACHE_BYTES` in the Android adapter.
+  /// Disk tier size. Must equal `DISK_CACHE_BYTES` in the Android adapter (CoilLoaderSetup.kt).
   static let diskCacheBytes = 150 * 1024 * 1024
 
   @objc public override init() {
