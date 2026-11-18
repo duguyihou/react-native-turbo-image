@@ -293,13 +293,17 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     return;
   }
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  // memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk),
-  // keyed through the core's canonical form exactly like a source.
+  // memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk).
+  // The core says which keys the prop may name (an explicit cacheKey as
+  // written, or a URI's canonical form); the first hit wins.
   if (!props.placeholder.memoryCacheKey.empty()) {
-    NSString *key = TIStringFromStd(turboimage::canonicalCacheKey(props.placeholder.memoryCacheKey));
-    UIImage *cached = [TIImageLoaderRegistry.sharedLoader memoryCachedImageForKey:key];
-    if (cached != nil) {
-      _imageView.image = cached;
+    id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+    for (const auto &key : turboimage::memoryCacheKeyCandidates(props.placeholder.memoryCacheKey)) {
+      UIImage *cached = [loader memoryCachedImageForKey:TIStringFromStd(key)];
+      if (cached != nil) {
+        _imageView.image = cached;
+        break;
+      }
     }
     return;
   }

@@ -24,6 +24,40 @@ TEST(CanonicalCacheKey, LeavesSchemelessInputUntouched) {
   EXPECT_EQ(canonicalCacheKey("Avatars/Ada.png"), "Avatars/Ada.png");
 }
 
+TEST(CanonicalCacheKey, KeepsUserinfoCase) {
+  // Userinfo is case-sensitive (RFC 3986 §3.2.1); only the host is not.
+  EXPECT_EQ(canonicalCacheKey("HTTPS://Ada:S3cret@CDN.Example.com:8443/a.png"),
+            "https://Ada:S3cret@cdn.example.com:8443/a.png");
+}
+
+TEST(CanonicalCacheKey, LowercasesAsciiOnly) {
+  // Bytes above 0x7F (here UTF-8 "É") must pass through whatever the C
+  // locale is; `std::tolower` would map some of them in a Latin-1 locale.
+  EXPECT_EQ(canonicalCacheKey("https://\xC3\x89XAMPLE.com/a.png"),
+            "https://\xC3\x89xample.com/a.png");
+}
+
+TEST(MemoryCacheKeyCandidates, TriesAnExplicitKeyVerbatimFirst) {
+  // `source.cacheKey` is stored as given, so a key with a '#' or a
+  // scheme-like prefix must be looked up as given, before the form a URI
+  // source would have been stored under.
+  EXPECT_EQ(memoryCacheKeyCandidates("Avatar#42"),
+            (std::vector<std::string>{"Avatar#42", "Avatar"}));
+  EXPECT_EQ(memoryCacheKeyCandidates("HTTPS://CDN.Example.com/a.png#thumb"),
+            (std::vector<std::string>{"HTTPS://CDN.Example.com/a.png#thumb",
+                                      "https://cdn.example.com/a.png"}));
+}
+
+TEST(MemoryCacheKeyCandidates, DoesNotRepeatAKeyThatIsAlreadyCanonical) {
+  EXPECT_EQ(memoryCacheKeyCandidates("https://cdn.example.com/a.png"),
+            (std::vector<std::string>{"https://cdn.example.com/a.png"}));
+  EXPECT_EQ(memoryCacheKeyCandidates("avatar-42"), (std::vector<std::string>{"avatar-42"}));
+}
+
+TEST(MemoryCacheKeyCandidates, EmptyKeyHasNoCandidates) {
+  EXPECT_TRUE(memoryCacheKeyCandidates("").empty());
+}
+
 TEST(ResolveRequest, RejectsEmptyUri) {
   const auto result = resolveRequest({.uri = ""});
   EXPECT_FALSE(result.ok());

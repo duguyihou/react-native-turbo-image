@@ -262,11 +262,25 @@ Java_com_turboimage_core_TurboImageCore_nativeParseCachePolicy(JNIEnv* env, jobj
   });
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_turboimage_core_TurboImageCore_nativeCanonicalCacheKey(JNIEnv* env, jobject /* this */,
-                                                                 jstring uri) {
-  return guarded(env, static_cast<jstring>(nullptr), [&]() -> jstring {
-    return env->NewStringUTF(turboimage::canonicalCacheKey(toStdString(env, uri)).c_str());
+// `String[]` of the keys a `memoryCacheKey` placeholder may name, in lookup
+// order (see memoryCacheKeyCandidates in ImageRequest.h).
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeMemoryCacheKeyCandidates(JNIEnv* env,
+                                                                        jobject /* this */,
+                                                                        jstring key) {
+  return guarded(env, static_cast<jobjectArray>(nullptr), [&]() -> jobjectArray {
+    const auto candidates = turboimage::memoryCacheKeyCandidates(toStdString(env, key));
+    jclass stringClass = env->FindClass("java/lang/String");
+    auto array = env->NewObjectArray(static_cast<jsize>(candidates.size()), stringClass, nullptr);
+    if (array == nullptr) {
+      throw JavaExceptionPending{};
+    }
+    for (std::size_t i = 0; i < candidates.size(); ++i) {
+      jstring candidate = env->NewStringUTF(candidates[i].c_str());
+      env->SetObjectArrayElement(array, static_cast<jsize>(i), candidate);
+      env->DeleteLocalRef(candidate);
+    }
+    return array;
   });
 }
 

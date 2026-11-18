@@ -28,8 +28,11 @@ bool contains(const std::array<std::string_view, N>& schemes,
   return std::find(schemes.begin(), schemes.end(), scheme) != schemes.end();
 }
 
+// Not `std::tolower`: that follows the C locale, and an app that sets a
+// Latin-1 locale would have bytes above 0x7F (half of a UTF-8 character)
+// rewritten, on one platform and not the other.
 char toLowerAscii(char c) {
-  return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
 }
 
 std::string lowerAscii(std::string_view s) {
@@ -110,11 +113,32 @@ std::string canonicalCacheKey(std::string_view uri) {
     authorityEnd = uri.size();
   }
 
+  // "user:password@" in front of the host is case-sensitive and stays as
+  // written. The last '@' ends it: an unencoded '@' inside a password is
+  // malformed but seen in the wild, and the host cannot contain one.
+  const auto authority = uri.substr(authorityStart, authorityEnd - authorityStart);
+  const auto at = authority.rfind('@');
+  const auto hostStart =
+      at == std::string_view::npos ? authorityStart : authorityStart + at + 1;
+
   std::string key;
   key.reserve(uri.size());
-  key += lowerAscii(uri.substr(0, authorityEnd));
+  key += lowerAscii(uri.substr(0, authorityStart));          // scheme://
+  key += uri.substr(authorityStart, hostStart - authorityStart);  // userinfo@
+  key += lowerAscii(uri.substr(hostStart, authorityEnd - hostStart));  // host:port
   key += uri.substr(authorityEnd);
   return key;
+}
+
+std::vector<std::string> memoryCacheKeyCandidates(std::string_view key) {
+  if (key.empty()) {
+    return {};
+  }
+  std::vector<std::string> candidates{std::string(key)};
+  if (auto canonical = canonicalCacheKey(key); canonical != candidates.front()) {
+    candidates.push_back(std::move(canonical));
+  }
+  return candidates;
 }
 
 ResolveResult resolveRequest(const ImageRequest& request) {

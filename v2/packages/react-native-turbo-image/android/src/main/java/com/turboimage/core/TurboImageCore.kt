@@ -50,12 +50,16 @@ object TurboImageCore {
     DECODE(4),
   }
 
-  /** The core's canonical cache key for a URI (or explicit key). */
-  fun canonicalCacheKey(uri: String): String = nativeCanonicalCacheKey(uri)
+  /**
+   * The cache keys a `placeholder.memoryCacheKey` may name, in lookup order:
+   * the key as written (an explicit `source.cacheKey`), then its canonical
+   * form (a source URI). The core decides, so iOS tries the same keys.
+   */
+  fun memoryCacheKeyCandidates(key: String): Array<String> = nativeMemoryCacheKeyCandidates(key)
 
   private external fun nativeParseCachePolicy(js: String): Int
 
-  private external fun nativeCanonicalCacheKey(uri: String): String
+  private external fun nativeMemoryCacheKeyCandidates(key: String): Array<String>
 
   /** The JS spelling of a load error code, owned by the C++ core. */
   fun loadErrorCodeName(code: Int): String = nativeLoadErrorCodeName(code)

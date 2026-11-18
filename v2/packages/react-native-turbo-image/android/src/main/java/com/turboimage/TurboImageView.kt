@@ -155,11 +155,12 @@ class TurboImageView(
     val generation = ++placeholderGeneration
     if (!placeholderAllowed()) return
     // memoryCacheKey: a synchronous memory-cache lookup (no decode, no
-    // disk), keyed through the core's canonical form exactly like a source.
+    // disk). The core says which keys the prop may name (an explicit
+    // cacheKey as written, or a URI's canonical form); the first hit wins.
     memoryCacheKey?.takeIf { it.isNotEmpty() }?.let { key ->
-      loader.memoryCachedDrawable(TurboImageCore.canonicalCacheKey(key), resources)?.let {
-        setImageDrawable(it)
-      }
+      TurboImageCore.memoryCacheKeyCandidates(key)
+        .firstNotNullOfOrNull { loader.memoryCachedDrawable(it, resources) }
+        ?.let { setImageDrawable(it) }
       return
     }
 

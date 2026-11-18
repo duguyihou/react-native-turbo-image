@@ -212,11 +212,20 @@ enum class LoadErrorCode : std::int32_t {
 
 // Normalises a URI into the canonical form used for cache keys:
 //   * scheme and host are lower-cased (they are case-insensitive per
-//     RFC 3986, and the two loaders disagree on whether they normalise them),
+//     RFC 3986, and the two loaders disagree on whether they normalise them);
+//     ASCII letters only, and not the userinfo in front of the host,
 //   * the fragment is dropped (it never reaches the server).
 // Path and query are preserved byte-for-byte because servers may treat them
 // case-sensitively.
 [[nodiscard]] std::string canonicalCacheKey(std::string_view uri);
+
+// The cache keys a `placeholder.memoryCacheKey` may name, in the order to
+// look them up. The prop takes either what a source would be given as
+// `cacheKey` or what it would be given as `uri`, and the two are stored
+// differently: an explicit key verbatim, a URI in canonical form. So the key
+// is tried as written first and then canonicalised (once, if both are the
+// same). Empty for an empty key.
+[[nodiscard]] std::vector<std::string> memoryCacheKeyCandidates(std::string_view key);
 
 // Turns JS-facing props into the platform-neutral instructions adapters
 // execute. Validation lives here so both platforms reject the same inputs.
