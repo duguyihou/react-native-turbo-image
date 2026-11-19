@@ -45,7 +45,7 @@ TurboImage's mitigation, in `Package.swift`:
 
 ## Risks
 
-1. **Layout drift.** If a future RN moves `build/xcframeworks` or the `libs/` symlink, the Fabric target silently disappears. The app would then fail at runtime ("Unimplemented component"), not at build time. Mitigation: the `ios-spm-app` CI job; TODO: add a smoke test that asserts the component renders.
+1. **Layout drift.** If a future RN moves `build/xcframeworks` or the `libs/` symlink, the Fabric target silently disappears. The app would then fail at runtime ("Unimplemented component"), not at build time. Mitigation: the `ios-spm-app` CI job, which builds this path in Release and runs the smoke suite on it, so a missing component fails the job.
 2. **Remote mode** (`RN_SPM_REMOTE_URL`) isn't handled. In that mode the RN package identity is the remote URL, so our local-path dependency would be wrong. TODO once RN documents the identity contract.
 3. **Preview APIs.** Autolinking plugins are explicitly PREVIEW/UNSTABLE. We don't use them.
 4. **Untested configurations.** Device builds, and coexistence with other self-managed packages that also depend on Nuke. SwiftPM unifies on one version, so our `exact:` pin could conflict with theirs. Release simulator builds are verified.

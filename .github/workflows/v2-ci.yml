@@ -286,7 +286,10 @@ jobs:
     continue-on-error: true
     needs: [core, js]
     runs-on: xcode-27
-    timeout-minutes: 15
+    # The Debug-only build took 4 min; the Release build and the smoke run
+    # have not been timed on a hosted runner yet. TODO: cut this to two to
+    # three times the longest green run, like the other jobs.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
@@ -301,11 +304,34 @@ jobs:
           rsync -a --exclude ios/Pods --exclude android apps/example/ .spm-trial/example/
           cd .spm-trial/example
           node ../../node_modules/react-native/scripts/setup-apple-spm.js add --deintegrate --yes
-      - working-directory: v2/.spm-trial/example
+      # Release, not Debug, because the smoke test below needs the bundled
+      # JS and reads the result from os_log. The Debug configuration of this
+      # path is intentionally no longer built here: one build keeps a
+      # non-gating job short.
+      - name: Build (Release)
+        working-directory: v2/.spm-trial/example
         run: |
           xcodebuild -project ios/TurboImageExample.xcodeproj -scheme TurboImageExample \
-            -configuration Debug -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' build
+            -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build build
+      # A build alone does not show that this path works: if the Fabric
+      # target drops out of the package (spm-assessment.md, "Layout drift"),
+      # the app still builds and fails at runtime with "Unimplemented
+      # component". The suite only passes when the component renders. It
+      # also keeps the SwiftPM result in the docs from going stale, which it
+      # did while this job only built.
+      - name: On-simulator smoke test (Release)
+        run: |
+          bash scripts/smoke-ios.sh \
+            "$PWD/.spm-trial/example/ios/build/Build/Products/Release-iphonesimulator/TurboImageExample.app"
+      - name: Keep the smoke test's failure log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-failure-ios-spm
+          path: v2/tmp/smoke-*-failure-*.log
+          if-no-files-found: ignore
 
   eval-nuke-14:
     name: Evaluate Nuke 14 (pre-release)
