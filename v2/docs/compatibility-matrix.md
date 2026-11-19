@@ -1,10 +1,10 @@
 # Native dependency compatibility matrix
 
-Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16; rows that say 38/38 or 90/90 on 2026-11-17; rows that say 49/49 on 2026-11-19.
+Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16; rows that say 49/49 or 98/98 on 2026-11-19.
 
 Legend: ✅ verified by building (and running, where noted) · 🟡 builds, needs more verification · 🔬 evaluation only · ❌ incompatible · — not applicable
 
-Smoke results are recorded as passed/total of the suite when the row was verified. The suite has 49 scenarios today (RFC §8); "38/38" rows date from the 38-scenario suite. The 49/49 rows are from the hosted `v2-ci.yml` run on 3b08d09 (x86_64 Android emulator), except RN SwiftPM, which was run locally because CI only builds that path.
+Smoke results are recorded as passed/total of the suite when the row was verified. The suite has 49 scenarios today (RFC §8). The RN 0.89 results are from the hosted `v2-ci.yml` run on 3b08d09 (x86_64 Android emulator); the RN 0.88 results were also run locally (arm64 emulator, iOS 27.2 simulator), RN SwiftPM only locally.
 
 ## Production baseline (TurboImage 2.0.0-alpha.0)
 
@@ -14,13 +14,13 @@ Smoke results are recorded as passed/total of the suite when the row was verifie
 | Nuke (SwiftPM) | 13.2.3 (`exact:`) | iOS 15, Swift tools 6.0 | ✅ standalone + in app via RN SPM |
 | Nuke (CocoaPods) | 13.2.3, vendored xcframework | Same tag, built by `build-nuke-xcframework.sh`; iOS and tvOS slices | ✅ example runs |
 | react-native-tvos (tvOS) | 0.88.1-0 | tvOS 15.1; app from `@react-native-tvos/template-tv` 0.83.0-0, the newest published | 🟡 2026-11-18: the packed library builds into a Release app for the tvOS simulator and device SDKs (`test-packed-install.sh tvos`), and the SwiftPM package builds standalone for tvOS. Never run: no tvOS simulator runtime was installed. Android TV not tried |
-| Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`, `coil-network-cache-control`, `coil-gif`, `coil-svg`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug run; R8 release smoke test 38/38 |
+| Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`, `coil-network-cache-control`, `coil-gif`, `coil-svg`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug run; R8 release smoke test 49/49 |
 | Kotlin (app) | 2.4.21 | — | ✅ |
 | AGP | 9.2.1 (from RN) | Gradle 9.4.1, JDK 17 | ✅ |
 | Android NDK | 27.1.12297006 | — | ✅ (16 KB page alignment set) |
 | compileSdk / targetSdk / minSdk | 37 / 36 / 24 | — | ✅ |
 | C++ standard | C++20 | Apple Clang (Xcode 27.2), NDK Clang, CMake ≥ 3.22 | ✅ |
-| GoogleTest | 1.17.0 | — | ✅ 90/90 on host (Apple Clang) and on the Android arm64 emulator |
+| GoogleTest | 1.17.0 | — | ✅ 98/98 on host (Apple Clang) and on the Android arm64 emulator |
 | Bun | 1.3.13, hoisted linker | — | ✅ |
 | react-native-safe-area-context (example only) | 5.11.1 | — | ✅ |
 | Xcode | 27.2 (local) | Swift tools ≥ 6.2 for Package.swift | ✅ |

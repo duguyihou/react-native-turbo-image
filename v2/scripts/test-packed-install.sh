@@ -183,7 +183,12 @@ if [[ "${platform}" == "android" ]]; then
   "${adb}" wait-for-device
   abi="$("${adb}" shell getprop ro.product.cpu.abi | tr -d '\r')"
   (cd "${app}/android" && ./gradlew assembleRelease --console=plain -q "-PreactNativeArchitectures=${abi}")
-  "${adb}" install -r "${app}/android/app/build/outputs/apk/release/app-release.apk" > /dev/null
+  # Uninstall first rather than `install -r`, as smoke-android.sh does: a
+  # run that was interrupted before the uninstall below leaves the app
+  # behind, and `install -r` then needs room for both APKs at once.
+  # `|| true`: normally there is nothing to uninstall.
+  "${adb}" uninstall com.helloworld > /dev/null 2>&1 || true
+  "${adb}" install "${app}/android/app/build/outputs/apk/release/app-release.apk" > /dev/null
   "${adb}" logcat -c
   "${adb}" shell am start -n com.helloworld/.MainActivity > /dev/null
   for ((elapsed = 0; elapsed < timeout_s; elapsed += 2)); do

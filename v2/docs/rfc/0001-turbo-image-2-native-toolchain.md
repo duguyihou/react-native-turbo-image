@@ -457,6 +457,9 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 49 scenarios in
 - `noCache`,
 - core validation (`invalidRequest`),
 - a recycled view reloading the same source,
+- a view detached and reattached: a loaded `noCache` image is not fetched again, and a failed load is not retried,
+- every visible row of a `FlatList` loading,
+- memory-cache hits on a mounted view giving one completion per start,
 - the event lifecycle,
 - a superseded load ending as `cancelled`,
 - the placeholder being removed on failure by default,
@@ -467,11 +470,13 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 49 scenarios in
 - Live Text (iOS; a plain load on Android),
 - request headers: sent, changing the response, and an injection attempt rejected,
 - formats: GIF, APNG, animated WebP and SVG,
+- SVG draw size: not shrunk to its own size by `allowDownscaling={false}`, drawn at the card size before a processor runs (with and without downscaling), drawn again for a smaller view, and blurred at its own size when nothing resizes it,
 - a `require()` asset under `cacheOnly`,
 - `allowHardware={false}`,
-- decode size: a 3000×2000 source decoded at the card's size, then in full with `allowDownscaling={false}` from the disk original,
+- decode size: a 3000×2000 source decoded at the card's size, then in full with `allowDownscaling={false}` from the disk original, and a 1500×1000 animated GIF decoded at the card's size,
 - `urlCache`: stored in the HTTP cache, where `cacheOnly` cannot see it, and the requests the server received for a fresh, a `no-store` and a revalidated response,
 - the Android `User-Agent`,
+- a cookie set through React Native's `fetch` being sent with the image request,
 - the indicator chaining the app's own `onStart` / `onCompletion` handlers.
 
 The result line is compact (`passed`, `total`, failures only), because iOS `os_log` truncates messages at about 1 KB.
@@ -489,8 +494,8 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 
 | Check | Result |
 |---|---|
-| C++ core, 90 GoogleTests (host CMake, 2026-11-17) | ✅ pass |
-| C++ core, 90 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-17) | ✅ pass |
+| C++ core, 98 GoogleTests (host CMake, 2026-11-19) | ✅ pass |
+| C++ core, 98 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-19) | ✅ pass |
 | iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
@@ -499,7 +504,7 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
 | Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19) |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 48/48 (2026-11-19), one scenario behind; 49/49 on the x86_64 emulator (CI, 2026-11-19) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 49/49 (2026-11-19); also 49/49 on the x86_64 emulator (CI, 2026-11-19) |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-19). CI builds this path in Debug and does not run the suite on it |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 49/49 each (CI, 2026-11-19) |
 | CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
