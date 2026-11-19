@@ -408,6 +408,14 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   /// size, although the entries are identical.
   /// TODO: share those. It needs the vector-ness of a cache key remembered
   /// from its first decode, or a memory cache of our own in front of Nuke's.
+  ///
+  /// Tried and rejected: letting a vector pass through Nuke's processor
+  /// untouched and drawing and processing it in `loadImage`, with the
+  /// result stored under a key of the adapter's own. It spares bitmaps,
+  /// but it moves processing, cache writes, coalescing and cancellation
+  /// for SVGs out of Nuke's pipeline into code this adapter has to
+  /// maintain, to save memory in a case that needs a processor,
+  /// `allowDownscaling` off and one bitmap at two sizes all at once.
   private static func processorID(for request: TIImageRequest) -> String {
     let base = "com.turboimage.\(request.processorKey)"
     let vector = request.vectorDecodeSize
