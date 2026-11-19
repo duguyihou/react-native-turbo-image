@@ -496,7 +496,7 @@ the suite had 7.
 | Smoke test, Android R8 release, arm64 emulator | ✅ 38/38 (2026-11-17) |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
-| CI workflow | ⚠️ written but not yet run on GitHub-hosted runners |
+| CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
 
 ## 10. Open questions
 
