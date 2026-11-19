@@ -55,7 +55,9 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   /// memory key is (imageID, thumbnail, processors), so each processed
   /// variant and each decode size is its own entry.
   private struct Variant: Hashable {
-    let processorKey: String
+    /// The identifier of the request's Nuke processor (`processorID`), which
+    /// is what Nuke puts in the memory key. Empty: not processed.
+    let processorID: String
     let thumbnail: ImageRequest.ThumbnailOptions?
   }
 
@@ -65,7 +67,8 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   // instead, so Android needs no such index. Written from `load` (main) and
   // read from the cache module (any thread), hence the lock.
   // TODO: bound this. It grows by one small value per distinct (processing,
-  // decode size) of a key and is only reset by dispose and clearMemoryCache.
+  // decode size, vector size) of a key and is only reset by dispose and
+  // clearMemoryCache.
   private let variantsLock = NSLock()
   private var variants: [String: Set<Variant>] = [:]
 
@@ -139,8 +142,11 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     completion: @escaping TIImageLoadCompletion
   ) -> any TIImageLoadTask {
     let nukeRequest = Self.makeNukeRequest(from: request)
-    if !request.processorKey.isEmpty || nukeRequest.thumbnail != nil {
-      let variant = Variant(processorKey: request.processorKey, thumbnail: nukeRequest.thumbnail)
+    // Read back from the Nuke request, so the index holds exactly what Nuke
+    // keys the entry by.
+    let processorID = nukeRequest.processors.first?.identifier ?? ""
+    if !processorID.isEmpty || nukeRequest.thumbnail != nil {
+      let variant = Variant(processorID: processorID, thumbnail: nukeRequest.thumbnail)
       variantsLock.withLock { _ = variants[request.cacheKey, default: []].insert(variant) }
     }
     let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
@@ -238,7 +244,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // key that includes that size. Any unprocessed size will do for a
     // placeholder; a blurred or tinted variant must not stand in.
     let unprocessed = variantsLock.withLock {
-      variants[cacheKey]?.filter { $0.processorKey.isEmpty } ?? []
+      variants[cacheKey]?.filter { $0.processorID.isEmpty } ?? []
     }
     for variant in unprocessed {
       let request = Self.request(for: variant, of: cacheKey)
@@ -255,8 +261,8 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   private static func request(for variant: Variant, of cacheKey: String) -> ImageRequest {
     var request = keyOnlyRequest(cacheKey)
     request.thumbnail = variant.thumbnail
-    if !variant.processorKey.isEmpty {
-      request.processors = [ImageProcessors.Anonymous(id: processorID(variant.processorKey)) { $0 }]
+    if !variant.processorID.isEmpty {
+      request.processors = [ImageProcessors.Anonymous(id: variant.processorID) { $0 }]
     }
     return request
   }
@@ -355,7 +361,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
       // stretched), so it is drawn at the request's vector target first.
       nukeRequest.processors = [
         CoreProcessor(
-          identifier: processorID(request.processorKey), processor: processorBox,
+          identifier: processorID(for: request), processor: processorBox,
           vectorTarget: VectorTarget(
             size: request.vectorDecodeSize, fill: request.vectorDecodeFill,
             displayScale: request.displayScale))
@@ -385,8 +391,33 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   /// stores sizes in.
   private static let unboundedPixels = CGFloat(1 << 30)
 
-  private static func processorID(_ processorKey: String) -> String {
-    "com.turboimage.\(processorKey)"
+  /// The identifier Nuke adds to the memory key of a processed image:
+  /// everything that decides the processed pixels and is not in the key
+  /// already.
+  ///
+  /// That is the core's processor key and, when it is not the decode bound,
+  /// the size a vector is drawn at. The decode bound is in the key as the
+  /// request's `thumbnail`. With `allowDownscaling` off there is no bound,
+  /// but a processed SVG is still drawn for the view (`vectorDecodeSize`),
+  /// and without the size here two views of different sizes shared one
+  /// entry: the second was handed the first one's bitmap.
+  ///
+  /// Whether the source is a vector is only known once it is decoded, after
+  /// the key is needed, so a bitmap pays for this too: processed with
+  /// `allowDownscaling` off and shown at two sizes, it is kept once per
+  /// size, although the entries are identical.
+  /// TODO: share those. It needs the vector-ness of a cache key remembered
+  /// from its first decode, or a memory cache of our own in front of Nuke's.
+  private static func processorID(for request: TIImageRequest) -> String {
+    let base = "com.turboimage.\(request.processorKey)"
+    let vector = request.vectorDecodeSize
+    let sameAsDecodeBound =
+      vector == request.decodeSize && request.vectorDecodeFill == request.decodeFill
+    // A zero size is the image's own size: nothing of the view's is in it.
+    guard vector.width > 0, !sameAsDecodeBound else { return base }
+    // Whole pixels: the same rounding as `VectorTarget.draw`'s result.
+    let size = "\(Int(vector.width.rounded()))x\(Int(vector.height.rounded()))"
+    return "\(base)@vector=\(size)\(request.vectorDecodeFill ? ",fill" : "")"
   }
 }
 
@@ -394,8 +425,8 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
 /// because that sees only the image, and whether an image is a vector is
 /// known from its container's type.
 private struct CoreProcessor: ImageProcessing {
-  /// Must stay `processorID(_:)` of the request's key: `request(for:of:)`
-  /// addresses the processed memory entry by this identifier alone.
+  /// `processorID(for:)` of the request. `request(for:of:)` addresses the
+  /// processed memory entry by this identifier alone.
   let identifier: String
   let processor: UncheckedSendable<TIImageProcessor>
   let vectorTarget: VectorTarget

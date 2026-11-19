@@ -105,6 +105,9 @@ type Scenario = {
   indicator?: TurboImageProps['indicator'];
   allowHardware?: boolean;
   allowDownscaling?: boolean;
+  // Half a card wide (same 3:2 shape), for scenarios about one image shown
+  // at two sizes.
+  halfWidth?: boolean;
   // Image processors, passed straight through to <TurboImage>.
   processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
@@ -552,6 +555,22 @@ const SCENARIOS: Scenario[] = [
     expectSizeNear: SVG_IN_CARD,
   },
   {
+    id: 'svgFullSizeTintedSmaller',
+    title: 'the same processed SVG in a smaller view is drawn again for that view',
+    // Same source and processing as the card above, so the same cache key.
+    // With allowDownscaling={false} the request carries no decode size, and
+    // on iOS the processed bitmap's memory key had no size in it either:
+    // this view was handed the card-sized bitmap.
+    source: { uri: svg('full-size-tinted') },
+    processing: { tint: '#2060c0' },
+    cachePolicy: 'default',
+    allowDownscaling: false,
+    halfWidth: true,
+    expect: 'load',
+    expectSizeNear: { width: SVG_IN_CARD.width / 2, height: SVG_IN_CARD.height / 2 },
+    after: 'svgFullSizeTinted',
+  },
+  {
     id: 'svgBlurred',
     title: 'blur without resize acts on an SVG at its own size in points/dp',
     // `blur` is in image pixels, so the view's size must not matter; the
@@ -965,7 +984,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
   return (
     <TurboImage
       testID={`image-${scenario.id}`}
-      style={styles.image}
+      style={scenario.halfWidth ? styles.halfImage : styles.image}
       source={scenario.source}
       placeholder={scenario.placeholder}
       showPlaceholderOnFailure={scenario.showPlaceholderOnFailure}
@@ -1279,6 +1298,7 @@ const styles = StyleSheet.create({
   card: { gap: 8 },
   label: { fontSize: 12, fontFamily: 'Menlo' },
   image: { width: '100%', aspectRatio: 3 / 2, backgroundColor: '#ddd' },
+  halfImage: { width: '50%', aspectRatio: 3 / 2, backgroundColor: '#ddd' },
   // Explicit sizes: a horizontal scroll view has no height of its own to
   // give an `aspectRatio` child.
   reattachScroll: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3 },
