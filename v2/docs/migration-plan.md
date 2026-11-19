@@ -24,7 +24,7 @@ builds, and the CI matrix.
 
 ### Phase 1: CI green and lifecycle hardening
 - [x] Run `v2-ci.yml` on GitHub-hosted runners and fix any differences from the local runs (runner Xcode version, NDK install, emulator). Every job passed on PR #454 (2026-11-18). The iOS jobs run on the `xcode-27` image, because `macos-latest` has no Xcode 27.
-- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios at the time, 38 now, release builds).
+- [x] Emulator and simulator smoke tests (`scripts/smoke-{ios,android}.sh`, 7 deterministic scenarios at the time, 49 now, release builds).
 - [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
 - [x] Cross-platform `onFailure.code` taxonomy (RFC §4.4).
 - [x] RN 0.89.0-rc.1 evaluation, scripted (`scripts/eval-rn-version.sh`) and run in CI (non-blocking).

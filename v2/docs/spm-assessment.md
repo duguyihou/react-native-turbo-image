@@ -8,7 +8,7 @@ source (`react-native/scripts/spm/*`) and tried on TurboImage's example app.
 | Question | Answer |
 |---|---|
 | Can a library with a third-party SwiftPM dependency (Nuke) integrate today? | **Yes**, through a hand-written "self-managed" `Package.swift`. Verified end to end: Debug simulator build, app runs, images load. |
-| Is it production-ready? | **Not yet.** It works (Debug and Release simulator builds pass the 7/7 smoke test alongside another self-managed package, `react-native-safe-area-context`). But the manifest depends on the app's build layout, the tooling is partly marked PREVIEW/UNSTABLE, and device builds are untested. |
+| Is it production-ready? | **Not yet.** It works (Debug and Release simulator builds pass the smoke test, 7/7 at the time and 49/49 in Release on 2026-11-19, alongside another self-managed package, `react-native-safe-area-context`). But the manifest depends on the app's build layout, the tooling is partly marked PREVIEW/UNSTABLE, and device builds are untested. |
 | Default for TurboImage 2.0.0 | **CocoaPods.** SPM is an opt-in, tracked by a non-blocking CI job (`ios-spm-app`). |
 | What would flip the default | RN shipping "V2" autolinking, where library manifests are referenced via `.package(url:)` with no app-relative paths, or a stable remote mode. Plus green Release and device builds in CI. |
 

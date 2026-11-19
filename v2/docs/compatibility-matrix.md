@@ -1,10 +1,10 @@
 # Native dependency compatibility matrix
 
-Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16; rows that say 38/38 or 90/90 on 2026-11-17.
+Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-16; rows that say 38/38 or 90/90 on 2026-11-17; rows that say 49/49 on 2026-11-19.
 
 Legend: ✅ verified by building (and running, where noted) · 🟡 builds, needs more verification · 🔬 evaluation only · ❌ incompatible · — not applicable
 
-Smoke results are recorded as passed/total of the suite when the row was verified. "7/7" rows date from the 7-scenario suite and have not been re-run against today's 38 scenarios (RFC §8).
+Smoke results are recorded as passed/total of the suite when the row was verified. The suite has 49 scenarios today (RFC §8); "38/38" rows date from the 38-scenario suite. The 49/49 rows are from the hosted `v2-ci.yml` run on 3b08d09 (x86_64 Android emulator), except RN SwiftPM, which was run locally because CI only builds that path.
 
 ## Production baseline (TurboImage 2.0.0-alpha.0)
 
@@ -30,9 +30,9 @@ Smoke results are recorded as passed/total of the suite when the row was verifie
 
 | | RN 0.88.1 (Kotlin 2.2.0 default) | RN 0.88.1 + Kotlin 2.4.21 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2) |
 |---|---|---|---|
-| Coil 3.6.3 | ❌ metadata 2.4 unreadable by 2.2. The library's Gradle check fails early with a fix-it message | ✅ | ✅ R8 release smoke test 7/7 with the template's Kotlin 2.3.21. This confirms Kotlin 2.3 reads Coil's 2.4 metadata |
+| Coil 3.6.3 | ❌ metadata 2.4 unreadable by 2.2. The library's Gradle check fails early with a fix-it message | ✅ | ✅ R8 release smoke test 49/49 with the template's Kotlin 2.3.21. This confirms Kotlin 2.3 reads Coil's 2.4 metadata |
 | Android NDK | 27.1 ✅ | 27.1 ✅ | 28.2 ✅ (AGP auto-installs it) |
-| iOS (CocoaPods, Release simulator) | — | ✅ | ✅ smoke test 7/7 |
+| iOS (CocoaPods, Release simulator) | — | ✅ | ✅ smoke test 49/49 |
 
 RN 0.89 app-side changes, none of them in TurboImage itself:
 
@@ -50,7 +50,7 @@ Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 | iOS integration | CocoaPods | RN SwiftPM (0.88 preview) |
 |---|---|---|
 | Debug, simulator | ✅ runs | ✅ runs |
-| Release, simulator | ✅ smoke test 38/38 | ✅ smoke test 7/7 |
+| Release, simulator | ✅ smoke test 49/49 | ✅ smoke test 49/49 |
 | Device (arm64) | 🟡 compiles and links (unsigned Release); not run | 🟡 compiles and links (unsigned Release); not run |
 | `use_frameworks! :linkage => :static` | 🟡 not yet built | — |
 

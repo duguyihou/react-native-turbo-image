@@ -447,7 +447,7 @@ both platforms load the same `http://localhost:8765` URLs.
 - **Trade-off: no TLS.** The suite no longer makes an HTTPS request. TLS is the platform's, not TurboImage's, but a regression in how the adapters configure their HTTP clients for HTTPS would now go unseen. TODO: one opt-in scenario against a real host.
 - **Cleartext.** The Android example allows cleartext HTTP to `localhost` and `10.0.2.2` only (`network_security_config.xml`); iOS already allows local networking.
 
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 38 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 49 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -483,9 +483,9 @@ Three of the failing scenarios set `showPlaceholderOnFailure` and carry a blurha
 
 Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27). Test and
 scenario counts are those of the suite when each row was verified: the smoke
-suite had 7 scenarios, then 17, and has 38 now (§8). Rows dated 2026-11-17
-were re-run that day. The SwiftPM and RN 0.89 rows have not been re-run since
-the suite had 7.
+suite had 7 scenarios, then 17, then 38, and has 49 now (§8). Dated rows were
+re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
+3b08d09 (run 44453245980), whose Android emulator is x86_64.
 
 | Check | Result |
 |---|---|
@@ -498,10 +498,10 @@ the suite had 7.
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 48/48 (2026-11-19) |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 48/48 (2026-11-19) |
-| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
-| RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 48/48 (2026-11-19), one scenario behind; 49/49 on the x86_64 emulator (CI, 2026-11-19) |
+| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-19). CI builds this path in Debug and does not run the suite on it |
+| RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 49/49 each (CI, 2026-11-19) |
 | CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
 
 ## 10. Open questions
