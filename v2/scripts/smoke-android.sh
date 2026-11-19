@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # On-device smoke test for the Android example (release / R8 build).
 #
-# Installs the APK on the connected device or emulator with cleared app
-# data (so caches start cold), launches it, and waits for the single
+# Reinstalls the APK on the connected device or emulator (uninstalling first
+# wipes its data, so caches start cold), launches it, and waits for the single
 # `TURBOIMAGE_SMOKE {...}` line App.tsx logs once every scenario settles.
 #
 # The app loads its fixtures from scripts/fixture-server.py, started here on
@@ -37,9 +37,17 @@ start_fixture_server
 
 "${adb}" wait-for-device
 "${adb}" reverse "tcp:${fixture_server_port}" "tcp:${fixture_server_port}" > /dev/null
-"${adb}" install -r "${apk}" > /dev/null
-# Cold caches every run: the cacheMiss scenario depends on it.
-"${adb}" shell pm clear "${package}" > /dev/null
+# Uninstall first, as the iOS script does, rather than `install -r` and
+# `pm clear`. Either gives the cold caches the cacheMiss scenario depends on,
+# but only an uninstall also frees the previous APK before the new one is
+# written: `install -r` needs room for both at once, and on an emulator
+# whose /data is nearly full that is what fails the install, or leaves so
+# little space that Android empties the app's caches under the running
+# suite. The app's cookies go with its data, so the `cookie` scenario cannot
+# pass on a cookie an earlier run left behind.
+# `|| true`: on a fresh device there is nothing to uninstall.
+"${adb}" uninstall "${package}" > /dev/null 2>&1 || true
+"${adb}" install "${apk}" > /dev/null
 "${adb}" logcat -c
 "${adb}" shell am start -n "${package}/.MainActivity" > /dev/null
 
