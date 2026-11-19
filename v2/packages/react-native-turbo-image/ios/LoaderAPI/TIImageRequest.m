@@ -14,7 +14,10 @@
                     headers:(NSArray<NSArray<NSString *> *> *)headers
                   httpCache:(BOOL)httpCache
                  decodeSize:(CGSize)decodeSize
-                 decodeFill:(BOOL)decodeFill {
+                 decodeFill:(BOOL)decodeFill
+           vectorDecodeSize:(CGSize)vectorDecodeSize
+           vectorDecodeFill:(BOOL)vectorDecodeFill
+               displayScale:(CGFloat)displayScale {
   if ((self = [super init])) {
     _url = [url copy];
     _cacheKey = [cacheKey copy];
@@ -29,6 +32,9 @@
     _httpCache = httpCache;
     _decodeSize = decodeSize;
     _decodeFill = decodeFill;
+    _vectorDecodeSize = vectorDecodeSize;
+    _vectorDecodeFill = vectorDecodeFill;
+    _displayScale = displayScale;
   }
   return self;
 }

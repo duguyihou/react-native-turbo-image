@@ -51,6 +51,21 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
 /// YES: the image must cover `decodeSize` (aspect fill). NO: it only has to
 /// fit inside it (aspect fit). Ignored unless both dimensions are bounded.
 @property(nonatomic, readonly) BOOL decodeFill;
+/// The size, in pixels, to draw the image at before `processor` runs if it
+/// has no pixels of its own (a vector `UIImage`, as SVG decodes to). Same
+/// shape as `decodeSize`, with `vectorDecodeFill` in the place of
+/// `decodeFill`, but a target to draw at, not an upper bound.
+/// `CGSizeZero`: the image's own size in points times `displayScale`, and
+/// the result keeps that scale so its size in points does not change.
+///
+/// It can differ from `decodeSize`: with `allowDownscaling` off a bitmap
+/// keeps every pixel, while a vector has none to keep and is still drawn
+/// for the view. Without a `processor` an adapter needs none of this: a
+/// vector image view draws it sharp at any size.
+@property(nonatomic, readonly) CGSize vectorDecodeSize;
+@property(nonatomic, readonly) BOOL vectorDecodeFill;
+/// Pixels per point of the screen the image is for.
+@property(nonatomic, readonly) CGFloat displayScale;
 
 - (instancetype)initWithURL:(NSURL *)url
                    cacheKey:(NSString *)cacheKey
@@ -64,7 +79,10 @@ typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
                     headers:(NSArray<NSArray<NSString *> *> *)headers
                   httpCache:(BOOL)httpCache
                  decodeSize:(CGSize)decodeSize
-                 decodeFill:(BOOL)decodeFill NS_DESIGNATED_INITIALIZER;
+                 decodeFill:(BOOL)decodeFill
+           vectorDecodeSize:(CGSize)vectorDecodeSize
+           vectorDecodeFill:(BOOL)vectorDecodeFill
+               displayScale:(CGFloat)displayScale NS_DESIGNATED_INITIALIZER;
 
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;

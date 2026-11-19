@@ -70,6 +70,8 @@ enum class ResizeMode : std::int32_t {
 // knows the view's size, so `View` is resolved by the platform.
 //
 // Every target is an upper bound: images are never upscaled to reach it.
+// The exception is a source with no pixels of its own (SVG), which is drawn
+// at the target; see `ResolvedRequest::vectorDecode`.
 struct DecodeSize {
   enum class Kind : std::int32_t {
     // Decode every pixel of the source.
@@ -168,6 +170,15 @@ struct ResolvedRequest {
   // same on both platforms.
   bool httpCache = false;
   DecodeSize decode;
+  // The size to draw the image at if it turns out to have no pixels of its
+  // own (SVG). Only the loader learns that, from the bytes, so both targets
+  // are always resolved. It is `decode` as it would be with
+  // `allowDownscaling` left on: a vector has no original to keep, and
+  // drawing it at its own (often small) size and scaling that up is what
+  // the opt-out exists to prevent. `Original` here means the image's own
+  // size read as points/dp, so it draws as large as on a 1x screen and as
+  // sharp as this one allows.
+  DecodeSize vectorDecode;
 
   friend bool operator==(const ResolvedRequest&, const ResolvedRequest&) =
       default;

@@ -4,10 +4,16 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.view.View
 import android.widget.ImageView
+import coil3.Extras
 import coil3.Image
+import coil3.ImageLoader
+import coil3.decode.Decoder
+import coil3.fetch.SourceFetchResult
+import coil3.getExtra
 import coil3.network.NetworkHeaders
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import coil3.request.Options
 import coil3.request.transformations
 import coil3.size.Dimension
 import coil3.size.Precision
@@ -22,8 +28,8 @@ import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 // How one resolved request becomes one Coil request: the translation itself
-// first, then the three Coil extension points it plugs in (target,
-// transformation, size resolver). Part of the Coil adapter; see
+// first, then the four Coil extension points it plugs in (target,
+// transformation, size resolver, vector decoder). Part of the Coil adapter; see
 // CoilImageLoaderAdapter.kt for what is done with the request.
 
 /**
@@ -43,6 +49,13 @@ internal fun ResolvedRequest.toCoilRequest(context: Context, view: View?): Image
       // Read back by PolicyCacheStrategy, which then applies HTTP freshness.
       if (httpCache) extras[PolicyCacheStrategy.HTTP_CACHE] = true
       applyDecodeSize(decode, view)
+      // Only the decoder learns whether the bytes are an SVG, so the size a
+      // vector should be drawn at travels with the request and
+      // VectorSizeDecoderFactory picks it up. The two targets differ only
+      // when `allowDownscaling` is off.
+      if (vectorDecode != decode) {
+        vectorTarget(vectorDecode, view)?.let { extras[VectorTarget.KEY] = it }
+      }
       if (processorKey.isNotEmpty()) {
         transformations(CoreProcessingTransformation(processorKey))
       }
@@ -71,6 +84,22 @@ private fun ImageRequest.Builder.applyDecodeSize(decode: ResolvedRequest.DecodeS
   // smaller image *up* to it.
   precision(Precision.INEXACT)
 }
+
+/**
+ * The core's target for a vector as something a decoder can resolve, or
+ * null when it comes to the SVG's own size, which is what the request
+ * (`Size.ORIGINAL`) already asks the decoder for.
+ */
+private fun vectorTarget(decode: ResolvedRequest.DecodeSize, view: View?): VectorTarget? =
+  when (decode) {
+    ResolvedRequest.DecodeSize.Original -> null
+    // A prefetch has no view. Its decode is not kept in memory for a view
+    // to reuse at another size anyway (Coil re-draws a vector per size).
+    is ResolvedRequest.DecodeSize.View ->
+      view?.let { VectorTarget(LaidOutSizeResolver(it), if (decode.fill) Scale.FILL else Scale.FIT) }
+    is ResolvedRequest.DecodeSize.Width ->
+      VectorTarget(SizeResolver(Size(Dimension(decode.pixels), Dimension.Undefined)), Scale.FIT)
+  }
 
 /**
  * HTTP-cache entries live in the same Coil DiskCache under their own
@@ -178,4 +207,40 @@ private class LaidOutSizeResolver(private val view: View) : SizeResolver {
 
   private fun currentSize(): Size =
     if (view.width > 0 && view.height > 0) Size(view.width, view.height) else Size.ORIGINAL
+}
+
+/** Where to draw a vector image, when that is not the request's own size. */
+internal class VectorTarget(val size: SizeResolver, val scale: Scale) {
+  companion object {
+    /** Absent on most requests: the request's size is the vector's too. */
+    val KEY = Extras.Key<VectorTarget?>(default = null)
+  }
+}
+
+/**
+ * Draws a vector at the request's [VectorTarget] instead of at the size
+ * the request names.
+ *
+ * `allowDownscaling={false}` asks Coil for `Size.ORIGINAL`, which is right
+ * for a bitmap (every pixel) and wrong for an SVG: its "original" is its
+ * nominal size, usually smaller than the view, and the view then scales
+ * that bitmap up (measured: 315×210 stretched over 630×420). The request
+ * cannot ask for the view's size instead, because it is built before the
+ * bytes are known and would downscale a bitmap. So the swap happens here,
+ * the first place that knows the bytes are an SVG.
+ *
+ * [delegate] decides what counts as a vector: this only ever changes the
+ * options of a decode the delegate accepted.
+ */
+internal class VectorSizeDecoderFactory(private val delegate: Decoder.Factory) : Decoder.Factory {
+  override fun create(result: SourceFetchResult, options: Options, imageLoader: ImageLoader): Decoder? {
+    val plain = delegate.create(result, options, imageLoader) ?: return null
+    val target = options.getExtra(VectorTarget.KEY) ?: return plain
+    return Decoder {
+      // Resolved here, not in `create`: the view may not be laid out yet,
+      // and only `decode` can wait for it.
+      val atTarget = options.copy(size = target.size.size(), scale = target.scale)
+      (delegate.create(result, atTarget, imageLoader) ?: plain).decode()
+    }
+  }
 }

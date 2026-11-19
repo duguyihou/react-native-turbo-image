@@ -52,7 +52,7 @@ builds, and the CI matrix.
 | — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
 
-**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. What remains before Phase 3 is hardening: Android SVG at full size.
+**Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. The last hardening item before Phase 3, SVG at "full size", is done (RFC §4.5c): an SVG's own size is read as points/dp, and `allowDownscaling={false}` no longer shrinks one to it.
 
 ### Phase 3: promote `v2/` to the repository root
 1. Tag the final 1.x release and create a `1.x` maintenance branch.

@@ -192,7 +192,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **Progress ends at 100%.** A successful load with a known total always ends with a `{total, total}` progress event, via `ProgressThrottle::finish`. Coil can decode a `noCache` response straight from the network stream and stop at the JPEG end marker without reading to EOF, so Android's byte count can end short. The smoke scenario `supersede` caught this intermittently.
 - **Android progress.** Coil has no progress API. The adapter tags each request with a per-load token header (`X-TurboImage-Load`), which an OkHttp interceptor strips and uses to count response bytes. 1.x keyed this on the view tag, which could route an old request's progress into a view's new load.
 - **Known gap.** With Coil's dedup, only the first of N identical concurrent loads reports progress on Android. Nuke reports it to all of them.
-- **`onSuccess` size** is the decoded image's size in pixels, on both platforms. By default that is no larger than the view (§4.5c), so it is the source's intrinsic size only when the source is smaller than the view or `allowDownscaling` is off. The smoke scenarios `downscaled` and `fullSize` assert both cases with a 3000×2000 source.
+- **`onSuccess` size** is the decoded image's size in pixels, on both platforms (iOS multiplies `UIImage.size` by its scale; a vector SVG shown unprocessed has no pixels and reports its canvas). By default that is no larger than the view (§4.5c), so it is the source's intrinsic size only when the source is smaller than the view or `allowDownscaling` is off. The smoke scenarios `downscaled` and `fullSize` assert both cases with a 3000×2000 source.
 - **Tests.** The smoke scenarios `lifecycle` and `supersede` assert these exact sequences on both platforms.
 
 ### 4.4b 1.x prop compatibility
@@ -311,6 +311,12 @@ sees. The core picks the target (`ResolvedRequest.decode`), in this order:
 - **Caching.** The disk keeps the original bytes; each decode size is its own memory entry. The smoke scenario `fullSize` reads all 3000×2000 pixels with `cacheOnly` after `downscaled` loaded the same URL at the card's size.
 - **The size is taken when the load starts.** A view that grows later keeps the image it has. TODO: reload when the view outgrows the decoded image; until then `allowDownscaling={false}` is the way out for zoomable views.
 - **No view, no bound.** `prefetch` and a view laid out with no area decode the original.
+- **SVG has no pixels to keep**, so it gets a target of its own (`ResolvedRequest.vectorDecode`): the table above without its first row. Only the loader learns from the bytes that a source is an SVG, so the core always resolves both targets.
+  - *Own size.* Where the table says "full size", an SVG is drawn at its own size read as points/dp (120×80 is 315×210 px on a 2.6× screen), so `center` draws it as large on every screen and `blur` is as strong. Android: `SvgDecoder.Factory(scaleToDensity = true)`. Before, a 120×80 SVG was 120×80 px on Android, a thumbnail under `center`.
+  - *`allowDownscaling={false}`* does not apply: the SVG is still drawn for the view. Its own size is usually smaller than the view, and scaling that bitmap up is what the opt-out exists to prevent (measured on Android: 315×210 stretched over 630×420). The Coil request still says `Size.ORIGINAL`, which is right if the bytes turn out to be a bitmap; `VectorSizeDecoderFactory` wraps the SVG decoder and swaps in the vector target.
+  - *iOS only needs this with a processor.* A vector `UIImage` is sharp at any size while the view draws it. The core's processors work on pixels, and the seam's processor used to draw the vector at its canvas size at 1× (120×80 px for a 720×480 px view, so `blur` was about 2.6× stronger than on Android and `tint` was coarse). The Nuke adapter now draws it at `TIImageRequest.vectorDecodeSize` first, capped at 4096 px a side, Coil's `maxBitmapSize`.
+  - *Trade-off.* With `allowDownscaling={false}` and a processor, Nuke's memory key carries no size (the request has no thumbnail bound), so the same processed SVG shown in two views of different sizes shares the entry the first one drew. On Android, Coil does not reuse a vector's bitmap for an original-size request at all and draws it again from the disk bytes. Both are narrow; neither is handled.
+  - *Tests.* Core: `ResolveVectorDecodeSize.*`. Smoke: `svgFullSize`, `svgTinted`, `svgFullSizeTinted`, `svgBlurred` assert the drawn sizes on both platforms. `center` has no scenario (the smoke cards are all `cover`); it was compared in screenshots of a temporary screen.
 - **`onSuccess`** reports the decoded size (§4.4a).
 
 ### 4.6 View-level fixes found by the smoke test
@@ -492,8 +498,8 @@ the suite had 7.
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 38/38 (2026-11-17) |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 38/38 (2026-11-17) |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 48/48 (2026-11-19) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 48/48 (2026-11-19) |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 7/7 |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 7/7 each |
 | CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |

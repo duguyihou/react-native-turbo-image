@@ -300,5 +300,56 @@ TEST(ResolveDecodeSize, AppliesToLocalSourcesToo) {
             DecodeSize::Kind::View);
 }
 
+// --- decode size of a vector source (SVG) -----------------------------------
+
+constexpr auto kLogo = "https://cdn.example.com/brand/logo.svg";
+
+DecodeSize vectorDecodeOf(const ImageRequest& request) {
+  const auto result = resolveRequest(request);
+  EXPECT_TRUE(result.ok());
+  return result.request->vectorDecode;
+}
+
+TEST(ResolveVectorDecodeSize, MatchesTheBitmapTargetWhileDownscalingIsOn) {
+  for (const ImageRequest& request : {
+           ImageRequest{.uri = kLogo},
+           ImageRequest{.uri = kLogo, .resizeMode = ResizeMode::Cover},
+           ImageRequest{.uri = kLogo, .resizeMode = ResizeMode::Center},
+           ImageRequest{.uri = kLogo, .processing = {.blur = 8}},
+           ImageRequest{.uri = kLogo, .processing = {.resize = 120}, .pixelRatio = 3},
+       }) {
+    EXPECT_EQ(vectorDecodeOf(request), decodeOf(request));
+  }
+}
+
+TEST(ResolveVectorDecodeSize, OptOutStillDrawsAtTheViewSize) {
+  // A bitmap's original is every pixel it has. A vector's would be its own
+  // nominal size, smaller than the view more often than not.
+  const ImageRequest optOut{.uri = kLogo, .allowDownscaling = false};
+  EXPECT_EQ(decodeOf(optOut).kind, DecodeSize::Kind::Original);
+  EXPECT_EQ(vectorDecodeOf(optOut),
+            (DecodeSize{.kind = DecodeSize::Kind::View, .width = 0, .fill = false}));
+}
+
+TEST(ResolveVectorDecodeSize, OptOutKeepsTheRulesAboutTheImagesOwnSize) {
+  // `center` draws 1:1 and `blur`'s radius is in image pixels, opt-out or not.
+  EXPECT_EQ(vectorDecodeOf({.uri = kLogo,
+                            .allowDownscaling = false,
+                            .resizeMode = ResizeMode::Center})
+                .kind,
+            DecodeSize::Kind::Original);
+  EXPECT_EQ(vectorDecodeOf({.uri = kLogo,
+                            .processing = {.blur = 8},
+                            .allowDownscaling = false})
+                .kind,
+            DecodeSize::Kind::Original);
+  // `resize` names a width: draw at it, there is nothing larger to resize from.
+  EXPECT_EQ(vectorDecodeOf({.uri = kLogo,
+                            .processing = {.resize = 120},
+                            .pixelRatio = 3,
+                            .allowDownscaling = false}),
+            (DecodeSize{.kind = DecodeSize::Kind::Width, .width = 360, .fill = false}));
+}
+
 }  // namespace
 }  // namespace turboimage

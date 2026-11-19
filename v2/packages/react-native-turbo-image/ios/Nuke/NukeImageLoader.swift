@@ -349,10 +349,16 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // classified as `decode`.
     if let processor = request.processor, !request.processorKey.isEmpty {
       let processorBox = UncheckedSendable(processor)
+      // The core works on pixels, and a vector image has none until it is
+      // drawn. Left to the seam's processor it would be drawn at its own
+      // size at 1x (measured: 120×80 px for a 720×480 px view, then
+      // stretched), so it is drawn at the request's vector target first.
       nukeRequest.processors = [
-        ImageProcessors.Anonymous(id: processorID(request.processorKey)) { image in
-          processorBox.value(image)
-        }
+        CoreProcessor(
+          identifier: processorID(request.processorKey), processor: processorBox,
+          vectorTarget: VectorTarget(
+            size: request.vectorDecodeSize, fill: request.vectorDecodeFill,
+            displayScale: request.displayScale))
       ]
     }
     return nukeRequest
@@ -381,6 +387,36 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
 
   private static func processorID(_ processorKey: String) -> String {
     "com.turboimage.\(processorKey)"
+  }
+}
+
+/// The seam's processor as a Nuke processor. Not `ImageProcessors.Anonymous`
+/// because that sees only the image, and whether an image is a vector is
+/// known from its container's type.
+private struct CoreProcessor: ImageProcessing {
+  /// Must stay `processorID(_:)` of the request's key: `request(for:of:)`
+  /// addresses the processed memory entry by this identifier alone.
+  let identifier: String
+  let processor: UncheckedSendable<TIImageProcessor>
+  let vectorTarget: VectorTarget
+
+  func process(_ image: PlatformImage) -> PlatformImage? {
+    processor.value(image)
+  }
+
+  func process(_ container: ImageContainer, context: ImageProcessingContext) throws -> ImageContainer {
+    var image = container.image
+    if container.type == SVGDecoder.assetType {
+      // A vector that cannot be drawn (no area) is left to the processor,
+      // which fails the load the same way it always did.
+      image = vectorTarget.draw(image) ?? image
+    }
+    guard let processed = process(image) else {
+      throw ImageProcessingError.unknown
+    }
+    var result = container
+    result.image = processed
+    return result
   }
 }
 

@@ -11,7 +11,16 @@
 // scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentRef } from 'react';
-import { Dimensions, FlatList, PixelRatio, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Dimensions,
+  FlatList,
+  PixelRatio,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
 import type { TurboImageProps } from 'react-native-turbo-image';
@@ -69,6 +78,14 @@ const PHOTO_DECODED = { width: 600 * PHOTO_SCALE, height: 400 * PHOTO_SCALE };
 // so the processed bitmap is this many pixels wide on either platform.
 const RESIZE_DP = 60;
 const RESIZED_PX = Math.round(RESIZE_DP * PixelRatio.get());
+
+// logo.svg has a 120×80 viewBox and no pixels of its own. Each scenario gets
+// its own URL, so none of them reads another's cache entry.
+const svg = (name: string) => `${BASE}/logo.svg?v=${name}`;
+// Drawn for a card (3:2, like the SVG), it is the card's size in pixels.
+const SVG_IN_CARD = { width: CARD_WIDTH_PX, height: (CARD_WIDTH_PX * 2) / 3 };
+// Drawn at its own size, 120×80 is read as points/dp.
+const SVG_OWN_SIZE = { width: 120 * PixelRatio.get(), height: 80 * PixelRatio.get() };
 
 type Outcome = 'load' | 'error';
 type Settle = (id: string, ok: boolean, outcome: string, detail: string) => void;
@@ -498,6 +515,53 @@ const SCENARIOS: Scenario[] = [
     source: { uri: `${BASE}/logo.svg` },
     cachePolicy: 'default',
     expect: 'load',
+  },
+  {
+    id: 'svgFullSize',
+    title: 'allowDownscaling={false} does not shrink an SVG to its own size',
+    // A bitmap's original is every pixel; an SVG's would be 120×80, scaled
+    // up by the view. Android draws it for the card. iOS keeps the vector
+    // image, which reports its canvas and is drawn sharp by the view.
+    source: { uri: svg('full-size') },
+    cachePolicy: 'default',
+    allowDownscaling: false,
+    expect: 'load',
+    ...(Platform.OS === 'android'
+      ? { expectSizeNear: SVG_IN_CARD }
+      : { expectSize: { width: 120, height: 80 } }),
+  },
+  {
+    id: 'svgTinted',
+    title: 'a processed SVG is drawn at the card size before the processor runs',
+    // The core works on pixels, so here iOS needs a bitmap too. It used to
+    // be the 120×80 canvas at 1×.
+    source: { uri: svg('tinted') },
+    processing: { tint: '#2060c0' },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSizeNear: SVG_IN_CARD,
+  },
+  {
+    id: 'svgFullSizeTinted',
+    title: 'a processed SVG is still drawn at the card size with allowDownscaling={false}',
+    source: { uri: svg('full-size-tinted') },
+    processing: { tint: '#2060c0' },
+    cachePolicy: 'default',
+    allowDownscaling: false,
+    expect: 'load',
+    expectSizeNear: SVG_IN_CARD,
+  },
+  {
+    id: 'svgBlurred',
+    title: 'blur without resize acts on an SVG at its own size in points/dp',
+    // `blur` is in image pixels, so the view's size must not matter; the
+    // screen's scale does, or the SVG would be a third of its size on a 3×
+    // screen and the blur three times as strong.
+    source: { uri: svg('blurred') },
+    processing: { blur: 2 },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSizeNear: SVG_OWN_SIZE,
   },
   {
     id: 'userAgent',

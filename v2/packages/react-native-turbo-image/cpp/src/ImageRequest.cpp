@@ -71,11 +71,17 @@ bool isValidHeader(const Header& header) {
 //      decode would draw a smaller image.
 //   5. Otherwise the view's size bounds what can be shown.
 // `monochrome` and `tint` work per pixel, so they are indifferent to rule 5.
+//
+// `hasPixels` false asks for the target of a vector source instead
+// (`ResolvedRequest::vectorDecode`): rule 1 does not apply, because there is
+// no "every pixel" to want. Rules 3 and 4 still do: they are about the
+// image's own size, which a vector has too.
 DecodeSize resolveDecodeSize(const ImageRequest& request,
-                             const ProcessingSpec& processing) {
+                             const ProcessingSpec& processing,
+                             bool hasPixels) {
   const DecodeSize original{
       .kind = DecodeSize::Kind::Original, .width = 0, .fill = false};
-  if (!request.allowDownscaling) {
+  if (hasPixels && !request.allowDownscaling) {
     return original;
   }
   if (processing.resizeWidth > 0) {
@@ -174,7 +180,9 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       .disk = {.read = true, .write = true},
       .allowNetwork = true,
       .httpCache = false,
-      .decode = resolveDecodeSize(request, processing),
+      .decode = resolveDecodeSize(request, processing, /*hasPixels=*/true),
+      .vectorDecode =
+          resolveDecodeSize(request, processing, /*hasPixels=*/false),
   };
 
   // Cache-tier matrix. Keep this switch exhaustive (no `default:`) so adding

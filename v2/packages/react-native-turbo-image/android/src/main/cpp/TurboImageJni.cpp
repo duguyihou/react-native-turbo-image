@@ -154,13 +154,15 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
     jclass resolvedClass = env->FindClass("com/turboimage/core/ResolvedRequest");
     jmethodID ctor =
         env->GetMethodID(resolvedClass, "<init>",
-                         "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;ZIIZ)V");
+                         "(Ljava/lang/String;Ljava/lang/String;ZZZZZLjava/lang/String;[Ljava/lang/String;ZIIZIIZ)V");
     return env->NewObject(resolvedClass, ctor, env->NewStringUTF(r.url.c_str()),
                           env->NewStringUTF(r.cacheKey.c_str()), r.memory.read, r.memory.write,
                           r.disk.read, r.disk.write, r.allowNetwork,
                           env->NewStringUTF(r.processorKey.c_str()), fromHeaders(env, r.headers),
                           r.httpCache, static_cast<jint>(r.decode.kind),
-                          static_cast<jint>(r.decode.width), r.decode.fill);
+                          static_cast<jint>(r.decode.width), r.decode.fill,
+                          static_cast<jint>(r.vectorDecode.kind),
+                          static_cast<jint>(r.vectorDecode.width), r.vectorDecode.fill);
   });
 }
 

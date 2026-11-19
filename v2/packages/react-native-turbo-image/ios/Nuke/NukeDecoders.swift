@@ -242,6 +242,57 @@ struct SVGDecoder: ImageDecoding {
   }
 }
 
+/// Where to draw a vector image when pixels are needed
+/// (`TIImageRequest.vectorDecodeSize`). A vector `UIImage` is sharp at any
+/// size while an image view draws it, but a processor works on a bitmap,
+/// and the bitmap has to be made at the size it will be shown at.
+struct VectorTarget: Sendable {
+  /// In pixels. Zero: the image's own size. A zero height: width only.
+  let size: CGSize
+  let fill: Bool
+  let displayScale: CGFloat
+
+  private static let maxPixels: CGFloat = 4096
+
+  /// `image` as a bitmap of the target's size, or nil if it has no area.
+  func draw(_ image: UIImage) -> UIImage? {
+    let canvas = image.size
+    guard canvas.width > 0, canvas.height > 0 else { return nil }
+    // Pixels per point of the canvas, and the scale the bitmap reports.
+    // At its own size the image keeps its size in points, so `center`
+    // draws it as large as the vector would be; fitted to a view it is
+    // 1x, like the bitmaps Nuke decodes.
+    let pixelsPerPoint: CGFloat
+    let bitmapScale: CGFloat
+    if size.width > 0 {
+      let horizontal = size.width / canvas.width
+      let vertical = size.height > 0 ? size.height / canvas.height : horizontal
+      pixelsPerPoint = fill ? max(horizontal, vertical) : min(horizontal, vertical)
+      bitmapScale = 1
+    } else {
+      pixelsPerPoint = max(displayScale, 1)
+      bitmapScale = pixelsPerPoint
+    }
+    // A bitmap is bounded by its source; a vector is not. Covering a wide,
+    // short view with a tall SVG would otherwise ask for a bitmap hundreds
+    // of megabytes large. 4096 is Coil's default `maxBitmapSize`, so both
+    // platforms stop at the same place.
+    let largest = max(canvas.width, canvas.height) * pixelsPerPoint
+    let capped = pixelsPerPoint * min(1, Self.maxPixels / largest)
+    let pixels = CGSize(
+      width: max((canvas.width * capped).rounded(), 1),
+      height: max((canvas.height * capped).rounded(), 1))
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = false
+    let bitmap = UIGraphicsImageRenderer(size: pixels, format: format).image { _ in
+      image.draw(in: CGRect(origin: .zero, size: pixels))
+    }
+    guard let cgImage = bitmap.cgImage else { return nil }
+    return UIImage(cgImage: cgImage, scale: bitmapScale, orientation: .up)
+  }
+}
+
 /// The 1.x approach (ios/CoreSVG.swift on main): CoreSVG's C functions via
 /// dlsym, and UIKit's private `+[UIImage _imageWithCGSVGDocument:]`, which
 /// returns a vector-backed UIImage that stays sharp at any size. Unlike 1.x,

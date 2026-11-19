@@ -174,6 +174,10 @@ TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &imageRequest,
                                                       httpCache:resolved.httpCache
                                                      decodeSize:TIDecodeSize(resolved.decode,
                                                                              viewPixelSize)
-                                                     decodeFill:resolved.decode.fill];
+                                                     decodeFill:resolved.decode.fill
+                                               vectorDecodeSize:TIDecodeSize(resolved.vectorDecode,
+                                                                             viewPixelSize)
+                                               vectorDecodeFill:resolved.vectorDecode.fill
+                                                   displayScale:imageRequest.pixelRatio];
   return {.request = request, .error = turboimage::LoadErrorCode::Unknown, .message = nil};
 }

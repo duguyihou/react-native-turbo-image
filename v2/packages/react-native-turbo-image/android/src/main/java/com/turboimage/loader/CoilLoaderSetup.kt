@@ -60,7 +60,15 @@ internal fun buildImageLoader(context: Context): ImageLoader {
       } else {
         add(GifDecoder.Factory())
       }
-      add(SvgDecoder.Factory())
+      // `scaleToDensity`: an SVG's own size is in dp, not raw pixels, the
+      // way iOS reads it in points. It only matters when the request asks
+      // for the original size (`resizeMode="center"`, `blur` without
+      // `resize`); otherwise the SVG is drawn at the view's size whatever
+      // its own size is. Without it a 120×80 SVG came out 120×80 px, a
+      // third of its size on a 2.6× screen. The wrapper covers
+      // `allowDownscaling={false}`, which must not shrink an SVG to its
+      // own size either.
+      add(VectorSizeDecoderFactory(SvgDecoder.Factory(scaleToDensity = true)))
       add(
         OkHttpNetworkFetcherFactory(
           callFactory = { okHttpClient },

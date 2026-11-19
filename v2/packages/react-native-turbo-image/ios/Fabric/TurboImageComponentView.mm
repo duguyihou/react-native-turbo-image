@@ -468,7 +468,12 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     }
     [self showFinalImage:image animated:!fromMemoryCache];
     [self updateLiveText];
-    [self emitSuccess:image.size source:source];
+    // In pixels, as on Android. `size` alone is in points, which differs
+    // for any image whose scale is not 1: a processed SVG drawn at its own
+    // size carries the screen's scale so that it keeps its size in points.
+    const CGFloat scale = image.scale > 0 ? image.scale : 1;
+    [self emitSuccess:CGSizeMake(image.size.width * scale, image.size.height * scale)
+               source:source];
   } else {
     [self applyFailureToPlaceholder];
     // The seam guarantees TIImageLoadErrorDomain; anything else is an

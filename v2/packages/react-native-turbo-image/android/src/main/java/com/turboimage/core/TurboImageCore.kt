@@ -220,6 +220,9 @@ data class ResolvedRequest(
   private val decodeKind: Int,
   private val decodeWidth: Int,
   private val decodeFill: Boolean,
+  private val vectorDecodeKind: Int,
+  private val vectorDecodeWidth: Int,
+  private val vectorDecodeFill: Boolean,
 ) : ResolveResult {
   /** How large to decode; mirrors `turboimage::DecodeSize`. */
   sealed interface DecodeSize {
@@ -234,12 +237,23 @@ data class ResolvedRequest(
   }
 
   val decode: DecodeSize
-    get() =
-      when (decodeKind) {
-        1 -> DecodeSize.View(decodeFill)
-        2 -> DecodeSize.Width(decodeWidth)
-        else -> DecodeSize.Original
-      }
+    get() = decodeSize(decodeKind, decodeWidth, decodeFill)
+
+  /**
+   * The size to draw the image at if it has no pixels of its own (SVG);
+   * see `ResolvedRequest::vectorDecode` in the core. Differs from [decode]
+   * only when `allowDownscaling` is off. [DecodeSize.Original] here is the
+   * image's own size in dp.
+   */
+  val vectorDecode: DecodeSize
+    get() = decodeSize(vectorDecodeKind, vectorDecodeWidth, vectorDecodeFill)
+
+  private fun decodeSize(kind: Int, width: Int, fill: Boolean): DecodeSize =
+    when (kind) {
+      1 -> DecodeSize.View(fill)
+      2 -> DecodeSize.Width(width)
+      else -> DecodeSize.Original
+    }
 
   /** Request headers in order; never part of a cache key. */
   val headers: List<Pair<String, String>>
@@ -253,10 +267,11 @@ data class ResolvedRequest(
       diskRead == other.diskRead && diskWrite == other.diskWrite &&
       allowNetwork == other.allowNetwork && processorKey == other.processorKey &&
       httpCache == other.httpCache && decode == other.decode &&
+      vectorDecode == other.vectorDecode &&
       headerFields.contentEquals(other.headerFields)
 
   override fun hashCode(): Int =
-    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey, httpCache, decode)
+    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey, httpCache, decode, vectorDecode)
       .hashCode() * 31 + headerFields.contentHashCode()
 }
 
