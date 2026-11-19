@@ -175,11 +175,6 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
-      # The passing side of the comparison in `eval-rn-0-89`; remove with it.
-      - name: Report free disk space before the emulator
-        if: matrix.variant == 'release'
-        working-directory: .
-        run: df -h / "$ANDROID_HOME"
       - name: On-device smoke test (R8 release)
         if: matrix.variant == 'release'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -366,19 +361,6 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
-      # Diagnostic. This leg failed three times running while installing
-      # the emulator's system image ("Failed to download package!", then
-      # "contains no system images"), on the same runner image and in the
-      # same minute as the `android` job, which installs the same package
-      # and passed. The emulator action discards sdkmanager's output, so
-      # the logs do not say why. A full disk is the suspect: this job has a
-      # second workspace copy and a second build tree. Remove once known.
-      - name: Report free disk space before the emulator
-        if: matrix.platform == 'android'
-        working-directory: .
-        run: |
-          df -h / "$ANDROID_HOME"
-          du -sh "$ANDROID_HOME" "$HOME/.gradle" v2/tmp v2/node_modules 2> /dev/null || true
       # The evaluation must smoke-test both platforms (RFC §3), not only
       # build: the copy's own script, so it checks the copy's APK.
       - name: On-device smoke test (Android R8 release)
@@ -391,8 +373,14 @@ jobs:
           disable-animations: true
           working-directory: v2
           script: bash "$EVAL_DIR/scripts/smoke-android.sh"
-      # The other half of the diagnostic above: what the failed install left
-      # behind, and how much room there was by then.
+      # Diagnostic. This leg failed three times running while installing
+      # the emulator's system image ("Failed to download package!", then
+      # "contains no system images"), on the same runner image and in the
+      # same minute as the `android` job, which installs the same package
+      # and passed. The emulator action discards sdkmanager's output, so
+      # the logs do not say why. It is not the disk: a run that passed had
+      # 81 GB free at this point. This shows what a failed install leaves
+      # behind the next time it happens. Remove once the cause is known.
       - name: Report the system image install after a failure
         if: failure() && matrix.platform == 'android'
         working-directory: .
