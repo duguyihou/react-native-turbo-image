@@ -59,7 +59,9 @@ await TurboImage.clearDiskCache();
 
 ## Documentation
 
-- [Architecture and decisions](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/rfc/0001-turbo-image-2-native-toolchain.md)
+- [Architecture](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/architecture.md)
+- [Decision records](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/adr/README.md)
+- [Detailed behaviour (RFC 0001)](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/rfc/0001-turbo-image-2-native-toolchain.md)
 - [Migrating from 1.x](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/migration-guide.md)
 - [Migration plan from 1.x](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/migration-plan.md)
 - [Compatibility matrix](https://github.com/duguyihou/react-native-turbo-image/blob/main/v2/docs/compatibility-matrix.md)

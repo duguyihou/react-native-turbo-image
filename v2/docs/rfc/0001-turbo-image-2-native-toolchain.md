@@ -1,8 +1,14 @@
 # RFC 0001: TurboImage 2.0 native toolchain and architecture
 
-- Status: Draft. The walking skeleton builds and runs on both platforms.
-- Date: 2026-11-16
+- Status: Accepted and implemented. This is the detailed record of how 2.0 behaves.
+- Date: 2026-11-16, kept up to date as the implementation changed
 - Supersedes: the 1.x layout at the repository root (`ios/`, `android/`, `src/`)
+
+Reading order: [`../architecture.md`](../architecture.md) is the overview
+(the parts, the rules, the contracts), and [`../adr/`](../adr/README.md) has
+one record per decision with its reasons. This document is the detail behind
+both. Its section numbers are stable, because the source comments cite them
+("RFC §4.2a"); new material gets a new lettered subsection, not a renumbering.
 
 ## 1. Summary
 
@@ -27,17 +33,13 @@ Goals:
 3. SwiftPM is the preferred iOS integration, and CocoaPods behaves the same during the migration.
 4. Every production dependency is pinned. Pre-releases are evaluated in separate CI jobs.
 
-Rules. The goals above are held up by eight rules, which the rest of this RFC
-and the source comments cite by number ("RFC rule 3"):
-
-1. **Loaders are replaceable adapters.** Nuke and Coil sit behind a seam (`TIImageLoading`, `ImageLoaderAdapter`), and no loader type appears in the views, the public headers or the JS API.
-2. **The C++ core is the single owner of request semantics**: validation, cache keys, the cache-policy matrix, decode size. Adapters translate a `ResolvedRequest` and decide nothing.
-3. **Both platforms behave the same.** Where the loaders differ (cache tiers, progress cadence, placeholder lifetime, error codes), the difference is closed in the core or in the adapters, not left to JS.
-4. **One copy of shared logic.** The C++ in `cpp/` is compiled into both platforms from one source tree; nothing is ported or copied per platform.
-5. **No Swift/C++ interop.** Swift targets hold no C-family sources and never import C++; ObjC++ sits between them.
-6. **SwiftPM and CocoaPods build the same thing**: the same sources, flags, language modes and Nuke version.
-7. **Every production dependency is pinned**, in one place (`scripts/native-versions.env`), and CI fails when a manifest disagrees.
-8. **Pre-releases are evaluated apart from production**, in their own CI jobs, and are never a production dependency.
+Rules. The goals are held up by eight rules, which this RFC and the source
+comments cite by number ("RFC rule 3"). They are listed in
+[`../architecture.md`](../architecture.md#rules): replaceable loader
+adapters (1), the core owning request semantics (2), identical behaviour on
+both platforms (3), one copy of shared logic (4), no Swift/C++ interop (5),
+SwiftPM and CocoaPods building the same thing (6), pinned production
+dependencies (7), pre-releases evaluated apart (8).
 
 Non-goals:
 
@@ -84,6 +86,7 @@ Pinned values live in `v2/scripts/native-versions.env`.
                ▼                  │                    ▼                │
         ┌────────────────────────────────────────────────────┐         │
         │ TurboImageCore (C++20, cpp/)  ← same sources, both │         │
+        │ resolveRequest · ViewLifecycle · processors, hashes│         │
         └────────────────────────────────────────────────────┘         │
                │ ResolvedRequest                                        │ ResolvedRequest
                ▼                                                        ▼
@@ -130,7 +133,7 @@ Each adapter needs explicit configuration so both platforms behave the same:
 | Network fetcher | `DataLoader` / `URLSession` | Explicit `OkHttpNetworkFetcherFactory` with its own `OkHttpClient` (15 s connect, 30 s read) |
 | Concurrent request dedup | Task coalescing (default, set explicitly) | `DeDupeConcurrentRequestStrategy` (`@ExperimentalCoilApi`) |
 
-Decision: TurboImage's disk cache is authoritative and HTTP freshness headers
+Decision ([ADR 0002](../adr/0002-disk-cache-is-authoritative.md)): TurboImage's disk cache is authoritative and HTTP freshness headers
 are ignored on both platforms, for every policy but one. Apps that need the
 server to control freshness opt in per image with `cachePolicy="urlCache"`
 (§4.2a).
@@ -167,7 +170,7 @@ tier is an HTTP cache:
 - **C++ core**: pure functions on value types. No globals and no I/O. Thread-safe and reentrant. Results own all their data.
 - **JNI**: local references only, nothing cached across calls. Called on the UI thread.
 - **Seams** (`TIImageLoading`, `ImageLoaderAdapter`): `load` is called on the main thread. The completion fires exactly once on the main thread, or never if the load was cancelled first. `cancel` is idempotent.
-- **Views** guard against stale completions by handle identity. This applies on top of adapter-side cancellation, because Fabric recycles views.
+- **Views** guard against stale completions by a per-load token. This applies on top of adapter-side cancellation, because Fabric recycles views. The guard, and every other decision about what a view shows and which load events it emits, is the core's `ViewLifecycle` (`cpp/include/turboimage/ViewLifecycle.h`, [ADR 0010](../adr/0010-view-lifecycle-in-the-core.md)): a view says what happened and carries out the effects it gets back. The state is per view and used on the main thread only.
 
 ### 4.4 Error taxonomy
 
@@ -248,7 +251,7 @@ decides what a view shows while a *new* load runs, after a request prop
 - **Only a loaded image is kept.** A placeholder or a failed view is cleared as before, and the placeholder is not drawn over a kept image.
 - **Failure.** A kept image is removed when the new load fails, because it is not what `source` names. With `showPlaceholderOnFailure` the placeholder then appears, as it would have without a previous image.
 - **A key change alone does nothing.** With the request props unchanged the image on screen is already the right one, so no load starts and nothing is cleared.
-- **Not a request field.** The key lives in the two views only. It never reaches the core, the seams or the cache keys, and Fabric's own view recycling on iOS still clears the view regardless (§4.6).
+- **Not a request field.** The key lives in the two views only. It never reaches request resolution, the seams or the cache keys; the core's lifecycle is told only whether it changed in the transaction that starts a load. Fabric's own view recycling on iOS still clears the view regardless (§4.6).
 - **Events** are unchanged: the superseded load still ends with `onCompletion {state:'cancelled'}`.
 - **Tests.** Jest covers the JS prop. TODO: the smoke test observes events, not pixels, so nothing yet checks on a device what is on screen during the second load; a screenshot taken mid-load would.
 
@@ -260,7 +263,7 @@ decides what a view shows while a *new* load runs, after a request prop
 - **Exactness.** The decoders are ports of npm `blurhash` 2.0.5 and `thumbhash` 0.1.1. GoogleTest goldens come from those references (`cpp/tests/tools/generate-placeholder-goldens.mjs`, pinned devDependencies), and the C++ output matches them **byte for byte**. That holds on macOS arm64 (Apple Clang) and on the Android arm64 emulator (NDK Clang, bionic `libm`, `scripts/test-core-android.sh`). CI adds Linux GCC, Linux Clang and Android x86_64.
 - **FP contraction.** `#pragma STDC FP_CONTRACT OFF` is required. Clang fuses `a*b + c` into FMA by default on arm64, which rounds differently and would make the platforms disagree.
 - **Untrusted input.** Lengths and alphabets are validated. The JS thumbhash reference reads past the end of a truncated hash; the port returns `nullopt` instead.
-- **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main behind a generation counter plus a "final image shown" flag. 1.x had no such guard and could show a stale placeholder after `source` changed.
+- **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main only if the core's lifecycle allows it: it is still the newest decode (a generation counter) and no image has taken the view since. 1.x had no such guard and could show a stale placeholder after `source` changed.
 - **Lifetime.** The placeholder is shown until the image loads. On failure it is removed by default and kept only with `showPlaceholderOnFailure` (1.x's rule, §4.4b), on both platforms. Android needed a Coil target subclass so that the view decides this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
 - **`memoryCacheKey`.** This is a synchronous memory-cache lookup through the seam (`memoryCachedImageForKey:` / `memoryCachedDrawable`), keyed by the core's `canonicalCacheKey`, so it matches what a view stored. Coil keys memory entries by key *plus* extras (e.g. the resolved size), so the Android adapter matches on the key string across the key set.
 
@@ -349,15 +352,16 @@ sees. The core picks the target (`ResolvedRequest.decode`), in this order:
 
 Rules:
 
-- **Public API**: the only public headers are `ios/LoaderAPI/include/*.h`, which are plain ObjC. No Nuke type and no C++ type appears in any public header or in the JS API.
+- **Public API**: the public headers are `ios/LoaderAPI/include/*.h`, which are plain ObjC. No Nuke type and no C++ type appears in them or in the JS API. Known gap: under SwiftPM the Fabric target is declared with `publicHeadersPath: "."`, which also exposes `ios/Fabric/TIRequestFactory.h`, a C++ header; the podspec keeps it private. TODO: move the two ObjC headers of that target into an `include/` directory.
 - **No Swift/C++ interop**: Swift never imports C++. The ObjC++ view converts core results into `TIImageRequest`. This avoids `-cxx-interoperability-mode`, which would spread to every target that imports the Swift module.
-- **Adapter lookup by name**: `TIImageLoaderRegistry` finds the default adapter with `NSClassFromString(@"TurboImageNukeLoader")`. Importing the Swift adapter from the seam would invert the layering and create a SwiftPM cycle. The trade-off is that a name typo fails at runtime, not at link time; the example app exercises this lookup in CI. Apps can replace the adapter with `TIImageLoaderRegistry.sharedLoader = …`.
+- **Adapter lookup by name** ([ADR 0003](../adr/0003-plain-objc-seam-on-ios.md)): `TIImageLoaderRegistry` finds the default adapter with `NSClassFromString(@"TurboImageNukeLoader")`. Importing the Swift adapter from the seam would invert the layering and create a SwiftPM cycle. The trade-off is that a name typo fails at runtime, not at link time; the example app exercises this lookup in CI. Apps can replace the adapter with `TIImageLoaderRegistry.sharedLoader = …`.
 - **CocoaPods equivalence**: `TurboImage.podspec` compiles the same five trees into one pod. The sources are written to work under both: `#if canImport(TurboImageLoaderAPI)`, quoted seam includes, and `cpp/include` on the header search path. Swift 6 mode, C++20 and the Nuke tag are the same in both.
 
 ### 4.8 Android layout
 
 - `android/CMakeLists.txt` does `add_subdirectory(../cpp)` and links `turboimage_core` into `libturboimage.so` alongside a JNI bridge. There is no Android copy of the C++ (rule 4). The `.so` is linked with 16 KB page alignment.
-- Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` follows the same steps as the iOS view. `ImageLoaderAdapter` is the seam and `CoilImageLoaderAdapter` the only Coil-aware file.
+- Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` takes the same steps as the iOS view, decided by the same core lifecycle. `ImageLoaderAdapter` is the seam, and the `Coil*.kt` files in `loader/` are the only Coil-aware code. An app replaces the adapter with `TurboImageLoaders.set`.
+- **The seam is not the iOS seam's shape.** The Android adapter is handed the `ImageView` and displays the image itself (cross-fade, animated playback, waiting for layout before sizing the decode); the iOS adapter returns a `UIImage` and the view displays it. [ADR 0004](../adr/0004-android-adapter-displays-the-image.md) records why and what it costs.
 - R8: `consumer-rules.pro` keeps the classes and constructors that JNI creates by name. The example's release build has R8 enabled, and CI asserts that those classes survive unrenamed.
 
 ### 4.9 C++ core build
@@ -507,8 +511,8 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 
 | Check | Result |
 |---|---|
-| C++ core, 98 GoogleTests (host CMake, 2026-11-19) | ✅ pass |
-| C++ core, 98 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-19) | ✅ pass |
+| C++ core, 118 GoogleTests (host CMake, also under ASan and UBSan, 2026-11-20) | ✅ pass |
+| C++ core, 118 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-20) | ✅ pass |
 | iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
@@ -516,8 +520,8 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19) |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 49/49 (2026-11-19); also 49/49 on the x86_64 emulator (CI, 2026-11-19) |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19; local with the lifecycle in the core, 2026-11-20) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 49/49 (2026-11-20, with the lifecycle in the core); also 49/49 on the x86_64 emulator (CI, 2026-11-19) |
 | Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-19). CI builds this path in Debug and does not run the suite on it |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 49/49 each (CI, 2026-11-19) |
 | CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
