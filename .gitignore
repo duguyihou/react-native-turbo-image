@@ -84,3 +84,6 @@ example/ios/.xcode.env.local
 
 # Working notes on deferred issues; local only.
 /SESSION.md
+
+# Claude Code project files (skills, settings); local only.
+/.claude/
