@@ -143,6 +143,25 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 }  // namespace
 
+// What the view holds for the current request. Exactly one of these is true
+// at any time, which is why it is one value and not a flag each: the flags
+// allowed combinations (loaded *and* failed) that no code path means. The
+// Android view has the same four states (`Showing` in TurboImageView.kt).
+enum class TIShowing {
+  // No image of the current request: the view is blank or shows the
+  // placeholder. Before the first load, and while a load runs.
+  NoImage,
+  // The image of the previous request, kept while the current load runs. It
+  // stands in for the placeholder, so no placeholder may replace it. See
+  // resetStateForNewLoad.
+  PreviousImage,
+  // The current request's image. A late placeholder must not replace it.
+  LoadedImage,
+  // The current load failed. With showPlaceholderOnFailure=false no
+  // placeholder may appear any more (even one whose decode finishes later).
+  Failed,
+};
+
 @interface TurboImageComponentView () <RCTTurboImageViewViewProtocol>
 @end
 
@@ -163,19 +182,11 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   BOOL _needsReload;
   BOOL _needsPlaceholder;
   BOOL _needsLiveTextUpdate;
-  // True once the loaded image is on screen; a late placeholder must not
-  // replace it.
-  BOOL _showingFinalImage;
-  // The image of the previous request is still on screen while the current
-  // load runs. It stands in for the placeholder, so no placeholder may
-  // replace it. See startLoad.
-  BOOL _showingPreviousImage;
+  // What the view holds for the current request; see TIShowing.
+  TIShowing _showing;
   // `recyclingKey` changed in this transaction: the next load must not keep
   // the previous image.
   BOOL _recyclingKeyChanged;
-  // The current load failed; with showPlaceholderOnFailure=false no
-  // placeholder may appear any more (even one whose decode finishes later).
-  BOOL _loadFailed;
   // Bumped whenever a placeholder decode is started or invalidated, so an
   // older decode finishing late is dropped (1.x had no such guard and could
   // flash a stale placeholder after `source` changed).
@@ -294,7 +305,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
     _liveText = nil;
     return;
   }
-  if (!_showingFinalImage || _imageView.image == nil) {
+  if (_showing != TIShowing::LoadedImage || _imageView.image == nil) {
     return;  // the load's success calls this again
   }
   if (_liveText == nil) {
@@ -306,9 +317,15 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 // Decodes the placeholder off the main thread with the shared C++ core and
 // shows it unless the real image (or a newer placeholder) got there first.
 - (BOOL)placeholderAllowed {
-  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  return !_showingFinalImage && !_showingPreviousImage &&
-         !(_loadFailed && !props.showPlaceholderOnFailure);
+  switch (_showing) {
+    case TIShowing::NoImage:
+      return YES;
+    case TIShowing::PreviousImage:
+    case TIShowing::LoadedImage:
+      return NO;
+    case TIShowing::Failed:
+      return std::static_pointer_cast<const TurboImageViewProps>(_props)->showPlaceholderOnFailure;
+  }
 }
 
 - (void)applyPlaceholder {
@@ -444,14 +461,14 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   //   * new `recyclingKey`: nothing, or the placeholder. The view is being
   //     reused for other content, and the old image would be wrong.
   // Only a loaded image is kept, never a placeholder or a failed view.
-  _showingPreviousImage =
-      (_showingFinalImage || _showingPreviousImage) && !_recyclingKeyChanged &&
-      _imageView.image != nil;
-  if (!_showingPreviousImage) {
+  const BOOL holdsImage =
+      _showing == TIShowing::LoadedImage || _showing == TIShowing::PreviousImage;
+  _showing = holdsImage && !_recyclingKeyChanged && _imageView.image != nil
+                 ? TIShowing::PreviousImage
+                 : TIShowing::NoImage;
+  if (_showing == TIShowing::NoImage) {
     _imageView.image = nil;
   }
-  _showingFinalImage = NO;
-  _loadFailed = NO;
   // The old image's analysis must not outlive its request.
   [_liveText detach];
   _progressThrottle = turboimage::ProgressThrottle{};
@@ -501,8 +518,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
                          error:(NSError *)error
                         source:(NSString *)source {
   if (image != nil) {
-    _showingFinalImage = YES;
-    _showingPreviousImage = NO;
+    _showing = TIShowing::LoadedImage;
     // A successful load ends progress at 100% (core rule, see finish()).
     if (_progressThrottle.finish(_lastProgressTotal)) {
       [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
@@ -550,11 +566,10 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 // removed when the load fails. Also stops a placeholder decode still in
 // flight from appearing after the failure.
 - (void)applyFailureToPlaceholder {
-  _loadFailed = YES;
   // A previous image kept during the load goes either way: it is not what
   // `source` names, and leaving it up would hide the failure.
-  const BOOL hadPreviousImage = _showingPreviousImage;
-  _showingPreviousImage = NO;
+  const BOOL hadPreviousImage = _showing == TIShowing::PreviousImage;
+  _showing = TIShowing::Failed;
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   if (!props.showPlaceholderOnFailure) {
     ++_placeholderGeneration;
@@ -577,10 +592,8 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   _needsLiveTextUpdate = NO;
   [_liveText detach];
   _liveText = nil;
-  _showingFinalImage = NO;
-  _showingPreviousImage = NO;
+  _showing = TIShowing::NoImage;
   _recyclingKeyChanged = NO;
-  _loadFailed = NO;
   ++_placeholderGeneration;  // drop any decode still in flight
   // Back to the spec default, like the image above: the next updateProps
   // compares this view's props with the defaults (see `_recycled`).

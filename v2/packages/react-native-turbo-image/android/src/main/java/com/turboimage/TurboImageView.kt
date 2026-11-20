@@ -63,10 +63,39 @@ class TurboImageView(
   private var needsReload = false
   private var needsPlaceholder = false
   private var recyclingKeyChanged = false
-  // The image of the previous request is still on screen while the current
-  // load runs. It stands in for the placeholder, so no placeholder may
-  // replace it (same rule as the iOS view).
-  private var showingPreviousImage = false
+  /**
+   * What the view holds for the current request. Exactly one of these is
+   * true at any time, which is why it is one value and not a flag each: the
+   * flags allowed combinations (loaded *and* failed) that no code path means.
+   * The iOS view has the same four states (`TIShowing`).
+   */
+  private enum class Showing {
+    /**
+     * No image of the current request: the view is blank or shows the
+     * placeholder. Before the first load, and while a load runs.
+     */
+    NO_IMAGE,
+
+    /**
+     * The image of the previous request, kept while the current load runs.
+     * It stands in for the placeholder, so no placeholder may replace it.
+     */
+    PREVIOUS_IMAGE,
+
+    /**
+     * The current request's image. A late placeholder must not replace it,
+     * and a newer decode supersedes an older one.
+     */
+    LOADED_IMAGE,
+
+    /**
+     * The current load failed. With showPlaceholderOnFailure=false no
+     * placeholder may appear any more.
+     */
+    FAILED,
+  }
+
+  private var showing = Showing.NO_IMAGE
   // The load in flight, if any: a token made before the adapter is called,
   // null again once the load succeeds, fails or is cancelled. A callback acts
   // only while its own token is still here.
@@ -79,12 +108,6 @@ class TurboImageView(
   private var inFlight: Any? = null
   // Cancels [inFlight]; null when nothing is in flight.
   private var handle: LoadHandle? = null
-  // Mirrors the iOS view: once the loaded image is shown, a late placeholder
-  // must not replace it, and a newer decode supersedes an older one.
-  private var showingFinalImage = false
-  // The current load failed; with showPlaceholderOnFailure=false no
-  // placeholder may appear any more (same rule as the iOS view).
-  private var loadFailed = false
   private var placeholderGeneration = 0
   private var progressThrottle = TurboImageCore.ProgressThrottle()
   // Last Content-Length seen this load, for the throttle's finish() step.
@@ -208,14 +231,17 @@ class TurboImageView(
   }
 
   private fun placeholderAllowed() =
-    !showingFinalImage && !showingPreviousImage && !(loadFailed && !showPlaceholderOnFailure)
+    when (showing) {
+      Showing.NO_IMAGE -> true
+      Showing.PREVIOUS_IMAGE, Showing.LOADED_IMAGE -> false
+      Showing.FAILED -> showPlaceholderOnFailure
+    }
 
   private fun onLoadFailed() {
-    loadFailed = true
     // A previous image kept during the load goes either way: it is not what
     // `uri` names, and leaving it up would hide the failure.
-    val hadPreviousImage = showingPreviousImage
-    showingPreviousImage = false
+    val hadPreviousImage = showing == Showing.PREVIOUS_IMAGE
+    showing = Showing.FAILED
     if (!showPlaceholderOnFailure) {
       ++placeholderGeneration // a decode still in flight must not appear
       setImageDrawable(null)
@@ -240,13 +266,13 @@ class TurboImageView(
     //   * new `recyclingKey`: nothing, or the placeholder. The view is being
     //     reused for other content, and the old image would be wrong.
     // Only a loaded image is kept, never a placeholder or a failed view.
-    showingPreviousImage =
-      (showingFinalImage || showingPreviousImage) && !recyclingKeyChanged && drawable != null
-    if (!showingPreviousImage) {
+    val holdsImage = showing == Showing.LOADED_IMAGE || showing == Showing.PREVIOUS_IMAGE
+    showing =
+      if (holdsImage && !recyclingKeyChanged && drawable != null) Showing.PREVIOUS_IMAGE
+      else Showing.NO_IMAGE
+    if (showing == Showing.NO_IMAGE) {
       setImageDrawable(null)
     }
-    showingFinalImage = false
-    loadFailed = false
     progressThrottle = TurboImageCore.ProgressThrottle()
     lastProgressTotal = -1L
 
@@ -295,8 +321,7 @@ class TurboImageView(
             if (inFlight !== thisLoad) return
             inFlight = null
             handle = null
-            showingFinalImage = true
-            showingPreviousImage = false
+            showing = Showing.LOADED_IMAGE
             // A successful load ends progress at 100% (core rule, see finish()):
             // Coil may decode a noCache response without reading it to EOF.
             if (progressThrottle.finish(lastProgressTotal)) {
