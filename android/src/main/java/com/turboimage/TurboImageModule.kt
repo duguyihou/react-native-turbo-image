@@ -7,10 +7,26 @@ import coil.request.ImageRequest
 import com.facebook.react.bridge.*
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import okhttp3.Headers
+import java.util.concurrent.ConcurrentHashMap
 
 class TurboImageModule(private val context: ReactApplicationContext) :
   ReactContextBaseJavaModule(context) {
-  private var imageLoader: ImageLoader? = null
+  // Same structure as TurboImageViewManager's shared loaders (#443): at most
+  // one ImageLoader per cachePolicy, with the network observer disabled. A
+  // loader built per prefetch call registers its own ConnectivityManager
+  // network callback and never releases it, so frequent prefetching still
+  // exhausts the 100-callback limit (fatal TooManyRequestsException).
+  private val sharedLoaders = ConcurrentHashMap<Boolean, ImageLoader>()
+
+  private fun sharedImageLoader(respectCacheHeaders: Boolean): ImageLoader {
+    return sharedLoaders.getOrPut(respectCacheHeaders) {
+      Coil.imageLoader(context.applicationContext)
+        .newBuilder()
+        .networkObserverEnabled(false)
+        .respectCacheHeaders(respectCacheHeaders)
+        .build()
+    }
+  }
 
   override fun getName(): String = REACT_CLASS
 
@@ -51,11 +67,9 @@ class TurboImageModule(private val context: ReactApplicationContext) :
           .build()
       }
     }
-    imageLoader = Coil.imageLoader(context).newBuilder()
-      .respectCacheHeaders(cachePolicy == "urlCache")
-      .build()
+    val imageLoader = sharedImageLoader(cachePolicy == "urlCache")
     imageRequests.forEach { imageRequest ->
-      imageLoader?.enqueue(imageRequest)
+      imageLoader.enqueue(imageRequest)
     }
   }
 
