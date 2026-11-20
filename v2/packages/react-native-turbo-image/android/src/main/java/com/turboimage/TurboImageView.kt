@@ -260,7 +260,7 @@ class TurboImageView(
           it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble(), headers,
           allowDownscaling, resizeMode)
       }
-        ?: ResolveFailure(errorCode = 1) // EmptyUri, same as the core's code
+        ?: ResolveFailure(TurboImageCore.CoreAbi.REQUEST_ERROR_EMPTY_URI) // what the core says of ""
     when (result) {
       is ResolveFailure -> {
         emitFailure(invalid, "Invalid request (core error ${result.errorCode})")

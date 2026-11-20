@@ -28,6 +28,38 @@
 
 namespace {
 
+// The integers Kotlin holds for the core's enums (TurboImageCore.kt:
+// `CachePolicy`, `ResizeMode`, `LoadErrorCode`, `CoreAbi`). They cross this
+// bridge as plain jints and are cast, so nothing else would notice a value
+// renumbered on one side only. A failure here means: change TurboImageCore.kt
+// to match, then this list.
+#define TI_ASSERT_ABI(value, expected) \
+  static_assert(static_cast<jint>(value) == (expected), "TurboImageCore.kt mirrors " #value)
+TI_ASSERT_ABI(turboimage::CachePolicy::Default, 0);
+TI_ASSERT_ABI(turboimage::CachePolicy::MemoryOnly, 1);
+TI_ASSERT_ABI(turboimage::CachePolicy::NoCache, 2);
+TI_ASSERT_ABI(turboimage::CachePolicy::CacheOnly, 3);
+TI_ASSERT_ABI(turboimage::CachePolicy::UrlCache, 4);
+TI_ASSERT_ABI(turboimage::ResizeMode::Contain, 0);
+TI_ASSERT_ABI(turboimage::ResizeMode::Cover, 1);
+TI_ASSERT_ABI(turboimage::ResizeMode::Stretch, 2);
+TI_ASSERT_ABI(turboimage::ResizeMode::Center, 3);
+TI_ASSERT_ABI(turboimage::LoadErrorCode::Unknown, 0);
+TI_ASSERT_ABI(turboimage::LoadErrorCode::InvalidRequest, 1);
+TI_ASSERT_ABI(turboimage::LoadErrorCode::NotCached, 2);
+TI_ASSERT_ABI(turboimage::LoadErrorCode::Network, 3);
+TI_ASSERT_ABI(turboimage::LoadErrorCode::Decode, 4);
+TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Original, 0);
+TI_ASSERT_ABI(turboimage::DecodeSize::Kind::View, 1);
+TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Width, 2);
+TI_ASSERT_ABI(turboimage::RequestError::EmptyUri, 1);
+#undef TI_ASSERT_ABI
+
+// The throttle's state crosses as a LongArray(3), field by field (see
+// nativeShouldReportProgress). A fourth field would silently not round-trip.
+static_assert(sizeof(turboimage::ProgressThrottle) == 3 * sizeof(jlong),
+              "ProgressThrottle no longer fits the LongArray(3) Kotlin keeps it in");
+
 // Thrown when a JNI call failed and left its own Java exception pending.
 // No further JNI calls are allowed in that state, so this unwinds to
 // `guarded`, which returns to the JVM and lets that exception propagate.

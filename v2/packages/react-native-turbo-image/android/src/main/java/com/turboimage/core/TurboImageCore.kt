@@ -51,6 +51,22 @@ object TurboImageCore {
   }
 
   /**
+   * Core values Kotlin handles as bare ints, without an enum of their own.
+   * Like the enums above they are a pinned ABI; `TurboImageJni.cpp` asserts
+   * every one of them against the C++ definitions at compile time.
+   */
+  internal object CoreAbi {
+    /** `turboimage::DecodeSize::Kind::View`. */
+    const val DECODE_VIEW = 1
+
+    /** `turboimage::DecodeSize::Kind::Width`. */
+    const val DECODE_WIDTH = 2
+
+    /** `turboimage::RequestError::EmptyUri`, for a view with no URI at all. */
+    const val REQUEST_ERROR_EMPTY_URI = 1
+  }
+
+  /**
    * The cache keys a `placeholder.memoryCacheKey` may name, in lookup order:
    * the key as written (an explicit `source.cacheKey`), then its canonical
    * form (a source URI). The core decides, so iOS tries the same keys.
@@ -151,10 +167,6 @@ object TurboImageCore {
   private external fun nativeLoadErrorCodeName(code: Int): String
 
   /**
-   * Decodes a blurhash or base64 thumbhash with the shared C++ core. Pure and
-   * thread-safe; call it off the main thread (it can take ~1 ms).
-   */
-  /**
    * Per-load progress throttle; the rule lives in the C++ core
    * (`turboimage::ProgressThrottle`). Holds only state, owned by one view and
    * used on the main thread.
@@ -176,6 +188,9 @@ object TurboImageCore {
   private external fun nativeShouldReportProgress(state: LongArray, completed: Long, total: Long): Boolean
 
   /**
+   * Decodes a blurhash or base64 thumbhash with the shared C++ core. Pure and
+   * thread-safe; call it off the main thread (it can take ~1 ms).
+   *
    * Null when neither hash decodes, and also when the core ran out of memory:
    * a placeholder is optional, and this runs on an executor thread, where a
    * thrown error would take the app down.
@@ -250,8 +265,8 @@ data class ResolvedRequest(
 
   private fun decodeSize(kind: Int, width: Int, fill: Boolean): DecodeSize =
     when (kind) {
-      1 -> DecodeSize.View(fill)
-      2 -> DecodeSize.Width(width)
+      TurboImageCore.CoreAbi.DECODE_VIEW -> DecodeSize.View(fill)
+      TurboImageCore.CoreAbi.DECODE_WIDTH -> DecodeSize.Width(width)
       else -> DecodeSize.Original
     }
 

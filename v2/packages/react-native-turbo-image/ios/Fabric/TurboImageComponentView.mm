@@ -30,6 +30,19 @@ using namespace facebook::react;
 
 namespace {
 
+// The seam's error codes are the core's, repeated in plain ObjC because the
+// seam header cannot include C++. `loadDidFinishWithImage:` casts one to the
+// other, so a value added or renumbered on one side only must not compile.
+#define TI_ASSERT_SAME_CODE(seam, core)                                              \
+  static_assert(static_cast<int>(seam) == static_cast<int>(turboimage::LoadErrorCode::core), \
+                "TIImageLoadErrorCode and turboimage::LoadErrorCode disagree")
+TI_ASSERT_SAME_CODE(TIImageLoadErrorUnknown, Unknown);
+TI_ASSERT_SAME_CODE(TIImageLoadErrorInvalidRequest, InvalidRequest);
+TI_ASSERT_SAME_CODE(TIImageLoadErrorNotCached, NotCached);
+TI_ASSERT_SAME_CODE(TIImageLoadErrorNetwork, Network);
+TI_ASSERT_SAME_CODE(TIImageLoadErrorDecode, Decode);
+#undef TI_ASSERT_SAME_CODE
+
 turboimage::CachePolicy toCorePolicy(TurboImageViewCachePolicy policy) {
   switch (policy) {
     case TurboImageViewCachePolicy::Default:
