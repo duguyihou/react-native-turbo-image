@@ -2,10 +2,12 @@ package com.turboimage
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.WritableMap
+import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.events.Event
@@ -120,6 +122,17 @@ class TurboImageView(
     // image whose aspect differs from the view paints over its neighbours.
     // Mirrors `clipsToBounds = YES` on iOS.
     cropToPadding = true
+  }
+
+  // Keeps everything this view draws (the image, a placeholder, a cross-fade
+  // between them) inside its border: within the border's width, and within
+  // its rounded corners. The border itself is the view's background (see
+  // [TurboImageBorders]), which is drawn before this and is not clipped.
+  // Without a border this clips to the view's bounds, as `cropToPadding`
+  // already did. The anti-aliased variant is what React Native's <Image>
+  // uses; a plain clipPath leaves jagged corners on API 28 and below.
+  override fun onDraw(canvas: Canvas) {
+    BackgroundStyleApplicator.clipToPaddingBoxWithAntiAliasing(this, canvas) { super.onDraw(canvas) }
   }
 
   fun setResizeMode(mode: String?) {

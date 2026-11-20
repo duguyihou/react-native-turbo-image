@@ -5,7 +5,6 @@ import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewManagerDelegate
-import com.facebook.react.viewmanagers.TurboImageViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerInterface
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.readHeaders
@@ -21,7 +20,8 @@ import com.turboimage.loader.TurboImageLoaders
 class TurboImageViewManager :
   SimpleViewManager<TurboImageView>(), TurboImageViewManagerInterface<TurboImageView> {
 
-  private val delegate = TurboImageViewManagerDelegate(this)
+  // The generated delegate, extended with the border style props.
+  private val delegate = TurboImagePropsDelegate(this)
 
   override fun getDelegate(): ViewManagerDelegate<TurboImageView> = delegate
 
@@ -93,6 +93,15 @@ class TurboImageViewManager :
   // iOS-only (VisionKit Live Text). Android has no equivalent system
   // interaction, and 1.x ignored the prop there too.
   override fun setEnableLiveTextInteraction(view: TurboImageView, value: Boolean) = Unit
+
+  // Fabric sends the view's content insets here (border widths plus the
+  // `padding` style) and the base class drops them. As ImageView padding
+  // they put the image in the same box as on iOS, where the base view lays
+  // its content out inside the border: the picture is scaled to the area
+  // within the border, not scaled to the whole view and then covered by it.
+  override fun setPadding(view: TurboImageView, left: Int, top: Int, right: Int, bottom: Int) {
+    view.setPadding(left, top, right, bottom)
+  }
 
   // Start at most one load per Fabric transaction, after all props landed.
   override fun onAfterUpdateTransaction(view: TurboImageView) {

@@ -125,6 +125,12 @@ Nothing here needs a code change to compile, but each can change what your app d
 - `placeholder.memoryCacheKey` accepts either the URI or the explicit `cacheKey` the other image was loaded with.
 - `indicator` appears only for loads that take longer than 150 ms, so cache hits never flash it, and it is never shown together with a `placeholder`.
 
+### Borders and padding
+
+- Border styles on `<TurboImage>` (`borderWidth`, `borderColor`, `borderStyle`, `borderRadius`, also per edge and per corner) now draw on Android. 1.x ignored them there.
+- A `borderRadius` in the style clips the image and its placeholder on both platforms. On iOS 1.x needed `overflow: 'hidden'` for that; it is now the default, and `overflow: 'visible'` in your style turns it off.
+- On Android the image is laid out inside the border and the `padding` style, as on iOS. 1.x Android ignored `padding`.
+
 ### `rounded`, `indicator` and `ref`
 
 1.x always wrapped the image in a container view. 2.0 adds the container only when `rounded` or `indicator` needs it.

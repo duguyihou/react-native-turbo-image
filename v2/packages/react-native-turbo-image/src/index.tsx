@@ -231,7 +231,7 @@ function TurboImageComponent({
       // A new object each render is fine: both native views compare the
       // request fields by value before reloading.
       source={toNativeSource(source)}
-      style={needsContainer ? StyleSheet.absoluteFill : style}
+      style={needsContainer ? StyleSheet.absoluteFill : [styles.image, style]}
       cachePolicy={resolveCachePolicy(cachePolicy)}
       // Without an indicator the app's handlers go straight through.
       onStart={showsIndicator ? handleStart : onStart}
@@ -242,10 +242,14 @@ function TurboImageComponent({
     return image;
   }
   // The same approach as 1.x: clip in a container. The native image view
-  // itself does not clip to borderRadius on Android (ImageView content is not
-  // clipped by RN's border drawing), so a clipping container keeps both
-  // platforms identical. The container must not come and go with the
-  // spinner: that would remount the native view and restart the load.
+  // clips to a `borderRadius` in its own style on both platforms now, so
+  // `rounded` no longer needs the container for that; it is kept because
+  // dropping it would move `ref`, `testID` and the accessibility props to
+  // another view, a breaking change of its own.
+  // TODO: give `rounded` to the image view as a style and keep the container
+  // for the indicator only.
+  // The container must not come and go with the spinner: that would remount
+  // the native view and restart the load.
   return (
     <View ref={ref} style={[style, rounded && styles.rounded]}>
       {image}
@@ -263,6 +267,12 @@ function TurboImageComponent({
 }
 
 const styles = StyleSheet.create({
+  // As React Native's <Image>: on iOS a view clips its content to
+  // `borderRadius` only with `overflow: 'hidden'`. Without it a rounded
+  // <TurboImage> kept square corners there, while Android (which clips in
+  // the view's own drawing) rounded them. An app's `overflow: 'visible'`
+  // still wins, since `style` comes after this.
+  image: { overflow: 'hidden' },
   rounded: { overflow: 'hidden', borderRadius: 9999 },
 });
 

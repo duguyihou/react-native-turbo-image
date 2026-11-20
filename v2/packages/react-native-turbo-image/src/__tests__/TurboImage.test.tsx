@@ -237,8 +237,18 @@ describe('layout', () => {
 
   it('gives the style to the native view when no container is needed', () => {
     const renderer = render({ style });
-    expect(nativeProps(renderer).style).toBe(style);
+    // Plus `overflow: 'hidden'`, which is what makes iOS clip the image to
+    // a `borderRadius` in the style (as React Native's <Image> does).
+    expect(StyleSheet.flatten(nativeProps(renderer).style)).toEqual({
+      ...style,
+      overflow: 'hidden',
+    });
     expect(renderer.root.findAllByType(View)).toHaveLength(0);
+  });
+
+  it("lets the app's overflow win over the default", () => {
+    const renderer = render({ style: { ...style, overflow: 'visible' } });
+    expect(StyleSheet.flatten(nativeProps(renderer).style)).toMatchObject({ overflow: 'visible' });
   });
 
   it('rounded: the style moves to a clipping container and the image fills it', () => {
