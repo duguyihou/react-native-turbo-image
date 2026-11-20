@@ -135,6 +135,17 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 @implementation TurboImageComponentView {
   UIImageView *_imageView;
+  // The load in flight, if any: a token made before the adapter is called,
+  // nil again once the load succeeds, fails or is cancelled. A callback acts
+  // only while its own token is still here.
+  //
+  // Not the adapter's task: an adapter may complete inside
+  // `loadImageWithRequest:`, before that task exists. Comparing tasks let
+  // such a callback through (both sides nil) and then stored a task for a
+  // load that had already finished, so the next reload reported a second,
+  // "cancelled" onCompletion for it. Same token as `inFlight` on Android.
+  NSObject *_inFlight;
+  // Cancels `_inFlight`; nil when nothing is in flight.
   id<TIImageLoadTask> _task;
   BOOL _needsReload;
   BOOL _needsPlaceholder;
@@ -368,18 +379,21 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // The adapter drops callbacks after cancel, but guard by identity as well:
   // if a newer load replaced this one, its callbacks are stale. The blocks do
   // only that check; what a callback means for the view is in the handlers.
+  // See `_inFlight` for why the identity is a token and not the task.
   __weak __typeof(self) weakSelf = self;
-  __block id<TIImageLoadTask> thisTask = nil;
-  thisTask = [loader loadImageWithRequest:built.request
+  NSObject *thisLoad = [NSObject new];
+  _inFlight = thisLoad;
+  id<TIImageLoadTask> thisTask = [loader loadImageWithRequest:built.request
       progress:^(int64_t completed, int64_t total) {
         __typeof(self) strongSelf = weakSelf;
-        if (strongSelf != nil && strongSelf->_task == thisTask) {
+        if (strongSelf != nil && strongSelf->_inFlight == thisLoad) {
           [strongSelf loadDidProgress:completed total:total];
         }
       }
       completion:^(UIImage *image, BOOL fromMemoryCache, NSError *error) {
         __typeof(self) strongSelf = weakSelf;
-        if (strongSelf != nil && strongSelf->_task == thisTask) {
+        if (strongSelf != nil && strongSelf->_inFlight == thisLoad) {
+          strongSelf->_inFlight = nil;
           strongSelf->_task = nil;
           [strongSelf loadDidFinishWithImage:image
                              fromMemoryCache:fromMemoryCache
@@ -387,17 +401,22 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
                                       source:source];
         }
       }];
-  _task = thisTask;
+  // Already finished if the completion ran inside the call above: nothing
+  // to cancel.
+  if (_inFlight == thisLoad) {
+    _task = thisTask;
+  }
 }
 
 // A load still in flight is superseded: tell JS it was cancelled, so every
 // onStart is matched by exactly one onCompletion.
 - (void)cancelInFlightLoad {
-  if (_task == nil) {
+  if (_inFlight == nil) {
     return;
   }
   [_task cancel];
   _task = nil;
+  _inFlight = nil;
   [self emitCompletion:@"cancelled"];
 }
 
@@ -534,6 +553,7 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   [super prepareForRecycle];
   [_task cancel];
   _task = nil;
+  _inFlight = nil;
   _imageView.image = nil;
   _needsReload = NO;
   _needsPlaceholder = NO;
