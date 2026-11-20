@@ -11,6 +11,16 @@ import com.turboimage.core.ResolvedRequest
  * The view layer only knows this interface, so Coil stays a replaceable
  * adapter (RFC rule 1) and no Coil type appears in TurboImage's API.
  *
+ * Not the iOS seam's shape, on purpose (docs/adr/0004): there the adapter
+ * returns an image and the view shows it. Here [load] is given the
+ * `ImageView`, and the adapter owns
+ *  * putting the result in the view and cross-fading to it,
+ *  * playing animated results, and
+ *  * waiting for the view's first layout before it sizes the decode.
+ * What stays on screen while a load runs, placeholders and events remain the
+ * view's (decided by the core's lifecycle). An adapter must therefore never
+ * touch the view after [LoadHandle.cancel]: the view cannot veto a paint.
+ *
  * Contract:
  *  * [load] is called on the main thread.
  *  * Exactly one of [Listener.onSuccess]/[Listener.onError] fires, on the
