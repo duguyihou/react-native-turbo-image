@@ -11,8 +11,9 @@
 #   3. iOS does NOT use CMake. Package.swift and the podspec compile the same
 #      `src/` and `include/` trees directly. If you add a source file here,
 #      nothing else needs to change on iOS because both manifests glob
-#      `cpp/src`; but if you add a compile definition, mirror it in
-#      Package.swift *and* TurboImage.podspec (RFC rule 6).
+#      `cpp/src` (an app that already has Pods needs `pod install` to see
+#      it); but if you add a compile definition, mirror it in Package.swift
+#      *and* TurboImage.podspec (RFC rule 6).
 
 cmake_minimum_required(VERSION 3.22)
 project(TurboImageCore VERSION 2.0.0 LANGUAGES CXX)
@@ -37,6 +38,7 @@ add_library(turboimage_core STATIC
   src/Placeholder.cpp
   src/Processing.cpp
   src/Progress.cpp
+  src/ViewLifecycle.cpp
 )
 target_include_directories(turboimage_core PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -74,6 +76,7 @@ if(TURBOIMAGE_BUILD_TESTS)
     tests/PlaceholderTest.cpp
     tests/ProcessingTest.cpp
     tests/ProgressTest.cpp
+    tests/ViewLifecycleTest.cpp
   )
   # PlaceholderGoldens.inc lives next to the tests.
   target_include_directories(turboimage_core_tests PRIVATE tests)

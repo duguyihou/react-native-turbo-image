@@ -7,6 +7,10 @@
 //   3. Hand the resolved request to whichever `TIImageLoading` adapter is
 //      registered (Nuke by default) and display the result.
 //
+// When each of those happens, what stays on screen meanwhile and which load
+// events JS sees is not decided here: the core's `ViewLifecycle` decides, and
+// this view carries out the effects it returns (`perform:occasion:`).
+//
 // This file is the *only* place where React Native, the C++ core and the
 // loader seam meet. It must not import Nuke.
 
@@ -21,6 +25,7 @@
 #include <turboimage/ImageRequest.h>
 #include <turboimage/Placeholder.h>
 #include <turboimage/Progress.h>
+#include <turboimage/ViewLifecycle.h>
 
 #import "TIImageLoading.h"
 #import "TILiveText.h"
@@ -143,23 +148,17 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 }  // namespace
 
-// What the view holds for the current request. Exactly one of these is true
-// at any time, which is why it is one value and not a flag each: the flags
-// allowed combinations (loaded *and* failed) that no code path means. The
-// Android view has the same four states (`Showing` in TurboImageView.kt).
-enum class TIShowing {
-  // No image of the current request: the view is blank or shows the
-  // placeholder. Before the first load, and while a load runs.
-  NoImage,
-  // The image of the previous request, kept while the current load runs. It
-  // stands in for the placeholder, so no placeholder may replace it. See
-  // resetStateForNewLoad.
-  PreviousImage,
-  // The current request's image. A late placeholder must not replace it.
-  LoadedImage,
-  // The current load failed. With showPlaceholderOnFailure=false no
-  // placeholder may appear any more (even one whose decode finishes later).
-  Failed,
+// What an effect of the lifecycle acts on besides the view itself: the
+// request a reload resolved, or what the adapter called back with.
+struct TIOccasion {
+  // A reload: the request to start, or why it cannot be started.
+  TIRequestResult request;
+  // The adapter's completion. `image` is nil when the load failed; `error`
+  // then says why.
+  UIImage *image = nil;
+  BOOL fromMemoryCache = NO;
+  NSError *error = nil;
+  NSString *source = nil;
 };
 
 @interface TurboImageComponentView () <RCTTurboImageViewViewProtocol>
@@ -167,30 +166,18 @@ enum class TIShowing {
 
 @implementation TurboImageComponentView {
   UIImageView *_imageView;
-  // The load in flight, if any: a token made before the adapter is called,
-  // nil again once the load succeeds, fails or is cancelled. A callback acts
-  // only while its own token is still here.
-  //
-  // Not the adapter's task: an adapter may complete inside
-  // `loadImageWithRequest:`, before that task exists. Comparing tasks let
-  // such a callback through (both sides nil) and then stored a task for a
-  // load that had already finished, so the next reload reported a second,
-  // "cancelled" onCompletion for it. Same token as `inFlight` on Android.
-  NSObject *_inFlight;
-  // Cancels `_inFlight`; nil when nothing is in flight.
+  // Every decision about what the view shows and which load events JS sees
+  // is the core's (the same code the Android view runs). This view says what
+  // happened and carries out the effects it gets back; see perform:occasion:.
+  turboimage::ViewLifecycle _lifecycle;
+  // Cancels the load in flight; nil when there is none.
   id<TIImageLoadTask> _task;
   BOOL _needsReload;
   BOOL _needsPlaceholder;
   BOOL _needsLiveTextUpdate;
-  // What the view holds for the current request; see TIShowing.
-  TIShowing _showing;
   // `recyclingKey` changed in this transaction: the next load must not keep
   // the previous image.
   BOOL _recyclingKeyChanged;
-  // Bumped whenever a placeholder decode is started or invalidated, so an
-  // older decode finishing late is dropped (1.x had no such guard and could
-  // flash a stale placeholder after `source` changed).
-  NSUInteger _placeholderGeneration;
   // Per-load progress throttle (core rule shared with Android).
   turboimage::ProgressThrottle _progressThrottle;
   // Last Content-Length seen this load, for the throttle's finish() step.
@@ -277,16 +264,16 @@ enum class TIShowing {
   [super finalizeUpdates:updateMask];
   if (_needsReload) {
     _needsReload = NO;
-    // startLoad may clear the view, so the placeholder must be (re)applied.
+    // A reload may clear the view, so the placeholder must be (re)applied.
     _needsPlaceholder = YES;
-    [self startLoad];
+    [self reload];
   }
   // Consumed by the load above, or dropped: the key applies only to a load
   // in its own transaction.
   _recyclingKeyChanged = NO;
   if (_needsPlaceholder) {
     _needsPlaceholder = NO;
-    [self applyPlaceholder];
+    [self perform:_lifecycle.applyPlaceholder([self lifecycleProps]) occasion:TIOccasion{}];
   }
   if (_needsLiveTextUpdate) {
     _needsLiveTextUpdate = NO;
@@ -305,7 +292,7 @@ enum class TIShowing {
     _liveText = nil;
     return;
   }
-  if (_showing != TIShowing::LoadedImage || _imageView.image == nil) {
+  if (_lifecycle.showingState() != turboimage::Showing::LoadedImage || _imageView.image == nil) {
     return;  // the load's success calls this again
   }
   if (_liveText == nil) {
@@ -314,165 +301,124 @@ enum class TIShowing {
   [_liveText analyzeImage:_imageView.image inImageView:_imageView];
 }
 
-// Decodes the placeholder off the main thread with the shared C++ core and
-// shows it unless the real image (or a newer placeholder) got there first.
-- (BOOL)placeholderAllowed {
-  switch (_showing) {
-    case TIShowing::NoImage:
-      return YES;
-    case TIShowing::PreviousImage:
-    case TIShowing::LoadedImage:
-      return NO;
-    case TIShowing::Failed:
-      return std::static_pointer_cast<const TurboImageViewProps>(_props)->showPlaceholderOnFailure;
-  }
+#pragma mark - Lifecycle
+
+// The props the core's lifecycle depends on, as they are now.
+- (turboimage::LifecycleProps)lifecycleProps {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  // JS allows one placeholder kind at a time; `memoryCacheKey` wins if an
+  // app passes several anyway, as it always has.
+  const auto kind = !props.placeholder.memoryCacheKey.empty()
+                        ? turboimage::PlaceholderKind::MemoryCacheKey
+                        : !props.placeholder.blurhash.empty() || !props.placeholder.thumbhash.empty()
+                              ? turboimage::PlaceholderKind::Hash
+                              : turboimage::PlaceholderKind::None;
+  return {.placeholder = kind, .showPlaceholderOnFailure = props.showPlaceholderOnFailure};
 }
 
-- (void)applyPlaceholder {
-  const NSUInteger generation = ++_placeholderGeneration;
-  if (![self placeholderAllowed]) {
-    return;
+// A request prop changed: resolve the new request and let the lifecycle end
+// the old load, decide what stays on screen, and start the new one.
+- (void)reload {
+  // The old image's analysis must not outlive its request.
+  [_liveText detach];
+  _progressThrottle = turboimage::ProgressThrottle{};
+  _lastProgressTotal = -1;
+
+  // Requests that cannot be started fail before onStart: no load ever began.
+  TIRequestResult built = [self makeRequest];
+  if (built.request != nil && TIImageLoaderRegistry.sharedLoader == nil) {
+    built = {.request = nil,
+             .error = turboimage::LoadErrorCode::Unknown,
+             .message = @"No TurboImage loader adapter is linked"};
   }
-  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  // memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk).
-  // The core says which keys the prop may name (an explicit cacheKey as
-  // written, or a URI's canonical form); the first hit wins.
-  if (!props.placeholder.memoryCacheKey.empty()) {
-    id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
-    UIImage *cached = nil;
-    for (const auto &key : turboimage::memoryCacheKeyCandidates(props.placeholder.memoryCacheKey)) {
-      cached = [loader memoryCachedImageForKey:TIStringFromStd(key)];
-      if (cached != nil) {
+  [self perform:_lifecycle.reload(_recyclingKeyChanged, _imageView.image != nil,
+                                  built.request != nil, [self lifecycleProps])
+       occasion:TIOccasion{.request = built}];
+}
+
+// Carries out the lifecycle's effects, in order. The lifecycle decided;
+// nothing here chooses whether an effect applies. Each effect reads the part
+// of `occasion` its own kind of step filled in.
+- (void)perform:(const turboimage::LifecycleEffects &)effects occasion:(const TIOccasion &)occasion {
+  using Kind = turboimage::LifecycleEffect::Kind;
+  for (const auto &effect : effects) {
+    switch (effect.kind) {
+      case Kind::CancelLoad:
+        [_task cancel];
+        _task = nil;
         break;
-      }
+      case Kind::ClearImage:
+        _imageView.image = nil;
+        break;
+      case Kind::EmitCancelled:
+        [self emitCompletion:@"cancelled"];
+        break;
+      case Kind::EmitCompleted:
+        [self emitCompletion:@"completed"];
+        break;
+      case Kind::DeliverInvalidRequest:
+        [self emitFailure:occasion.request.error message:occasion.request.message];
+        break;
+      case Kind::StartLoad:
+        [self startLoad:occasion.request.request token:effect.value];
+        break;
+      case Kind::DeliverSuccess:
+        _task = nil;
+        [self deliverSuccess:occasion];
+        break;
+      case Kind::DeliverFailure:
+        _task = nil;
+        [self deliverFailure:occasion.error];
+        break;
+      case Kind::ShowCachedPlaceholder:
+        [self showCachedPlaceholder];
+        break;
+      case Kind::DecodePlaceholder:
+        [self decodePlaceholder:effect.value];
+        break;
     }
-    // A miss clears the view, for the same reason as "no placeholder" below:
-    // what it shows is the placeholder of earlier props. (JS allows one
-    // placeholder kind at a time, so there is no hash to fall back on.)
-    _imageView.image = cached;
-    return;
   }
-
-  // Copied into the block: props may change before the decode runs.
-  const std::string blurhash = props.placeholder.blurhash;
-  const std::string thumbhash = props.placeholder.thumbhash;
-  if (blurhash.empty() && thumbhash.empty()) {
-    // No placeholder is asked for (any more). `placeholderAllowed` says the
-    // view holds no loaded image, so whatever it shows is a placeholder the
-    // props have since dropped: remove it, rather than leave it up until
-    // the load ends.
-    _imageView.image = nil;
-    return;
-  }
-
-  __weak __typeof(self) weakSelf = self;
-  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-    // A C++ exception that leaves this block terminates the app, and the
-    // decode allocates. A placeholder is optional: without memory for it,
-    // the view simply shows none.
-    UIImage *placeholder = nil;
-    try {
-      const auto rgba = turboimage::decodePlaceholder(blurhash, thumbhash);
-      placeholder = rgba ? imageFromRgba(*rgba) : nil;
-    } catch (...) {
-      NSLog(@"TurboImage: placeholder decode failed with a C++ exception");
-    }
-    dispatch_async(dispatch_get_main_queue(), ^{
-      __typeof(self) strongSelf = weakSelf;
-      if (strongSelf == nil || placeholder == nil ||
-          strongSelf->_placeholderGeneration != generation || ![strongSelf placeholderAllowed]) {
-        return;
-      }
-      strongSelf->_imageView.image = placeholder;
-    });
-  });
 }
 
 #pragma mark - Loading
 
-// One load, start to finish. Each step is a method below, in this order.
-- (void)startLoad {
-  [self cancelInFlightLoad];
-  [self resetStateForNewLoad];
-
-  const TIRequestResult built = [self makeRequest];
-  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
-  // Requests the core rejects fail before onStart: no load ever began.
-  if (built.request == nil || loader == nil) {
-    [self emitFailure:built.request == nil ? built.error : turboimage::LoadErrorCode::Unknown
-              message:built.request == nil ? built.message
-                                           : @"No TurboImage loader adapter is linked"];
-    [self applyFailureToPlaceholder];
-    [self emitCompletion:@"completed"];
-    return;
-  }
-  NSString *source = built.request.url.absoluteString;
+- (void)startLoad:(TIImageRequest *)request token:(int64_t)token {
+  NSString *source = request.url.absoluteString;
 
   [self emitStart];
 
-  // The adapter drops callbacks after cancel, but guard by identity as well:
-  // if a newer load replaced this one, its callbacks are stale. The blocks do
-  // only that check; what a callback means for the view is in the handlers.
-  // See `_inFlight` for why the identity is a token and not the task.
+  // The adapter drops callbacks after cancel, but the lifecycle guards by
+  // token as well: a callback from a load that was replaced gets no effects
+  // back, so it cannot touch this view. The blocks only pass on what
+  // happened; what it means for the view is the lifecycle's to say.
   __weak __typeof(self) weakSelf = self;
-  NSObject *thisLoad = [NSObject new];
-  _inFlight = thisLoad;
-  id<TIImageLoadTask> thisTask = [loader loadImageWithRequest:built.request
+  id<TIImageLoadTask> task = [TIImageLoaderRegistry.sharedLoader loadImageWithRequest:request
       progress:^(int64_t completed, int64_t total) {
         __typeof(self) strongSelf = weakSelf;
-        if (strongSelf != nil && strongSelf->_inFlight == thisLoad) {
+        if (strongSelf != nil && strongSelf->_lifecycle.isInFlight(token)) {
           [strongSelf loadDidProgress:completed total:total];
         }
       }
       completion:^(UIImage *image, BOOL fromMemoryCache, NSError *error) {
         __typeof(self) strongSelf = weakSelf;
-        if (strongSelf != nil && strongSelf->_inFlight == thisLoad) {
-          strongSelf->_inFlight = nil;
-          strongSelf->_task = nil;
-          [strongSelf loadDidFinishWithImage:image
-                             fromMemoryCache:fromMemoryCache
-                                       error:error
-                                      source:source];
+        if (strongSelf == nil) {
+          return;
+        }
+        if (image != nil) {
+          [strongSelf perform:strongSelf->_lifecycle.loadSucceeded(token)
+                     occasion:TIOccasion{.image = image,
+                                         .fromMemoryCache = fromMemoryCache,
+                                         .source = source}];
+        } else {
+          [strongSelf perform:strongSelf->_lifecycle.loadFailed(token, [strongSelf lifecycleProps])
+                     occasion:TIOccasion{.error = error}];
         }
       }];
-  // Already finished if the completion ran inside the call above: nothing
-  // to cancel.
-  if (_inFlight == thisLoad) {
-    _task = thisTask;
+  // Already finished if the completion ran inside the call above: there is
+  // nothing left to cancel, so the task is not kept.
+  if (_lifecycle.isInFlight(token)) {
+    _task = task;
   }
-}
-
-// A load still in flight is superseded: tell JS it was cancelled, so every
-// onStart is matched by exactly one onCompletion.
-- (void)cancelInFlightLoad {
-  if (_inFlight == nil) {
-    return;
-  }
-  [_task cancel];
-  _task = nil;
-  _inFlight = nil;
-  [self emitCompletion:@"cancelled"];
-}
-
-- (void)resetStateForNewLoad {
-  // What stays on screen while this load runs (expo-image's rule):
-  //   * same `recyclingKey`: the previous image, so a changed source or
-  //     processor swaps (and cross-fades) without a blank frame in between;
-  //   * new `recyclingKey`: nothing, or the placeholder. The view is being
-  //     reused for other content, and the old image would be wrong.
-  // Only a loaded image is kept, never a placeholder or a failed view.
-  const BOOL holdsImage =
-      _showing == TIShowing::LoadedImage || _showing == TIShowing::PreviousImage;
-  _showing = holdsImage && !_recyclingKeyChanged && _imageView.image != nil
-                 ? TIShowing::PreviousImage
-                 : TIShowing::NoImage;
-  if (_showing == TIShowing::NoImage) {
-    _imageView.image = nil;
-  }
-  // The old image's analysis must not outlive its request.
-  [_liveText detach];
-  _progressThrottle = turboimage::ProgressThrottle{};
-  _lastProgressTotal = -1;
 }
 
 // Turns the current props and the view's size into a seam request, through
@@ -512,35 +458,29 @@ enum class TIShowing {
   }
 }
 
-// `image` is nil when the load failed; `error` then says why.
-- (void)loadDidFinishWithImage:(UIImage *)image
-               fromMemoryCache:(BOOL)fromMemoryCache
-                         error:(NSError *)error
-                        source:(NSString *)source {
-  if (image != nil) {
-    _showing = TIShowing::LoadedImage;
-    // A successful load ends progress at 100% (core rule, see finish()).
-    if (_progressThrottle.finish(_lastProgressTotal)) {
-      [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
-    }
-    [self showFinalImage:image animated:!fromMemoryCache];
-    [self updateLiveText];
-    // In pixels, as on Android. `size` alone is in points, which differs
-    // for any image whose scale is not 1: a processed SVG drawn at its own
-    // size carries the screen's scale so that it keeps its size in points.
-    const CGFloat scale = image.scale > 0 ? image.scale : 1;
-    [self emitSuccess:CGSizeMake(image.size.width * scale, image.size.height * scale)
-               source:source];
-  } else {
-    [self applyFailureToPlaceholder];
-    // The seam guarantees TIImageLoadErrorDomain; anything else is an
-    // adapter bug, reported as unknown.
-    const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
-                          ? static_cast<turboimage::LoadErrorCode>(error.code)
-                          : turboimage::LoadErrorCode::Unknown;
-    [self emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
+- (void)deliverSuccess:(const TIOccasion &)success {
+  UIImage *image = success.image;
+  // A successful load ends progress at 100% (core rule, see finish()).
+  if (_progressThrottle.finish(_lastProgressTotal)) {
+    [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
   }
-  [self emitCompletion:@"completed"];
+  [self showFinalImage:image animated:!success.fromMemoryCache];
+  [self updateLiveText];
+  // In pixels, as on Android. `size` alone is in points, which differs for
+  // any image whose scale is not 1: a processed SVG drawn at its own size
+  // carries the screen's scale so that it keeps its size in points.
+  const CGFloat scale = image.scale > 0 ? image.scale : 1;
+  [self emitSuccess:CGSizeMake(image.size.width * scale, image.size.height * scale)
+             source:success.source];
+}
+
+- (void)deliverFailure:(NSError *)error {
+  // The seam guarantees TIImageLoadErrorDomain; anything else is an adapter
+  // bug, reported as unknown.
+  const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
+                        ? static_cast<turboimage::LoadErrorCode>(error.code)
+                        : turboimage::LoadErrorCode::Unknown;
+  [self emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
 }
 
 // Cross-fades from whatever is shown (placeholder, previous image or
@@ -562,39 +502,68 @@ enum class TIShowing {
                   completion:nil];
 }
 
-// 1.x semantics: without `showPlaceholderOnFailure` the placeholder is
-// removed when the load fails. Also stops a placeholder decode still in
-// flight from appearing after the failure.
-- (void)applyFailureToPlaceholder {
-  // A previous image kept during the load goes either way: it is not what
-  // `source` names, and leaving it up would hide the failure.
-  const BOOL hadPreviousImage = _showing == TIShowing::PreviousImage;
-  _showing = TIShowing::Failed;
+#pragma mark - Placeholder
+
+// memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk).
+// The core says which keys the prop may name (an explicit cacheKey as
+// written, or a URI's canonical form); the first hit wins, and a miss clears
+// the view.
+- (void)showCachedPlaceholder {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  if (!props.showPlaceholderOnFailure) {
-    ++_placeholderGeneration;
-    _imageView.image = nil;
-  } else if (hadPreviousImage) {
-    // The placeholder was held back while the previous image stood in.
-    _imageView.image = nil;
-    [self applyPlaceholder];
+  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+  UIImage *cached = nil;
+  for (const auto &key : turboimage::memoryCacheKeyCandidates(props.placeholder.memoryCacheKey)) {
+    cached = [loader memoryCachedImageForKey:TIStringFromStd(key)];
+    if (cached != nil) {
+      break;
+    }
   }
+  _imageView.image = cached;
+}
+
+// Decodes the placeholder off the main thread with the shared C++ core and
+// shows it unless the real image (or a newer placeholder) got there first,
+// which the lifecycle answers by the decode's generation.
+- (void)decodePlaceholder:(int64_t)generation {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  // Copied into the block: props may change before the decode runs.
+  const std::string blurhash = props.placeholder.blurhash;
+  const std::string thumbhash = props.placeholder.thumbhash;
+
+  __weak __typeof(self) weakSelf = self;
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
+    // A C++ exception that leaves this block terminates the app, and the
+    // decode allocates. A placeholder is optional: without memory for it,
+    // the view simply shows none.
+    UIImage *placeholder = nil;
+    try {
+      const auto rgba = turboimage::decodePlaceholder(blurhash, thumbhash);
+      placeholder = rgba ? imageFromRgba(*rgba) : nil;
+    } catch (...) {
+      NSLog(@"TurboImage: placeholder decode failed with a C++ exception");
+    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+      __typeof(self) strongSelf = weakSelf;
+      if (strongSelf == nil || placeholder == nil ||
+          !strongSelf->_lifecycle.placeholderDecoded(generation, [strongSelf lifecycleProps])) {
+        return;
+      }
+      strongSelf->_imageView.image = placeholder;
+    });
+  });
 }
 
 - (void)prepareForRecycle {
   [super prepareForRecycle];
-  [_task cancel];
-  _task = nil;
-  _inFlight = nil;
-  _imageView.image = nil;
+  // Stops the load and any decode and clears the image, with no event: the
+  // component that was listening is gone.
+  [self perform:_lifecycle.recycle() occasion:TIOccasion{}];
   _needsReload = NO;
   _needsPlaceholder = NO;
   _needsLiveTextUpdate = NO;
   [_liveText detach];
   _liveText = nil;
-  _showing = TIShowing::NoImage;
   _recyclingKeyChanged = NO;
-  ++_placeholderGeneration;  // drop any decode still in flight
   // Back to the spec default, like the image above: the next updateProps
   // compares this view's props with the defaults (see `_recycled`).
   _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);

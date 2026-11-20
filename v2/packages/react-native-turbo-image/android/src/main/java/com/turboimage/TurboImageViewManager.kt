@@ -110,7 +110,7 @@ class TurboImageViewManager :
   }
 
   override fun onDropViewInstance(view: TurboImageView) {
-    view.cancel()
+    view.drop()
     super.onDropViewInstance(view)
   }
 
