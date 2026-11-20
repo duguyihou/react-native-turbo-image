@@ -394,6 +394,45 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      # The emulator action installs this same package, but once, with
+      # sdkmanager's output sent to /dev/null. On this leg that download has
+      # failed intermittently ("Failed to download package!", or an install
+      # that "contains no system images"), leaving a package directory that
+      # holds only sdkmanager's `.installer` marker, with 80 GB of disk
+      # free. So the image is installed here first: retried, checked for
+      # the file the emulator needs, and with the output kept, so a failure
+      # that outlasts the retries says why. The action then finds the
+      # package present and skips its own download.
+      #
+      # TODO: the `android` job installs the same package through the
+      # action alone and has not failed yet; give it this step if it does.
+      - name: Install the emulator's system image
+        if: matrix.platform == 'android'
+        working-directory: .
+        run: |
+          package='system-images;android-35;google_apis;x86_64'
+          installed="$ANDROID_HOME/system-images/android-35/google_apis/x86_64"
+          # `yes` is killed by SIGPIPE when sdkmanager is done reading, which
+          # pipefail would report as the install failing.
+          set +o pipefail
+          for attempt in 1 2 3; do
+            echo "::group::sdkmanager, attempt ${attempt}"
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "$package" --channel=0 \
+              && status=0 || status=$?
+            echo "::endgroup::"
+            # The exit status alone is not enough: two of the failures were
+            # installs that reported success and left no image behind.
+            if [ "$status" -eq 0 ] && [ -f "$installed/system.img" ]; then
+              exit 0
+            fi
+            echo "Attempt ${attempt} failed (sdkmanager exit ${status}); left behind:"
+            ls -la "$installed" 2>&1 || true
+            # A partial package would make the next attempt a no-op.
+            rm -rf "$installed"
+            sleep 15
+          done
+          echo "::error::could not install ${package} in 3 attempts"
+          exit 1
       # The evaluation must smoke-test both platforms (RFC §3), not only
       # build: the copy's own script, so it checks the copy's APK.
       - name: On-device smoke test (Android R8 release)
@@ -406,21 +445,6 @@ jobs:
           disable-animations: true
           working-directory: v2
           script: bash "$EVAL_DIR/scripts/smoke-android.sh"
-      # Diagnostic. This leg failed three times running while installing
-      # the emulator's system image ("Failed to download package!", then
-      # "contains no system images"), on the same runner image and in the
-      # same minute as the `android` job, which installs the same package
-      # and passed. The emulator action discards sdkmanager's output, so
-      # the logs do not say why. It is not the disk: a run that passed had
-      # 81 GB free at this point. This shows what a failed install leaves
-      # behind the next time it happens. Remove once the cause is known.
-      - name: Report the system image install after a failure
-        if: failure() && matrix.platform == 'android'
-        working-directory: .
-        run: |
-          df -h / "$ANDROID_HOME"
-          ls -la "$ANDROID_HOME/system-images/android-35/google_apis/x86_64" 2>&1 || true
-          du -sh "$ANDROID_HOME/system-images" 2> /dev/null || true
       # As in the CocoaPods job, keyed on the evaluated version instead.
       - name: Cache React Native's pod downloads
         if: matrix.platform == 'ios'
