@@ -351,5 +351,37 @@ TEST(ResolveVectorDecodeSize, OptOutKeepsTheRulesAboutTheImagesOwnSize) {
             (DecodeSize{.kind = DecodeSize::Kind::Width, .width = 360, .fill = false}));
 }
 
+// The views start a new load when this comparison says the request changed,
+// so every prop that affects a load must take part in it.
+TEST(ImageRequestEquality, EveryFieldTakesPart) {
+  const ImageRequest base{.uri = "https://example.com/a.jpg"};
+  EXPECT_EQ(base, ImageRequest{.uri = "https://example.com/a.jpg"});
+
+  auto changed = base;
+  changed.uri = "https://example.com/b.jpg";
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.cacheKey = "avatar-7";
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.cachePolicy = CachePolicy::CacheOnly;
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.processing.blur = 4;
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.pixelRatio = 3;
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.headers = {{.name = "Authorization", .value = "Bearer token"}};
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.allowDownscaling = false;
+  EXPECT_NE(base, changed);
+  changed = base;
+  changed.resizeMode = ResizeMode::Cover;
+  EXPECT_NE(base, changed);
+}
+
 }  // namespace
 }  // namespace turboimage

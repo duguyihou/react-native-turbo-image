@@ -34,20 +34,10 @@ class TurboImageView(
   private val loader: ImageLoaderAdapter,
 ) : AppCompatImageView(reactContext) {
 
-  // Request-defining props. A change to any of them marks the view dirty;
-  // the load itself starts once per transaction in [onTransactionEnd].
-  var uri: String? = null
-    set(value) { if (field != value) { field = value; needsReload = true } }
-  var cacheKey: String? = null
-    set(value) { if (field != value) { field = value; needsReload = true } }
-  var headers: List<Pair<String, String>> = emptyList()
-    set(value) { if (field != value) { field = value; needsReload = true } }
-  var cachePolicy: TurboImageCore.CachePolicy = TurboImageCore.CachePolicy.DEFAULT
-    set(value) { if (field != value) { field = value; needsReload = true } }
-  // Processors change the pixels, so they need a new load (served from the
-  // disk original, or memory if this variant is cached). Same rule as iOS.
-  var processing = TurboImageCore.Processing()
-    set(value) { if (field != value) { field = value; needsReload = true } }
+  // Everything the props say about which image to load. The view manager
+  // replaces it field by field; whether a change needs a new load is decided
+  // once per transaction, by comparing it with [loadedFor].
+  var request = TurboImageCore.Request()
 
   // Placeholder props. A change re-applies the placeholder; see [onTransactionEnd].
   var blurhash: String? = null
@@ -58,12 +48,20 @@ class TurboImageView(
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
 
   // Not a request prop: a new key alone starts no load, because the image on
-  // screen is still the one `uri` names. It only decides how the load started
+  // screen is still the one the source names. It only decides how the load started
   // in this same transaction treats the previous image (see [reload]).
   var recyclingKey: String? = null
     set(value) { if (field != value) { field = value; recyclingKeyChanged = true } }
 
-  private var needsReload = false
+  /**
+   * What decides a load besides the request: a change to either starts a new
+   * one. [allowHardware] is not a request field (it never affects cache
+   * keys), but an image decoded for one answer is wrong for the other.
+   */
+  private data class LoadInputs(val request: TurboImageCore.Request, val allowHardware: Boolean)
+
+  // The inputs the current load was started for; null before the first load.
+  private var loadedFor: LoadInputs? = null
   private var needsPlaceholder = false
   private var recyclingKeyChanged = false
   // Every decision about what the view shows and which load events JS sees
@@ -85,20 +83,6 @@ class TurboImageView(
 
   /** 1.x prop: false decodes to a software bitmap. Changing it reloads. */
   var allowHardware = true
-    set(value) { if (field != value) { field = value; needsReload = true } }
-
-  /**
-   * false decodes the original instead of the view's size. Changing it
-   * reloads, because the image on screen was decoded for the other answer.
-   */
-  var allowDownscaling = true
-    set(value) { if (field != value) { field = value; needsReload = true } }
-
-  // A request prop as well as a drawing one: `contain` needs fewer pixels
-  // than `cover`, and `center` needs them all (the core's decode-size rule),
-  // so an image decoded for one mode can be too small for another.
-  private var resizeMode = TurboImageCore.ResizeMode.CONTAIN
-    set(value) { if (field != value) { field = value; needsReload = true } }
 
   init {
     // Matches the spec default (`contain`, 1.x's default).
@@ -131,14 +115,21 @@ class TurboImageView(
         else -> ScaleType.FIT_CENTER to TurboImageCore.ResizeMode.CONTAIN // the default
       }
     scaleType = scale
-    resizeMode = core
+    // A request prop as well as a drawing one: `contain` needs fewer pixels
+    // than `cover`, and `center` needs them all (the core's decode-size
+    // rule), so an image decoded for one mode can be too small for another.
+    request = request.copy(resizeMode = core)
   }
 
 
   /** Called once per Fabric transaction, after all props have landed. */
   fun onTransactionEnd() {
-    if (needsReload) {
-      needsReload = false
+    // A new load whenever the request differs from the one on screen, and
+    // for the first transaction whatever it says: a view mounted without a
+    // source reports that (`invalidRequest`) instead of staying silent.
+    val inputs = LoadInputs(request, allowHardware)
+    if (inputs != loadedFor) {
+      loadedFor = inputs
       // A reload may clear the view, so the placeholder must be (re)applied.
       needsPlaceholder = true
       reload()
@@ -167,15 +158,9 @@ class TurboImageView(
   private fun reload() {
     progressThrottle = TurboImageCore.ProgressThrottle()
     lastProgressTotal = -1L
-    val result =
-      uri?.let {
-        // `density` is what RN's PixelRatio reports to JS, so `resize` (dp)
-        // means the same as in the app's layout maths.
-        TurboImageCore.resolve(
-          it, cacheKey, cachePolicy, processing, resources.displayMetrics.density.toDouble(), headers,
-          allowDownscaling, resizeMode)
-      }
-        ?: ResolveFailure(TurboImageCore.CoreAbi.REQUEST_ERROR_EMPTY_URI) // what the core says of ""
+    // `density` is what RN's PixelRatio reports to JS, so `resize` (dp) means
+    // the same as in the app's layout maths.
+    val result = TurboImageCore.resolve(request, resources.displayMetrics.density.toDouble())
     perform(
       lifecycle.reload(
         recyclingKeyChanged,

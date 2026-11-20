@@ -61,9 +61,6 @@ object TurboImageCore {
 
     /** `turboimage::DecodeSize::Kind::Width`. */
     const val DECODE_WIDTH = 2
-
-    /** `turboimage::RequestError::EmptyUri`, for a view with no URI at all. */
-    const val REQUEST_ERROR_EMPTY_URI = 1
   }
 
   /**
@@ -91,6 +88,36 @@ object TurboImageCore {
     val monochrome: Int? = null,
     val tint: Int? = null,
   )
+
+  /**
+   * Everything a view's props say about which image to load and how; mirrors
+   * `turboimage::ImageRequest`. Two equal requests are the same load, which
+   * is how the view decides whether a prop change needs a new one: it
+   * compares this, so a field added here takes part without further code.
+   * An absent source is the empty [uri], which the core rejects.
+   */
+  data class Request(
+    val uri: String = "",
+    val cacheKey: String? = null,
+    val headers: List<Pair<String, String>> = emptyList(),
+    val cachePolicy: CachePolicy = CachePolicy.DEFAULT,
+    val processing: Processing = Processing(),
+    val allowDownscaling: Boolean = true,
+    val resizeMode: ResizeMode = ResizeMode.CONTAIN,
+  )
+
+  /** Resolves a view's [request]; [pixelRatio] converts `resize` from dp. */
+  fun resolve(request: Request, pixelRatio: Double): ResolveResult =
+    resolve(
+      request.uri,
+      request.cacheKey,
+      request.cachePolicy,
+      request.processing,
+      pixelRatio,
+      request.headers,
+      request.allowDownscaling,
+      request.resizeMode,
+    )
 
   /**
    * [allowDownscaling] defaults to false here, unlike the view prop: the

@@ -201,7 +201,8 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
                          → onCompletion {state:'completed'}
 ```
 
-- **Rejected requests.** A request the core rejects (`invalidRequest`) fails *before* `onStart`, because no load began.
+- **Rejected requests.** A request the core rejects (`invalidRequest`) fails *before* `onStart`, because no load began. A view with no source, or an empty `uri`, is such a request: it reports `invalidRequest` when it is mounted, on both platforms. (Until the views compared whole requests, iOS stayed silent for it, and Android did for an absent source but not for an empty `uri`.)
+- **When a load starts.** A view loads for its first props, and again whenever the request changes: the core's `ImageRequest` (source, cache policy, processors, `allowDownscaling`, `resizeMode`) compared as one value, plus `allowHardware` on Android. The views keep no list of their own, so a field added to the request cannot be forgotten on one platform.
 - **Superseded loads.** A load superseded by a new `source` ends with `onCompletion {state:'cancelled'}` and never reports success. 1.x declared that state but never sent it.
 - **Progress pacing.** Progress is paced by the core's `ProgressThrottle`: each whole percent, or every 64 KiB when `total` is unknown (`-1`). So JS sees the same cadence whether Nuke reports per chunk or OkHttp per `read()`. The throttle state is three integers, so Android keeps it in a `LongArray` passed through JNI, with no native handle.
 - **Progress ends at 100%.** A successful load with a known total always ends with a `{total, total}` progress event, via `ProgressThrottle::finish`. Coil can decode a `noCache` response straight from the network stream and stop at the JPEG end marker without reading to EOF, so Android's byte count can end short. The smoke scenario `supersede` caught this intermittently.

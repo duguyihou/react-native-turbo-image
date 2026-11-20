@@ -34,9 +34,12 @@ class TurboImageViewManager :
   }
 
   override fun setSource(view: TurboImageView, value: ReadableMap?) {
-    view.uri = value?.getString("uri")?.let { resolveSourceUri(view.context, it) }
-    view.cacheKey = if (value?.hasKey("cacheKey") == true) value.getString("cacheKey") else null
-    view.headers = readHeaders(value)
+    view.request =
+      view.request.copy(
+        uri = value?.getString("uri")?.let { resolveSourceUri(view.context, it) }.orEmpty(),
+        cacheKey = if (value?.hasKey("cacheKey") == true) value.getString("cacheKey") else null,
+        headers = readHeaders(value),
+      )
   }
 
   override fun setPlaceholder(view: TurboImageView, value: ReadableMap?) {
@@ -59,7 +62,7 @@ class TurboImageViewManager :
   }
 
   override fun setCachePolicy(view: TurboImageView, value: String?) {
-    view.cachePolicy = TurboImageCore.CachePolicy.fromJs(value)
+    view.request = view.request.copy(cachePolicy = TurboImageCore.CachePolicy.fromJs(value))
   }
 
   override fun setResizeMode(view: TurboImageView, value: String?) {
@@ -67,19 +70,19 @@ class TurboImageViewManager :
   }
 
   override fun setResize(view: TurboImageView, value: Double) {
-    view.processing = view.processing.copy(resize = value)
+    view.request = view.request.copy(processing = view.request.processing.copy(resize = value))
   }
 
   override fun setBlur(view: TurboImageView, value: Double) {
-    view.processing = view.processing.copy(blur = value)
+    view.request = view.request.copy(processing = view.request.processing.copy(blur = value))
   }
 
   override fun setMonochrome(view: TurboImageView, value: Int?) {
-    view.processing = view.processing.copy(monochrome = value)
+    view.request = view.request.copy(processing = view.request.processing.copy(monochrome = value))
   }
 
   override fun setTint(view: TurboImageView, value: Int?) {
-    view.processing = view.processing.copy(tint = value)
+    view.request = view.request.copy(processing = view.request.processing.copy(tint = value))
   }
 
   override fun setAllowHardware(view: TurboImageView, value: Boolean) {
@@ -87,7 +90,7 @@ class TurboImageViewManager :
   }
 
   override fun setAllowDownscaling(view: TurboImageView, value: Boolean) {
-    view.allowDownscaling = value
+    view.request = view.request.copy(allowDownscaling = value)
   }
 
   // iOS-only (VisionKit Live Text). Android has no equivalent system

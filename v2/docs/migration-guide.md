@@ -113,6 +113,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 ### Events
 
 - `onFailure` gains `code`: `'invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown'`, the same on both platforms. Branch on `code`; the `error` text is diagnostic and differs between platforms.
+- An image with no source, or an empty `uri`, fails with `invalidRequest` as soon as it is mounted. If you render `<TurboImage>` before the URL is known, render it conditionally or expect that event.
 - `onCompletion` can report `state: 'cancelled'` when a load is superseded by a newer one. A cancelled load reports neither success nor failure. Every `onStart` is answered by exactly one `onCompletion`.
 - `onProgress` is throttled to about 100 events per load.
 

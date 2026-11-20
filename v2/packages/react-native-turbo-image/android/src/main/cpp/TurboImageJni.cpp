@@ -53,7 +53,6 @@ TI_ASSERT_ABI(turboimage::LoadErrorCode::Decode, 4);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Original, 0);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::View, 1);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Width, 2);
-TI_ASSERT_ABI(turboimage::RequestError::EmptyUri, 1);
 // `TurboImageCore.ViewLifecycle`: `PlaceholderKind` and `Effect.Kind`, the
 // latter decoded by position, so its order is part of the ABI too.
 TI_ASSERT_ABI(turboimage::PlaceholderKind::None, 0);

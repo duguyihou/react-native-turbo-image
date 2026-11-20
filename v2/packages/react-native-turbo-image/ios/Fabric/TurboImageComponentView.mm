@@ -172,7 +172,11 @@ struct TIOccasion {
   turboimage::ViewLifecycle _lifecycle;
   // Cancels the load in flight; nil when there is none.
   id<TIImageLoadTask> _task;
-  BOOL _needsReload;
+  // Set by updateProps, consumed by finalizeUpdates.
+  BOOL _propsChanged;
+  // The request the current load was started for; empty before a view's
+  // first load, and again after a recycle.
+  std::optional<turboimage::ImageRequest> _loadedRequest;
   BOOL _needsPlaceholder;
   BOOL _needsLiveTextUpdate;
   // `recyclingKey` changed in this transaction: the next load must not keep
@@ -215,27 +219,19 @@ struct TIOccasion {
   // what the previous life set on the UIView (accessibility, opacity, ...).
   // This view's own state was instead reset by prepareForRecycle, so its
   // props are compared with the defaults. Comparing them with `_props` would
-  // leave a recycled view blank when it gets the same source as before
-  // (smoke scenario `recycledSameSource`).
+  // leave a recycled view without the placeholder or Live Text of its new
+  // life when they equal the previous life's. (The request needs no such
+  // care: prepareForRecycle forgets `_loadedRequest`, so the first props of
+  // a new life always load. Smoke scenario `recycledSameSource`.)
   const auto &oldViewProps =
       *std::static_pointer_cast<const TurboImageViewProps>(_recycled ? defaultViewProps() : _props);
   const auto &newViewProps = *std::static_pointer_cast<const TurboImageViewProps>(props);
   _recycled = NO;
 
-  if (oldViewProps.source.uri != newViewProps.source.uri ||
-      oldViewProps.source.cacheKey != newViewProps.source.cacheKey ||
-      toHeaders(oldViewProps.source) != toHeaders(newViewProps.source) ||
-      oldViewProps.cachePolicy != newViewProps.cachePolicy ||
-      // Processors change the pixels, so they need a new load (served from
-      // the disk original, or memory if this variant is cached).
-      toProcessing(oldViewProps) != toProcessing(newViewProps) ||
-      // Both decide how large the image is decoded (the core's decode-size
-      // rule): `contain` needs fewer pixels than `cover`, `center` needs
-      // them all. The image on screen may be too small for the new answer.
-      oldViewProps.allowDownscaling != newViewProps.allowDownscaling ||
-      oldViewProps.resizeMode != newViewProps.resizeMode) {
-    _needsReload = YES;
-  }
+  // Whether the request props changed is not worked out here: finalizeUpdates
+  // compares the whole request with the one the current load was started
+  // for, once `_props` holds the new values.
+  _propsChanged = YES;
   // Not a request prop: a new key alone starts no load, because the image
   // on screen is still the one `source` names. It only decides how the load
   // started in this same transaction treats the previous image.
@@ -262,11 +258,20 @@ struct TIOccasion {
 // changes several request props starts exactly one load.
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask {
   [super finalizeUpdates:updateMask];
-  if (_needsReload) {
-    _needsReload = NO;
-    // A reload may clear the view, so the placeholder must be (re)applied.
-    _needsPlaceholder = YES;
-    [self reload];
+  if (_propsChanged) {
+    _propsChanged = NO;
+    // A new load whenever the request differs from the one on screen, and for
+    // a view's first props whatever they say: a view mounted without a source
+    // reports that (`invalidRequest`) instead of staying silent. Comparing
+    // the core's request, not a list of props kept here, means a field added
+    // to it can never be forgotten on one platform.
+    auto request = [self coreRequest];
+    if (!_loadedRequest.has_value() || *_loadedRequest != request) {
+      _loadedRequest = std::move(request);
+      // A reload may clear the view, so the placeholder must be (re)applied.
+      _needsPlaceholder = YES;
+      [self reload];
+    }
   }
   // Consumed by the load above, or dropped: the key applies only to a load
   // in its own transaction.
@@ -325,7 +330,7 @@ struct TIOccasion {
   _lastProgressTotal = -1;
 
   // Requests that cannot be started fail before onStart: no load ever began.
-  TIRequestResult built = [self makeRequest];
+  TIRequestResult built = [self makeRequest:*_loadedRequest];
   if (built.request != nil && TIImageLoaderRegistry.sharedLoader == nil) {
     built = {.request = nil,
              .error = turboimage::LoadErrorCode::Unknown,
@@ -421,14 +426,10 @@ struct TIOccasion {
   }
 }
 
-// Turns the current props and the view's size into a seam request, through
+// Turns the request and the view's size into a seam request, through
 // the same factory as the cache module, so prefetched keys always match.
-- (TIRequestResult)makeRequest {
-  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  // Fabric applies props (and so starts loads) before mounting, when there
-  // is no window to ask; RN's own screen scale is what `PixelRatio` reports
-  // to JS, so `resize` means the same here as in the app's layout maths.
-  const CGFloat pixelRatio = RCTScreenScale();
+- (TIRequestResult)makeRequest:(const turboimage::ImageRequest &)request {
+  const CGFloat pixelRatio = request.pixelRatio;
   // The view's size bounds the decode (`allowDownscaling`). Fabric applies
   // layout metrics before finalizeUpdates, on mount as on update, so the
   // bounds are this transaction's. The size is taken once, here: a view that
@@ -437,18 +438,32 @@ struct TIOccasion {
   // not either; `allowDownscaling={false}` is the documented way out).
   const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
                                           self.bounds.size.height * pixelRatio);
-  return TIMakeImageRequest(
-      {
-          .uri = props.source.uri,
-          .cacheKey = TIOptionalCacheKey(props.source.cacheKey),
-          .cachePolicy = toCorePolicy(props.cachePolicy),
-          .processing = toProcessing(props),
-          .pixelRatio = pixelRatio,
-          .headers = toHeaders(props.source),
-          .allowDownscaling = props.allowDownscaling,
-          .resizeMode = toCoreResizeMode(props.resizeMode),
-      },
-      viewPixelSize);
+  return TIMakeImageRequest(request, viewPixelSize);
+}
+
+// The current props as the core's request: everything they say about which
+// image to load and how.
+- (turboimage::ImageRequest)coreRequest {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  return {
+      .uri = props.source.uri,
+      .cacheKey = TIOptionalCacheKey(props.source.cacheKey),
+      .cachePolicy = toCorePolicy(props.cachePolicy),
+      // Processors change the pixels, so they need a new load (served from
+      // the disk original, or memory if this variant is cached).
+      .processing = toProcessing(props),
+      // Fabric applies props (and so starts loads) before mounting, when
+      // there is no window to ask; RN's own screen scale is what `PixelRatio`
+      // reports to JS, so `resize` means the same here as in the app's
+      // layout maths.
+      .pixelRatio = RCTScreenScale(),
+      .headers = toHeaders(props.source),
+      // Both decide how large the image is decoded (the core's decode-size
+      // rule): `contain` needs fewer pixels than `cover`, `center` needs
+      // them all. The image on screen may be too small for the new answer.
+      .allowDownscaling = props.allowDownscaling,
+      .resizeMode = toCoreResizeMode(props.resizeMode),
+  };
 }
 
 - (void)loadDidProgress:(int64_t)completed total:(int64_t)total {
@@ -558,7 +573,8 @@ struct TIOccasion {
   // Stops the load and any decode and clears the image, with no event: the
   // component that was listening is gone.
   [self perform:_lifecycle.recycle() occasion:TIOccasion{}];
-  _needsReload = NO;
+  _propsChanged = NO;
+  _loadedRequest.reset();
   _needsPlaceholder = NO;
   _needsLiveTextUpdate = NO;
   [_liveText detach];

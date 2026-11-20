@@ -118,6 +118,11 @@ struct Header {
   friend bool operator==(const Header&, const Header&) = default;
 };
 
+// Everything a view's props say about which image to load and how. Two equal
+// requests are the same load, which is how the views decide whether a prop
+// change needs a new one: they compare this, field by field, instead of
+// keeping their own list of "props that reload". A field added here takes
+// part in that on both platforms without further code.
 struct ImageRequest {
   std::string uri;
   // An explicit cache key overrides URI-derived keys. Used when the same
@@ -138,6 +143,8 @@ struct ImageRequest {
   // or grow after the image has loaded.
   bool allowDownscaling = true;
   ResizeMode resizeMode = ResizeMode::Contain;
+
+  friend bool operator==(const ImageRequest&, const ImageRequest&) = default;
 };
 
 struct ResolvedRequest {

@@ -51,9 +51,10 @@ platform headers. It is compiled into both platforms from one source tree.
 | `Placeholder.h` | Blurhash and thumbhash decoding, byte for byte the same everywhere. |
 | `Progress.h` | How often a download reports progress. |
 
-A view never interprets a prop that affects loading. It hands the props to
-`resolveRequest()` and gets a `ResolvedRequest`; it tells `ViewLifecycle` what
-happened and gets effects. An adapter never makes a policy decision. It
+A view never interprets a prop that affects loading. It gathers the props
+into the core's `ImageRequest` and starts a load when that value changes; it
+hands the request to `resolveRequest()` and gets a `ResolvedRequest`; it
+tells `ViewLifecycle` what happened and gets effects. An adapter never makes a policy decision. It
 translates a `ResolvedRequest` field by field.
 
 ## Rules
