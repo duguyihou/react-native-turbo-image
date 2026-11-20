@@ -1,0 +1,8 @@
+[install]
+# React Native tooling (Metro, the Gradle plugin, CocoaPods' node lookups,
+# Codegen) assumes a flat, npm-style node_modules. Bun 1.3 defaults new
+# workspaces to the isolated linker, which breaks those path assumptions, so
+# pin the hoisted layout explicitly.
+linker = "hoisted"
+# Reproducible installs: CI runs `bun install --frozen-lockfile`.
+exact = true

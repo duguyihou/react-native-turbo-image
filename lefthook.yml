@@ -1,11 +1,19 @@
 pre-commit:
   parallel: true
   commands:
+    # v2/ has its own toolchain (oxlint, oxfmt and TypeScript 6 under Bun; see
+    # v2/package.json). The 1.x ESLint and tsc here cannot check it, so both
+    # hooks skip it. `exclude` is a regular expression: the form every 1.x
+    # lefthook accepts (glob lists need 1.10.10).
+    # TODO: add v2 hooks (`bun run lint`, `bun run typecheck` in v2/) once v2
+    # is the main line of work.
     lint:
       glob: "*.{js,ts,jsx,tsx}"
+      exclude: "^v2/"
       run: npx eslint {staged_files}
     types:
-      glob: "*.{js,ts, jsx, tsx}"
+      glob: "*.{js,ts,jsx,tsx}"
+      exclude: "^v2/"
       run: npx tsc --noEmit
 commit-msg:
   parallel: true
