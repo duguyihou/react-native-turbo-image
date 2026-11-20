@@ -158,9 +158,12 @@ class TurboImageView(
     // disk). The core says which keys the prop may name (an explicit
     // cacheKey as written, or a URI's canonical form); the first hit wins.
     memoryCacheKey?.takeIf { it.isNotEmpty() }?.let { key ->
-      TurboImageCore.memoryCacheKeyCandidates(key)
-        .firstNotNullOfOrNull { loader.memoryCachedDrawable(it, resources) }
-        ?.let { setImageDrawable(it) }
+      // A miss clears the view, for the same reason as "no placeholder"
+      // below: what it shows is the placeholder of earlier props. (JS allows
+      // one placeholder kind at a time, so there is no hash to fall back on.)
+      setImageDrawable(
+        TurboImageCore.memoryCacheKeyCandidates(key)
+          .firstNotNullOfOrNull { loader.memoryCachedDrawable(it, resources) })
       return
     }
 

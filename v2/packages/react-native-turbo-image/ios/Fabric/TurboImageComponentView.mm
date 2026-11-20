@@ -309,13 +309,17 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   // written, or a URI's canonical form); the first hit wins.
   if (!props.placeholder.memoryCacheKey.empty()) {
     id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+    UIImage *cached = nil;
     for (const auto &key : turboimage::memoryCacheKeyCandidates(props.placeholder.memoryCacheKey)) {
-      UIImage *cached = [loader memoryCachedImageForKey:TIStringFromStd(key)];
+      cached = [loader memoryCachedImageForKey:TIStringFromStd(key)];
       if (cached != nil) {
-        _imageView.image = cached;
         break;
       }
     }
+    // A miss clears the view, for the same reason as "no placeholder" below:
+    // what it shows is the placeholder of earlier props. (JS allows one
+    // placeholder kind at a time, so there is no hash to fall back on.)
+    _imageView.image = cached;
     return;
   }
 
