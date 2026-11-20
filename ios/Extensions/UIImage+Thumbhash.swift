@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 public extension UIImage {
   convenience init?(thumbhash: String?) {

@@ -1,15 +1,16 @@
 import Nuke
+import React
 
 @objc(TurboImageViewManager)
-class TurboImageViewManager: RCTViewManager {
+public class TurboImageViewManager: RCTViewManager {
 
   private var prefetchers: [String: ImagePrefetcher] = [:]
 
-  override func view() -> (TurboImageView) {
+  public override func view() -> UIView! {
     return TurboImageView()
   }
 
-  @objc override static func requiresMainQueueSetup() -> Bool {
+  @objc public override static func requiresMainQueueSetup() -> Bool {
     return true
   }
 }
