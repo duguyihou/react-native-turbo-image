@@ -5,6 +5,7 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
+import com.turboimage.core.CachePolicy
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.readHeaders
@@ -28,7 +29,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   override fun getName() = NAME
 
   // `{ uri, cacheKey? }` from JS → core resolution. null for invalid input.
-  private fun resolve(sources: ReadableArray, index: Int, policy: TurboImageCore.CachePolicy): ResolvedRequest? {
+  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
     val source = sources.getMap(index) ?: return null
     val uri = resolveSourceUri(context, if (source.hasKey("uri")) source.getString("uri").orEmpty() else "")
@@ -40,7 +41,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     // The loader seam is main-thread only.
     UiThreadUtil.runOnUiThread {
       val loader = TurboImageLoaders.get(context)
-      val policy = TurboImageCore.CachePolicy.fromJs(cachePolicy)
+      val policy = CachePolicy.fromJs(cachePolicy)
       var pending = sources.size()
       var allSucceeded = true
       if (pending == 0) {
@@ -78,7 +79,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     UiThreadUtil.runOnUiThread {
       // Policy is irrelevant for the key; DEFAULT resolves it like a view.
       val requests =
-        (0 until sources.size()).mapNotNull { resolve(sources, it, TurboImageCore.CachePolicy.DEFAULT) }
+        (0 until sources.size()).mapNotNull { resolve(sources, it, CachePolicy.DEFAULT) }
       TurboImageLoaders.get(context).remove(requests) { settle(promise, it) }
     }
   }

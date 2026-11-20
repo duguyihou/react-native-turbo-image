@@ -6,7 +6,7 @@ import com.facebook.react.uimanager.SimpleViewManager
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.ViewManagerDelegate
 import com.facebook.react.viewmanagers.TurboImageViewManagerInterface
-import com.turboimage.core.TurboImageCore
+import com.turboimage.core.CachePolicy
 import com.turboimage.core.readHeaders
 import com.turboimage.core.resolveSourceUri
 import com.turboimage.loader.TurboImageLoaders
@@ -62,7 +62,7 @@ class TurboImageViewManager :
   }
 
   override fun setCachePolicy(view: TurboImageView, value: String?) {
-    view.request = view.request.copy(cachePolicy = TurboImageCore.CachePolicy.fromJs(value))
+    view.request = view.request.copy(cachePolicy = CachePolicy.fromJs(value))
   }
 
   override fun setResizeMode(view: TurboImageView, value: String?) {

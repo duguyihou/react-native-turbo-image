@@ -11,12 +11,17 @@ import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
 import com.facebook.react.uimanager.events.Event
+import com.turboimage.core.ImageRequest
+import com.turboimage.core.LoadErrorCode
+import com.turboimage.core.ProgressThrottle
+import com.turboimage.core.ResizeMode
 import com.turboimage.core.ResolveFailure
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.ResolveResult
 import com.turboimage.core.TurboImageCore
-import com.turboimage.core.TurboImageCore.ViewLifecycle.Effect
-import com.turboimage.core.TurboImageCore.ViewLifecycle.PlaceholderKind
+import com.turboimage.core.ViewLifecycle
+import com.turboimage.core.ViewLifecycle.Effect
+import com.turboimage.core.ViewLifecycle.PlaceholderKind
 import com.turboimage.loader.ImageLoaderAdapter
 import com.turboimage.loader.LoadHandle
 import java.nio.ByteBuffer
@@ -37,7 +42,7 @@ class TurboImageView(
   // Everything the props say about which image to load. The view manager
   // replaces it field by field; whether a change needs a new load is decided
   // once per transaction, by comparing it with [loadedFor].
-  var request = TurboImageCore.Request()
+  var request = ImageRequest()
 
   // Placeholder props. A change re-applies the placeholder; see [onTransactionEnd].
   var blurhash: String? = null
@@ -58,7 +63,7 @@ class TurboImageView(
    * one. [allowHardware] is not a request field (it never affects cache
    * keys), but an image decoded for one answer is wrong for the other.
    */
-  private data class LoadInputs(val request: TurboImageCore.Request, val allowHardware: Boolean)
+  private data class LoadInputs(val request: ImageRequest, val allowHardware: Boolean)
 
   // The inputs the current load was started for; null before the first load.
   private var loadedFor: LoadInputs? = null
@@ -68,10 +73,10 @@ class TurboImageView(
   // is the core's (`turboimage::ViewLifecycle`, the same code the iOS view
   // runs). This view says what happened and carries out the effects it gets
   // back; see [perform].
-  private val lifecycle = TurboImageCore.ViewLifecycle()
+  private val lifecycle = ViewLifecycle()
   // Cancels the load in flight; null when there is none.
   private var handle: LoadHandle? = null
-  private var progressThrottle = TurboImageCore.ProgressThrottle()
+  private var progressThrottle = ProgressThrottle()
   // Last Content-Length seen this load, for the throttle's finish() step.
   private var lastProgressTotal = -1L
 
@@ -109,10 +114,10 @@ class TurboImageView(
   fun setResizeMode(mode: String?) {
     val (scale, core) =
       when (mode) {
-        "cover" -> ScaleType.CENTER_CROP to TurboImageCore.ResizeMode.COVER
-        "stretch" -> ScaleType.FIT_XY to TurboImageCore.ResizeMode.STRETCH
-        "center" -> ScaleType.CENTER to TurboImageCore.ResizeMode.CENTER
-        else -> ScaleType.FIT_CENTER to TurboImageCore.ResizeMode.CONTAIN // the default
+        "cover" -> ScaleType.CENTER_CROP to ResizeMode.COVER
+        "stretch" -> ScaleType.FIT_XY to ResizeMode.STRETCH
+        "center" -> ScaleType.CENTER to ResizeMode.CENTER
+        else -> ScaleType.FIT_CENTER to ResizeMode.CONTAIN // the default
       }
     scaleType = scale
     // A request prop as well as a drawing one: `contain` needs fewer pixels
@@ -156,7 +161,7 @@ class TurboImageView(
     }
 
   private fun reload() {
-    progressThrottle = TurboImageCore.ProgressThrottle()
+    progressThrottle = ProgressThrottle()
     lastProgressTotal = -1L
     // `density` is what RN's PixelRatio reports to JS, so `resize` (dp) means
     // the same as in the app's layout maths.
@@ -207,7 +212,7 @@ class TurboImageView(
         Effect.Kind.DELIVER_INVALID_REQUEST -> {
           val failure = (occasion as Occasion.Reload).request as ResolveFailure
           emitFailure(
-            TurboImageCore.LoadErrorCode.INVALID_REQUEST.nativeValue,
+            LoadErrorCode.INVALID_REQUEST.nativeValue,
             "Invalid request (core error ${failure.errorCode})")
         }
         Effect.Kind.START_LOAD ->

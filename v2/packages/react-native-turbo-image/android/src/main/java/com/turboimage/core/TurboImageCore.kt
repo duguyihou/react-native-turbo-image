@@ -7,61 +7,19 @@ import java.nio.ByteBuffer
 /**
  * Kotlin face of the shared C++ core (cpp/). Android never re-implements
  * request semantics; it asks the core, exactly like the iOS Fabric view does.
+ *
+ * This object holds the core's functions and every JNI declaration (the
+ * native library binds them by this class's name). The types they take and
+ * return are next to it: `ImageRequest.kt`, `ProgressThrottle.kt`,
+ * `ViewLifecycle.kt`.
  */
 object TurboImageCore {
   init {
     System.loadLibrary("turboimage")
   }
 
-  /** Mirrors `turboimage::CachePolicy`; the ints are a pinned ABI. */
-  enum class CachePolicy(val nativeValue: Int) {
-    DEFAULT(0),
-    MEMORY_ONLY(1),
-    NO_CACHE(2),
-    CACHE_ONLY(3),
-    URL_CACHE(4);
-
-    companion object {
-      /**
-       * Parses the JS spelling with the core's parser (one parser for views
-       * and the module, on both platforms). Unknown or null → DEFAULT.
-       */
-      fun fromJs(value: String?): CachePolicy {
-        val native = nativeParseCachePolicy(value.orEmpty())
-        return entries.firstOrNull { it.nativeValue == native } ?: DEFAULT
-      }
-    }
-  }
-
-  /** Mirrors `turboimage::ResizeMode`; the ints are a pinned ABI. */
-  enum class ResizeMode(val nativeValue: Int) {
-    CONTAIN(0),
-    COVER(1),
-    STRETCH(2),
-    CENTER(3),
-  }
-
-  /** Mirrors `turboimage::LoadErrorCode`; the ints are a pinned ABI. */
-  enum class LoadErrorCode(val nativeValue: Int) {
-    UNKNOWN(0),
-    INVALID_REQUEST(1),
-    NOT_CACHED(2),
-    NETWORK(3),
-    DECODE(4),
-  }
-
-  /**
-   * Core values Kotlin handles as bare ints, without an enum of their own.
-   * Like the enums above they are a pinned ABI; `TurboImageJni.cpp` asserts
-   * every one of them against the C++ definitions at compile time.
-   */
-  internal object CoreAbi {
-    /** `turboimage::DecodeSize::Kind::View`. */
-    const val DECODE_VIEW = 1
-
-    /** `turboimage::DecodeSize::Kind::Width`. */
-    const val DECODE_WIDTH = 2
-  }
+  /** A `turboimage::CachePolicy` value, or -1 for an unknown spelling. */
+  internal fun parseCachePolicy(js: String): Int = nativeParseCachePolicy(js)
 
   /**
    * The cache keys a `placeholder.memoryCacheKey` may name, in lookup order:
@@ -70,44 +28,11 @@ object TurboImageCore {
    */
   fun memoryCacheKeyCandidates(key: String): Array<String> = nativeMemoryCacheKeyCandidates(key)
 
-  private external fun nativeParseCachePolicy(js: String): Int
-
-  private external fun nativeMemoryCacheKeyCandidates(key: String): Array<String>
-
   /** The JS spelling of a load error code, owned by the C++ core. */
   fun loadErrorCodeName(code: Int): String = nativeLoadErrorCodeName(code)
 
-  /**
-   * Image processors as the view receives them (see
-   * cpp/include/turboimage/Processing.h). `resize` is in dp; colours are
-   * ARGB ints, null when unset.
-   */
-  data class Processing(
-    val resize: Double = 0.0,
-    val blur: Double = 0.0,
-    val monochrome: Int? = null,
-    val tint: Int? = null,
-  )
-
-  /**
-   * Everything a view's props say about which image to load and how; mirrors
-   * `turboimage::ImageRequest`. Two equal requests are the same load, which
-   * is how the view decides whether a prop change needs a new one: it
-   * compares this, so a field added here takes part without further code.
-   * An absent source is the empty [uri], which the core rejects.
-   */
-  data class Request(
-    val uri: String = "",
-    val cacheKey: String? = null,
-    val headers: List<Pair<String, String>> = emptyList(),
-    val cachePolicy: CachePolicy = CachePolicy.DEFAULT,
-    val processing: Processing = Processing(),
-    val allowDownscaling: Boolean = true,
-    val resizeMode: ResizeMode = ResizeMode.CONTAIN,
-  )
-
   /** Resolves a view's [request]; [pixelRatio] converts `resize` from dp. */
-  fun resolve(request: Request, pixelRatio: Double): ResolveResult =
+  fun resolve(request: ImageRequest, pixelRatio: Double): ResolveResult =
     resolve(
       request.uri,
       request.cacheKey,
@@ -170,153 +95,8 @@ object TurboImageCore {
     }
   }
 
-  private external fun nativeProcess(rgba: ByteArray, width: Int, height: Int, processorKey: String): PlaceholderPixels?
-
   val coreVersion: String
     get() = nativeCoreVersion()
-
-  private external fun nativeResolve(
-    uri: String,
-    cacheKey: String,
-    cachePolicy: Int,
-    resize: Double,
-    blur: Double,
-    monochrome: Long,
-    tint: Long,
-    pixelRatio: Double,
-    headers: Array<String>,
-    allowDownscaling: Boolean,
-    resizeMode: Int,
-  ): ResolveResult
-
-  private external fun nativeCoreVersion(): String
-
-  private external fun nativeLoadErrorCodeName(code: Int): String
-
-  /**
-   * Per-load progress throttle; the rule lives in the C++ core
-   * (`turboimage::ProgressThrottle`). Holds only state, owned by one view and
-   * used on the main thread.
-   */
-  class ProgressThrottle {
-    // Mirrors ProgressThrottle's fields: lastPercent, lastReportedBytes,
-    // reportedCompletion. Initial values match the C++ defaults.
-    private val state = longArrayOf(-1L, -1L, 0L)
-
-    fun shouldReport(completed: Long, total: Long): Boolean =
-      nativeShouldReportProgress(state, completed, total)
-
-    /** True if a final {total, total} event must still be emitted on success. */
-    fun finish(total: Long): Boolean = nativeFinishProgress(state, total)
-  }
-
-  /**
-   * The load lifecycle of one view; every decision is the C++ core's
-   * (`turboimage::ViewLifecycle`, shared with the iOS view). Each step says
-   * what happened and returns the [Effect]s the view must carry out, in
-   * order. Holds only state, owned by one view and used on the main thread.
-   */
-  class ViewLifecycle {
-    /** Mirrors `turboimage::PlaceholderKind`; the ints are a pinned ABI. */
-    enum class PlaceholderKind(val nativeValue: Int) {
-      NONE(0),
-      HASH(1),
-      MEMORY_CACHE_KEY(2),
-    }
-
-    /** One thing the view must do; see `turboimage::LifecycleEffect`. */
-    data class Effect(val kind: Kind, val value: Long) {
-      /**
-       * Mirrors `turboimage::LifecycleEffect::Kind`, in the same order:
-       * effects are decoded by position. `TurboImageJni.cpp` asserts it.
-       */
-      enum class Kind {
-        CANCEL_LOAD,
-        CLEAR_IMAGE,
-        EMIT_CANCELLED,
-        EMIT_COMPLETED,
-        DELIVER_INVALID_REQUEST,
-        START_LOAD,
-        DELIVER_SUCCESS,
-        DELIVER_FAILURE,
-        SHOW_CACHED_PLACEHOLDER,
-        DECODE_PLACEHOLDER,
-      }
-    }
-
-    // Mirrors ViewLifecycle's fields: showing, inFlight, lastToken,
-    // placeholderGeneration. All start at 0, as in C++.
-    private val state = LongArray(4)
-
-    fun reload(
-      recyclingKeyChanged: Boolean,
-      imageOnScreen: Boolean,
-      requestValid: Boolean,
-      placeholder: PlaceholderKind,
-      showPlaceholderOnFailure: Boolean,
-    ): List<Effect> =
-      effects(
-        nativeLifecycleReload(
-          state, recyclingKeyChanged, imageOnScreen, requestValid, placeholder.nativeValue, showPlaceholderOnFailure))
-
-    fun isInFlight(token: Long): Boolean = nativeLifecycleIsInFlight(state, token)
-
-    fun loadSucceeded(token: Long): List<Effect> = effects(nativeLifecycleLoadSucceeded(state, token))
-
-    fun loadFailed(token: Long, placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
-      effects(nativeLifecycleLoadFailed(state, token, placeholder.nativeValue, showPlaceholderOnFailure))
-
-    fun applyPlaceholder(placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
-      effects(nativeLifecycleApplyPlaceholder(state, placeholder.nativeValue, showPlaceholderOnFailure))
-
-    fun placeholderDecoded(generation: Long, placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): Boolean =
-      nativeLifecyclePlaceholderDecoded(state, generation, placeholder.nativeValue, showPlaceholderOnFailure)
-
-    fun drop(): List<Effect> = effects(nativeLifecycleDrop(state))
-
-    // (kind, value) pairs, as the JNI bridge returns them.
-    private fun effects(flat: LongArray): List<Effect> =
-      List(flat.size / 2) { i -> Effect(Effect.Kind.entries[flat[2 * i].toInt()], flat[2 * i + 1]) }
-  }
-
-  private external fun nativeLifecycleReload(
-    state: LongArray,
-    recyclingKeyChanged: Boolean,
-    imageOnScreen: Boolean,
-    requestValid: Boolean,
-    placeholder: Int,
-    showPlaceholderOnFailure: Boolean,
-  ): LongArray
-
-  private external fun nativeLifecycleIsInFlight(state: LongArray, token: Long): Boolean
-
-  private external fun nativeLifecycleLoadSucceeded(state: LongArray, token: Long): LongArray
-
-  private external fun nativeLifecycleLoadFailed(
-    state: LongArray,
-    token: Long,
-    placeholder: Int,
-    showPlaceholderOnFailure: Boolean,
-  ): LongArray
-
-  private external fun nativeLifecycleApplyPlaceholder(
-    state: LongArray,
-    placeholder: Int,
-    showPlaceholderOnFailure: Boolean,
-  ): LongArray
-
-  private external fun nativeLifecyclePlaceholderDecoded(
-    state: LongArray,
-    generation: Long,
-    placeholder: Int,
-    showPlaceholderOnFailure: Boolean,
-  ): Boolean
-
-  private external fun nativeLifecycleDrop(state: LongArray): LongArray
-
-  private external fun nativeFinishProgress(state: LongArray, total: Long): Boolean
-
-  private external fun nativeShouldReportProgress(state: LongArray, completed: Long, total: Long): Boolean
 
   /**
    * Decodes a blurhash or base64 thumbhash with the shared C++ core. Pure and
@@ -334,91 +114,87 @@ object TurboImageCore {
       null
     }
 
+  // ---------------------------------------------------------------------
+  // JNI declarations (android/src/main/cpp/TurboImageJni.cpp).
+  //
+  // Those used only above are private. The ones `ProgressThrottle` and
+  // `ViewLifecycle` call are `internal`, and Kotlin would otherwise append
+  // the module's name to an internal function's JVM name, which the native
+  // library does not know: hence the `@JvmName` on each.
+
+  private external fun nativeParseCachePolicy(js: String): Int
+
+  private external fun nativeMemoryCacheKeyCandidates(key: String): Array<String>
+
+  private external fun nativeLoadErrorCodeName(code: Int): String
+
+  private external fun nativeCoreVersion(): String
+
+  private external fun nativeResolve(
+    uri: String,
+    cacheKey: String,
+    cachePolicy: Int,
+    resize: Double,
+    blur: Double,
+    monochrome: Long,
+    tint: Long,
+    pixelRatio: Double,
+    headers: Array<String>,
+    allowDownscaling: Boolean,
+    resizeMode: Int,
+  ): ResolveResult
+
+  private external fun nativeProcess(rgba: ByteArray, width: Int, height: Int, processorKey: String): PlaceholderPixels?
+
   private external fun nativeDecodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels?
-}
 
-sealed interface ResolveResult
+  @JvmName("nativeShouldReportProgress")
+  internal external fun nativeShouldReportProgress(state: LongArray, completed: Long, total: Long): Boolean
 
-/** Constructed from JNI; constructor signature is pinned in consumer-rules.pro. */
-data class ResolvedRequest(
-  val url: String,
-  val cacheKey: String,
-  val memoryRead: Boolean,
-  val memoryWrite: Boolean,
-  val diskRead: Boolean,
-  val diskWrite: Boolean,
-  val allowNetwork: Boolean,
-  /**
-   * Empty when unprocessed. Otherwise the identity *and* full description of
-   * the processing step: adapters key memory variants by it (with
-   * `cacheKey` naming the shared original) and pass it to
-   * [TurboImageCore.process].
-   */
-  val processorKey: String,
-  /** Validated headers as alternating names and values (the JNI shape). */
-  private val headerFields: Array<String>,
-  /**
-   * The disk tier is the HTTP cache (`cachePolicy="urlCache"`): keyed by
-   * [url], obeying `Cache-Control`, and separate from the disk cache
-   * [cacheKey] addresses. See `ResolvedRequest::httpCache` in the core.
-   */
-  val httpCache: Boolean,
-  private val decodeKind: Int,
-  private val decodeWidth: Int,
-  private val decodeFill: Boolean,
-  private val vectorDecodeKind: Int,
-  private val vectorDecodeWidth: Int,
-  private val vectorDecodeFill: Boolean,
-) : ResolveResult {
-  /** How large to decode; mirrors `turboimage::DecodeSize`. */
-  sealed interface DecodeSize {
-    /** Every pixel of the source. */
-    data object Original : DecodeSize
+  @JvmName("nativeFinishProgress")
+  internal external fun nativeFinishProgress(state: LongArray, total: Long): Boolean
 
-    /** The target view's size. [fill]: cover it; otherwise fit inside it. */
-    data class View(val fill: Boolean) : DecodeSize
+  @JvmName("nativeLifecycleReload")
+  internal external fun nativeLifecycleReload(
+    state: LongArray,
+    recyclingKeyChanged: Boolean,
+    imageOnScreen: Boolean,
+    requestValid: Boolean,
+    placeholder: Int,
+    showPlaceholderOnFailure: Boolean,
+  ): LongArray
 
-    /** This many pixels wide, aspect kept. */
-    data class Width(val pixels: Int) : DecodeSize
-  }
+  @JvmName("nativeLifecycleIsInFlight")
+  internal external fun nativeLifecycleIsInFlight(state: LongArray, token: Long): Boolean
 
-  val decode: DecodeSize
-    get() = decodeSize(decodeKind, decodeWidth, decodeFill)
+  @JvmName("nativeLifecycleLoadSucceeded")
+  internal external fun nativeLifecycleLoadSucceeded(state: LongArray, token: Long): LongArray
 
-  /**
-   * The size to draw the image at if it has no pixels of its own (SVG);
-   * see `ResolvedRequest::vectorDecode` in the core. Differs from [decode]
-   * only when `allowDownscaling` is off. [DecodeSize.Original] here is the
-   * image's own size in dp.
-   */
-  val vectorDecode: DecodeSize
-    get() = decodeSize(vectorDecodeKind, vectorDecodeWidth, vectorDecodeFill)
+  @JvmName("nativeLifecycleLoadFailed")
+  internal external fun nativeLifecycleLoadFailed(
+    state: LongArray,
+    token: Long,
+    placeholder: Int,
+    showPlaceholderOnFailure: Boolean,
+  ): LongArray
 
-  private fun decodeSize(kind: Int, width: Int, fill: Boolean): DecodeSize =
-    when (kind) {
-      TurboImageCore.CoreAbi.DECODE_VIEW -> DecodeSize.View(fill)
-      TurboImageCore.CoreAbi.DECODE_WIDTH -> DecodeSize.Width(width)
-      else -> DecodeSize.Original
-    }
+  @JvmName("nativeLifecycleApplyPlaceholder")
+  internal external fun nativeLifecycleApplyPlaceholder(
+    state: LongArray,
+    placeholder: Int,
+    showPlaceholderOnFailure: Boolean,
+  ): LongArray
 
-  /** Request headers in order; never part of a cache key. */
-  val headers: List<Pair<String, String>>
-    get() = headerFields.toList().chunked(2) { (name, value) -> name to value }
+  @JvmName("nativeLifecyclePlaceholderDecoded")
+  internal external fun nativeLifecyclePlaceholderDecoded(
+    state: LongArray,
+    generation: Long,
+    placeholder: Int,
+    showPlaceholderOnFailure: Boolean,
+  ): Boolean
 
-  // A data class compares arrays by identity; compare their contents.
-  override fun equals(other: Any?): Boolean =
-    other is ResolvedRequest &&
-      url == other.url && cacheKey == other.cacheKey &&
-      memoryRead == other.memoryRead && memoryWrite == other.memoryWrite &&
-      diskRead == other.diskRead && diskWrite == other.diskWrite &&
-      allowNetwork == other.allowNetwork && processorKey == other.processorKey &&
-      httpCache == other.httpCache && decode == other.decode &&
-      vectorDecode == other.vectorDecode &&
-      headerFields.contentEquals(other.headerFields)
-
-  override fun hashCode(): Int =
-    listOf(url, cacheKey, memoryRead, memoryWrite, diskRead, diskWrite, allowNetwork, processorKey, httpCache, decode, vectorDecode)
-      .hashCode() * 31 + headerFields.contentHashCode()
+  @JvmName("nativeLifecycleDrop")
+  internal external fun nativeLifecycleDrop(state: LongArray): LongArray
 }
 
 /**
@@ -426,6 +202,3 @@ data class ResolvedRequest(
  * Bitmap. Constructed from JNI; constructor pinned in consumer-rules.pro.
  */
 class PlaceholderPixels(val width: Int, val height: Int, val rgba: ByteArray)
-
-/** Constructed from JNI; `errorCode` mirrors `turboimage::RequestError`. */
-data class ResolveFailure(val errorCode: Int) : ResolveResult

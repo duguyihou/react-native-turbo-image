@@ -15,8 +15,8 @@ import coil3.network.httpHeaders
 import coil3.request.Disposable
 import coil3.request.allowHardware
 import coil3.request.crossfade
+import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.ResolvedRequest
-import com.turboimage.core.TurboImageCore
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -231,9 +231,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
   private fun classify(error: Throwable, request: ResolvedRequest): Int =
     when {
       error is HttpException && error.response.code == 504 && !request.allowNetwork ->
-        TurboImageCore.LoadErrorCode.NOT_CACHED.nativeValue
-      error is HttpException || error is IOException -> TurboImageCore.LoadErrorCode.NETWORK.nativeValue
-      else -> TurboImageCore.LoadErrorCode.DECODE.nativeValue
+        LoadErrorCode.NOT_CACHED.nativeValue
+      error is HttpException || error is IOException -> LoadErrorCode.NETWORK.nativeValue
+      else -> LoadErrorCode.DECODE.nativeValue
     }
 
   companion object {
