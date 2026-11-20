@@ -167,7 +167,14 @@ class TurboImageView(
     // Snapshot: props may change before the decode runs.
     val blur = blurhash.orEmpty()
     val thumb = thumbhash.orEmpty()
-    if (blur.isEmpty() && thumb.isEmpty()) return
+    if (blur.isEmpty() && thumb.isEmpty()) {
+      // No placeholder is asked for (any more). [placeholderAllowed] says the
+      // view holds no loaded image, so whatever it shows is a placeholder the
+      // props have since dropped: remove it, rather than leave it up until
+      // the load ends. Same rule as the iOS view.
+      setImageDrawable(null)
+      return
+    }
 
     placeholderExecutor.execute {
       val pixels = TurboImageCore.decodePlaceholder(blur, thumb) ?: return@execute

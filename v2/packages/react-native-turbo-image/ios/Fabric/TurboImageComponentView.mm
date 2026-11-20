@@ -312,6 +312,11 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   const std::string blurhash = props.placeholder.blurhash;
   const std::string thumbhash = props.placeholder.thumbhash;
   if (blurhash.empty() && thumbhash.empty()) {
+    // No placeholder is asked for (any more). `placeholderAllowed` says the
+    // view holds no loaded image, so whatever it shows is a placeholder the
+    // props have since dropped: remove it, rather than leave it up until
+    // the load ends.
+    _imageView.image = nil;
     return;
   }
 
