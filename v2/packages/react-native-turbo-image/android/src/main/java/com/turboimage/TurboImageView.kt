@@ -3,6 +3,7 @@ package com.turboimage
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.util.Log
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import com.facebook.react.bridge.Arguments
@@ -17,7 +18,6 @@ import com.turboimage.core.ProgressThrottle
 import com.turboimage.core.ResizeMode
 import com.turboimage.core.ResolveFailure
 import com.turboimage.core.ResolvedRequest
-import com.turboimage.core.ResolveResult
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.ViewLifecycle
 import com.turboimage.core.ViewLifecycle.Effect
@@ -175,31 +175,56 @@ class TurboImageView(
         placeholderKind(),
         showPlaceholderOnFailure,
       ),
-      Occasion.Reload(result),
+      when (result) {
+        is ResolvedRequest ->
+          object : StepEffects() {
+            override fun startLoad(token: Long) = startLoad(result, token)
+          }
+        is ResolveFailure ->
+          object : StepEffects() {
+            override fun deliverInvalidRequest() =
+              emitFailure(
+                LoadErrorCode.INVALID_REQUEST.nativeValue,
+                "Invalid request (core error ${result.errorCode})")
+          }
+      },
     )
   }
 
   /**
-   * What an effect acts on besides the view itself: the request a reload
-   * resolved, or what the adapter called back with.
+   * The effects that only one kind of step can produce, and that need what
+   * that step knows: the request a reload resolved, or what the adapter
+   * called back with. Each caller of [perform] overrides the ones its step
+   * can produce, closing over that knowledge, so no effect has to dig its
+   * context out of a loosely typed argument.
+   *
+   * The lifecycle never sends an effect from a step that cannot produce it
+   * (`StartLoad` from a callback, say). If it ever did, that is a bug in the
+   * core or here, reported by [unexpected] rather than acted on.
    */
-  private sealed interface Occasion {
-    data object None : Occasion
+  private open inner class StepEffects {
+    open fun deliverInvalidRequest(): Unit = unexpected(Effect.Kind.DELIVER_INVALID_REQUEST)
 
-    class Reload(val request: ResolveResult) : Occasion
+    open fun startLoad(token: Long): Unit = unexpected(Effect.Kind.START_LOAD)
 
-    class Success(val width: Int, val height: Int, val url: String) : Occasion
+    open fun deliverSuccess(): Unit = unexpected(Effect.Kind.DELIVER_SUCCESS)
 
-    class Failure(val code: Int, val message: String) : Occasion
+    open fun deliverFailure(): Unit = unexpected(Effect.Kind.DELIVER_FAILURE)
+  }
+
+  // Loud where a developer will see it, harmless where a user would: the
+  // effect is skipped, which at worst leaves one image unloaded.
+  private fun unexpected(kind: Effect.Kind) {
+    val message = "TurboImage: the lifecycle sent $kind from a step that cannot produce it"
+    if (BuildConfig.DEBUG) error(message)
+    Log.e("TurboImage", message)
   }
 
   /**
    * Carries out the lifecycle's effects, in order. The lifecycle decided;
-   * nothing here chooses whether an effect applies. The casts say which
-   * occasion an effect can come from, and the lifecycle never sends one
-   * from another.
+   * nothing here chooses whether an effect applies.
    */
-  private fun perform(effects: List<Effect>, occasion: Occasion = Occasion.None) {
+  private fun perform(effects: List<Effect>, step: StepEffects = StepEffects()) {
     for (effect in effects) {
       when (effect.kind) {
         Effect.Kind.CANCEL_LOAD -> {
@@ -209,21 +234,15 @@ class TurboImageView(
         Effect.Kind.CLEAR_IMAGE -> setImageDrawable(null)
         Effect.Kind.EMIT_CANCELLED -> emitCompletion("cancelled")
         Effect.Kind.EMIT_COMPLETED -> emitCompletion("completed")
-        Effect.Kind.DELIVER_INVALID_REQUEST -> {
-          val failure = (occasion as Occasion.Reload).request as ResolveFailure
-          emitFailure(
-            LoadErrorCode.INVALID_REQUEST.nativeValue,
-            "Invalid request (core error ${failure.errorCode})")
-        }
-        Effect.Kind.START_LOAD ->
-          startLoad((occasion as Occasion.Reload).request as ResolvedRequest, token = effect.value)
+        Effect.Kind.DELIVER_INVALID_REQUEST -> step.deliverInvalidRequest()
+        Effect.Kind.START_LOAD -> step.startLoad(token = effect.value)
         Effect.Kind.DELIVER_SUCCESS -> {
           handle = null
-          deliverSuccess(occasion as Occasion.Success)
+          step.deliverSuccess()
         }
         Effect.Kind.DELIVER_FAILURE -> {
           handle = null
-          (occasion as Occasion.Failure).let { emitFailure(it.code, it.message) }
+          step.deliverFailure()
         }
         Effect.Kind.SHOW_CACHED_PLACEHOLDER -> showCachedPlaceholder()
         Effect.Kind.DECODE_PLACEHOLDER -> decodePlaceholder(generation = effect.value)
@@ -251,12 +270,18 @@ class TurboImageView(
           }
 
           override fun onSuccess(width: Int, height: Int) =
-            perform(lifecycle.loadSucceeded(token), Occasion.Success(width, height, request.url))
+            perform(
+              lifecycle.loadSucceeded(token),
+              object : StepEffects() {
+                override fun deliverSuccess() = deliverSuccess(width, height, request.url)
+              })
 
           override fun onError(code: Int, message: String) =
             perform(
               lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure),
-              Occasion.Failure(code, message))
+              object : StepEffects() {
+                override fun deliverFailure() = emitFailure(code, message)
+              })
         },
       )
     // Already finished if the callback ran inside `load()` (a memory-cache
@@ -266,16 +291,16 @@ class TurboImageView(
 
   // The adapter (Coil's target) has already put the image in this view; see
   // `DeliverSuccess` in the core.
-  private fun deliverSuccess(success: Occasion.Success) {
+  private fun deliverSuccess(width: Int, height: Int, url: String) {
     // A successful load ends progress at 100% (core rule, see finish()):
     // Coil may decode a noCache response without reading it to EOF.
     if (progressThrottle.finish(lastProgressTotal)) {
       emitProgress(lastProgressTotal, lastProgressTotal)
     }
     emit("topSuccess") {
-      putDouble("width", success.width.toDouble())
-      putDouble("height", success.height.toDouble())
-      putString("source", success.url)
+      putDouble("width", width.toDouble())
+      putDouble("height", height.toDouble())
+      putString("source", url)
     }
   }
 

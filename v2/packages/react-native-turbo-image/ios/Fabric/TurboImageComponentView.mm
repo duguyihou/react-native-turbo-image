@@ -9,13 +9,14 @@
 //
 // When each of those happens, what stays on screen meanwhile and which load
 // events JS sees is not decided here: the core's `ViewLifecycle` decides, and
-// this view carries out the effects it returns (`perform:occasion:`).
+// this view carries out the effects it returns (`perform:step:`).
 //
 // This file is the *only* place where React Native, the C++ core and the
 // loader seam meet. It must not import Nuke.
 
 #import "TurboImageComponentView.h"
 
+#import <React/RCTLog.h>
 #import <React/RCTUtils.h>
 #import <react/renderer/components/TurboImageSpec/ComponentDescriptors.h>
 #import <react/renderer/components/TurboImageSpec/EventEmitters.h>
@@ -121,6 +122,13 @@ turboimage::ProcessingOptions toProcessing(const TurboImageViewProps &props) {
   };
 }
 
+// Loud where a developer will see it (a redbox in development), harmless
+// where a user would: the effect is skipped, which at worst leaves one image
+// unloaded.
+void TIUnexpectedEffect(NSString *kind) {
+  RCTLogError(@"TurboImage: the lifecycle sent %@ from a step that cannot produce it", kind);
+}
+
 const std::shared_ptr<const TurboImageViewProps> &defaultViewProps() {
   static const auto defaultProps = std::make_shared<const TurboImageViewProps>();
   return defaultProps;
@@ -148,17 +156,20 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 }  // namespace
 
-// What an effect of the lifecycle acts on besides the view itself: the
-// request a reload resolved, or what the adapter called back with.
-struct TIOccasion {
-  // A reload: the request to start, or why it cannot be started.
-  TIRequestResult request;
-  // The adapter's completion. `image` is nil when the load failed; `error`
-  // then says why.
-  UIImage *image = nil;
-  BOOL fromMemoryCache = NO;
-  NSError *error = nil;
-  NSString *source = nil;
+// The effects of the lifecycle that only one kind of step can produce, and
+// that need what that step knows: the request a reload resolved, or what the
+// adapter called back with. Each caller of perform:step: sets the ones its
+// step can produce, as blocks closing over that knowledge, so no effect has
+// to dig its context out of a loosely typed argument.
+//
+// The lifecycle never sends an effect from a step that cannot produce it
+// (`StartLoad` from a callback, say). If it ever did, the block is nil: that
+// is a bug in the core or here, and it is reported, not acted on.
+struct TIStepEffects {
+  void (^deliverInvalidRequest)(void) = nil;
+  void (^startLoad)(int64_t token) = nil;
+  void (^deliverSuccess)(void) = nil;
+  void (^deliverFailure)(void) = nil;
 };
 
 @interface TurboImageComponentView () <RCTTurboImageViewViewProtocol>
@@ -168,7 +179,7 @@ struct TIOccasion {
   UIImageView *_imageView;
   // Every decision about what the view shows and which load events JS sees
   // is the core's (the same code the Android view runs). This view says what
-  // happened and carries out the effects it gets back; see perform:occasion:.
+  // happened and carries out the effects it gets back; see perform:step:.
   turboimage::ViewLifecycle _lifecycle;
   // Cancels the load in flight; nil when there is none.
   id<TIImageLoadTask> _task;
@@ -278,7 +289,7 @@ struct TIOccasion {
   _recyclingKeyChanged = NO;
   if (_needsPlaceholder) {
     _needsPlaceholder = NO;
-    [self perform:_lifecycle.applyPlaceholder([self lifecycleProps]) occasion:TIOccasion{}];
+    [self perform:_lifecycle.applyPlaceholder([self lifecycleProps]) step:TIStepEffects{}];
   }
   if (_needsLiveTextUpdate) {
     _needsLiveTextUpdate = NO;
@@ -336,15 +347,30 @@ struct TIOccasion {
              .error = turboimage::LoadErrorCode::Unknown,
              .message = @"No TurboImage loader adapter is linked"};
   }
+  TIStepEffects step;
+  if (built.request != nil) {
+    TIImageRequest *request = built.request;
+    step.startLoad = ^(int64_t token) {
+      [self startLoad:request token:token];
+    };
+  } else {
+    const auto code = built.error;
+    NSString *message = built.message;
+    step.deliverInvalidRequest = ^{
+      [self emitFailure:code message:message];
+    };
+  }
   [self perform:_lifecycle.reload(_recyclingKeyChanged, _imageView.image != nil,
                                   built.request != nil, [self lifecycleProps])
-       occasion:TIOccasion{.request = built}];
+           step:step];
 }
 
 // Carries out the lifecycle's effects, in order. The lifecycle decided;
-// nothing here chooses whether an effect applies. Each effect reads the part
-// of `occasion` its own kind of step filled in.
-- (void)perform:(const turboimage::LifecycleEffects &)effects occasion:(const TIOccasion &)occasion {
+// nothing here chooses whether an effect applies.
+//
+// The blocks in `step` capture `self` strongly. They run before this
+// returns and the struct lives on the caller's stack, so that is no cycle.
+- (void)perform:(const turboimage::LifecycleEffects &)effects step:(const TIStepEffects &)step {
   using Kind = turboimage::LifecycleEffect::Kind;
   for (const auto &effect : effects) {
     switch (effect.kind) {
@@ -362,18 +388,34 @@ struct TIOccasion {
         [self emitCompletion:@"completed"];
         break;
       case Kind::DeliverInvalidRequest:
-        [self emitFailure:occasion.request.error message:occasion.request.message];
+        if (step.deliverInvalidRequest != nil) {
+          step.deliverInvalidRequest();
+        } else {
+          TIUnexpectedEffect(@"DeliverInvalidRequest");
+        }
         break;
       case Kind::StartLoad:
-        [self startLoad:occasion.request.request token:effect.value];
+        if (step.startLoad != nil) {
+          step.startLoad(effect.value);
+        } else {
+          TIUnexpectedEffect(@"StartLoad");
+        }
         break;
       case Kind::DeliverSuccess:
         _task = nil;
-        [self deliverSuccess:occasion];
+        if (step.deliverSuccess != nil) {
+          step.deliverSuccess();
+        } else {
+          TIUnexpectedEffect(@"DeliverSuccess");
+        }
         break;
       case Kind::DeliverFailure:
         _task = nil;
-        [self deliverFailure:occasion.error];
+        if (step.deliverFailure != nil) {
+          step.deliverFailure();
+        } else {
+          TIUnexpectedEffect(@"DeliverFailure");
+        }
         break;
       case Kind::ShowCachedPlaceholder:
         [self showCachedPlaceholder];
@@ -409,14 +451,19 @@ struct TIOccasion {
         if (strongSelf == nil) {
           return;
         }
+        // `image` is nil when the load failed; `error` then says why.
+        TIStepEffects step;
         if (image != nil) {
-          [strongSelf perform:strongSelf->_lifecycle.loadSucceeded(token)
-                     occasion:TIOccasion{.image = image,
-                                         .fromMemoryCache = fromMemoryCache,
-                                         .source = source}];
+          step.deliverSuccess = ^{
+            [strongSelf deliverSuccess:image fromMemoryCache:fromMemoryCache source:source];
+          };
+          [strongSelf perform:strongSelf->_lifecycle.loadSucceeded(token) step:step];
         } else {
+          step.deliverFailure = ^{
+            [strongSelf deliverFailure:error];
+          };
           [strongSelf perform:strongSelf->_lifecycle.loadFailed(token, [strongSelf lifecycleProps])
-                     occasion:TIOccasion{.error = error}];
+                         step:step];
         }
       }];
   // Already finished if the completion ran inside the call above: there is
@@ -473,20 +520,21 @@ struct TIOccasion {
   }
 }
 
-- (void)deliverSuccess:(const TIOccasion &)success {
-  UIImage *image = success.image;
+- (void)deliverSuccess:(UIImage *)image
+       fromMemoryCache:(BOOL)fromMemoryCache
+                source:(NSString *)source {
   // A successful load ends progress at 100% (core rule, see finish()).
   if (_progressThrottle.finish(_lastProgressTotal)) {
     [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
   }
-  [self showFinalImage:image animated:!success.fromMemoryCache];
+  [self showFinalImage:image animated:!fromMemoryCache];
   [self updateLiveText];
   // In pixels, as on Android. `size` alone is in points, which differs for
   // any image whose scale is not 1: a processed SVG drawn at its own size
   // carries the screen's scale so that it keeps its size in points.
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   [self emitSuccess:CGSizeMake(image.size.width * scale, image.size.height * scale)
-             source:success.source];
+             source:source];
 }
 
 - (void)deliverFailure:(NSError *)error {
@@ -572,7 +620,7 @@ struct TIOccasion {
   [super prepareForRecycle];
   // Stops the load and any decode and clears the image, with no event: the
   // component that was listening is gone.
-  [self perform:_lifecycle.recycle() occasion:TIOccasion{}];
+  [self perform:_lifecycle.recycle() step:TIStepEffects{}];
   _propsChanged = NO;
   _loadedRequest.reset();
   _needsPlaceholder = NO;
