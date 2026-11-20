@@ -138,7 +138,10 @@ if isInsideReactNativeApp {
         .product(name: "ReactAppHeaders", package: "React-GeneratedCode"),
       ],
       path: "ios/Fabric",
-      publicHeadersPath: ".",
+      // Only the two plain-ObjC class headers. Everything else in the target
+      // (TIRequestFactory.h) speaks C++ and stays private, as the podspec
+      // keeps it (RFC rule 6).
+      publicHeadersPath: "include",
       cxxSettings: reactDefines
     )
   )

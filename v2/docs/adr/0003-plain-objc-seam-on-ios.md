@@ -21,6 +21,6 @@ target from the seam would invert the layering and create a SwiftPM cycle.
 
 - A typo in the class name fails at run time, not at link time. The example app exercises the lookup in CI.
 - An app replaces the loader by assigning `TIImageLoaderRegistry.sharedLoader`.
-- `Package.swift` gives the Fabric target `publicHeadersPath: "."`, which also exposes `TIRequestFactory.h` (C++) under SwiftPM. That is a known gap, not part of this decision.
+- SwiftPM requires the Fabric target to name a public-headers directory. It holds only that target's two plain-ObjC class headers (`ios/Fabric/include`); the C++ factory header stays private on both paths.
 
 More: RFC §4.7.
