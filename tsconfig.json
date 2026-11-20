@@ -1,4 +1,5 @@
 {
+  "exclude": ["v2"],
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
