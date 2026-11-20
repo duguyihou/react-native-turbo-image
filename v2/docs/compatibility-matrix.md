@@ -26,6 +26,34 @@ Smoke results are recorded as passed/total of the suite when the row was verifie
 | Xcode | 27.2 (local) | Swift tools ≥ 6.2 for Package.swift | ✅ |
 | blurhash / thumbhash (npm, devDependencies) | 2.0.5 / 0.1.1 | Reference implementations for the C++ goldens only | ✅ |
 
+## Verification log
+
+What has been built and run, and when. Moved here from RFC 0001 §9, which
+recorded the first of these: the gate that released the pipeline work.
+
+Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27). Test and
+scenario counts are those of the suite when each row was verified: the smoke
+suite had 7 scenarios, then 17, then 38, and has 49 now (RFC §8). Dated rows were
+re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
+3b08d09 (run 44453245980), whose Android emulator is x86_64.
+
+| Check | Result |
+|---|---|
+| C++ core, 119 GoogleTests (host CMake, 2026-11-20; 118 of them also under ASan and UBSan that day) | ✅ pass |
+| C++ core, 118 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-20) | ✅ pass |
+| iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
+| SwiftPM standalone, Nuke 13.2.3 | ✅ build |
+| SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
+| iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, the load event fires |
+| iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
+| Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
+| Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
+| Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19; local with the lifecycle in the core, 2026-11-20) |
+| Smoke test, Android R8 release, arm64 emulator | ✅ 49/49 (2026-11-20, with the lifecycle in the core); also 49/49 on the x86_64 emulator (CI, 2026-11-19) |
+| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-20). CI builds this path in Debug and does not run the suite on it |
+| RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 49/49 each (CI, 2026-11-19) |
+| CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
+
 ## Cross-version matrix
 
 | | RN 0.88.1 (Kotlin 2.2.0 default) | RN 0.88.1 + Kotlin 2.4.21 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2) |

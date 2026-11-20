@@ -10,7 +10,7 @@
 
 ## Principles
 
-1. **The gate first.** No pipeline features until both platforms build the minimal example. ✅ met (RFC §9).
+1. **The gate first.** No pipeline features until both platforms build the minimal example. ✅ met (RFC §9; the verification log is in `compatibility-matrix.md`).
 2. **Port behaviour, not code.** Each 1.x feature comes back by extending the core contract and then both adapters in the same PR, with GoogleTest coverage for the semantics.
 3. **1.x stays releasable on `main`** until 2.0.0 ships. Fixes keep landing there.
 

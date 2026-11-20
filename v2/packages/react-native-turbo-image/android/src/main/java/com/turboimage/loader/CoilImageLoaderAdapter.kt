@@ -123,8 +123,9 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     disposable = enqueued
     if (completed) enqueued.dispose()
     // `dispose()` cancels the job and clears the ViewTarget, so no listener
-    // fires afterwards (RFC §Open questions 1). A no-op once Coil has moved
-    // on to another request for this view, so safe after completion too.
+    // fires afterwards (RFC §4.8, "Coil and the view's attach state"). A
+    // no-op once Coil has moved on to another request for this view, so safe
+    // after completion too.
     return LoadHandle {
       finish()
       enqueued.dispose()

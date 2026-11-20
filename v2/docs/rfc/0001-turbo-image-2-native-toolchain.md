@@ -138,6 +138,15 @@ are ignored on both platforms, for every policy but one. Apps that need the
 server to control freshness opt in per image with `cachePolicy="urlCache"`
 (§4.2a).
 
+Host network state. Per-request configuration is `source.headers` (§4.1), as
+in 1.x. Cookies are the one piece of host state the adapters share: iOS
+through `URLSessionConfiguration.default` (the shared `HTTPCookieStorage`),
+Android through a `CookieJar` over React Native's `ForwardingCookieHandler`,
+the store `fetch` and WebView use. The Android client takes nothing else from
+the host, so the app's interceptors cannot change image loading. 1.x built
+its own Android client with no cookie jar, so cookies on Android are new in
+2.0. TODO: an app-wide native hook for default headers or an interceptor.
+
 Coil's dedup strategy is experimental API. We opt in because without it,
 Android would issue N network requests for N identical concurrent views where
 iOS issues one. If Coil changes or removes the API, the fallback is
@@ -363,6 +372,13 @@ Rules:
 - `android/CMakeLists.txt` does `add_subdirectory(../cpp)` and links `turboimage_core` into `libturboimage.so` alongside a JNI bridge. There is no Android copy of the C++ (rule 4). The `.so` is linked with 16 KB page alignment.
 - Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` takes the same steps as the iOS view, decided by the same core lifecycle. `ImageLoaderAdapter` is the seam, and the `Coil*.kt` files in `loader/` are the only Coil-aware code. An app replaces the adapter with `TurboImageLoaders.set`.
 - **The seam is not the iOS seam's shape.** The Android adapter is handed the `ImageView` and displays the image itself (cross-fade, animated playback, waiting for layout before sizing the decode); the iOS adapter returns a `UIImage` and the view displays it. [ADR 0004](../adr/0004-android-adapter-displays-the-image.md) records why and what it costs.
+- **Coil and the view's attach state** (read from Coil's source; the smoke test is consistent with it). With `target(ImageView)`, Coil:
+  - cancels a request that starts before the view is attached and restarts it on attach (Fabric applies props before mounting),
+  - disposes on detach and restarts on reattach,
+  - stops restarting after our explicit `dispose()`.
+
+  Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. Coil also restarts a request that has already completed, and its target repaints whatever the view's own guards say. So the adapter disposes each request as soon as it succeeds or fails, and only an in-flight load is ever restarted: `onSuccess` fires once per request, a failed load is not retried behind the view's back, and a `noCache` source is not downloaded again on reattach. TODO: a long, fast-scrolling list stress test before enabling recycling.
+- **Coil and the Activity lifecycle.** Fabric builds each `ThemedReactContext` on top of the root view's context, which is the Activity (`FabricUIManager.startSurface`). Coil's `getLifecycle()` walks the `ContextWrapper` chain, so it finds the Activity. Requests therefore wait for `STARTED` and are disposed on `ON_DESTROY`, without TurboImage doing anything.
 - R8: `consumer-rules.pro` keeps the classes and constructors that JNI creates by name. The example's release build has R8 enabled, and CI asserts that those classes survive unrenamed.
 
 ### 4.9 C++ core build
@@ -504,39 +520,19 @@ Three of the failing scenarios set `showPlaceholderOnFailure` and carry a blurha
 
 ## 9. Gate status: the minimal example builds and runs
 
-Verified locally on 2026-11-16 (Xcode 27.2, JDK 17, macOS 27). Test and
-scenario counts are those of the suite when each row was verified: the smoke
-suite had 7 scenarios, then 17, then 38, and has 49 now (§8). Dated rows were
-re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
-3b08d09 (run 44453245980), whose Android emulator is x86_64.
-
-| Check | Result |
-|---|---|
-| C++ core, 118 GoogleTests (host CMake, also under ASan and UBSan, 2026-11-20) | ✅ pass |
-| C++ core, 118 GoogleTests on the Android arm64 emulator (NDK 27.1, 16 KB pages, 2026-11-20) | ✅ pass |
-| iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
-| SwiftPM standalone, Nuke 13.2.3 | ✅ build |
-| SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
-| iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, the load event fires |
-| iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
-| Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
-| Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
-| Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19; local with the lifecycle in the core, 2026-11-20) |
-| Smoke test, Android R8 release, arm64 emulator | ✅ 49/49 (2026-11-20, with the lifecycle in the core); also 49/49 on the x86_64 emulator (CI, 2026-11-19) |
-| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-19). CI builds this path in Debug and does not run the suite on it |
-| RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 49/49 each (CI, 2026-11-19) |
-| CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
+The gate was met on 2026-11-16: the minimal example built and ran on both
+platforms, which is what released the pipeline work described in §4. The
+table of what has been verified since, and when, is kept with the other
+verification results in
+[`../compatibility-matrix.md`](../compatibility-matrix.md#verification-log).
 
 ## 10. Open questions
 
-1. ~~Coil view lifecycle under Fabric recycling.~~ **Resolved by reading the source; the smoke test is consistent with it.** With `target(ImageView)`, Coil:
-   - cancels a request that starts before the view is attached and restarts it on attach (Fabric applies props before mounting),
-   - disposes on detach and restarts on reattach,
-   - stops restarting after our explicit `dispose()`.
+1. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.
+2. **Nuke 14 adoption.** It raises the iOS floor to 16.0, above RN's 15.1. Adopt it in 2.x only once it is stable and the floor change is acceptable.
 
-   Android Fabric only recycles views for managers that call `setupViewRecycling()`, and TurboImage doesn't. Coil also restarts a request that has already completed, and its target repaints whatever the view's own guards say. So the adapter disposes each request as soon as it succeeds or fails, and only an in-flight load is ever restarted: `onSuccess` fires once per request, a failed load is not retried behind the view's back, and a `noCache` source is not downloaded again on reattach. TODO: a long, fast-scrolling list stress test before enabling recycling.
-2. ~~Context lifecycle.~~ **Resolved; this RFC was wrong.** Fabric builds each `ThemedReactContext` on top of the root view's context, which is the Activity (`FabricUIManager.startSurface`). Coil's `getLifecycle()` walks the `ContextWrapper` chain, so it finds the Activity. Requests therefore wait for `STARTED` and are disposed on `ON_DESTROY`, without TurboImage doing anything.
-3. ~~`cacheOnly` race in the example.~~ **Resolved.** The example is now a deterministic smoke test: scenarios that depend on the cache mount only after the load they depend on has settled.
-4. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.
-5. ~~Host network configuration.~~ **Decided: per-source `source.headers`** (§4.1), as in 1.x. Cookies are the one piece of host state the adapters do share: iOS through `URLSessionConfiguration.default` (the shared `HTTPCookieStorage`), Android through a `CookieJar` over React Native's `ForwardingCookieHandler`, the store `fetch` and WebView use. The Android client takes nothing else from the host, so the app's interceptors still cannot change image loading (§4.2). An earlier version of this RFC said 1.x got Android cookies from RN's shared `OkHttpClient`. It did not: 1.x built its own client with no cookie jar, so cookies on Android are new in 2.0. TODO: an app-wide native hook for default headers or an interceptor.
-6. **Nuke 14 adoption.** It raises the iOS floor to 16.0, above RN's 15.1. Adopt it in 2.x only once it is stable and the floor change is acceptable.
+Four earlier questions are answered, and the answers are now where the
+behaviour is described: Coil's handling of a view's attach state and of the
+Activity lifecycle in §4.8, and host network state (headers, cookies) in
+§4.2. The fourth was a race in the example app, gone since the example
+became a deterministic smoke test (§8).

@@ -27,4 +27,4 @@ runs, placeholders, events. Those decisions are the core's on both platforms
 - The fade duration and `allowHardware` cross the seam as `DisplayOptions`, which the iOS seam has no counterpart for.
 - Revisit if a second Android adapter is ever wanted: the seam would then return a drawable and take a size provider.
 
-More: RFC §4.8, §10 item 1; `ImageLoaderAdapter.kt`.
+More: RFC §4.8; `ImageLoaderAdapter.kt`.
