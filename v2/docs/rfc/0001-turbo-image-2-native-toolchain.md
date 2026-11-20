@@ -27,6 +27,18 @@ Goals:
 3. SwiftPM is the preferred iOS integration, and CocoaPods behaves the same during the migration.
 4. Every production dependency is pinned. Pre-releases are evaluated in separate CI jobs.
 
+Rules. The goals above are held up by eight rules, which the rest of this RFC
+and the source comments cite by number ("RFC rule 3"):
+
+1. **Loaders are replaceable adapters.** Nuke and Coil sit behind a seam (`TIImageLoading`, `ImageLoaderAdapter`), and no loader type appears in the views, the public headers or the JS API.
+2. **The C++ core is the single owner of request semantics**: validation, cache keys, the cache-policy matrix, decode size. Adapters translate a `ResolvedRequest` and decide nothing.
+3. **Both platforms behave the same.** Where the loaders differ (cache tiers, progress cadence, placeholder lifetime, error codes), the difference is closed in the core or in the adapters, not left to JS.
+4. **One copy of shared logic.** The C++ in `cpp/` is compiled into both platforms from one source tree; nothing is ported or copied per platform.
+5. **No Swift/C++ interop.** Swift targets hold no C-family sources and never import C++; ObjC++ sits between them.
+6. **SwiftPM and CocoaPods build the same thing**: the same sources, flags, language modes and Nuke version.
+7. **Every production dependency is pinned**, in one place (`scripts/native-versions.env`), and CI fails when a manifest disagrees.
+8. **Pre-releases are evaluated apart from production**, in their own CI jobs, and are never a production dependency.
+
 Non-goals:
 
 - visionOS and macOS targets (tvOS was a non-goal too until it was added on 2026-11-18, as the iOS code built for a second platform; see the compatibility matrix),
@@ -362,7 +374,7 @@ Rules:
 v2/
   package.json  bunfig.toml  bun.lock
   packages/react-native-turbo-image/   npm package (JS + iOS + Android + cpp)
-    src/  cpp/  ios/{LoaderAPI,Nuke,Fabric,vendor*}  android/
+    src/  cpp/  ios/{LoaderAPI,Nuke,LiveText,Fabric,vendor*}  android/
     Package.swift  TurboImage.podspec  package.json
   apps/example/                        RN 0.88.1 app (CocoaPods by default)
   scripts/native-versions.env  check-native-versions.sh  build-nuke-xcframework.sh
