@@ -203,6 +203,14 @@ struct TIStepEffects {
   // own state was reset to the spec defaults, so that is what the incoming
   // props must be compared with. See updateProps.
   BOOL _recycled;
+  // The request of the image on screen, when it was decoded for this view's
+  // size and could be loaded again larger if the view grows
+  // (`turboimage::needsLargerDecode`); nil otherwise. With the image's size
+  // in pixels, and the view's when the image was loaded (the request's
+  // `decodeSize`, or the size an upgrade failed at, see upgradeIfOutgrown).
+  TIImageRequest *_upgradable;
+  turboimage::PixelSize _upgradableDecoded;
+  turboimage::PixelSize _upgradableLoadedFor;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -339,6 +347,10 @@ struct TIStepEffects {
 // A request prop changed: resolve the new request and let the lifecycle end
 // the old load, decide what stays on screen, and start the new one.
 - (void)reload {
+  // The image on screen is about to be replaced; there is nothing to upgrade
+  // until the new one arrives. (A running upgrade is cancelled by the
+  // lifecycle, below.)
+  _upgradable = nil;
   // The old image's analysis must not outlive its request.
   [_liveText detach];
   _progressThrottle = turboimage::ProgressThrottle{};
@@ -463,6 +475,7 @@ struct TIStepEffects {
                              animation:animation
                        fromMemoryCache:fromMemoryCache
                                 source:source];
+            [strongSelf rememberImage:image animation:animation request:request];
           };
           [strongSelf perform:strongSelf->_lifecycle.loadSucceeded(token) step:step];
         } else {
@@ -486,10 +499,8 @@ struct TIStepEffects {
   const CGFloat pixelRatio = request.pixelRatio;
   // The view's size bounds the decode (`allowDownscaling`). Fabric applies
   // layout metrics before finalizeUpdates, on mount as on update, so the
-  // bounds are this transaction's. The size is taken once, here: a view that
-  // grows later keeps the image it has.
-  // TODO: reload when the view outgrows the decoded image (expo-image does
-  // not either; `allowDownscaling={false}` is the documented way out).
+  // bounds are this transaction's. A view that grows later loads the image
+  // again at its new size (upgradeIfOutgrown), through this same method.
   const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
                                           self.bounds.size.height * pixelRatio);
   return TIMakeImageRequest(request, viewPixelSize);
@@ -543,6 +554,104 @@ struct TIStepEffects {
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   [self emitSuccess:CGSizeMake(image.size.width * scale, image.size.height * scale)
              source:source];
+}
+
+#pragma mark - Upgrades
+
+// A view outgrows its image when it is resized after the load: a zoom, a
+// rotation, a card that expands. Fabric applies the new frame here.
+- (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics
+           oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics {
+  [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+  const auto &size = layoutMetrics.frame.size;
+  const auto &oldSize = oldLayoutMetrics.frame.size;
+  if (size.width > oldSize.width || size.height > oldSize.height) {
+    [self upgradeIfOutgrown];
+  }
+}
+
+// Notes an image that was sized for this view, then sees whether the view
+// already outgrew it.
+//
+// Not for an animated image: Nuke's player decodes its frames for the view's
+// size itself, and replacing the image would restart it. Not for a vector
+// (SVG): it has no pixels (`CGImage` is nil) and is drawn sharp at any size.
+// Not for a request whose decode does not follow the view: `decodeSize`
+// with no height is a `resize` width, and zero is the original size.
+- (void)rememberImage:(UIImage *)image animation:(nullable id)animation request:(TIImageRequest *)request {
+  const CGSize bound = request.decodeSize;
+  if (animation != nil || image.CGImage == nil || bound.width <= 0 || bound.height <= 0) {
+    _upgradable = nil;
+    return;
+  }
+  _upgradable = request;
+  const CGFloat scale = image.scale > 0 ? image.scale : 1;
+  _upgradableDecoded = {image.size.width * scale, image.size.height * scale};
+  _upgradableLoadedFor = {bound.width, bound.height};
+  // The view may have grown while the load ran.
+  [self upgradeIfOutgrown];
+}
+
+// Loads the image again at the view's size if the view has grown past it
+// (`turboimage::needsLargerDecode`). Silent: no events, no progress, and on
+// failure the image already shown stays (`ViewLifecycle::startUpgrade`).
+- (void)upgradeIfOutgrown {
+  if (_upgradable == nil || !_loadedRequest.has_value()) {
+    return;
+  }
+  const CGFloat pixelRatio = RCTScreenScale();
+  const turboimage::PixelSize now{self.bounds.size.width * pixelRatio,
+                                  self.bounds.size.height * pixelRatio};
+  if (!turboimage::needsLargerDecode(_upgradableDecoded, _upgradableLoadedFor, now,
+                                     _upgradable.decodeFill)) {
+    return;
+  }
+  // The same request at the view's current size, through the same factory.
+  TIRequestResult built = [self makeRequest:*_loadedRequest];
+  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+  if (built.request == nil || loader == nil) {
+    return;
+  }
+  const std::int64_t token = _lifecycle.startUpgrade();
+  if (token == 0) {
+    return;
+  }
+  TIImageRequest *request = built.request;
+  __weak __typeof(self) weakSelf = self;
+  id<TIImageLoadTask> task = [loader loadImageWithRequest:request
+      progress:nil
+      completion:^(UIImage *image, id animation, BOOL /* fromMemoryCache */, NSError *error) {
+        __typeof(self) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+          return;
+        }
+        if (image == nil) {
+          if (!strongSelf->_lifecycle.isUpgrading(token)) {
+            return;
+          }
+          strongSelf->_lifecycle.upgradeFailed(token);
+          strongSelf->_task = nil;
+          // Not again for this image: recorded as loaded for the size it
+          // failed at, the rule takes the image for the source at its own
+          // size. A new source, or a reload, starts over.
+          strongSelf->_upgradableLoadedFor = now;
+          return;
+        }
+        if (!strongSelf->_lifecycle.upgradeSucceeded(token)) {
+          return;  // superseded by a reload, recycle or drop
+        }
+        strongSelf->_task = nil;
+        // No fade: the same picture, only sharper, replaces itself.
+        [loader displayImage:image animation:animation inImageView:strongSelf->_imageView];
+        [strongSelf updateLiveText];
+        // Records the new image and asks again, in case the view kept
+        // growing meanwhile.
+        [strongSelf rememberImage:image animation:animation request:request];
+      }];
+  // Already finished if the completion ran inside the call above.
+  if (_lifecycle.isUpgrading(token)) {
+    _task = task;
+  }
 }
 
 - (void)deliverFailure:(NSError *)error {
@@ -633,6 +742,7 @@ struct TIStepEffects {
   // Stops the load and any decode and clears the image, with no event: the
   // component that was listening is gone.
   [self perform:_lifecycle.recycle() step:TIStepEffects{}];
+  _upgradable = nil;
   _propsChanged = NO;
   _loadedRequest.reset();
   _needsPlaceholder = NO;

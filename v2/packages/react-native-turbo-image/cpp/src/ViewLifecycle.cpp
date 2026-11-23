@@ -75,6 +75,12 @@ void ViewLifecycle::fail(const LifecycleProps& props, LifecycleEffects& effects)
 LifecycleEffects ViewLifecycle::reload(bool recyclingKeyChanged, bool imageOnScreen,
                                        bool requestValid, const LifecycleProps& props) {
   LifecycleEffects effects;
+  // An upgrade of the image being replaced: stop it, and say nothing, since
+  // JS never heard of it.
+  if (upgrading != 0) {
+    upgrading = 0;
+    effects.push_back({.kind = Kind::CancelLoad});
+  }
   // A load still in flight is superseded: tell JS it was cancelled, so
   // every onStart is matched by exactly one onCompletion.
   if (inFlight != 0) {
@@ -123,10 +129,33 @@ LifecycleEffects ViewLifecycle::loadFailed(std::int64_t token, const LifecyclePr
   return effects;
 }
 
+std::int64_t ViewLifecycle::startUpgrade() {
+  if (showingState() != Showing::LoadedImage || inFlight != 0 || upgrading != 0) {
+    return 0;
+  }
+  upgrading = ++lastToken;
+  return upgrading;
+}
+
+bool ViewLifecycle::upgradeSucceeded(std::int64_t token) {
+  if (!isUpgrading(token)) {
+    return false;
+  }
+  upgrading = 0;
+  return true;
+}
+
+void ViewLifecycle::upgradeFailed(std::int64_t token) {
+  if (isUpgrading(token)) {
+    upgrading = 0;
+  }
+}
+
 LifecycleEffects ViewLifecycle::recycle() {
   LifecycleEffects effects;
-  if (inFlight != 0) {
+  if (inFlight != 0 || upgrading != 0) {
     inFlight = 0;
+    upgrading = 0;
     effects.push_back({.kind = Kind::CancelLoad});
   }
   effects.push_back({.kind = Kind::ClearImage});
@@ -137,8 +166,9 @@ LifecycleEffects ViewLifecycle::recycle() {
 
 LifecycleEffects ViewLifecycle::drop() {
   LifecycleEffects effects;
-  if (inFlight != 0) {
+  if (inFlight != 0 || upgrading != 0) {
     inFlight = 0;
+    upgrading = 0;
     effects.push_back({.kind = Kind::CancelLoad});
   }
   ++placeholderGeneration;  // drop any decode still in flight

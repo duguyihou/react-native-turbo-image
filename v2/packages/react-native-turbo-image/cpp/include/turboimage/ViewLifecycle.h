@@ -15,7 +15,7 @@
 //
 // Ownership/threading: a plain value type holding per-view state, like
 // `ProgressThrottle`. Each view owns one and uses it on the main thread
-// only. Four integers, so the Android view can keep it in a LongArray and
+// only. Five integers, so the Android view can keep it in a LongArray and
 // pass it through JNI with no native handle.
 //
 // Re-entrancy: an adapter may call back inside the call that starts a load
@@ -121,6 +121,9 @@ struct ViewLifecycle {
   // Bumped whenever a placeholder decode is started or invalidated, so an
   // older decode finishing late is dropped.
   std::int64_t placeholderGeneration = 0;
+  // The token of an upgrade in flight, 0 when there is none (see
+  // `startUpgrade`). Never at the same time as `inFlight`.
+  std::int64_t upgrading = 0;
 
   [[nodiscard]] Showing showingState() const { return static_cast<Showing>(showing); }
 
@@ -153,6 +156,36 @@ struct ViewLifecycle {
   // a replaced load calling back late must not touch the view.
   [[nodiscard]] LifecycleEffects loadSucceeded(std::int64_t token);
   [[nodiscard]] LifecycleEffects loadFailed(std::int64_t token, const LifecycleProps& props);
+
+  // Upgrades: the view has grown past its image (`needsLargerDecode`) and
+  // loads the same request again at its new size. Silent by design: JS hears
+  // nothing, because the props did not change and the image it was told
+  // about is still the one on screen, only sharper. So there is no onStart,
+  // no progress, no onSuccess, and a failed upgrade leaves the image as it
+  // is.
+  //
+  // Only over a loaded image with nothing in flight: a load in flight will
+  // be decoded for the view's size anyway, and a placeholder or a failure is
+  // not the image to sharpen. One upgrade at a time; the view asks again
+  // when one succeeds, in case the view kept growing meanwhile.
+  //
+  // Returns the upgrade's token, or 0 if none may start. The view starts
+  // the load itself (no effect list: there is nothing else to do), and
+  // passes the token back with the adapter's callbacks. A reload, recycle or
+  // drop cancels a running upgrade with `CancelLoad` and no event.
+  [[nodiscard]] std::int64_t startUpgrade();
+
+  // True while `token` is the upgrade in flight: whether to keep the handle
+  // the adapter returned (a memory hit may finish inside that call).
+  [[nodiscard]] bool isUpgrading(std::int64_t token) const {
+    return token != 0 && upgrading == token;
+  }
+
+  // The adapter's callbacks for an upgrade. `upgradeSucceeded` is true if
+  // the view must show the new image (iOS; Coil paints it on Android);
+  // false for an upgrade that is no longer current, which shows nothing.
+  [[nodiscard]] bool upgradeSucceeded(std::int64_t token);
+  void upgradeFailed(std::int64_t token);
 
   // (Re)applies the placeholder the props name: after a reload, and when a
   // placeholder prop changes. Does nothing while an image holds the view

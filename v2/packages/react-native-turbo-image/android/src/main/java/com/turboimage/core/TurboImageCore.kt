@@ -195,6 +195,30 @@ object TurboImageCore {
 
   @JvmName("nativeLifecycleDrop")
   internal external fun nativeLifecycleDrop(state: LongArray): LongArray
+
+  @JvmName("nativeLifecycleStartUpgrade")
+  internal external fun nativeLifecycleStartUpgrade(state: LongArray): Long
+
+  @JvmName("nativeLifecycleIsUpgrading")
+  internal external fun nativeLifecycleIsUpgrading(state: LongArray, token: Long): Boolean
+
+  @JvmName("nativeLifecycleUpgradeSucceeded")
+  internal external fun nativeLifecycleUpgradeSucceeded(state: LongArray, token: Long): Boolean
+
+  @JvmName("nativeLifecycleUpgradeFailed")
+  internal external fun nativeLifecycleUpgradeFailed(state: LongArray, token: Long)
+
+  /** `turboimage::needsLargerDecode`; sizes in pixels. */
+  @JvmName("nativeNeedsLargerDecode")
+  internal external fun nativeNeedsLargerDecode(
+    decodedWidth: Double,
+    decodedHeight: Double,
+    loadedForWidth: Double,
+    loadedForHeight: Double,
+    nowWidth: Double,
+    nowHeight: Double,
+    fill: Boolean,
+  ): Boolean
 }
 
 /**

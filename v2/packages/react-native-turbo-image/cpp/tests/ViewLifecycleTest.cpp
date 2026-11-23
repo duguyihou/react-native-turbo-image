@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -212,6 +213,60 @@ TEST(ViewLifecycle, DropStopsTheLoadAndAnyDecode) {
   EXPECT_TRUE(lifecycle.drop().empty());
 }
 
+TEST(ViewLifecycle, AnUpgradeStartsOnlyOverALoadedImage) {
+  ViewLifecycle fresh;
+  EXPECT_EQ(fresh.startUpgrade(), 0);  // nothing loaded
+
+  ViewLifecycle loading;
+  (void)loading.reload(false, false, true, kNoPlaceholder);
+  EXPECT_EQ(loading.startUpgrade(), 0);  // the load in flight is sized for the view anyway
+
+  ViewLifecycle failed;
+  (void)failed.reload(false, false, true, kNoPlaceholder);
+  (void)failed.loadFailed(failed.inFlight, kNoPlaceholder);
+  EXPECT_EQ(failed.startUpgrade(), 0);  // nothing to sharpen
+
+  auto lifecycle = loaded();
+  const auto token = lifecycle.startUpgrade();
+  EXPECT_NE(token, 0);
+  EXPECT_TRUE(lifecycle.isUpgrading(token));
+  EXPECT_FALSE(lifecycle.isInFlight(token));  // so its progress reaches nobody
+  EXPECT_EQ(lifecycle.startUpgrade(), 0);  // one at a time
+}
+
+TEST(ViewLifecycle, AnUpgradeIsSilentWhicheverWayItEnds) {
+  auto lifecycle = loaded();
+  const auto token = lifecycle.startUpgrade();
+  EXPECT_TRUE(lifecycle.upgradeSucceeded(token));
+  EXPECT_EQ(lifecycle.showingState(), Showing::LoadedImage);
+  EXPECT_FALSE(lifecycle.upgradeSucceeded(token));  // heard once
+
+  const auto failing = lifecycle.startUpgrade();
+  lifecycle.upgradeFailed(failing);
+  EXPECT_EQ(lifecycle.showingState(), Showing::LoadedImage);  // the image stays
+  EXPECT_NE(lifecycle.startUpgrade(), 0);  // and a later growth may try again
+}
+
+TEST(ViewLifecycle, AReloadCancelsAnUpgradeWithoutAnEvent) {
+  auto lifecycle = loaded();
+  const auto token = lifecycle.startUpgrade();
+  EXPECT_EQ(lifecycle.reload(false, true, true, kNoPlaceholder),
+            effects({{.kind = Kind::CancelLoad}, {.kind = Kind::StartLoad, .value = token + 1}}));
+  EXPECT_FALSE(lifecycle.upgradeSucceeded(token));  // a late callback shows nothing
+}
+
+TEST(ViewLifecycle, RecycleAndDropCancelAnUpgrade) {
+  auto recycled = loaded();
+  (void)recycled.startUpgrade();
+  EXPECT_EQ(recycled.recycle(), effects({{.kind = Kind::CancelLoad}, {.kind = Kind::ClearImage}}));
+  EXPECT_EQ(recycled.upgrading, 0);
+
+  auto dropped = loaded();
+  (void)dropped.startUpgrade();
+  EXPECT_EQ(dropped.drop(), effects({{.kind = Kind::CancelLoad}}));
+  EXPECT_EQ(dropped.upgrading, 0);
+}
+
 // ---------------------------------------------------------------------------
 // Every order of events, to a bounded depth.
 //
@@ -231,11 +286,18 @@ struct SimulatedView {
   ViewLifecycle lifecycle;
   LifecycleProps props;
   Screen screen = Screen::Blank;
-  // Screen::Image: the token of the load whose image is up.
-  std::int64_t imageOf = 0;
+  // The request the props name now; a reload makes a new one.
+  int request = 0;
+  // The request each load or upgrade was started for. An upgrade loads the
+  // same request again, so an image is identified by its request, not by
+  // the token that brought it.
+  std::map<std::int64_t, int> requestOf;
+  // Screen::Image: the request whose image is up.
+  int imageOf = -1;
   // onStart events not yet followed by an onCompletion.
   int openEvents = 0;
   std::set<std::int64_t> awaitingCallback;
+  std::set<std::int64_t> awaitingUpgrade;
   std::set<std::int64_t> decodes;
 
   void perform(const LifecycleEffects& list, std::int64_t callbackToken, bool completeInsideLoad) {
@@ -259,6 +321,7 @@ struct SimulatedView {
           break;
         case Kind::StartLoad:
           ++openEvents;
+          requestOf[effect.value] = request;
           if (completeInsideLoad) {
             perform(lifecycle.loadSucceeded(effect.value), effect.value, false);
           } else {
@@ -267,7 +330,7 @@ struct SimulatedView {
           break;
         case Kind::DeliverSuccess:
           screen = Screen::Image;
-          imageOf = callbackToken;
+          imageOf = requestOf[callbackToken];
           break;
         case Kind::ShowCachedPlaceholder:
           screen = Screen::Placeholder;
@@ -280,9 +343,32 @@ struct SimulatedView {
   }
 
   void reload(bool recyclingKeyChanged, bool requestValid, bool completeInsideLoad) {
+    ++request;
     perform(lifecycle.reload(recyclingKeyChanged, screen == Screen::Image, requestValid, props), 0,
             completeInsideLoad);
     perform(lifecycle.applyPlaceholder(props), 0, false);
+  }
+
+  // The view grew past its image: startUpgrade, then the adapter's load,
+  // which may call back inside the call that starts it.
+  void upgrade(bool completeInsideLoad) {
+    const auto token = lifecycle.startUpgrade();
+    if (token == 0) {
+      return;
+    }
+    requestOf[token] = request;
+    if (completeInsideLoad) {
+      upgradeSucceeded(token);
+    } else {
+      awaitingUpgrade.insert(token);
+    }
+  }
+
+  void upgradeSucceeded(std::int64_t token) {
+    if (lifecycle.upgradeSucceeded(token)) {
+      screen = Screen::Image;
+      imageOf = requestOf[token];
+    }
   }
 
   // Empty when every rule holds, otherwise the rule that broke.
@@ -291,9 +377,15 @@ struct SimulatedView {
     if (openEvents != (lifecycle.inFlight != 0 ? 1 : 0)) {
       return "EventsBalanced";
     }
-    if (showing == Showing::LoadedImage &&
-        !(screen == Screen::Image && imageOf == lifecycle.lastToken)) {
+    if (showing == Showing::LoadedImage && !(screen == Screen::Image && imageOf == request)) {
       return "LoadedImageStays";
+    }
+    if (lifecycle.upgrading != 0 &&
+        !(showing == Showing::LoadedImage && requestOf.at(lifecycle.upgrading) == request)) {
+      return "UpgradeOnlyOverLoadedImage";
+    }
+    if (lifecycle.upgrading != 0 && lifecycle.inFlight != 0) {
+      return "UpgradeNeverBesideALoad";
     }
     if (screen == Screen::Image && showing != Showing::LoadedImage &&
         showing != Showing::PreviousImage) {
@@ -352,6 +444,20 @@ void explore(const SimulatedView& view, int depth, std::string& path, std::strin
     step("fails#" + std::to_string(token), [&](SimulatedView& v) {
       v.awaitingCallback.erase(token);
       v.perform(v.lifecycle.loadFailed(token, v.props), token, false);
+    });
+  }
+  for (const bool inside : {false, true}) {
+    step(std::string("upgrade") + (inside ? "(completesInside)" : ""),
+         [&](SimulatedView& v) { v.upgrade(inside); });
+  }
+  for (const auto token : view.awaitingUpgrade) {
+    step("upgradeSucceeds#" + std::to_string(token), [&](SimulatedView& v) {
+      v.awaitingUpgrade.erase(token);
+      v.upgradeSucceeded(token);
+    });
+    step("upgradeFails#" + std::to_string(token), [&](SimulatedView& v) {
+      v.awaitingUpgrade.erase(token);
+      v.lifecycle.upgradeFailed(token);
     });
   }
   for (const auto generation : view.decodes) {

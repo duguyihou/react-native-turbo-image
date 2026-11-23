@@ -22,3 +22,4 @@ old one superseded.
 | [0010](0010-view-lifecycle-in-the-core.md) | The view lifecycle is a state machine in the core |
 | [0011](0011-local-fixture-server.md) | The smoke suite loads from a local fixture server |
 | [0012](0012-nuke-plays-animations-on-ios.md) | On iOS the adapter plays animations, in an image view it supplies |
+| [0013](0013-silent-upgrade-when-a-view-outgrows-its-image.md) | A view that outgrows its image reloads it silently |

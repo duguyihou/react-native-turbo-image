@@ -78,7 +78,7 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 - tvOS needs react-native-tvos 0.88 or newer and tvOS 16.0 (1.x listed tvOS 13 in the podspec). `enableLiveTextInteraction` is a no-op there.
 - `cachePolicy` `dataCache` is renamed `default` (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`, which honours them on both platforms (1.x: iOS only). What `urlCache` stores on disk is not visible to `cacheOnly`, and the reverse.
-- Images are decoded no larger than their view by default, and `onSuccess` reports that decoded size, not the source's. A view that is zoomed, or grows after the image loaded, needs `allowDownscaling={false}`.
+- Images are decoded no larger than their view by default, and `onSuccess` reports that decoded size, not the source's. A view whose layout grows reloads a sharper copy silently; a view zoomed by `transform` needs `allowDownscaling={false}`.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
 - When `source` (or a processor prop) changes, the previous image stays on screen until the new one has loaded; 1.x blanked the view. Lists that reuse views (FlashList) must pass a `recyclingKey`, such as the row's id, or a reused row briefly shows the previous row's image.
 - `fadeDuration` defaults to 300 ms on Android too (1.x Android: 100 ms). Set `fadeDuration={100}` to keep the old timing.

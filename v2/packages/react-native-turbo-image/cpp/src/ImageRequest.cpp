@@ -249,4 +249,33 @@ std::string_view loadErrorCodeName(LoadErrorCode code) {
 
 std::string_view coreVersion() { return "2.0.0-alpha.0"; }
 
+bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bool fill) {
+  // Every size must be known and positive; this is false for NaN too.
+  const auto positive = [](PixelSize size) { return size.width > 0 && size.height > 0; };
+  if (!positive(decoded) || !positive(loadedFor) || !positive(now)) {
+    return false;
+  }
+
+  // Cut down for its view, or the source at its own size? A decode bounded
+  // by the view touches the view's box on one side (fit) or covers it (fill);
+  // one that stops short of that was capped by the source. One pixel of
+  // slack for the decoders' rounding.
+  constexpr double kRoundingSlack = 1;
+  const bool shortOfWidth = loadedFor.width > decoded.width + kRoundingSlack;
+  const bool shortOfHeight = loadedFor.height > decoded.height + kRoundingSlack;
+  const bool cappedBySource = fill ? (shortOfWidth || shortOfHeight) : (shortOfWidth && shortOfHeight);
+  if (cappedBySource) {
+    return false;
+  }
+
+  // How much the view would scale the image up now, by the same rule the
+  // decode followed: fill takes the larger of the two scales, fit the
+  // smaller.
+  const double horizontal = now.width / decoded.width;
+  const double vertical = now.height / decoded.height;
+  const double upscale = fill ? std::max(horizontal, vertical) : std::min(horizontal, vertical);
+  constexpr double kUpgradeRatio = 1.5;
+  return upscale > kUpgradeRatio;
+}
+
 }  // namespace turboimage

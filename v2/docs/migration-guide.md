@@ -116,7 +116,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 ### Sizes and memory
 
 - **Images are decoded no larger than their view.** A 12 MP photo in a thumbnail costs the thumbnail's memory. `onSuccess` therefore reports the decoded size, not the source's.
-- A view that is zoomed, or that grows after its image loaded, shows the smaller decode scaled up. Set `allowDownscaling={false}` for those.
+- A view whose layout grows after its image loaded (a rotation, a card that expands) gets a sharper copy once it has grown by half, with no events and no flash. A zoom by `transform` does not change the layout, so a zoomable image still shows the smaller decode scaled up: set `allowDownscaling={false}` for it.
 - Downscaling is not applied with `resizeMode="center"` or with `blur` without `resize`.
 
 ### Events

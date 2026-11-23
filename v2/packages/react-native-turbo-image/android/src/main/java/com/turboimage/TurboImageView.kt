@@ -80,6 +80,24 @@ class TurboImageView(
   // Last Content-Length seen this load, for the throttle's finish() step.
   private var lastProgressTotal = -1L
 
+  /**
+   * The image on screen, when it was decoded for this view's size and could
+   * be loaded again larger if the view grows (`turboimage::needsLargerDecode`).
+   * Null otherwise: nothing loaded yet, a load in flight, or a request whose
+   * decode does not follow the view (`allowDownscaling` off, `resize`,
+   * `center`, `blur`). Sizes in pixels.
+   */
+  private data class Upgradable(
+    val request: ResolvedRequest,
+    val fill: Boolean,
+    val decodedWidth: Int,
+    val decodedHeight: Int,
+    val loadedForWidth: Int,
+    val loadedForHeight: Int,
+  )
+
+  private var upgradable: Upgradable? = null
+
   /** 1.x semantics: false removes the placeholder when the load fails. */
   var showPlaceholderOnFailure = false
 
@@ -149,7 +167,18 @@ class TurboImageView(
   }
 
   /** The view is gone for good ([TurboImageViewManager.onDropViewInstance]). */
-  fun drop() = perform(lifecycle.drop())
+  fun drop() {
+    upgradable = null
+    perform(lifecycle.drop())
+  }
+
+  // A size change is when a view outgrows its image: a zoom, a rotation, a
+  // card that expands. Asked here and not in a layout listener because the
+  // view only needs its own size.
+  override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
+    super.onSizeChanged(width, height, oldWidth, oldHeight)
+    if (width > oldWidth || height > oldHeight) upgradeIfOutgrown()
+  }
 
   // JS allows one placeholder kind at a time; `memoryCacheKey` wins if an
   // app passes several anyway, as it always has.
@@ -161,6 +190,10 @@ class TurboImageView(
     }
 
   private fun reload() {
+    // The image on screen is about to be replaced; there is nothing to
+    // upgrade until the new one arrives. (A running upgrade is cancelled by
+    // the lifecycle, below.)
+    upgradable = null
     progressThrottle = ProgressThrottle()
     lastProgressTotal = -1L
     // `density` is what RN's PixelRatio reports to JS, so `resize` (dp) means
@@ -252,6 +285,9 @@ class TurboImageView(
 
   private fun startLoad(request: ResolvedRequest, token: Long) {
     emit("topStart") { putString("state", "running") }
+    // What the decode is sized for, if the view is laid out already; if not,
+    // the adapter waits for the layout, and the size at success is it.
+    val sizeAtStart = width to height
 
     // The adapter drops callbacks after cancel, but the lifecycle guards by
     // token as well: a callback from a load that was replaced gets no
@@ -273,7 +309,10 @@ class TurboImageView(
             perform(
               lifecycle.loadSucceeded(token),
               object : StepEffects() {
-                override fun deliverSuccess() = deliverSuccess(width, height, request.url)
+                override fun deliverSuccess() {
+                  deliverSuccess(width, height, request.url)
+                  remember(request, width, height, sizeAtStart)
+                }
               })
 
           override fun onError(code: Int, message: String) =
@@ -287,6 +326,83 @@ class TurboImageView(
     // Already finished if the callback ran inside `load()` (a memory-cache
     // hit): there is nothing left to cancel, so the handle is not kept.
     if (lifecycle.isInFlight(token)) handle = thisHandle
+  }
+
+  /** Notes an image that was sized for this view, then sees whether the view already outgrew it. */
+  private fun remember(request: ResolvedRequest, width: Int, height: Int, sizeAtStart: Pair<Int, Int>) {
+    val decode = request.decode as? ResolvedRequest.DecodeSize.View
+    if (decode == null) {
+      upgradable = null
+      return
+    }
+    val (startWidth, startHeight) = sizeAtStart
+    val laidOut = startWidth > 0 && startHeight > 0
+    upgradable =
+      Upgradable(
+        request, decode.fill, width, height,
+        loadedForWidth = if (laidOut) startWidth else this.width,
+        loadedForHeight = if (laidOut) startHeight else this.height,
+      )
+    // The view may have grown while the load ran.
+    upgradeIfOutgrown()
+  }
+
+  /**
+   * Loads the image again at the view's size if the view has grown past it
+   * (`turboimage::needsLargerDecode`). Silent: no events, no progress, and
+   * on failure the image already shown stays (`ViewLifecycle::startUpgrade`).
+   *
+   * Animated images are upgraded too, which restarts their animation. Rare
+   * (the view has to grow by half), and telling an animated drawable apart
+   * here would mean naming Coil's types in the view.
+   * TODO: skip them, or keep the frame, if the restart turns out to matter.
+   */
+  private fun upgradeIfOutgrown() {
+    val shown = upgradable ?: return
+    val nowWidth = width
+    val nowHeight = height
+    val outgrown =
+      ViewLifecycle.needsLargerDecode(
+        shown.decodedWidth, shown.decodedHeight,
+        shown.loadedForWidth, shown.loadedForHeight,
+        nowWidth, nowHeight, shown.fill)
+    if (!outgrown) return
+    val token = lifecycle.startUpgrade()
+    if (token == 0L) return
+    val thisHandle =
+      loader.load(
+        this as ImageView,
+        shown.request,
+        // No fade: the same picture, only sharper, replaces itself.
+        ImageLoaderAdapter.DisplayOptions(fadeMillis = 0, allowHardware = allowHardware),
+        object : ImageLoaderAdapter.Listener {
+          override fun onProgress(completed: Long, total: Long) = Unit
+
+          override fun onSuccess(width: Int, height: Int) {
+            // Coil has painted it; false only for an upgrade already
+            // cancelled, which a disposed Coil request never reports.
+            if (!lifecycle.upgradeSucceeded(token)) return
+            handle = null
+            upgradable =
+              shown.copy(
+                decodedWidth = width, decodedHeight = height,
+                loadedForWidth = nowWidth, loadedForHeight = nowHeight)
+            // It may have kept growing meanwhile.
+            upgradeIfOutgrown()
+          }
+
+          override fun onError(code: Int, message: String) {
+            if (!lifecycle.isUpgrading(token)) return
+            lifecycle.upgradeFailed(token)
+            handle = null
+            // Not again for this image: recorded as loaded for the size it
+            // failed at, the rule takes the image for the source at its own
+            // size. A new source, or a reload, starts over.
+            upgradable = shown.copy(loadedForWidth = nowWidth, loadedForHeight = nowHeight)
+          }
+        },
+      )
+    if (lifecycle.isUpgrading(token)) handle = thisHandle
   }
 
   // The adapter (Coil's target) has already put the image in this view; see

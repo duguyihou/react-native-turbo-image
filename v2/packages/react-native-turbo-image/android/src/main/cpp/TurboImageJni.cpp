@@ -74,9 +74,9 @@ TI_ASSERT_ABI(turboimage::LifecycleEffect::Kind::DecodePlaceholder, 9);
 // nativeShouldReportProgress). A fourth field would silently not round-trip.
 static_assert(sizeof(turboimage::ProgressThrottle) == 3 * sizeof(jlong),
               "ProgressThrottle no longer fits the LongArray(3) Kotlin keeps it in");
-// Likewise the view lifecycle, a LongArray(4) (see `withLifecycle`).
-static_assert(sizeof(turboimage::ViewLifecycle) == 4 * sizeof(jlong),
-              "ViewLifecycle no longer fits the LongArray(4) Kotlin keeps it in");
+// Likewise the view lifecycle, a LongArray(5) (see `withLifecycle`).
+static_assert(sizeof(turboimage::ViewLifecycle) == 5 * sizeof(jlong),
+              "ViewLifecycle no longer fits the LongArray(5) Kotlin keeps it in");
 
 // Thrown when a JNI call failed and left its own Java exception pending.
 // No further JNI calls are allowed in that state, so this unwinds to
@@ -356,14 +356,14 @@ Java_com_turboimage_core_TurboImageCore_nativeCoreVersion(JNIEnv* env, jobject /
 // ---------------------------------------------------------------------------
 // View lifecycle (turboimage/ViewLifecycle.h).
 //
-// The state lives in a Kotlin LongArray(4) owned by the view, as with the
+// The state lives in a Kotlin LongArray(5) owned by the view, as with the
 // progress throttle: read, take one step, write back. Effects go back as a
 // LongArray of (kind, value) pairs, in the order the view must carry them
 // out.
 
 namespace {
 
-constexpr jsize kLifecycleFields = 4;
+constexpr jsize kLifecycleFields = 5;
 
 // Runs `step` on the lifecycle held in `state` and stores the result.
 template <typename Step>
@@ -375,11 +375,13 @@ auto withLifecycle(JNIEnv* env, jlongArray state, Step&& step) {
   lifecycle.inFlight = fields[1];
   lifecycle.lastToken = fields[2];
   lifecycle.placeholderGeneration = fields[3];
+  lifecycle.upgrading = fields[4];
   auto result = step(lifecycle);
   fields[0] = lifecycle.showing;
   fields[1] = lifecycle.inFlight;
   fields[2] = lifecycle.lastToken;
   fields[3] = lifecycle.placeholderGeneration;
+  fields[4] = lifecycle.upgrading;
   env->SetLongArrayRegion(state, 0, kLifecycleFields, fields);
   return result;
 }
@@ -473,6 +475,67 @@ Java_com_turboimage_core_TurboImageCore_nativeLifecyclePlaceholderDecoded(
       return lifecycle.placeholderDecoded(generation,
                                           toLifecycleProps(placeholder, showPlaceholderOnFailure));
     }) ? JNI_TRUE : JNI_FALSE;
+  });
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLifecycleStartUpgrade(JNIEnv* env,
+                                                                     jobject /* this */,
+                                                                     jlongArray state) {
+  return guarded(env, static_cast<jlong>(0), [&]() -> jlong {
+    return withLifecycle(env, state,
+                         [&](turboimage::ViewLifecycle& lifecycle) { return lifecycle.startUpgrade(); });
+  });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLifecycleIsUpgrading(JNIEnv* env,
+                                                                    jobject /* this */,
+                                                                    jlongArray state, jlong token) {
+  return guarded(env, static_cast<jboolean>(JNI_FALSE), [&]() -> jboolean {
+    return withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
+      return lifecycle.isUpgrading(token);
+    }) ? JNI_TRUE : JNI_FALSE;
+  });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLifecycleUpgradeSucceeded(JNIEnv* env,
+                                                                         jobject /* this */,
+                                                                         jlongArray state,
+                                                                         jlong token) {
+  return guarded(env, static_cast<jboolean>(JNI_FALSE), [&]() -> jboolean {
+    return withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
+      return lifecycle.upgradeSucceeded(token);
+    }) ? JNI_TRUE : JNI_FALSE;
+  });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLifecycleUpgradeFailed(JNIEnv* env,
+                                                                      jobject /* this */,
+                                                                      jlongArray state,
+                                                                      jlong token) {
+  guarded(env, 0, [&]() -> int {
+    withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
+      lifecycle.upgradeFailed(token);
+      return 0;
+    });
+    return 0;
+  });
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeNeedsLargerDecode(
+    JNIEnv* env, jobject /* this */, jdouble decodedWidth, jdouble decodedHeight,
+    jdouble loadedForWidth, jdouble loadedForHeight, jdouble nowWidth, jdouble nowHeight,
+    jboolean fill) {
+  return guarded(env, static_cast<jboolean>(JNI_FALSE), [&]() -> jboolean {
+    return turboimage::needsLargerDecode({decodedWidth, decodedHeight},
+                                         {loadedForWidth, loadedForHeight},
+                                         {nowWidth, nowHeight}, fill == JNI_TRUE)
+               ? JNI_TRUE
+               : JNI_FALSE;
   });
 }
 

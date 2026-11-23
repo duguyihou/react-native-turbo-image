@@ -35,8 +35,8 @@ class ViewLifecycle {
   }
 
   // Mirrors ViewLifecycle's fields: showing, inFlight, lastToken,
-  // placeholderGeneration. All start at 0, as in C++.
-  private val state = LongArray(4)
+  // placeholderGeneration, upgrading. All start at 0, as in C++.
+  private val state = LongArray(5)
 
   fun reload(
     recyclingKeyChanged: Boolean,
@@ -63,6 +63,36 @@ class ViewLifecycle {
     TurboImageCore.nativeLifecyclePlaceholderDecoded(state, generation, placeholder.nativeValue, showPlaceholderOnFailure)
 
   fun drop(): List<Effect> = effects(TurboImageCore.nativeLifecycleDrop(state))
+
+  /**
+   * The view has grown past its image: the token of a silent reload at the
+   * new size, or 0 if none may start. See `ViewLifecycle::startUpgrade`.
+   */
+  fun startUpgrade(): Long = TurboImageCore.nativeLifecycleStartUpgrade(state)
+
+  fun isUpgrading(token: Long): Boolean = TurboImageCore.nativeLifecycleIsUpgrading(state, token)
+
+  /** True if the upgrade is still current (Coil has already painted it). */
+  fun upgradeSucceeded(token: Long): Boolean = TurboImageCore.nativeLifecycleUpgradeSucceeded(state, token)
+
+  fun upgradeFailed(token: Long) = TurboImageCore.nativeLifecycleUpgradeFailed(state, token)
+
+  companion object {
+    /** `turboimage::needsLargerDecode`: sizes in pixels. */
+    fun needsLargerDecode(
+      decodedWidth: Int,
+      decodedHeight: Int,
+      loadedForWidth: Int,
+      loadedForHeight: Int,
+      nowWidth: Int,
+      nowHeight: Int,
+      fill: Boolean,
+    ): Boolean =
+      TurboImageCore.nativeNeedsLargerDecode(
+        decodedWidth.toDouble(), decodedHeight.toDouble(),
+        loadedForWidth.toDouble(), loadedForHeight.toDouble(),
+        nowWidth.toDouble(), nowHeight.toDouble(), fill)
+  }
 
   // (kind, value) pairs, as the JNI bridge returns them.
   private fun effects(flat: LongArray): List<Effect> =

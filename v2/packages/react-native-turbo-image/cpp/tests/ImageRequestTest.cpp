@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
+
 #include "turboimage/ImageRequest.h"
 
 namespace turboimage {
@@ -381,6 +383,45 @@ TEST(ImageRequestEquality, EveryFieldTakesPart) {
   changed = base;
   changed.resizeMode = ResizeMode::Cover;
   EXPECT_NE(base, changed);
+}
+
+// needsLargerDecode: when a view has grown past its image.
+
+TEST(NeedsLargerDecode, NotUntilTheViewWouldScaleTheImageUpByHalf) {
+  // 300x200 decoded for a 300x200 view (fit).
+  const PixelSize decoded{300, 200};
+  EXPECT_FALSE(needsLargerDecode(decoded, {300, 200}, {300, 200}, false));
+  EXPECT_FALSE(needsLargerDecode(decoded, {300, 200}, {450, 300}, false));  // exactly 1.5x
+  EXPECT_TRUE(needsLargerDecode(decoded, {300, 200}, {600, 400}, false));
+}
+
+TEST(NeedsLargerDecode, FitFollowsTheSideThatBinds) {
+  // A 3:2 image fitting a view that only grows taller is not drawn larger.
+  EXPECT_FALSE(needsLargerDecode({300, 200}, {300, 200}, {300, 900}, false));
+  // Fill covers the view, so the taller view needs more pixels.
+  EXPECT_TRUE(needsLargerDecode({450, 300}, {300, 300}, {300, 900}, true));
+}
+
+TEST(NeedsLargerDecode, NeverForASourceAlreadyAtItsOwnSize) {
+  // 100x50 decoded for a 300x200 view: it stopped short of the view, so it
+  // is the whole source, and another decode would give the same pixels.
+  EXPECT_FALSE(needsLargerDecode({100, 50}, {300, 200}, {900, 600}, false));
+  // Fill: covering 300x300 needed 450x300; it came out 200x100.
+  EXPECT_FALSE(needsLargerDecode({200, 100}, {300, 300}, {900, 900}, true));
+}
+
+TEST(NeedsLargerDecode, ToleratesTheDecodersRounding) {
+  // One pixel short of the view is still a decode bounded by it.
+  EXPECT_TRUE(needsLargerDecode({299, 199}, {300, 200}, {600, 400}, false));
+}
+
+TEST(NeedsLargerDecode, UnknownSizesNeverReload) {
+  const PixelSize nothing{0, 0};
+  const PixelSize nan{std::nan(""), 10};
+  EXPECT_FALSE(needsLargerDecode(nothing, {300, 200}, {900, 600}, false));
+  EXPECT_FALSE(needsLargerDecode({300, 200}, nothing, {900, 600}, false));
+  EXPECT_FALSE(needsLargerDecode({300, 200}, {300, 200}, nothing, false));
+  EXPECT_FALSE(needsLargerDecode(nan, {300, 200}, {900, 600}, false));
 }
 
 }  // namespace

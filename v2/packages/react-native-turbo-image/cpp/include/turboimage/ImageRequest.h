@@ -93,6 +93,37 @@ struct DecodeSize {
   friend bool operator==(const DecodeSize&, const DecodeSize&) = default;
 };
 
+// A view's or an image's size in pixels.
+struct PixelSize {
+  double width = 0;
+  double height = 0;
+};
+
+// Whether a view should load its image again at its current size, because it
+// has grown past the size the image was decoded for (`DecodeSize::Kind::View`
+// only; the other kinds do not follow the view).
+//
+// `decoded`: the image on screen, in pixels. `loadedFor`: the view's size
+// when that image was loaded. `now`: the view's size now. `fill`: the
+// request's `DecodeSize::fill`.
+//
+// The image is decoded no larger than its view, so a view that grows (a
+// zoom, a rotation, an expanding card) draws it stretched and soft. This says
+// when that is worth a reload:
+//   * the view would draw the image at more than 1.5x its pixels. Not the
+//     first pixel of growth: a view that animates its size would otherwise
+//     reload on every frame. A ratio makes the number of reloads count the
+//     times the view grew by half, however smoothly it grows. (Nuke's
+//     animated-image view uses the same ratio for the same reason.)
+//   * and the image was cut down for its view at all. One that came out
+//     smaller than the view it was loaded for is the source at its own size,
+//     since decoding never upscales, and loading it again gives the same
+//     pixels.
+//
+// A view keeps the image on screen while the larger one loads (see
+// `ViewLifecycle::startUpgrade`), so nothing flashes and JS hears nothing.
+[[nodiscard]] bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bool fill);
+
 // What a loader is allowed to do with one cache tier. This maps 1:1 onto
 // Coil's `CachePolicy` and onto Nuke's `ImageRequest.Options` read/write
 // flags, which is why it is expressed as two booleans instead of a single

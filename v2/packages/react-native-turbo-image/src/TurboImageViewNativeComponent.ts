@@ -123,9 +123,11 @@ export interface NativeProps extends ViewProps {
   // reports the decoded size. Not applied with `resizeMode="center"` (drawn
   // 1:1) or `blur` without `resize` (its radius is in image pixels).
   //
-  // Set false for a view that is zoomed or grows after the image loaded:
-  // the size is taken when the load starts, and a later, larger layout
-  // does not reload. New in 2.0; expo-image's prop of the same name.
+  // A view whose layout grows to more than 1.5x what its image was decoded
+  // for loads it again at the new size, silently (no events), keeping the
+  // image on screen meanwhile. A zoom by `transform` does not change the
+  // layout, so set false for a zoomable image. New in 2.0; expo-image's
+  // prop of the same name.
   // An SVG has no pixels to keep, so false changes nothing for one: it is
   // drawn for the view either way.
   allowDownscaling?: CodegenTypes.WithDefault<boolean, true>;
