@@ -605,15 +605,19 @@ const SCENARIOS: Scenario[] = [
   },
   {
     id: 'cookie',
-    title: "a cookie set through React Native's fetch is sent with the image request",
+    title: "a cookie set through React Native's fetch: sent on iOS, not on Android",
     // `/cookie/set` answers the app's `fetch` with Set-Cookie, as a login
     // endpoint would; `/cookie/photo/` answers 403 without that cookie. iOS
-    // shares `HTTPCookieStorage` between the two; on Android the adapter's
-    // client reads React Native's cookie store. noCache, so the request is
-    // made on every run.
+    // shares `HTTPCookieStorage` between the two, so the image loads. The
+    // Android client has no cookie jar, as in 1.x: React Native's store
+    // starts WebView on first use, which held up a process's first network
+    // image by 0.2–0.6 s. Apps pass a session in `source.headers` instead.
+    // noCache, so the request is made on every run.
     source: { uri: `${BASE}/cookie/photo/session.jpg` },
     cachePolicy: 'noCache',
-    expect: 'load',
+    ...(Platform.OS === 'android'
+      ? { expect: 'error' as const, expectCode: 'network' }
+      : { expect: 'load' as const }),
     kind: 'cookie',
   },
   {

@@ -139,13 +139,17 @@ server to control freshness opt in per image with `cachePolicy="urlCache"`
 (§4.2a).
 
 Host network state. Per-request configuration is `source.headers` (§4.1), as
-in 1.x. Cookies are the one piece of host state the adapters share: iOS
-through `URLSessionConfiguration.default` (the shared `HTTPCookieStorage`),
-Android through a `CookieJar` over React Native's `ForwardingCookieHandler`,
-the store `fetch` and WebView use. The Android client takes nothing else from
-the host, so the app's interceptors cannot change image loading. 1.x built
-its own Android client with no cookie jar, so cookies on Android are new in
-2.0. TODO: an app-wide native hook for default headers or an interceptor.
+in 1.x. Cookies are as in 1.x: iOS sends the shared `HTTPCookieStorage`'s
+(it comes with `URLSessionConfiguration.default`), and the Android client
+has no cookie jar. Android takes nothing from the host, so the app's
+interceptors cannot change image loading. A cookie jar over React Native's
+`ForwardingCookieHandler` was tried and removed: the handler starts the
+platform `CookieManager`, and with it WebView, on first use, which held up
+a process's first network image by 0.2–0.6 s (emulator, freshly cleared
+data) in every app, cookies or not. An image behind a session takes it in
+`source.headers`.
+TODO: an opt-in for Android cookies if apps need them, and an app-wide
+native hook for default headers or an interceptor.
 
 Coil's dedup strategy is experimental API. We opt in because without it,
 Android would issue N network requests for N identical concurrent views where
@@ -512,7 +516,7 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 50 scenarios in
 - decode size: a 3000×2000 source decoded at the card's size, then in full with `allowDownscaling={false}` from the disk original, and a 1500×1000 animated GIF decoded at the card's size,
 - `urlCache`: stored in the HTTP cache, where `cacheOnly` cannot see it, and the requests the server received for a fresh, a `no-store` and a revalidated response,
 - the Android `User-Agent`,
-- a cookie set through React Native's `fetch` being sent with the image request,
+- a cookie set through React Native's `fetch`: sent with the image request on iOS, not on Android,
 - the indicator chaining the app's own `onStart` / `onCompletion` handlers.
 
 The result line is compact (`passed`, `total`, failures only), because iOS `os_log` truncates messages at about 1 KB.

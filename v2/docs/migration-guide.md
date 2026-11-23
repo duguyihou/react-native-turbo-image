@@ -169,7 +169,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 - `source.headers` are sent with the request but are not part of the cache key. A header with CR, LF or NUL in its value, or a name that is not an HTTP token, fails the load with `invalidRequest`.
 - Local sources (`file://`, `content://`, `android.resource://`, `require()`) are never copied into the disk cache, and `cacheOnly` does not block them.
 - On Android, requests send a descriptive `User-Agent` (`<App>/<version> TurboImage/<version> (Android <release>)`) instead of OkHttp's default, which some CDNs refuse.
-- Cookies set through React Native's networking (`fetch`, or a WebView on Android) are now sent with image requests on Android too, and cookies an image response sets are stored. 1.x did this on iOS only. A signed URL or a token in `source.headers` is still the better way to authorise an image: a cached image outlives the session, so clear the caches on logout either way.
+- Cookies are unchanged from 1.x: iOS sends the shared `HTTPCookieStorage`'s cookies (those `fetch` set) with image requests, Android sends none. To authorise an image on both platforms, use a signed URL or put the session in `source.headers` (a `Cookie` or `Authorization` header). A cached image outlives the session, so clear the caches on logout either way.
 
 ### Processors
 

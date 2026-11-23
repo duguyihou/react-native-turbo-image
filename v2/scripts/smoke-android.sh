@@ -43,8 +43,7 @@ start_fixture_server
 # written: `install -r` needs room for both at once, and on an emulator
 # whose /data is nearly full that is what fails the install, or leaves so
 # little space that Android empties the app's caches under the running
-# suite. The app's cookies go with its data, so the `cookie` scenario cannot
-# pass on a cookie an earlier run left behind.
+# suite.
 # `|| true`: on a fresh device there is nothing to uninstall.
 "${adb}" uninstall "${package}" > /dev/null 2>&1 || true
 "${adb}" install "${apk}" > /dev/null
