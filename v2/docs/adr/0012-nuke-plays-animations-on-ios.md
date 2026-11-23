@@ -42,6 +42,11 @@ what 2.0 did before:
 - Frames are sized by the same rule as the still: for the view, unless
   `allowDownscaling` is off.
 
+Nuke shares decoded frames between views by the identity of the animation
+object. TurboImage decodes an image once per view size, so the adapter keeps
+the live animation of each cache key and attaches that one to every decode
+of the same bytes.
+
 ## Consequences
 
 - No frame limit; memory is bounded by Nuke's pool (5% of the device's

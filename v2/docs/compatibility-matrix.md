@@ -46,6 +46,7 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
 | SwiftPM standalone, Nuke 14.0.0, iOS and tvOS simulator (local, 2026-11-23) | ✅ build |
 | Smoke test, iOS Release simulator (CocoaPods), Nuke 14.0.0 and the iOS 16.0 floor (local, 2026-11-23) | ✅ 49/49. Not re-run with Nuke 14: the RN SwiftPM app path, the RN 0.89 copy, device builds, the tvOS app |
+| iOS animated images on the paths no event reports, by screenshots of a temporary screen (local, iOS simulator, 2026-11-23) | ✅ GIF, APNG and WebP play; so do a memory-cache hit, a view recycled while playing, a still replaced by an animation in one view, and the cross-fade into an animation. An animation replaced by a still stops. Two sizes of one GIF get one animation object. With Reduce Motion on, every one is a still |
 | Packed install into a new RN 0.88.1 template app with its target raised to 16.0 (`test-packed-install.sh ios`, local, 2026-11-23) | ✅ loads an image |
 | iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, the load event fires |
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |

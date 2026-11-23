@@ -89,9 +89,11 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // host app cannot evict or poison it. Both pipelines share it, because
     // the memory tier is one cache whatever the disk policy (core rule).
     let imageCache = ImageCache()
+    // One for both pipelines too: a key names one image whatever the policy.
+    let animations = AnimationSources()
     pipeline = Self.makePipeline(
       .withDataCache(name: "com.turboimage.DataCache", sizeLimit: Self.diskCacheBytes),
-      imageCache: imageCache)
+      imageCache: imageCache, animations: animations)
 
     // `cachePolicy="urlCache"`: a second pipeline whose only disk tier is an
     // HTTP cache. URLSession then does what the policy promises: it serves
@@ -116,22 +118,22 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     sessionConfiguration.urlCache = urlCache
     httpPipeline = Self.makePipeline(
       ImagePipeline.Configuration(dataLoader: DataLoader(configuration: sessionConfiguration)),
-      imageCache: imageCache)
+      imageCache: imageCache, animations: animations)
     super.init()
   }
 
   /// What both pipelines have in common; they differ only in their disk tier.
   private static func makePipeline(
-    _ base: ImagePipeline.Configuration, imageCache: ImageCache
+    _ base: ImagePipeline.Configuration, imageCache: ImageCache, animations: AnimationSources
   ) -> ImagePipeline {
     var configuration = base
     configuration.imageCache = imageCache
     configuration.isTaskCoalescingEnabled = true
     // Animated GIF/APNG/WebP and SVG, chosen by content (NukeDecoders.swift).
-    configuration.makeImageDecoder = { TurboImageDecoders.make($0) }
+    configuration.makeImageDecoder = { TurboImageDecoders.make($0, animations: animations) }
     // Off because `ContentDecoder` attaches the animations itself: Nuke's
     // own parsing skips every downscaled request and covers formats
-    // TurboImage shows as stills (NukeDecoders.swift, `Animation`).
+    // TurboImage shows as stills (NukeDecoders.swift, `AnimationSources`).
     configuration.isAnimatedImageParsingEnabled = false
     // Skips decompression for SVG images (NukeDecoders.swift).
     return ImagePipeline(configuration: configuration, delegate: TurboImagePipelineDelegate())

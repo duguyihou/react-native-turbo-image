@@ -24,8 +24,12 @@ enum TurboImageDecoders {
   /// (`TaskFetchOriginalImage.getDecoder`). So the format cannot be chosen
   /// here: a partial SVG would get Nuke's bitmap decoder for good. Every task
   /// gets a dispatcher instead, which decides on the complete bytes.
-  static func make(_ context: ImageDecodingContext) -> (any ImageDecoding)? {
-    ContentDecoder(fallback: ImageDecoders.Default(context: context))
+  static func make(_ context: ImageDecodingContext, animations: AnimationSources) -> (any ImageDecoding)? {
+    ContentDecoder(
+      fallback: ImageDecoders.Default(context: context),
+      // The adapter sets `imageID` to the request's cache key.
+      cacheKey: context.request.imageID,
+      animations: animations)
   }
 }
 
@@ -35,6 +39,8 @@ struct ContentDecoder: ImageDecoding {
   /// Nuke's decoder for this context, if it recognised the data; it keeps
   /// the incremental state for previews, and the request's `thumbnail`.
   let fallback: ImageDecoders.Default?
+  let cacheKey: String?
+  let animations: AnimationSources
 
   func decode(_ data: Data) throws -> ImageContainer {
     if SVGDecoder.isSVG(data) {
@@ -43,7 +49,7 @@ struct ContentDecoder: ImageDecoding {
     // The still: the whole image, or the first frame of an animation, no
     // larger than the request's decode bound (`thumbnail`).
     var container = try (fallback ?? ImageDecoders.Default()).decode(data)
-    if let animation = Animation.source(in: data) {
+    if let animation = animations.source(in: data, cacheKey: cacheKey) {
       container.animation = animation
       // The bytes the animation plays from, which it shares; set here too so
       // the memory cache counts them (`ImageContainer.memoryCost`).
@@ -84,25 +90,67 @@ final class TurboImagePipelineDelegate: ImagePipeline.Delegate {
 ///   * it also plays HEIC and AVIF sequences, which Android shows as stills.
 ///
 /// So that parsing is off (NukeImageLoader.swift) and this does it instead.
-enum Animation {
+///
+/// It also hands out **one source per image**, which Nuke's parsing would
+/// not. Nuke shares decoded frames between views by the identity of their
+/// source, and TurboImage decodes an image once per view size (each size is
+/// its own memory-cache entry). A source per decode would give two views of
+/// one GIF at different sizes two sets of frames, two parses and two copies
+/// of the encoded bytes.
+final class AnimationSources: @unchecked Sendable {
   // ImageIO reports several images for TIFF, ICO and HEIC files too; only
   // the formats TurboImage documents as animated are animated.
   private static let animatedTypes: Set<String> = [
     "com.compuserve.gif", "public.png", "org.webmproject.webp",
   ]
 
+  // The live source of each cache key. Weak: a source lasts as long as a
+  // memory-cache entry or a playing view holds it, and this must not be
+  // what keeps the encoded bytes of an evicted image alive. Decodes run on
+  // Nuke's decoding queue, two at a time, hence the lock.
+  private let lock = NSLock()
+  private let live = NSMapTable<NSString, AnimatedImageSource>.strongToWeakObjects()
+
   /// Nil for a still, including a single-frame GIF and a plain PNG.
-  static func source(in data: Data) -> AnimatedImageSource? {
+  func source(in data: Data, cacheKey: String?) -> AnimatedImageSource? {
     // A cheap look at the header first: `AnimatedImageSource` reads the
     // delay of every frame, which is wasted on a format that is not played.
-    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
-      let type = CGImageSourceGetType(source) as String?,
-      animatedTypes.contains(type),
-      CGImageSourceGetCount(source) > 1
+    guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil),
+      let type = CGImageSourceGetType(imageSource) as String?,
+      Self.animatedTypes.contains(type),
+      CGImageSourceGetCount(imageSource) > 1
     else { return nil }
-    // Delays are corrected the way browsers and Android's decoder do it:
-    // 10 ms or less becomes 100 ms (many GIFs declare 0 and rely on it).
-    return AnimatedImageSource(data: data)
+
+    guard let key = cacheKey.map({ $0 as NSString }) else {
+      return AnimatedImageSource(data: data)
+    }
+    if let existing = existing(for: key, matching: data) {
+      return existing
+    }
+    // Parsed outside the lock: it reads every frame's delay. Delays are
+    // corrected the way browsers and Android's decoder do it: 10 ms or less
+    // becomes 100 ms (many GIFs declare 0 and rely on it).
+    guard let source = AnimatedImageSource(data: data) else { return nil }
+    return lock.withLock {
+      // Looked up again: two sizes of one image mounted together decode at
+      // the same time, and both miss the first lookup. Whichever gets here
+      // second takes the first one's source and drops its own.
+      if let existing = live.object(forKey: key), existing.data == data {
+        return existing
+      }
+      live.setObject(source, forKey: key)
+      return source
+    }
+  }
+
+  /// The bytes are compared, not only the key: what a key names can change
+  /// (the image was disposed of and fetched again, or `urlCache` revalidated
+  /// it), and the old animation must not stand in for the new image.
+  private func existing(for key: NSString, matching data: Data) -> AnimatedImageSource? {
+    guard let existing = lock.withLock({ live.object(forKey: key) }), existing.data == data else {
+      return nil
+    }
+    return existing
   }
 }
 
