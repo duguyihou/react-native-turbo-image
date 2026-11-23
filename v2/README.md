@@ -18,7 +18,7 @@ bun install                         # hoisted node_modules (see bunfig.toml)
 bun run check:versions              # manifests agree with scripts/native-versions.env
 bun run test                        # JS unit tests (Jest) for src/index.tsx
 bun run test:core                   # C++ core + GoogleTest
-bun run test:ios                    # Nuke adapter tests on an iPhone simulator (animated images)
+bun run test:ios                    # Nuke adapter tests on an iPhone simulator
 
 # iOS (CocoaPods)
 bun run vendor:nuke                 # builds Nuke.xcframework and NukeUI.xcframework from the pinned tag

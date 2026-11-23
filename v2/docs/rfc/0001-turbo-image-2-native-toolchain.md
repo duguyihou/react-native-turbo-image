@@ -464,7 +464,7 @@ backed by a non-blocking CI job.
 | `js` | ubuntu | ✓ | oxlint and oxfmt (`bun run lint`, `format:check`); Codegen spec and example typecheck; Jest |
 | `android (debug, release)` | ubuntu | ✓ | Gradle + NDK + CMake + Kotlin 2.4; release = R8 + JNI keep rules |
 | `ios-cocoapods` | macOS | ✓ | Pinned Nuke xcframeworks + podspec + Fabric |
-| `ios-spm-standalone` | macOS | ✓ | Package.swift layering without an app; the Nuke adapter's tests (`ios/Tests`, animated images) on a simulator |
+| `ios-spm-standalone` | macOS | ✓ | Package.swift layering without an app; the Nuke adapter's tests (`ios/Tests`: animated images, decode size, failure codes, the memory cache, SVG) on a simulator |
 | `ios-spm-app` | macOS | — | RN 0.88 SwiftPM integration (preview) |
 | `eval-rn-0-89` (android, ios) | ubuntu, macOS | — | `scripts/eval-rn-version.sh 0.89.0-rc.1`: the example on the next RN template |
 

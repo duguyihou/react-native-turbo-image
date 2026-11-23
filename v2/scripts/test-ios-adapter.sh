@@ -2,9 +2,11 @@
 # Runs the Nuke adapter's tests (packages/react-native-turbo-image/ios/Tests)
 # on an iPhone simulator.
 #
-# They cover animated images, which no load event reports and the on-device
-# smoke suite therefore cannot see. They need UIKit, hence a simulator, but
-# no app: the package is built standalone, without the Fabric view.
+# They drive the adapter through the seam with local files: decode sizes,
+# failure codes, the memory cache, SVG, and animated images, which no load
+# event reports and the on-device smoke suite therefore cannot see. They need
+# UIKit, hence a simulator, but no app: the package is built standalone,
+# without the Fabric view.
 #
 # Usage: scripts/test-ios-adapter.sh [simulator-udid]
 # Exit:  xcodebuild's; 1 when there is no simulator to run on.

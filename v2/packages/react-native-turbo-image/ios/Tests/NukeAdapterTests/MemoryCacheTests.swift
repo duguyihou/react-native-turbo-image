@@ -1,0 +1,180 @@
+// The adapter's memory tier: which loads hit it, which entries are separate,
+// and what eviction reaches.
+//
+// Nuke keys a memory entry by (imageID, thumbnail, processors), so one cache
+// key has an entry per decode size and per processed variant, and Nuke's
+// cache cannot be enumerated. The adapter keeps an index of the variants it
+// has seen so that `removeCachedImage` and the `memoryCacheKey` placeholder
+// can find them; these tests are what holds that index to its job.
+
+import Testing
+import TurboImageLoaderAPI
+import UIKit
+
+@testable import TurboImageNuke
+
+@MainActor
+@Suite(.serialized)
+struct MemoryCacheTests {
+  let adapter = Adapter()
+  let bound = CGSize(width: 20, height: 15)
+
+  // MARK: Reads and writes (the core's cache-policy matrix)
+
+  @Test func aSecondLoadComesFromMemory() async throws {
+    let request = adapter.request(for: try Fixture.png(), decodeSize: bound)
+
+    #expect(await adapter.load(request).fromMemoryCache == false)
+    #expect(await adapter.load(request).fromMemoryCache)
+  }
+
+  /// `noCache` and friends: the core clears `memoryCacheWrite`.
+  @Test func aLoadThatMayNotWriteLeavesNothingBehind() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    _ = await adapter.load(adapter.request(for: file, cacheKey: key, memoryCacheWrite: false))
+
+    let second = await adapter.load(adapter.request(for: file, cacheKey: key))
+
+    #expect(second.fromMemoryCache == false)
+  }
+
+  @Test func aLoadThatMayNotReadIgnoresWhatIsThere() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    _ = await adapter.load(adapter.request(for: file, cacheKey: key))
+
+    let second = await adapter.load(adapter.request(for: file, cacheKey: key, memoryCacheRead: false))
+
+    #expect(second.image != nil)
+    #expect(second.fromMemoryCache == false)
+  }
+
+  // MARK: One entry per variant
+
+  @Test func eachDecodeSizeIsItsOwnEntry() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    _ = await adapter.load(adapter.request(for: file, cacheKey: key, decodeSize: bound))
+
+    let other = await adapter.load(
+      adapter.request(for: file, cacheKey: key, decodeSize: CGSize(width: 10, height: 10)))
+
+    #expect(other.fromMemoryCache == false)
+    #expect(other.pixelSize == CGSize(width: 10, height: 8))
+  }
+
+  /// A processed image must never be handed to a view that asked for the
+  /// plain one, or for another processing of it.
+  ///
+  /// Told apart by the image, not by `fromMemoryCache`: Nuke makes a
+  /// processed variant from the plain image when that is in memory, and
+  /// reports the result as a memory hit although the variant was not cached.
+  @Test func eachProcessingIsItsOwnEntry() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    let (blurredImage, tintedImage) = (UncheckedImage(), UncheckedImage())
+    let blurred = adapter.request(
+      for: file, cacheKey: key, processorKey: "blur", processor: { _ in blurredImage.image })
+    _ = await adapter.load(blurred)
+
+    let plain = await adapter.load(adapter.request(for: file, cacheKey: key))
+    let tinted = await adapter.load(
+      adapter.request(for: file, cacheKey: key, processorKey: "tint", processor: { _ in tintedImage.image }))
+    let blurredAgain = await adapter.load(blurred)
+
+    #expect(plain.pixelSize == Fixture.size)
+    #expect(tinted.image === tintedImage.image)
+    #expect(blurredAgain.image === blurredImage.image)
+    #expect(blurredAgain.fromMemoryCache)
+  }
+
+  // MARK: Eviction (`TurboImage.dispose`, `clearMemoryCache`)
+
+  @Test func removingAnImageEvictsEveryVariantOfIt() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    // Every variant of one key, as a normal load or as a memory-only one.
+    // The memory-only form is how the test looks without loading: a normal
+    // load of the plain image would put it back, and Nuke would then make
+    // the processed variants from it.
+    func variants(memoryOnly: Bool) -> [TIImageRequest] {
+      [
+        adapter.request(for: file, cacheKey: key, allowNetwork: !memoryOnly),
+        adapter.request(for: file, cacheKey: key, decodeSize: bound, allowNetwork: !memoryOnly),
+        adapter.request(
+          for: file, cacheKey: key, allowNetwork: !memoryOnly, processorKey: "blur", processor: { $0 }),
+        adapter.request(
+          for: file, cacheKey: key, decodeSize: bound, allowNetwork: !memoryOnly, processorKey: "blur",
+          processor: { $0 }),
+      ]
+    }
+    for variant in variants(memoryOnly: false) {
+      _ = await adapter.load(variant)
+    }
+    for variant in variants(memoryOnly: true) {
+      #expect(await adapter.load(variant).fromMemoryCache)
+    }
+
+    adapter.loader.removeCachedImage(for: variants(memoryOnly: false)[0])
+
+    for variant in variants(memoryOnly: true) {
+      #expect(await adapter.load(variant).errorCode == .notCached)
+    }
+  }
+
+  @Test func removingAnImageLeavesOtherImagesAlone() async throws {
+    let kept = adapter.request(for: try Fixture.png(), decodeSize: bound)
+    let removed = adapter.request(for: try Fixture.png(), decodeSize: bound)
+    _ = await adapter.loadTogether([kept, removed])
+
+    adapter.loader.removeCachedImage(for: removed)
+
+    #expect(await adapter.load(kept).fromMemoryCache)
+  }
+
+  @Test func clearingTheMemoryCacheEvictsEverything() async throws {
+    let request = adapter.request(for: try Fixture.png(), decodeSize: bound)
+    _ = await adapter.load(request)
+
+    adapter.loader.clearMemoryCache()
+
+    // Looked up first: the load below puts the image back.
+    #expect(adapter.loader.memoryCachedImage(forKey: request.cacheKey) == nil)
+    #expect(await adapter.load(request).fromMemoryCache == false)
+  }
+
+  // MARK: The `memoryCacheKey` placeholder
+
+  @Test func aCachedImageIsFoundByItsKey() async throws {
+    let request = adapter.request(for: try Fixture.png())
+    let loaded = await adapter.load(request)
+
+    #expect(adapter.loader.memoryCachedImage(forKey: request.cacheKey) === loaded.image)
+    #expect(adapter.loader.memoryCachedImage(forKey: "never loaded") == nil)
+  }
+
+  /// A view usually caches the image at its own size, under a key that
+  /// includes that size. Any size will do for a placeholder.
+  @Test func aDownscaledImageIsFoundByItsKey() async throws {
+    let request = adapter.request(for: try Fixture.png(), decodeSize: bound)
+    let loaded = await adapter.load(request)
+
+    #expect(adapter.loader.memoryCachedImage(forKey: request.cacheKey) === loaded.image)
+  }
+
+  /// A blurred or tinted variant must not stand in for the image.
+  @Test func aProcessedVariantIsNotAPlaceholder() async throws {
+    let request = adapter.request(
+      for: try Fixture.png(), decodeSize: bound, processorKey: "blur", processor: { $0 })
+    _ = await adapter.load(request)
+
+    #expect(adapter.loader.memoryCachedImage(forKey: request.cacheKey) == nil)
+  }
+}
+
+/// A distinct image for a processor block to return, so a test can tell
+/// which processor produced what it was handed. Immutable once made.
+private struct UncheckedImage: @unchecked Sendable {
+  let image = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { _ in }
+}
