@@ -4,7 +4,7 @@ Source of truth for pins: `scripts/native-versions.env`. Last verified 2026-11-1
 
 Legend: ✅ verified by building (and running, where noted) · 🟡 builds, needs more verification · 🔬 evaluation only · ❌ incompatible · — not applicable
 
-Smoke results are recorded as passed/total of the suite when the row was verified. The suite has 49 scenarios today (RFC §8). The RN 0.89 results are from the hosted `v2-ci.yml` run on 3b08d09 (x86_64 Android emulator); the RN 0.88 results were also run locally (arm64 emulator, iOS 27.2 simulator), RN SwiftPM only locally.
+Smoke results are recorded as passed/total of the suite when the row was verified. The suite has 50 scenarios today (RFC §8). The RN 0.89 results are from the hosted `v2-ci.yml` run on 3b08d09 (x86_64 Android emulator); the RN 0.88 results were also run locally (arm64 emulator, iOS 27.2 simulator), RN SwiftPM only locally.
 
 ## Production baseline (TurboImage 2.0.0-alpha.0)
 

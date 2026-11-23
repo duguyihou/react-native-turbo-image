@@ -19,6 +19,8 @@ with it a cache entry, of its own):
   /anim.gif /anim.png /anim.webp   animated GIF, APNG, WebP
   /anim-large.gif              1500x1000 animated GIF (two frames)
   /accept/png                  200 only if `Accept` allows image/png, else 406
+  /not-an-image/<name>         200 with an HTML page, as a server's error page
+                                 often is: the load fails as `decode`
   /ua/<name>.jpg               403 for OkHttp's default User-Agent, as some
                                  CDNs answer it
   /cookie/set                  200 with Set-Cookie, for the app's `fetch`
@@ -75,6 +77,8 @@ CACHE_HEADERS = {
     "/cache/revalidate/": {"Cache-Control": "no-cache", "ETag": ETAG},
 }
 
+NOT_AN_IMAGE = b"<!doctype html><title>Not found</title><p>This page is not an image.</p>\n"
+
 hits_lock = threading.Lock()
 hits = {}  # path -> {"count": requests seen, "conditional": of those, with If-None-Match}
 log_file = None
@@ -109,6 +113,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in EXACT:
             return self.reply(200, *EXACT[path])
+        if path.startswith("/not-an-image/"):
+            return self.reply(200, NOT_AN_IMAGE, "text/html; charset=utf-8")
         if path == "/accept/png":
             if accepts_png(self.headers.get("Accept")):
                 return self.reply(200, *EXACT["/text.png"])

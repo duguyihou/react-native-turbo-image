@@ -481,7 +481,7 @@ both platforms load the same `http://localhost:8765` URLs.
 - **Trade-off: no TLS.** The suite no longer makes an HTTPS request. TLS is the platform's, not TurboImage's, but a regression in how the adapters configure their HTTP clients for HTTPS would now go unseen. TODO: one opt-in scenario against a real host.
 - **Cleartext.** The Android example allows cleartext HTTP to `localhost` and `10.0.2.2` only (`network_security_config.xml`); iOS already allows local networking.
 
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 49 scenarios in
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 50 scenarios in
 `apps/example/App.tsx` cover:
 
 - a network load,
@@ -490,6 +490,7 @@ Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 49 scenarios in
 - an explicit `cacheKey` shared across two different URLs,
 - `noCache`,
 - core validation (`invalidRequest`),
+- a `200` whose body is not an image (`decode`),
 - a recycled view reloading the same source,
 - a view detached and reattached: a loaded `noCache` image is not fetched again, and a failed load is not retried,
 - every visible row of a `FlatList` loading,

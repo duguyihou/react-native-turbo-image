@@ -219,7 +219,18 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
+      # The frameworks are built from source (scripts/build-nuke-xcframework.sh,
+      # several minutes per platform) and depend only on the Nuke tag, the
+      # script and Xcode. A cache hit skips the build; check-native-versions.sh
+      # and the pack guard still verify the vendored version.
+      - name: Cache the Nuke and NukeUI xcframeworks
+        id: nuke-cache
+        uses: actions/cache@v6
+        with:
+          path: v2/packages/react-native-turbo-image/ios/vendor
+          key: nuke-xcframeworks-xcode-${{ env.XCODE_VERSION }}-${{ hashFiles('v2/scripts/native-versions.env', 'v2/scripts/build-nuke-xcframework.sh') }}
       - name: Build pinned Nuke and NukeUI xcframeworks
+        if: steps.nuke-cache.outputs.cache-hit != 'true'
         run: bash scripts/build-nuke-xcframework.sh
       - run: bash scripts/check-native-versions.sh
       # What `npm publish` would upload: runs the `prepack` guard and fails if
@@ -367,7 +378,18 @@ jobs:
         uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
       - run: bun install --frozen-lockfile
+      # The frameworks are built from source (scripts/build-nuke-xcframework.sh,
+      # several minutes per platform) and depend only on the Nuke tag, the
+      # script and Xcode. A cache hit skips the build; check-native-versions.sh
+      # and the pack guard still verify the vendored version.
       - if: matrix.platform == 'ios'
+        name: Cache the Nuke and NukeUI xcframeworks
+        id: nuke-cache
+        uses: actions/cache@v6
+        with:
+          path: v2/packages/react-native-turbo-image/ios/vendor
+          key: nuke-xcframeworks-xcode-${{ env.XCODE_VERSION }}-${{ hashFiles('v2/scripts/native-versions.env', 'v2/scripts/build-nuke-xcframework.sh') }}
+      - if: matrix.platform == 'ios' && steps.nuke-cache.outputs.cache-hit != 'true'
         run: bash scripts/build-nuke-xcframework.sh
       - name: Prepare workspace copy on RN ${{ env.EVAL_RN_VERSION }}
         # Assigned first, not expanded inside `echo`: a command substitution

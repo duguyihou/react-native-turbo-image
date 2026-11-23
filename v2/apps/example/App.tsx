@@ -456,6 +456,17 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
   },
   {
+    // A 200 whose body is not an image, as a server's HTML error page often
+    // is. Android once reported this as `network`: its `ImageDecoder`
+    // throws an `IOException` subclass.
+    id: 'notAnImage',
+    title: 'a 200 that is not an image fails as decode',
+    source: { uri: `${BASE}/not-an-image/${RUN}.jpg` },
+    cachePolicy: 'noCache',
+    expect: 'error',
+    expectCode: 'decode',
+  },
+  {
     id: 'headersChangeResponse',
     title: 'a different header changes the response (Accept: JSON → 406)',
     source: { uri: `${BASE}/accept/png`, headers: [['Accept', 'application/json']] },
