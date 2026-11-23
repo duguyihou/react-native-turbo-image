@@ -1,0 +1,13 @@
+{
+  "extends": "@react-native/typescript-config",
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["**/node_modules", "**/Pods"],
+  "compilerOptions": {
+    "types": [],
+    // "source" makes the workspace's react-native-turbo-image resolve to its
+    // TypeScript (see `exports` in its package.json), so the example is
+    // checked against the library as it is now, not against declarations
+    // that exist only after `build:types`. "react-native" is the preset's.
+    "customConditions": ["react-native", "source"]
+  }
+}
