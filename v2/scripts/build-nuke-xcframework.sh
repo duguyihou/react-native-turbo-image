@@ -57,16 +57,20 @@ for destination in "${destinations[@]}"; do
   archives+=("${archive}")
 done
 
-# With debug symbols: these are dynamic frameworks inside the app, and
-# without their dSYMs a crash in them cannot be symbolicated. They roughly
-# triple the size of the vendored directory.
+# Debug symbols for the device slices only. These are dynamic frameworks
+# inside the app, and without their dSYMs a crash in a shipped build cannot
+# be symbolicated; CocoaPods copies them into the app's archive. Simulator
+# builds are never archived or shipped, and their dSYMs would double the
+# gzipped tarball (about 10 MB of 19.5) for crashes a developer reproduces
+# locally, where the binary's exported symbols still name the frames.
 for framework in Nuke NukeUI; do
   create_args=()
   for archive in "${archives[@]}"; do
-    create_args+=(
-      -framework "${archive}/Products/Library/Frameworks/${framework}.framework"
-      -debug-symbols "${archive}/dSYMs/${framework}.framework.dSYM"
-    )
+    create_args+=(-framework "${archive}/Products/Library/Frameworks/${framework}.framework")
+    case "${archive}" in
+      *Simulator*) ;;
+      *) create_args+=(-debug-symbols "${archive}/dSYMs/${framework}.framework.dSYM") ;;
+    esac
   done
   rm -rf "${out_dir}/${framework}.xcframework"
   xcodebuild -create-xcframework "${create_args[@]}" -output "${out_dir}/${framework}.xcframework"

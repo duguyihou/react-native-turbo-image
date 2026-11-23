@@ -62,7 +62,8 @@ of the same bytes.
 - Every TurboImage view ignores Smart Invert (`accessibilityIgnoresInvertColors`),
   stills included: the image view sets it.
 - CocoaPods vendors a second framework, `NukeUI.xcframework`. The tarball is
-  about 21 MB (14.2 MB with Nuke alone).
+  about 21 MB (14.2 MB with Nuke alone); 10.3 MB since the simulator
+  slices lost their dSYMs (ADR 0006).
 - A replacement adapter has two more methods to implement; one that plays
   no animations returns a plain `UIImageView` and sets `image`.
 
