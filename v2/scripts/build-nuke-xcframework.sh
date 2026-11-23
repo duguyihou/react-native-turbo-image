@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Builds Nuke.xcframework from a pinned Nuke tag for the CocoaPods path.
+# Builds Nuke.xcframework and NukeUI.xcframework from a pinned Nuke tag for
+# the CocoaPods path. The adapter imports both: Nuke is the pipeline, NukeUI
+# the animated-image player.
 #
 # Why this exists: Nuke stopped publishing to CocoaPods trunk after 9.5, so
-# `s.dependency "Nuke", "13.2.3"` cannot resolve. SwiftPM consumers get Nuke
+# `s.dependency "Nuke", "14.0.0"` cannot resolve. SwiftPM consumers get Nuke
 # from Package.swift (`.package(url:exact:)`); CocoaPods consumers get the
-# *same tag* as a vendored xcframework built here. Both paths read the
+# *same tag* as vendored xcframeworks built here. Both paths read the
 # version from scripts/native-versions.env so they cannot drift (RFC rule 6).
 #
-# Output: packages/react-native-turbo-image/ios/vendor/Nuke.xcframework
+# Output: packages/react-native-turbo-image/ios/vendor/{Nuke,NukeUI}.xcframework
 # (gitignored; built in CI and before `npm publish`).
 #
 # Usage: scripts/build-nuke-xcframework.sh [nuke-tag]
@@ -37,29 +39,38 @@ destinations=(
   "generic/platform=tvOS"
   "generic/platform=tvOS Simulator"
 )
-# With debug symbols: Nuke is a dynamic framework inside the app, and without
-# its dSYMs a crash in it cannot be symbolicated. They roughly triple the
-# size of the vendored directory.
-create_args=()
+# One archive per destination holds both frameworks: the NukeUI scheme
+# builds Nuke as its dependency, and SKIP_INSTALL=NO on the command line
+# applies to every target, so both are installed into the archive.
+archives=()
 for destination in "${destinations[@]}"; do
   archive="${work_dir}/${destination//[^A-Za-z]/_}.xcarchive"
   xcodebuild archive \
     -project "${work_dir}/src/Nuke.xcodeproj" \
-    -scheme Nuke \
+    -scheme NukeUI \
     -configuration Release \
     -destination "${destination}" \
     -archivePath "${archive}" \
     SKIP_INSTALL=NO \
     BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
     -quiet
-  create_args+=(
-    -framework "${archive}/Products/Library/Frameworks/Nuke.framework"
-    -debug-symbols "${archive}/dSYMs/Nuke.framework.dSYM"
-  )
+  archives+=("${archive}")
 done
 
-rm -rf "${out_dir}/Nuke.xcframework"
-xcodebuild -create-xcframework "${create_args[@]}" -output "${out_dir}/Nuke.xcframework"
+# With debug symbols: these are dynamic frameworks inside the app, and
+# without their dSYMs a crash in them cannot be symbolicated. They roughly
+# triple the size of the vendored directory.
+for framework in Nuke NukeUI; do
+  create_args=()
+  for archive in "${archives[@]}"; do
+    create_args+=(
+      -framework "${archive}/Products/Library/Frameworks/${framework}.framework"
+      -debug-symbols "${archive}/dSYMs/${framework}.framework.dSYM"
+    )
+  done
+  rm -rf "${out_dir}/${framework}.xcframework"
+  xcodebuild -create-xcframework "${create_args[@]}" -output "${out_dir}/${framework}.xcframework"
+done
 
 echo "${nuke_tag}" > "${out_dir}/Nuke.version"
-echo "Built Nuke ${nuke_tag} → ${out_dir}/Nuke.xcframework"
+echo "Built Nuke and NukeUI ${nuke_tag} → ${out_dir}"

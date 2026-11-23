@@ -5,7 +5,9 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, min_ios_version_supported
+# TurboImage needs iOS 16 (Nuke 14); React Native's own floor
+# (`min_ios_version_supported`) is 15.1.
+platform :ios, '16.0'
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']

@@ -12,8 +12,8 @@ Performant image component for React Native, backed by
 ## Requirements
 
 - React Native 0.88 or newer, New Architecture only
-- iOS 15.1 or newer
-- tvOS 15.1 or newer, with react-native-tvos 0.88 or newer (Live Text is iOS only)
+- iOS 16.0 or newer, built with Xcode 27 or newer. React Native's template targets 15.1: raise `platform :ios` in the `Podfile` and the app's deployment target
+- tvOS 16.0 or newer, with react-native-tvos 0.88 or newer (Live Text is iOS only)
 - Android `minSdk` 24, Kotlin 2.3 or newer
 
 ## Installation

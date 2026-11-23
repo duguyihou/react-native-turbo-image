@@ -79,7 +79,7 @@ screen:
 | | iOS (`TIImageLoading`) | Android (`ImageLoaderAdapter`) |
 |---|---|---|
 | The adapter is given | The request, with the decode size in pixels | The request and the `ImageView` |
-| Success delivers | A `UIImage`; the view shows and cross-fades it | The image's size; the adapter has already shown and cross-faded it |
+| Success delivers | A `UIImage` and, for an animated image, an opaque animation. The view cross-fades and hands both back to the adapter, which plays the animation in the image view it supplied ([ADR 0012](adr/0012-nuke-plays-animations-on-ios.md)) | The image's size; the adapter has already shown and cross-faded it |
 | The decode size comes from | The view's bounds, read by the view | The view's laid-out size, awaited by the adapter |
 
 This is deliberate; [ADR 0004](adr/0004-android-adapter-displays-the-image.md)

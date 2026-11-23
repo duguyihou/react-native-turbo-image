@@ -213,7 +213,11 @@ struct TIStepEffects {
   if ((self = [super initWithFrame:frame])) {
     _props = defaultViewProps();
 
-    _imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+    // The loader's image view, because playing an animation takes one of its
+    // own (TIImageLoading.h). A plain one if no adapter is linked: such a
+    // view only ever reports that, and shows placeholders.
+    _imageView = [TIImageLoaderRegistry.sharedLoader makeImageView] ?: [UIImageView new];
+    _imageView.frame = self.bounds;
     _imageView.clipsToBounds = YES;
     // The spec default (`contain`, 1.x's default), read from the default
     // props so the two cannot drift apart.
@@ -446,7 +450,7 @@ struct TIStepEffects {
           [strongSelf loadDidProgress:completed total:total];
         }
       }
-      completion:^(UIImage *image, BOOL fromMemoryCache, NSError *error) {
+      completion:^(UIImage *image, id animation, BOOL fromMemoryCache, NSError *error) {
         __typeof(self) strongSelf = weakSelf;
         if (strongSelf == nil) {
           return;
@@ -455,7 +459,10 @@ struct TIStepEffects {
         TIStepEffects step;
         if (image != nil) {
           step.deliverSuccess = ^{
-            [strongSelf deliverSuccess:image fromMemoryCache:fromMemoryCache source:source];
+            [strongSelf deliverSuccess:image
+                             animation:animation
+                       fromMemoryCache:fromMemoryCache
+                                source:source];
           };
           [strongSelf perform:strongSelf->_lifecycle.loadSucceeded(token) step:step];
         } else {
@@ -521,13 +528,14 @@ struct TIStepEffects {
 }
 
 - (void)deliverSuccess:(UIImage *)image
+             animation:(nullable id)animation
        fromMemoryCache:(BOOL)fromMemoryCache
                 source:(NSString *)source {
   // A successful load ends progress at 100% (core rule, see finish()).
   if (_progressThrottle.finish(_lastProgressTotal)) {
     [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
   }
-  [self showFinalImage:image animated:!fromMemoryCache];
+  [self showFinalImage:image animation:animation fade:!fromMemoryCache];
   [self updateLiveText];
   // In pixels, as on Android. `size` alone is in points, which differs for
   // any image whose scale is not 1: a processed SVG drawn at its own size
@@ -549,10 +557,14 @@ struct TIStepEffects {
 // Cross-fades from whatever is shown (placeholder, previous image or
 // blank). Memory-cache hits appear instantly, the same rule as Coil's crossfade on Android, so
 // scrolling back through a list does not re-fade every cell.
-- (void)showFinalImage:(UIImage *)image animated:(BOOL)animated {
+//
+// The loader puts it on screen, because an animated image is played by the
+// loader (`animation`); placeholders and clearing are plain `image` sets.
+- (void)showFinalImage:(UIImage *)image animation:(nullable id)animation fade:(BOOL)fade {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  if (!animated || props.fadeDuration <= 0) {
-    _imageView.image = image;
+  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+  if (!fade || props.fadeDuration <= 0) {
+    [loader displayImage:image animation:animation inImageView:_imageView];
     return;
   }
   [UIView transitionWithView:_imageView
@@ -560,7 +572,7 @@ struct TIStepEffects {
                      options:UIViewAnimationOptionTransitionCrossDissolve |
                              UIViewAnimationOptionAllowUserInteraction
                   animations:^{
-                    self->_imageView.image = image;
+                    [loader displayImage:image animation:animation inImageView:self->_imageView];
                   }
                   completion:nil];
 }

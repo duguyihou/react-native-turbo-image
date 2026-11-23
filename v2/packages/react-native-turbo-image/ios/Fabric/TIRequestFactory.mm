@@ -18,13 +18,11 @@ namespace {
 // May throw: the pixel buffer and the core's working copies are plain C++
 // allocations. Callers go through TIProcessImage below.
 UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
-  // Processors apply to still images. An animated image is processed as its
-  // first frame and becomes static, which is also what Coil does with
+  // Processors apply to still images. An animated image arrives here as its
+  // first frame (the seam's `image` is always a still) and the adapter drops
+  // the animation of a processed image, which is also what Coil does with
   // transformations on Android (and what 1.x Android did).
   // TODO: process every frame, on both platforms.
-  if (image.images.count > 0) {
-    image = image.images.firstObject;
-  }
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   const auto width = static_cast<int>(std::lround(image.size.width * scale));
   const auto height = static_cast<int>(std::lround(image.size.height * scale));

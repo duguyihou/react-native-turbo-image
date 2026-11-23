@@ -489,8 +489,9 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'gifDownscaled',
     title: 'a 1500×1000 animated GIF is decoded at the card size too',
-    // Animated images go through a decoder of their own on iOS, which used
-    // to keep every frame at full size whatever the view's size.
+    // The still of an animated image follows the view's size like any other
+    // image (an earlier iOS decoder kept every frame at full size). The
+    // frames do too, which no event reports.
     source: { uri: `${BASE}/anim-large.gif` },
     cachePolicy: 'default',
     expect: 'load',

@@ -11,7 +11,7 @@
 //     ├─ TurboImageLoaderAPI (ObjC)         owner: core; the adapter seam
 //     └─ TurboImageNuke (Swift)             owner: iOS adapter
 //          ├─ TurboImageLoaderAPI
-//          └─ Nuke (pinned)
+//          └─ Nuke, NukeUI (pinned)
 //
 // Two ways this manifest is consumed:
 //
@@ -40,13 +40,14 @@ import PackageDescription
 // MARK: - Pinned versions (RFC rule 7)
 //
 // Must match scripts/native-versions.env; scripts/check-native-versions.sh
-// enforces it. The beta/RC evaluation job overrides this through the
-// environment so production builds never resolve a pre-release (rule 8).
+// enforces it. Evaluating a beta/RC overrides this through the environment,
+// so production builds never resolve a pre-release (rule 8).
 let nukeVersion: Version = Context.environment["TURBOIMAGE_EVAL_NUKE_VERSION"]
-  .flatMap { Version($0) } ?? "13.2.3"
-// Nuke 14 raises its floor to iOS 16; 13.x supports React Native's 15.1.
-// react-native-tvos uses the same floor for tvOS, and so does Nuke.
-let iosDeploymentTarget = nukeVersion.major >= 14 ? "16.0" : "15.1"
+  .flatMap { Version($0) } ?? "14.0.0"
+// Nuke 14's floor, for iOS and tvOS alike. It is above React Native's own
+// 15.1, so an app has to raise its deployment target to use TurboImage.
+// Must match `s.platforms` in TurboImage.podspec.
+let iosDeploymentTarget = "16.0"
 let tvosDeploymentTarget = iosDeploymentTarget
 
 // MARK: - React Native detection
@@ -96,6 +97,8 @@ var targets: [Target] = [
     dependencies: [
       "TurboImageLoaderAPI",
       .product(name: "Nuke", package: "Nuke"),
+      // The animated-image player (`AnimatedImageView` and its frame pool).
+      .product(name: "NukeUI", package: "Nuke"),
     ],
     path: "ios/Nuke",
     swiftSettings: [.swiftLanguageMode(.v6)]

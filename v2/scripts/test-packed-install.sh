@@ -118,6 +118,20 @@ grep -q "kotlinVersion = \"${KOTLIN_VERSION}\"" "${app}/android/build.gradle"
 # shellcheck disable=SC2016 # as above
 grep -qF 'kotlin-gradle-plugin:$kotlinVersion' "${app}/android/build.gradle"
 
+# The one iOS change the migration guide asks of every app: the templates
+# target React Native's floor (15.1), below the 16.0 TurboImage's pod
+# declares for Nuke 14, and `pod install` refuses the lower target. The
+# Podfile decides the pods' target, the project the app's own.
+sed -i.bak -E \
+  -e "s/^platform :(ios|tvos), .*/platform :\1, '16.0'/" \
+  "${app}/ios/Podfile"
+rm "${app}/ios/Podfile.bak"
+grep -qE "^platform :(ios|tvos), '16.0'" "${app}/ios/Podfile"
+sed -i.bak -E \
+  -e 's/(IPHONEOS|TVOS)_DEPLOYMENT_TARGET = [0-9.]+;/\1_DEPLOYMENT_TARGET = 16.0;/' \
+  "${app}/ios"/*.xcodeproj/project.pbxproj
+rm "${app}/ios"/*.xcodeproj/project.pbxproj.bak
+
 # A bundled image, so the check needs no server: it goes through the same
 # native view, core and loader as a remote one.
 cp "${v2_root}/apps/example/assets/local-fixture.png" "${app}/fixture.png"

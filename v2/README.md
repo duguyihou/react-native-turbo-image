@@ -20,7 +20,7 @@ bun run test                        # JS unit tests (Jest) for src/index.tsx
 bun run test:core                   # C++ core + GoogleTest
 
 # iOS (CocoaPods)
-bun run vendor:nuke                 # builds Nuke.xcframework from the pinned tag
+bun run vendor:nuke                 # builds Nuke.xcframework and NukeUI.xcframework from the pinned tag
 (cd apps/example/ios && pod install)
 bun run example:ios
 

@@ -27,9 +27,11 @@ fail() {
 }
 
 vendor="${pkg}/ios/vendor"
-if [[ ! -d "${vendor}/Nuke.xcframework" ]]; then
-  fail "ios/vendor/Nuke.xcframework is missing."
-fi
+for framework in Nuke NukeUI; do
+  if [[ ! -d "${vendor}/${framework}.xcframework" ]]; then
+    fail "ios/vendor/${framework}.xcframework is missing."
+  fi
+done
 if [[ ! -f "${vendor}/Nuke.version" ]]; then
   fail "ios/vendor/Nuke.version is missing, so the xcframework's version is unknown."
 fi

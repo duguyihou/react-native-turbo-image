@@ -10,9 +10,9 @@ For app developers. The reasons behind each change are in the [RFC](rfc/0001-tur
 |---|---|---|
 | Architecture | Old or New | **New Architecture only** |
 | React Native | not pinned | **0.88 or newer** |
-| iOS | 13.0 | **15.1** |
+| iOS | 13.0 | **16.0**, built with **Xcode 27 or newer** |
 | Android | the app's `minSdk` | `minSdk` **24**, **Kotlin 2.3 or newer** |
-| tvOS | listed in the podspec | **15.1**, with [react-native-tvos](https://github.com/react-native-tvos/react-native-tvos) 0.88 or newer |
+| tvOS | listed in the podspec | **16.0**, with [react-native-tvos](https://github.com/react-native-tvos/react-native-tvos) 0.88 or newer |
 
 If your app is still on the Old Architecture, stay on 1.x until it has moved.
 
@@ -35,6 +35,15 @@ The Kotlin floor comes from Coil 3.6.3. React Native 0.88's app template ships K
 
 An app whose Kotlin compiler is too old fails at Gradle configuration with a message that names the version it found.
 
+The iOS floor comes from Nuke 14. React Native 0.88's app template targets iOS 15.1, so most apps have to raise it too, in the `Podfile` and in the app target's **Minimum Deployments** setting in Xcode (`IPHONEOS_DEPLOYMENT_TARGET`):
+
+```diff
+- platform :ios, min_ios_version_supported
++ platform :ios, '16.0'
+```
+
+With a lower target, `pod install` stops with a message that the `TurboImage` pod needs a higher minimum deployment target.
+
 ## 2. Install
 
 ```sh
@@ -43,8 +52,8 @@ cd ios && pod install
 ```
 
 - **The pod is renamed** from `react-native-turbo-image` to `TurboImage`. Autolinking handles it. If your `Podfile`, a `post_install` hook or a build script names the old pod, update the name.
-- **Gifu and APNGKit are gone.** Animated images are decoded with ImageIO. If your app depended on those pods only through TurboImage, they disappear from `Podfile.lock`.
-- **Nuke is vendored** as a prebuilt `Nuke.xcframework` inside the package (13.2.3), so there is nothing extra to add to the `Podfile`.
+- **Gifu and APNGKit are gone.** Animated images are played by Nuke. If your app depended on those pods only through TurboImage, they disappear from `Podfile.lock`.
+- **Nuke is vendored** as prebuilt `Nuke.xcframework` and `NukeUI.xcframework` inside the package (14.0.0), so there is nothing extra to add to the `Podfile`.
 
 ### Optional: Swift Package Manager on iOS
 
@@ -163,7 +172,8 @@ Nothing here needs a code change to compile, but each can change what your app d
 
 - `format` is ignored: GIF, APNG, animated WebP and SVG are detected from the bytes. You can delete the prop.
 - `isProgressiveImageRenderingEnabled` is ignored. It had no effect in 1.x either.
-- On iOS an animation is shown as its first frame if all its frames, at the size they are decoded at, would exceed 64 MB.
+- On iOS an animation shows its first frame while Reduce Motion is on or Auto-Play Animated Images is off (Settings › Accessibility › Motion). Animations loop for as long as they are shown, on both platforms.
+- On iOS, images are no longer inverted by Smart Invert.
 
 ## 5. SVG on iOS and App Review
 
@@ -175,7 +185,7 @@ Android uses `coil-svg` and has no such concern.
 
 ## 6. Checklist
 
-- [ ] App is on the New Architecture, React Native 0.88+, Kotlin 2.3+, iOS 15.1+
+- [ ] App is on the New Architecture, React Native 0.88+, Kotlin 2.3+, iOS 16.0+ (deployment target raised in the `Podfile` and in Xcode)
 - [ ] `Podfile` and scripts no longer name the `react-native-turbo-image` pod
 - [ ] `cachePolicy="dataCache"` replaced with `"default"`
 - [ ] Images in recycled lists have a `recyclingKey`

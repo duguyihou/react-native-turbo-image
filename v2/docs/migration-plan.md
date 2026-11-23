@@ -45,7 +45,7 @@ builds, and the CI matrix.
 | `allowHardware` (Android) | Android-only native prop; a display option on the loader seam, not part of the request | ✅ done. Checked once by log: `HARDWARE` by default, `ARGB_8888` with `allowHardware={false}` |
 | `isProgressiveImageRenderingEnabled` (iOS) | Accepted and ignored | ✅ nothing to port: 1.x never enabled progressive decoding in its Nuke pipeline (off by default in Nuke 12.8.0), so the prop had no effect. Real progressive rendering would be a new, iOS-only feature (Coil has none) |
 | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache` | New **TurboModule** | ✅ done (RFC §4.4c). `prefetch` now resolves `false` if any source fails; `dispose` actually works now (1.x never implemented it) |
-| GIF, APNG, SVG | Adapter decoders, chosen by content | ✅ done (RFC §4.5b). ImageIO on iOS (drops Gifu and APNGKit), `coil-gif` + LINE `apng-drawable` on Android. SVG keeps 1.x's private CoreSVG on iOS by decision; `coil-svg` on Android. `format` is ignored |
+| GIF, APNG, SVG | Adapter decoders, chosen by content | ✅ done (RFC §4.5b). Nuke's animated-image player on iOS (drops Gifu and APNGKit; first ImageIO into `UIImage.animatedImage`, see ADR 0012), `coil-gif` + LINE `apng-drawable` on Android. SVG keeps 1.x's private CoreSVG on iOS by decision; `coil-svg` on Android. `format` is ignored |
 | Video thumbnails (1.x Android `coil-video`) | Not ported | ✅ nothing to port: 1.x declared the dependency but never registered `VideoFrameDecoder`, so it never worked |
 | Local assets / `require()` sources | Core scheme handling | ✅ done (RFC §4.1). `require()` is new in 2.0 (1.x only took `{ uri }`); `file://`, `content://`, `android.resource://` are explicit now (1.x loaded them by accident). Local sources skip the disk tier and load under `cacheOnly` |
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). Cookies are shared with React Native's networking on both platforms (new on Android). An app-wide hook for default headers is a TODO |
@@ -60,9 +60,9 @@ builds, and the CI matrix.
 3. Update `package.json` `repository.directory`, the workflow `working-directory` values and the docs paths.
 
 ### Phase 4: release
-- `2.0.0-beta.N` on npm under the `next` tag. The tarball includes `ios/vendor/Nuke.xcframework`, built in CI from the pinned tag. A `prepack` hook should fail if the vendored version doesn't match.
+- `2.0.0-beta.N` on npm under the `next` tag. The tarball includes `ios/vendor/Nuke.xcframework` and `NukeUI.xcframework`, built in CI from the pinned tag. A `prepack` hook should fail if the vendored version doesn't match.
 - Publish a migration guide for app developers (drafted: [`migration-guide.md`](migration-guide.md)):
-  - Requirements: New Architecture, RN ≥ 0.88, **Kotlin ≥ 2.3**, iOS 15.1.
+  - Requirements: New Architecture, RN ≥ 0.88, **Kotlin ≥ 2.3**, iOS 16.0 (Nuke 14).
   - Prop renames and the `cachePolicy` mapping.
   - The pod name changes from `react-native-turbo-image` to `TurboImage`. Autolinking handles this, but apps that reference the pod name directly need updating.
   - SwiftPM opt-in instructions (`npx react-native spm`).
@@ -74,7 +74,8 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 
 - Old Architecture is no longer supported.
 - Requires RN ≥ 0.88 and **Kotlin ≥ 2.3** (Coil 3.6.3).
-- tvOS needs react-native-tvos 0.88 or newer and tvOS 15.1 (1.x listed tvOS 13 in the podspec). `enableLiveTextInteraction` is a no-op there.
+- Requires iOS 16.0 (1.x: 13.0) and Xcode 27, both from Nuke 14. React Native's own floor is 15.1, so apps raise their deployment target.
+- tvOS needs react-native-tvos 0.88 or newer and tvOS 16.0 (1.x listed tvOS 13 in the podspec). `enableLiveTextInteraction` is a no-op there.
 - `cachePolicy` `dataCache` is renamed `default` (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`, which honours them on both platforms (1.x: iOS only). What `urlCache` stores on disk is not visible to `cacheOnly`, and the reverse.
 - Images are decoded no larger than their view by default, and `onSuccess` reports that decoded size, not the source's. A view that is zoomed, or grows after the image loaded, needs `allowDownscaling={false}`.
@@ -94,7 +95,7 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 - `format` is ignored: formats are detected from the bytes. Gifu and APNGKit are no longer dependencies.
 - SVG on iOS still uses Apple's private CoreSVG framework, as in 1.x. Apps should know this is private-API use that App Review could flag. It is the technique SDWebImageSVGCoder uses, with the same run-time lookup, so a removed symbol fails the load instead of crashing.
 - Processors on an animated image now produce a static image on iOS too (1.x iOS ignored the processors and animated the raw data).
-- On iOS, animations larger than 64 MB decoded show only their first frame.
+- On iOS, an animation shows its first frame while Reduce Motion is on or Auto-Play Animated Images is off, and images ignore Smart Invert.
 - On Android, image requests now send a descriptive `User-Agent` (`<App>/<version> TurboImage/<version> (Android <release>)`) instead of OkHttp's default.
 - A `source.headers` entry with CR/LF/NUL in its value or a non-token name now fails the load with `invalidRequest` instead of being sent.
 - On Android, image requests now send and store cookies through React Native's cookie store, as iOS always has through the shared `HTTPCookieStorage`. 1.x Android sent none: it built its own `OkHttpClient` with no cookie jar.

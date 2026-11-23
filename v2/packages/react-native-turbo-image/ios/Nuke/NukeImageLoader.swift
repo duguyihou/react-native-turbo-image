@@ -8,6 +8,7 @@
 
 import Foundation
 import Nuke
+import NukeUI
 import UIKit
 
 // Under SwiftPM the seam is a separate Clang target and must be imported.
@@ -128,7 +129,11 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     configuration.isTaskCoalescingEnabled = true
     // Animated GIF/APNG/WebP and SVG, chosen by content (NukeDecoders.swift).
     configuration.makeImageDecoder = { TurboImageDecoders.make($0) }
-    // Skips decompression for animated and SVG images (NukeDecoders.swift).
+    // Off because `ContentDecoder` attaches the animations itself: Nuke's
+    // own parsing skips every downscaled request and covers formats
+    // TurboImage shows as stills (NukeDecoders.swift, `Animation`).
+    configuration.isAnimatedImageParsingEnabled = false
+    // Skips decompression for SVG images (NukeDecoders.swift).
     return ImagePipeline(configuration: configuration, delegate: TurboImagePipelineDelegate())
   }
 
@@ -178,14 +183,51 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
         // request-lifecycle contract: a recycled view must never receive
         // the image for its previous source.
         guard !Task.isCancelled else { return }
-        completionBox.value(response.image, response.cacheType == .memory, nil)
+        let animation = response.container.animation.map {
+          PlayableAnimation(source: $0, fitsView: nukeRequest.thumbnail != nil)
+        }
+        completionBox.value(response.image, animation, response.cacheType == .memory, nil)
       } catch {
         progressTask?.cancel()
         guard !Task.isCancelled else { return }
-        completionBox.value(nil, false, Self.classify(error))
+        completionBox.value(nil, nil, false, Self.classify(error))
       }
     }
     return NukeLoadTask(imageTask: imageTask, task: task, progressTask: progressTask)
+  }
+
+  // MARK: - Display
+
+  /// NukeUI's image view: a UIImageView that also plays an animation, from
+  /// frames it decodes as it shows them and shares with every other view of
+  /// the same animation (`AnimatedImageFramePool`). It pauses while it is
+  /// outside a window, hidden or transparent, and shows a still while Reduce
+  /// Motion is on or Auto-Play Animated Images is off.
+  @MainActor
+  public func makeImageView() -> UIImageView {
+    let imageView = AnimatedImageView()
+    // Every animation loops for as long as it is shown, whatever count the
+    // file declares: what Coil's animated drawables do on Android, and what
+    // `UIImage.animatedImage` did here before. Nuke's default follows the
+    // file, as browsers do, and would play a GIF without a loop count once.
+    imageView.playerOptions.loopCount = .infinite
+    return imageView
+  }
+
+  @MainActor
+  public func display(_ image: UIImage, animation: Any?, in imageView: UIImageView) {
+    // The still first: it is what shows until the first frame is decoded,
+    // and all that shows in a view that cannot play. Setting `image` also
+    // stops the animation the view was playing.
+    imageView.image = image
+    guard let animation = animation as? PlayableAnimation,
+      let imageView = imageView as? AnimatedImageView
+    else { return }
+    // Frames are decoded no larger than the view draws them, unless the
+    // request asked for the image at its own size (`allowDownscaling` off,
+    // for a view that is zoomed): the same rule the still was decoded by.
+    imageView.isAutomaticDownsamplingEnabled = animation.fitsView
+    imageView.animation = animation.source
   }
 
   // MARK: - Cache management (TurboImageModule)
@@ -340,14 +382,6 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // `imageID` keys both Nuke's memory and data caches.
     nukeRequest.imageID = request.cacheKey
     nukeRequest.thumbnail = thumbnail(for: request)
-    // The same bound again, in a form TurboImage's own decoders can read:
-    // Nuke applies `thumbnail` only in its default decoder and keeps the
-    // numbers inside it private (NukeDecoders.swift, AnimatedImageDecoder).
-    // `userInfo` is not part of any cache key; `thumbnail` already is.
-    if request.decodeSize.width > 0 {
-      nukeRequest.userInfo[DecodeBound.userInfoKey] = DecodeBound(
-        size: request.decodeSize, fill: request.decodeFill)
-    }
     // One opaque step; the core owns the algorithms. Nuke folds its id into
     // the memory key (one entry per variant) and, with the default
     // `.storeOriginalData` policy, keeps only the original on disk, which is
@@ -455,7 +489,25 @@ private struct CoreProcessor: ImageProcessing {
     }
     var result = container
     result.image = processed
+    // Processors apply to the still: a processed animation is its first
+    // frame (ADR 0007). Kept, the animation would play the unprocessed
+    // frames over it. Nuke drops both for its own processors as well.
+    result.animation = nil
+    result.data = nil
     return result
+  }
+}
+
+/// What the completion hands the view as `animation`, and `display` gets
+/// back: an animation and how its frames are to be sized.
+private final class PlayableAnimation: NSObject, Sendable {
+  let source: AnimatedImageSource
+  /// Whether the request was decoded for its view (`TIImageRequest.decodeSize`).
+  let fitsView: Bool
+
+  init(source: AnimatedImageSource, fitsView: Bool) {
+    self.source = source
+    self.fitsView = fitsView
   }
 }
 

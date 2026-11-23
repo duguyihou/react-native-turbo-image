@@ -47,7 +47,14 @@ typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
 /// loader's errors so JS sees the same code on both platforms.
 /// `fromMemoryCache` lets the view skip the fade for memory hits, which is
 /// what Coil's crossfade does on Android.
+///
+/// `image` is always a still: for an animated image, its first frame. What
+/// plays it is `animation`, which is nil for everything else. It is opaque
+/// here because how an animation is played is the loader's business (Nuke:
+/// frames decoded lazily into a shared pool). The view only hands it back,
+/// to `displayImage:animation:inImageView:` of the loader it came from.
 typedef void (^TIImageLoadCompletion)(UIImage *_Nullable image,
+                                      id _Nullable animation,
                                       BOOL fromMemoryCache,
                                       NSError *_Nullable error);
 
@@ -61,6 +68,31 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 - (id<TIImageLoadTask>)loadImageWithRequest:(TIImageRequest *)request
                                    progress:(nullable TIImageLoadProgress)progress
                                  completion:(TIImageLoadCompletion)completion;
+
+// Display. The view owns what is on screen and when (the core's lifecycle
+// decides); the loader only supplies the image view and plays animations in
+// it, because an animation needs a player and a plain UIImageView has none.
+// The Android seam goes further and hands the adapter the whole display
+// (ADR 0004); here it is only these two calls.
+
+/// A new image view for one TurboImage view. Any UIImageView will do for a
+/// loader that plays no animations. Main thread.
+///
+/// The view sets placeholders and clears the image through `image`, so
+/// setting `image` must stop an animation that is playing, as it does for
+/// UIImageView's own animated images.
+- (UIImageView *)makeImageView NS_SWIFT_UI_ACTOR;
+
+/// Shows the result of a load: `image`, and `animation` playing over it if
+/// there is one. Both are what this loader's completion delivered. Main
+/// thread.
+///
+/// `imageView` usually comes from `makeImageView`, but not always (the
+/// registry's loader can be replaced while views exist), so a view the
+/// loader cannot play in must still get the still image.
+- (void)displayImage:(UIImage *)image
+           animation:(nullable id)animation
+         inImageView:(UIImageView *)imageView NS_SWIFT_UI_ACTOR;
 
 // Cache management, backing the TurboImageModule (prefetch/dispose/clear*).
 // Every request and key is already resolved by the core

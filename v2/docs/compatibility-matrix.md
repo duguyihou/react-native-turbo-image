@@ -11,9 +11,9 @@ Smoke results are recorded as passed/total of the suite when the row was verifie
 | Component | Pinned | Requires | Status |
 |---|---|---|---|
 | React Native | 0.88.1 | Node ≥ 22.11, New Architecture | ✅ example runs on iOS and Android |
-| Nuke (SwiftPM) | 13.2.3 (`exact:`) | iOS 15, Swift tools 6.0 | ✅ standalone + in app via RN SPM |
-| Nuke (CocoaPods) | 13.2.3, vendored xcframework | Same tag, built by `build-nuke-xcframework.sh`; iOS and tvOS slices | ✅ example runs |
-| react-native-tvos (tvOS) | 0.88.1-0 | tvOS 15.1; app from `@react-native-tvos/template-tv` 0.83.0-0, the newest published | 🟡 2026-11-18: the packed library builds into a Release app for the tvOS simulator and device SDKs (`test-packed-install.sh tvos`), and the SwiftPM package builds standalone for tvOS. Never run: no tvOS simulator runtime was installed. Android TV not tried |
+| Nuke (SwiftPM) | 14.0.0 (`exact:`) | iOS 16, tvOS 16, Swift tools 6.4 (Xcode 27) | ✅ standalone, iOS and tvOS simulator builds (2026-11-23). In an app via RN SPM: last run with 13.2.3 |
+| Nuke (CocoaPods) | 14.0.0, vendored `Nuke.xcframework` and `NukeUI.xcframework` | Same tag, built by `build-nuke-xcframework.sh`; iOS and tvOS slices | ✅ example runs; smoke test 49/49 (2026-11-23) |
+| react-native-tvos (tvOS) | 0.88.1-0 | tvOS 16.0 (15.1 when this row was verified, with Nuke 13.2.3); app from `@react-native-tvos/template-tv` 0.83.0-0, the newest published | 🟡 2026-11-18: the packed library builds into a Release app for the tvOS simulator and device SDKs (`test-packed-install.sh tvos`), and the SwiftPM package builds standalone for tvOS. Never run: no tvOS simulator runtime was installed. Android TV not tried |
 | Coil | 3.6.3 (`coil-core`, `coil-network-okhttp`, `coil-network-cache-control`, `coil-gif`, `coil-svg`) | **Kotlin ≥ 2.3** in the app (built with 2.4.10) | ✅ debug run; R8 release smoke test 49/49 |
 | Kotlin (app) | 2.4.21 | — | ✅ |
 | AGP | 9.2.1 (from RN) | Gradle 9.4.1, JDK 17 | ✅ |
@@ -44,6 +44,9 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 | iOS device (`iphoneos`) Release build, CocoaPods and SwiftPM (unsigned) | ✅ compiles and links; not run (no device attached) |
 | SwiftPM standalone, Nuke 13.2.3 | ✅ build |
 | SwiftPM standalone, Nuke 14.0.0-rc.1 | ✅ build (no source changes) |
+| SwiftPM standalone, Nuke 14.0.0, iOS and tvOS simulator (local, 2026-11-23) | ✅ build |
+| Smoke test, iOS Release simulator (CocoaPods), Nuke 14.0.0 and the iOS 16.0 floor (local, 2026-11-23) | ✅ 49/49. Not re-run with Nuke 14: the RN SwiftPM app path, the RN 0.89 copy, device builds, the tvOS app |
+| Packed install into a new RN 0.88.1 template app with its target raised to 16.0 (`test-packed-install.sh ios`, local, 2026-11-23) | ✅ loads an image |
 | iOS example, CocoaPods, Debug simulator | ✅ build; all four policies render, the load event fires |
 | iOS example, RN SwiftPM (`spm add --deintegrate`), Debug simulator | ✅ build; renders |
 | Android example, debug, arm64 emulator | ✅ build; renders; `libturboimage.so` loads |
@@ -72,8 +75,8 @@ Reproduce with `scripts/eval-rn-version.sh <version>`. CI job: `eval-rn-0-89`.
 
 | | iOS 15.1 floor (RN default) | iOS 16.0 floor |
 |---|---|---|
-| Nuke 13.2.3 | ✅ | ✅ |
-| Nuke 14.0.0-rc.1 | ❌ Nuke 14 requires iOS 16 | 🔬 standalone package builds with **no adapter changes** (`ImagePipeline.Configuration`, `ImageRequest.Options`, `imageID` and `ImageTask.image` are source-compatible). Not run in the app yet |
+| Nuke 13.2.3 (pinned until 2026-11-23) | ✅ | ✅ |
+| Nuke 14.0.0 (pinned) | ❌ Nuke 14 requires iOS 16 | ✅ no adapter changes needed to compile (`ImagePipeline.Configuration`, `ImageRequest.Options`, `imageID` and `ImageTask.image` are source-compatible). Since then the adapter plays animations with NukeUI's player (ADR 0012) |
 
 | iOS integration | CocoaPods | RN SwiftPM (0.88 preview) |
 |---|---|---|

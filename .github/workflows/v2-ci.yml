@@ -216,7 +216,7 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
-      - name: Build pinned Nuke.xcframework
+      - name: Build pinned Nuke and NukeUI xcframeworks
         run: bash scripts/build-nuke-xcframework.sh
       - run: bash scripts/check-native-versions.sh
       # What `npm publish` would upload: runs the `prepack` guard and fails if
@@ -332,21 +332,6 @@ jobs:
           name: smoke-failure-ios-spm
           path: v2/tmp/smoke-*-failure-*.log
           if-no-files-found: ignore
-
-  eval-nuke-14:
-    name: Evaluate Nuke 14 (pre-release)
-    continue-on-error: true
-    needs: core
-    runs-on: xcode-27
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
-      - working-directory: v2/packages/react-native-turbo-image
-        env:
-          TURBOIMAGE_SPM_STANDALONE: '1'
-          TURBOIMAGE_EVAL_NUKE_VERSION: 14.0.0-rc.1
-        run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
 
   eval-rn-0-89:
     name: Evaluate React Native 0.89 (${{ matrix.platform }}, pre-release)
