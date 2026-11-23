@@ -36,3 +36,26 @@ re-run `pod install`: iOS Codegen runs there, not during the Xcode build.
 
 Run the app with `cd apps/example && npx react-native start`, then launch it
 from Xcode or Android Studio, or with `npx react-native run-ios` / `run-android`.
+
+## Releasing a pre-release
+
+`.github/workflows/v2-publish.yml` publishes to npm under the `next` dist-tag,
+so `npm install react-native-turbo-image` keeps giving 1.x.
+
+1. Set the version in `packages/react-native-turbo-image/package.json`
+   (a pre-release, such as `2.0.0-beta.1`; the workflow refuses a stable one)
+   and get that commit through `v2 CI` (push it to the pull request).
+2. Tag it and push the tag:
+
+   ```sh
+   git tag v2.0.0-beta.1 && git push origin v2.0.0-beta.1
+   ```
+
+The workflow checks the tag against `package.json` and that `v2 CI` passed on
+the commit, builds the Nuke frameworks, and publishes with npm's trusted
+publishing, which adds a provenance attestation. To rehearse, run the workflow
+by hand from the Actions tab: that is a dry run unless told otherwise.
+
+One-time setup on npmjs.com: react-native-turbo-image → Settings → Trusted
+publisher → GitHub Actions, repository `duguyihou/react-native-turbo-image`,
+workflow `v2-publish.yml`.

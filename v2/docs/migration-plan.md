@@ -60,7 +60,7 @@ builds, and the CI matrix.
 3. Update `package.json` `repository.directory`, the workflow `working-directory` values and the docs paths.
 
 ### Phase 4: release
-- `2.0.0-beta.N` on npm under the `next` tag. The tarball includes `ios/vendor/Nuke.xcframework` and `NukeUI.xcframework`, built in CI from the pinned tag. A `prepack` hook should fail if the vendored version doesn't match.
+- `2.0.0-beta.N` on npm under the `next` tag, published by `.github/workflows/v2-publish.yml` on a `v2.*` tag (trusted publishing with provenance; pre-releases only; requires a green `v2 CI` run on the commit). The tarball includes `ios/vendor/Nuke.xcframework` and `NukeUI.xcframework`, built from the pinned tag; the `prepack` hook (`check-pack.sh`) fails if the vendored version doesn't match.
 - Publish a migration guide for app developers (drafted: [`migration-guide.md`](migration-guide.md)):
   - Requirements: New Architecture, RN ≥ 0.88, **Kotlin ≥ 2.3**, iOS 16.0 (Nuke 14).
   - Prop renames and the `cachePolicy` mapping.

@@ -466,6 +466,7 @@ backed by a non-blocking CI job.
 | `ios-cocoapods` | macOS | ✓ | Pinned Nuke xcframeworks + podspec + Fabric |
 | `ios-spm-standalone` | macOS | ✓ | Package.swift layering without an app; the Nuke adapter's tests (`ios/Tests`: animated images, decode size, failure codes, the memory cache, SVG) on a simulator |
 | `ios-spm-app` | macOS | — | RN 0.88 SwiftPM integration (preview) |
+| `v2-publish.yml` (own workflow, on `v2.*` tags) | macOS | — | Publishes a pre-release to npm under `next`, after checking the tag, a green `v2 CI` run on the commit and the pack guard |
 | `eval-rn-0-89` (android, ios) | ubuntu, macOS | — | `scripts/eval-rn-version.sh 0.89.0-rc.1`: the example on the next RN template |
 
 `ios-cocoapods` and `android (release)` also run the on-device smoke test
