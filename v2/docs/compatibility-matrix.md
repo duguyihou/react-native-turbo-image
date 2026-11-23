@@ -57,7 +57,7 @@ re-run that day. Rows that name CI are from the hosted run of `v2-ci.yml` on
 | Android example, release (R8), arm64 emulator | ✅ build; renders; JNI classes kept |
 | Smoke test, iOS Release simulator (CocoaPods) | ✅ 49/49 (CI, 2026-11-19; local with the lifecycle in the core, 2026-11-20) |
 | Smoke test, Android R8 release, arm64 emulator | ✅ 49/49 (2026-11-20, with the lifecycle in the core); also 49/49 on the x86_64 emulator (CI, 2026-11-19) |
-| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-20). CI builds this path in Debug and does not run the suite on it |
+| Smoke test, iOS Release simulator via RN SwiftPM | ✅ 49/49 (local, iOS 27.2 simulator, 2026-11-20); passing in CI's `ios-spm-app` job since (Release build and smoke run, e.g. on 0415869, 2026-11-23) |
 | RN 0.89.0-rc.1 (Kotlin 2.3.21, NDK 28.2): smoke test on iOS and Android | ✅ 49/49 each (CI, 2026-11-19) |
 | CI workflow (`v2-ci.yml`) on GitHub-hosted runners | ✅ every job passed on PR #454 (2026-11-18) |
 
