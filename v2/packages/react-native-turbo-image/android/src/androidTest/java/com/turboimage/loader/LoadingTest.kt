@@ -1,0 +1,197 @@
+package com.turboimage.loader
+
+import android.graphics.drawable.ColorDrawable
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.turboimage.core.CachePolicy
+import com.turboimage.core.LoadErrorCode
+import com.turboimage.core.Processing
+import com.turboimage.core.ResizeMode
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * What a load through the adapter does to its view and tells its listener:
+ * the image at the size the request bounds it to, or a failure under one of
+ * the seam's codes, and nothing at all after a cancel.
+ */
+@RunWith(AndroidJUnit4::class)
+class LoadingTest : AdapterTest() {
+  // MARK: Decode size
+
+  @Test
+  fun anImageLargerThanItsViewIsDecodedForTheView() {
+    // 600×400 into 300×200: a half, exactly.
+    val outcome = load(resolve(photo()))
+
+    assertTrue(outcome.succeeded)
+    assertEquals(VIEW_WIDTH to VIEW_HEIGHT, outcome.width to outcome.height)
+    assertNotNull(outcome.view.drawable)
+  }
+
+  @Test
+  fun withDownscalingOffTheImageKeepsItsSize() {
+    val outcome = load(resolve(photo(), allowDownscaling = false))
+
+    assertEquals(PHOTO_WIDTH to PHOTO_HEIGHT, outcome.width to outcome.height)
+  }
+
+  @Test
+  fun decodingNeverUpscales() {
+    val outcome = load(resolve(photo()), width = 4 * PHOTO_WIDTH, height = 4 * PHOTO_HEIGHT)
+
+    assertEquals(PHOTO_WIDTH to PHOTO_HEIGHT, outcome.width to outcome.height)
+  }
+
+  /** `cover` needs the image to cover the view, so the shorter side binds. */
+  @Test
+  fun aViewTheImageMustCoverGetsMorePixelsThanOneItFitsInside() {
+    // A 300×100 view: fitting inside it takes 150×100, covering it 300×200.
+    val contained = load(resolve(photo(), resizeMode = ResizeMode.CONTAIN), width = 300, height = 100)
+    val covering = load(resolve(photo(), resizeMode = ResizeMode.COVER), width = 300, height = 100)
+
+    assertEquals(150 to 100, contained.width to contained.height)
+    assertEquals(300 to 200, covering.width to covering.height)
+  }
+
+  /** `resize` in dp is a width in pixels, whatever the view's size. */
+  @Test
+  fun aResizeWidthBoundsTheDecode() {
+    val outcome = load(resolve(photo(), processing = Processing(resize = 150.0)))
+
+    assertEquals(150 to 100, outcome.width to outcome.height)
+  }
+
+  // MARK: Failures
+
+  @Test
+  fun anHttpErrorIsANetworkError() {
+    val outcome = load(resolve("$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg"))
+
+    assertEquals(LoadErrorCode.NETWORK, outcome.error)
+    assertNull(outcome.view.drawable)
+  }
+
+  /**
+   * An HTML error page sent with a 200 is the usual case. Android's
+   * `ImageDecoder` reports it with an `IOException` subclass, which once
+   * made this `network` on Android and `decode` on iOS.
+   */
+  @Test
+  fun aBodyNoDecoderRecognisesIsADecodeError() {
+    // 200 with the text "ok".
+    val outcome = load(resolve(fixture("__ping")))
+
+    assertEquals(outcome.message, LoadErrorCode.DECODE, outcome.error)
+  }
+
+  @Test
+  fun aCacheMissUnderCacheOnlyIsNotCached() {
+    val uri = photo()
+    val outcome = load(resolve(uri, CachePolicy.CACHE_ONLY))
+
+    assertEquals(LoadErrorCode.NOT_CACHED, outcome.error)
+    assertEquals("cacheOnly must not reach the network", 0, requestsReceived(uri))
+  }
+
+  /**
+   * A failed load paints nothing: what stays on screen (the previous image,
+   * a placeholder) is the view's decision, made by the core's lifecycle.
+   */
+  @Test
+  fun aFailedLoadLeavesTheViewsDrawableAlone() {
+    val view = addView()
+    val previous = ColorDrawable(0xff336699.toInt())
+    onMain { view.setImageDrawable(previous) }
+
+    val outcome = loadInto(view, resolve("$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg"))
+
+    assertEquals(LoadErrorCode.NETWORK, outcome.error)
+    assertSame(previous, view.drawable)
+  }
+
+  // MARK: Progress
+
+  @Test
+  fun progressIsReportedBeforeCompletionAndNeverAfter() {
+    // Sent in 4 KB pieces with pauses, so several reads see progress.
+    val outcome = load(resolve(photo("slow/photo"), CachePolicy.NO_CACHE))
+
+    assertTrue(outcome.succeeded)
+    assertTrue("expected progress callbacks, got none", outcome.progress.isNotEmpty())
+    val (received, expected) = outcome.progress.last()
+    assertTrue("progress ${outcome.progress} should end within the body", received <= expected)
+    assertEquals(outcome.progress.map { it.first }.sorted(), outcome.progress.map { it.first })
+    settle(200)
+    assertFalse(outcome.progressAfterCompletion)
+  }
+
+  // MARK: Cancel
+
+  /**
+   * The seam's cancel contract carries more weight here than on iOS: the
+   * adapter paints the view itself, so a load that outlives its cancel puts
+   * a stale image on screen without the view having a say (ADR 0004).
+   */
+  @Test
+  fun aCancelledLoadNeitherCompletesNorPaints() {
+    val view = addView()
+    val pending = start(view, resolve(photo("slow/photo"), CachePolicy.NO_CACHE))
+
+    onMain { pending.handle.cancel() }
+
+    // The slow photo takes about a third of a second when left alone.
+    assertFalse("a cancelled load called back", pending.await(seconds = 2))
+    assertNull(view.drawable)
+    assertFalse(pending.outcome().completed)
+  }
+
+  @Test
+  fun cancellingTwiceOrAfterCompletionIsHarmless() {
+    val view = addView()
+    val pending = start(view, resolve(photo()))
+    assertTrue(pending.await())
+    val shown = view.drawable
+
+    onMain {
+      pending.handle.cancel()
+      pending.handle.cancel()
+    }
+
+    assertSame("cancelling a finished load must not clear the view", shown, view.drawable)
+  }
+
+  // MARK: Prefetch
+
+  @Test
+  fun prefetchReportsWhetherTheImageLoaded() {
+    assertTrue(prefetch(resolve(photo(), allowDownscaling = false)))
+    assertFalse(prefetch(resolve("$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg", allowDownscaling = false)))
+  }
+
+  @Test
+  fun aPrefetchedImageNeedsNoNetwork() {
+    val uri = photo()
+    assertTrue(prefetch(resolve(uri, allowDownscaling = false)))
+
+    assertTrue(isCached(uri))
+    assertEquals(1, requestsReceived(uri))
+  }
+
+  // MARK: Headers
+
+  @Test
+  fun requestHeadersAreSent() {
+    // The route answers 406 unless `Accept` allows PNG.
+    val refused = load(resolve(fixture("accept/png"), headers = listOf("Accept" to "image/jpeg")))
+    val accepted = load(resolve(fixture("accept/png"), headers = listOf("Accept" to "image/png")))
+
+    assertEquals(LoadErrorCode.NETWORK, refused.error)
+    assertTrue(accepted.succeeded)
+  }
+}

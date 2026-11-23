@@ -2,6 +2,8 @@ package com.turboimage.loader
 
 import android.content.Context
 import android.content.res.Resources
+import android.graphics.ImageDecoder
+import android.os.Build
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
@@ -228,12 +230,22 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
    * Anything that is not a transport failure happened after bytes arrived
    * (fetchers are chosen by the core-validated http(s) scheme), so it is
    * classified as a decode failure.
+   *
+   * Android's `ImageDecoder.DecodeException` is an `IOException`, and Coil
+   * decodes stills with `ImageDecoder` where it can (`StaticImageDecoder`),
+   * so it is checked before the transport rule. Without that, bytes that are
+   * not an image (an HTML error page sent with a 200) reported `network`
+   * here and `decode` on iOS. The adapter test
+   * `aBodyNoDecoderRecognisesIsADecodeError` caught it; no smoke scenario
+   * expects `decode`.
    */
   private fun classify(error: Throwable, request: ResolvedRequest): Int =
     when {
       error is HttpException && error.response.code == 504 && !request.allowNetwork ->
         LoadErrorCode.NOT_CACHED.nativeValue
-      error is HttpException || error is IOException -> LoadErrorCode.NETWORK.nativeValue
+      error is HttpException -> LoadErrorCode.NETWORK.nativeValue
+      Build.VERSION.SDK_INT >= 28 && error is ImageDecoder.DecodeException -> LoadErrorCode.DECODE.nativeValue
+      error is IOException -> LoadErrorCode.NETWORK.nativeValue
       else -> LoadErrorCode.DECODE.nativeValue
     }
 

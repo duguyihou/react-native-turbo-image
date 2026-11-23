@@ -20,6 +20,7 @@
     "android",
     "!android/build",
     "!android/.cxx",
+    "!android/src/androidTest",
     "Package.swift",
     "TurboImage.podspec",
     "!**/__tests__",
@@ -47,6 +48,7 @@
     "test": "jest",
     "test:core": "cmake -S cpp -B build/core -DTURBOIMAGE_BUILD_TESTS=ON -DTURBOIMAGE_WARNINGS_AS_ERRORS=ON && cmake --build build/core -j && ctest --test-dir build/core --output-on-failure",
     "test:ios": "bash ../../scripts/test-ios-adapter.sh",
+    "test:android": "bash ../../scripts/test-android-adapter.sh",
     "vendor:nuke": "bash ../../scripts/build-nuke-xcframework.sh",
     "goldens:placeholder": "node cpp/tests/tools/generate-placeholder-goldens.mjs > cpp/tests/PlaceholderGoldens.inc"
   },

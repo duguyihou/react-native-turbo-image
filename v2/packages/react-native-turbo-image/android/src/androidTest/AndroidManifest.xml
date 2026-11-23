@@ -1,0 +1,12 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    The test APK only. The fixtures come from scripts/fixture-server.py over
+    plain HTTP on localhost (through `adb reverse`), which Android refuses by
+    default; and the image views under test need a window to be laid out in.
+  -->
+  <application android:usesCleartextTraffic="true">
+    <activity
+        android:name="com.turboimage.loader.TestActivity"
+        android:exported="false" />
+  </application>
+</manifest>

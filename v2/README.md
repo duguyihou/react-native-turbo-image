@@ -19,6 +19,7 @@ bun run check:versions              # manifests agree with scripts/native-versio
 bun run test                        # JS unit tests (Jest) for src/index.tsx
 bun run test:core                   # C++ core + GoogleTest
 bun run test:ios                    # Nuke adapter tests on an iPhone simulator
+bun run test:android                # Coil adapter tests on the connected device or emulator
 
 # iOS (CocoaPods)
 bun run vendor:nuke                 # builds Nuke.xcframework and NukeUI.xcframework from the pinned tag

@@ -191,9 +191,12 @@ jobs:
           target: google_apis
           disable-animations: true
           working-directory: v2
-          # Core goldens on-device (x86_64 bionic libm), then the app smoke test.
+          # Core goldens on-device (x86_64 bionic libm), the Coil adapter's
+          # instrumented tests (a debug build of the library's test APK),
+          # then the app smoke test.
           script: |
             bash scripts/test-core-android.sh
+            bash scripts/test-android-adapter.sh
             bash scripts/smoke-android.sh
       - name: Keep the smoke test's failure log
         if: failure()

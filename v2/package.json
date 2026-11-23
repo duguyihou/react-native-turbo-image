@@ -12,6 +12,7 @@
     "format:check": "oxfmt --check",
     "test": "bun run --filter react-native-turbo-image test",
     "test:ios": "bun run --filter react-native-turbo-image test:ios",
+    "test:android": "bun run --filter react-native-turbo-image test:android",
     "test:core": "bun run --filter react-native-turbo-image test:core",
     "check:versions": "bash scripts/check-native-versions.sh",
     "vendor:nuke": "bash scripts/build-nuke-xcframework.sh",

@@ -166,6 +166,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 - `resize`, `blur`, `monochrome` and `tint` are now one cross-platform implementation, so results differ slightly from 1.x on both platforms.
 - `blur` is a Gaussian σ in pixels of the (resized) image. On Android it now applies at the original size, not the view's, so the same value looks weaker on a large photo. Pair it with `resize`.
 - A `monochrome` colour's alpha is now the effect's intensity.
+- A response that is not an image (an HTML error page sent with `200`) fails with `code: 'decode'` on both platforms.
 - Processors on an animated image produce a static image on iOS too. 1.x iOS ignored the processors and animated the raw data.
 
 ### Formats

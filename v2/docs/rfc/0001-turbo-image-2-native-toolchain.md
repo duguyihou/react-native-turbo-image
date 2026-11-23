@@ -462,7 +462,7 @@ backed by a non-blocking CI job.
 | `versions` | ubuntu | ✓ | Manifests match `native-versions.env`; shellcheck |
 | `core` | ubuntu, macOS | ✓ | C++20 core + GoogleTest on GCC/Clang and Apple Clang |
 | `js` | ubuntu | ✓ | oxlint and oxfmt (`bun run lint`, `format:check`); Codegen spec and example typecheck; Jest |
-| `android (debug, release)` | ubuntu | ✓ | Gradle + NDK + CMake + Kotlin 2.4; release = R8 + JNI keep rules |
+| `android (debug, release)` | ubuntu | ✓ | Gradle + NDK + CMake + Kotlin 2.4; release = R8 + JNI keep rules; on the release job's emulator, the Coil adapter's instrumented tests (`android/src/androidTest`: decode size, failure codes, cancel, progress, every cache tier) |
 | `ios-cocoapods` | macOS | ✓ | Pinned Nuke xcframeworks + podspec + Fabric |
 | `ios-spm-standalone` | macOS | ✓ | Package.swift layering without an app; the Nuke adapter's tests (`ios/Tests`: animated images, decode size, failure codes, the memory cache, SVG) on a simulator |
 | `ios-spm-app` | macOS | — | RN 0.88 SwiftPM integration (preview) |
