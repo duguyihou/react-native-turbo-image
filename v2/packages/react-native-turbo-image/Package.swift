@@ -149,6 +149,22 @@ if isInsideReactNativeApp {
     )
   )
   productTargets = ["TurboImage"]
+} else {
+  // Standalone only: an app that depends on this package has no use for its
+  // tests. They cover what the on-device smoke suite cannot observe, since
+  // no event reports whether an image is animating.
+  targets.append(
+    .testTarget(
+      name: "TurboImageNukeTests",
+      dependencies: [
+        "TurboImageNuke",
+        "TurboImageLoaderAPI",
+        .product(name: "NukeUI", package: "Nuke"),
+      ],
+      path: "ios/Tests/NukeAdapterTests",
+      swiftSettings: [.swiftLanguageMode(.v6)]
+    )
+  )
 }
 
 let package = Package(
