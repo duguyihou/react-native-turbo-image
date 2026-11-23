@@ -92,6 +92,19 @@ if [[ "${platform}" == "tvos" ]]; then
   rm -rf "${app}/ios"
   cp -R "${work}/template/tv/package/template/ios" "${app}/ios"
   mv "${app}/ios/_xcode.env" "${app}/ios/.xcode.env"
+  # The tvOS template (0.83) starts React Native from its app delegate,
+  # without a scene. Built with the tvOS 27 SDK, such an app is stopped by
+  # UIKit at launch (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`,
+  # a trap, not a log). React Native's own 0.88 template has adopted the
+  # scene lifecycle, so take its delegates and scene manifest. The scene
+  # delegate goes in the app delegate's file because the tvOS Xcode project
+  # compiles that one file and nothing else.
+  # TODO: drop this once a tvOS template with a scene delegate is published.
+  rn_template_app="${work}/template/package/template/ios/HelloWorld"
+  cat "${rn_template_app}/AppDelegate.swift" "${rn_template_app}/SceneDelegate.swift" \
+    > "${app}/ios/HelloWorld/AppDelegate.swift"
+  scene_manifest="$(plutil -extract UIApplicationSceneManifest xml1 -o - "${rn_template_app}/Info.plist")"
+  plutil -insert UIApplicationSceneManifest -xml "${scene_manifest}" "${app}/ios/HelloWorld/Info.plist"
   # The fork is installed under React Native's name, as its README directs.
   # `@react-native/new-app-screen` goes because it pins the exact upstream
   # version as a peer, which the fork's version can never equal; the app
@@ -102,6 +115,23 @@ if [[ "${platform}" == "tvos" ]]; then
     "${app}/package.json"
   rm "${app}/package.json.bak"
   grep -q "npm:react-native-tvos@${tvos_fork_version}" "${app}/package.json"
+  # The fork's own `@react-native-tvos/virtualized-lists` peers on exactly
+  # `react-native@<upstream version>`, which the fork's pre-release version
+  # never satisfies, so npm installs upstream React Native *inside* the fork
+  # as well. Two React Natives in one bundle break every Fabric component a
+  # library registers (the renderer reads the other copy's view-config
+  # registry: "View config getter callback for component `TurboImageView`
+  # must be a function"). npm's `overrides` make every `react-native` the
+  # app's own; any Apple TV app installed with npm needs the same. Spelled
+  # out: npm cannot resolve the `$react-native` reference to an alias.
+  # shellcheck disable=SC2016 # JavaScript, not shell: nothing to expand.
+  node -e '
+    const fs = require("fs");
+    const [file, spec] = process.argv.slice(1);
+    const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+    manifest.overrides = { ...manifest.overrides, "react-native": spec };
+    fs.writeFileSync(file, JSON.stringify(manifest, null, 2) + "\n");
+  ' "${app}/package.json" "npm:react-native-tvos@${tvos_fork_version}"
 fi
 
 # The one Android change the migration guide asks of every app: the template

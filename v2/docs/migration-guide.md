@@ -18,7 +18,15 @@ If your app is still on the Old Architecture, stay on 1.x until it has moved.
 
 An app on React Native older than 0.88 fails at `pod install` and at Gradle configuration with a message that names the version it found.
 
-On Apple TV, `enableLiveTextInteraction` does nothing: tvOS has no Live Text. Everything else is the iOS implementation. tvOS support is new and so far only built, not run (see the compatibility matrix).
+On Apple TV, `enableLiveTextInteraction` does nothing: tvOS has no Live Text. Everything else is the iOS implementation. tvOS support is new: it has been built and run in a fresh react-native-tvos 0.88 app on the simulator, not yet on a device (see the compatibility matrix). Two things an Apple TV app may need, neither specific to TurboImage:
+
+- **Installed with npm:** react-native-tvos 0.88's `@react-native-tvos/virtualized-lists` makes npm install upstream React Native beside the fork, and two React Natives in one bundle break native components (`View config getter callback for component ... must be a function`). Check with `npm ls react-native`, and fix it with an override in `package.json`:
+
+  ```json
+  "overrides": { "react-native": "npm:react-native-tvos@0.88.1-0" }
+  ```
+
+- **Built with Xcode 27:** the app must adopt the UIScene lifecycle, or UIKit stops it at launch. React Native 0.88's iOS template has a `SceneDelegate`; react-native-tvos's template (0.83) does not yet.
 
 The Kotlin floor comes from Coil 3.6.3. React Native 0.88's app template ships Kotlin 2.2, so most apps have to raise it in `android/build.gradle`. Change both lines: the template declares the Kotlin Gradle plugin without a version, so setting `kotlinVersion` alone leaves the compiler at 2.2.
 
