@@ -2,6 +2,43 @@ require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 
+# The oldest React Native this library builds against. Must match
+# scripts/native-versions.env (MIN_REACT_NATIVE_VERSION) and
+# android/build.gradle.
+minimum_react_native = "0.88"
+
+# React Native's version, checked here because the npm peer range cannot: it
+# is `*`, since every react-native-tvos version is a semver pre-release
+# (`0.88.1-0`), which no range like `>=0.88.0` accepts. Read from the
+# package.json Node's resolver would find, walking up from this library;
+# react-native-tvos installs under the same name.
+react_native_manifest = nil
+dir = __dir__
+loop do
+  candidate = File.join(dir, "node_modules", "react-native", "package.json")
+  if File.file?(candidate)
+    react_native_manifest = candidate
+    break
+  end
+  parent = File.dirname(dir)
+  break if parent == dir
+  dir = parent
+end
+if react_native_manifest.nil?
+  Pod::UI.warn "TurboImage: could not find react-native's package.json above #{__dir__}; " \
+               "skipping the React Native version check (>= #{minimum_react_native} is required)."
+else
+  react_native_version = JSON.parse(File.read(react_native_manifest))["version"].to_s
+  major_minor = ->(version) { version.split(/[.-]/).first(2).map(&:to_i) }
+  # A nightly (0.0.0-...) has no version to compare and is newer than any release.
+  if !react_native_version.start_with?("0.0.0") &&
+     (major_minor.(react_native_version) <=> major_minor.(minimum_react_native)) < 0
+    raise "TurboImage 2.x requires React Native >= #{minimum_react_native} (New Architecture), " \
+          "but this app uses #{react_native_version}. Upgrade React Native, or stay on " \
+          "react-native-turbo-image 1.x."
+  end
+end
+
 # CocoaPods path for TurboImage 2.0, kept during the SwiftPM migration.
 #
 # Behaviour must match Package.swift (RFC rule 6):

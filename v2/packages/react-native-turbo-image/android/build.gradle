@@ -34,6 +34,10 @@ def coilVersion = "3.6.3"
 // LINE apng-drawable; must match scripts/native-versions.env.
 def apngDrawableVersion = "1.12.0"
 def minimumKotlinForCoil = "2.3.0"
+// The oldest React Native this library builds against: New Architecture
+// only, and the APIs the view and module use. Must match
+// scripts/native-versions.env (MIN_REACT_NATIVE_VERSION).
+def minimumReactNative = "0.88"
 // The instrumented tests' own dependencies (src/androidTest). Not part of
 // what an app gets; pinned like the rest, in scripts/native-versions.env.
 def androidxTestVersion = "1.7.0"
@@ -78,6 +82,35 @@ if (majorMinor(appKotlin) < majorMinor(minimumKotlinForCoil)) {
     "Gradle plugin ${appKotlin}. In android/build.gradle, set `kotlinVersion` in `ext {}` " +
     "and give the plugin that version: " +
     "classpath(\"org.jetbrains.kotlin:kotlin-gradle-plugin:\$kotlinVersion\")."
+  )
+}
+
+// React Native's version, checked here because the npm peer range cannot:
+// it is `*`, since every react-native-tvos version is a semver pre-release
+// (`0.88.1-0`), which no range like `>=0.88.0` accepts. Read from the
+// package.json Node's resolver would find, walking up from this library;
+// react-native-tvos installs under the same name. Not React Native's Gradle
+// plugin's `reactNativeDir`: its default is the app's own node_modules,
+// which a hoisted monorepo does not have.
+def findReactNativeVersion = {
+  for (def dir = projectDir; dir != null; dir = dir.parentFile) {
+    def manifest = new File(dir, "node_modules/react-native/package.json")
+    if (manifest.isFile()) {
+      return new groovy.json.JsonSlurper().parse(manifest).version?.toString()
+    }
+  }
+  return null
+}
+def reactNativeVersion = findReactNativeVersion()
+if (reactNativeVersion == null) {
+  logger.warn("react-native-turbo-image: could not find react-native's package.json above ${projectDir}; " +
+    "skipping the React Native version check (>= ${minimumReactNative} is required).")
+} else if (reactNativeVersion.startsWith("0.0.0")) {
+  // A nightly: no version to compare, and newer than any release.
+} else if (majorMinor(reactNativeVersion) < majorMinor(minimumReactNative)) {
+  throw new GradleException(
+    "react-native-turbo-image 2.x requires React Native >= ${minimumReactNative} (New Architecture), " +
+    "but this app uses ${reactNativeVersion}. Upgrade React Native, or stay on react-native-turbo-image 1.x."
   )
 }
 

@@ -16,6 +16,8 @@ For app developers. The reasons behind each change are in the [RFC](rfc/0001-tur
 
 If your app is still on the Old Architecture, stay on 1.x until it has moved.
 
+An app on React Native older than 0.88 fails at `pod install` and at Gradle configuration with a message that names the version it found.
+
 On Apple TV, `enableLiveTextInteraction` does nothing: tvOS has no Live Text. Everything else is the iOS implementation. tvOS support is new and so far only built, not run (see the compatibility matrix).
 
 The Kotlin floor comes from Coil 3.6.3. React Native 0.88's app template ships Kotlin 2.2, so most apps have to raise it in `android/build.gradle`. Change both lines: the template declares the Kotlin Gradle plugin without a version, so setting `kotlinVersion` alone leaves the compiler at 2.2.
