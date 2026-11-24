@@ -228,13 +228,18 @@ class TurboImageView(
           boxWidth.toDouble(), boxHeight.toDouble(),
           request.resizeMode, contentPositionX, contentPositionY)
         .map { it.toFloat() }
-    applyPlacement(
-      ScaleType.MATRIX,
-      Matrix().apply {
-        setScale(w / image.intrinsicWidth, h / image.intrinsicHeight)
-        postTranslate(x, y)
-      })
+    placementMatrix.setScale(w / image.intrinsicWidth, h / image.intrinsicHeight)
+    placementMatrix.postTranslate(x, y)
+    applyPlacement(ScaleType.MATRIX, placementMatrix)
   }
+
+  // Reused by every placement, which runs on each drawable, padding, size
+  // and prop change: `setImageMatrix` copies its argument, so neither is
+  // held by ImageView. `Matrix` has a native peer, so this saves a native
+  // allocation and its cleanup per call, not just a small object.
+  private val placementMatrix = Matrix()
+  private val nudgeMatrix = Matrix().apply { setTranslate(1f, 0f) }
+  private val identityMatrix = Matrix()
 
   /**
    * Sets the scale type and, for MATRIX, the matrix, and makes ImageView
@@ -249,8 +254,10 @@ class TurboImageView(
    */
   private fun applyPlacement(type: ScaleType, matrix: Matrix?) {
     if (scaleType != type) scaleType = type
-    imageMatrix = Matrix().apply { setTranslate(1f, 0f) }
-    imageMatrix = matrix ?: Matrix()
+    // Both sets are kept, so the second always differs from the first; the
+    // two invalidates land in the same frame and draw once.
+    imageMatrix = nudgeMatrix
+    imageMatrix = matrix ?: identityMatrix
   }
 
   override fun setImageDrawable(drawable: Drawable?) {

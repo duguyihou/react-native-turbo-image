@@ -43,7 +43,13 @@ internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSi
   // by 0.2–0.6 s in every app. A session goes in `source.headers` instead.
   // TODO: an opt-in for React Native's cookies, and a hook for default
   // headers or an interceptor.
-  val okHttpClient =
+  //
+  // Built on the first network fetch, not here: this runs on the main
+  // thread when the first view mounts, while Coil resolves `callFactory`
+  // lazily on its fetch thread. Building the client and reading the
+  // package info for the User-Agent there takes them off the first frame;
+  // a process that only shows cached or local images never builds them.
+  val buildOkHttpClient = {
     OkHttpClient.Builder()
       // Application interceptor: sees the token header before the
       // network layer, strips it, and counts response bytes.
@@ -52,6 +58,7 @@ internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSi
       .connectTimeout(15, TimeUnit.SECONDS)
       .readTimeout(30, TimeUnit.SECONDS)
       .build()
+  }
 
   return ImageLoader.Builder(context)
     .components {
@@ -76,7 +83,7 @@ internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSi
       add(VectorSizeDecoderFactory(SvgDecoder.Factory(scaleToDensity = true)))
       add(
         OkHttpNetworkFetcherFactory(
-          callFactory = { okHttpClient },
+          callFactory = buildOkHttpClient,
           cacheStrategy = { PolicyCacheStrategy() },
           concurrentRequestStrategy = { DeDupeConcurrentRequestStrategy() },
         )
