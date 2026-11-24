@@ -14,7 +14,9 @@ add_subdirectory(
 )
 
 add_library(turboimage SHARED src/main/cpp/TurboImageJni.cpp)
-target_link_libraries(turboimage PRIVATE turboimage_core)
+# jnigraphics: AndroidBitmap_lockPixels, so processing reads and writes
+# Bitmap pixels in place (nativeProcess).
+target_link_libraries(turboimage PRIVATE turboimage_core jnigraphics)
 target_compile_options(turboimage PRIVATE -Wall -Wextra)
 # Same switch as the core (see ../cpp/CMakeLists.txt for why it is off in an
 # app's build). Set from Gradle with `turboImage.warningsAsErrors=true`.

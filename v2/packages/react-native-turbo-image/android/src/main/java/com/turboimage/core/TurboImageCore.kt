@@ -2,7 +2,6 @@ package com.turboimage.core
 
 import android.graphics.Bitmap
 import android.util.Log
-import java.nio.ByteBuffer
 
 /**
  * Kotlin face of the shared C++ core (cpp/). Android never re-implements
@@ -87,12 +86,8 @@ object TurboImageCore {
     val source =
       if (input.config == Bitmap.Config.ARGB_8888) input
       else input.copy(Bitmap.Config.ARGB_8888, false) ?: return null
-    val bytes = ByteArray(source.byteCount)
-    source.copyPixelsToBuffer(ByteBuffer.wrap(bytes))
-    val pixels = nativeProcess(bytes, source.width, source.height, processorKey) ?: return null
-    return Bitmap.createBitmap(pixels.width, pixels.height, Bitmap.Config.ARGB_8888).apply {
-      copyPixelsFromBuffer(ByteBuffer.wrap(pixels.rgba))
-    }
+    // Reads `source`'s pixels and writes the result's in native code.
+    return nativeProcess(source, processorKey)
   }
 
   val coreVersion: String
@@ -144,7 +139,7 @@ object TurboImageCore {
     resizeMode: Int,
   ): ResolveResult
 
-  private external fun nativeProcess(rgba: ByteArray, width: Int, height: Int, processorKey: String): PlaceholderPixels?
+  private external fun nativeProcess(input: Bitmap, processorKey: String): Bitmap?
 
   private external fun nativeDecodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels?
 

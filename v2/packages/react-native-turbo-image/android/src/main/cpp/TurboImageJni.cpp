@@ -13,8 +13,11 @@
 // what can throw is allocation (a blur of a large bitmap needs several
 // copies of it), and Kotlin can handle a Java OutOfMemoryError.
 
+#include <android/bitmap.h>
 #include <jni.h>
 
+#include <cstdint>
+#include <cstring>
 #include <exception>
 #include <new>
 #include <optional>
@@ -232,22 +235,105 @@ jobject toPixels(JNIEnv* env, const turboimage::RgbaImage& image) {
   return env->NewObject(pixelsClass, ctor, image.width, image.height, bytes);
 }
 
+// A Bitmap's pixels, locked for as long as this lives, so nothing (a throw
+// from the core included) can leave the Bitmap locked.
+class LockedPixels {
+ public:
+  LockedPixels(JNIEnv* env, jobject bitmap) : env_(env), bitmap_(bitmap) {
+    if (AndroidBitmap_lockPixels(env, bitmap, &pixels_) != ANDROID_BITMAP_RESULT_SUCCESS) {
+      pixels_ = nullptr;
+    }
+  }
+  ~LockedPixels() {
+    if (pixels_ != nullptr) {
+      AndroidBitmap_unlockPixels(env_, bitmap_);
+    }
+  }
+  LockedPixels(const LockedPixels&) = delete;
+  LockedPixels& operator=(const LockedPixels&) = delete;
+
+  [[nodiscard]] std::uint8_t* data() const { return static_cast<std::uint8_t*>(pixels_); }
+
+ private:
+  JNIEnv* env_;
+  jobject bitmap_;
+  void* pixels_ = nullptr;
+};
+
+// `Bitmap.createBitmap(width, height, ARGB_8888)`. Null with an exception
+// pending (an OutOfMemoryError) when the JVM could not make it.
+jobject createArgb8888Bitmap(JNIEnv* env, int width, int height) {
+  jclass bitmapClass = env->FindClass("android/graphics/Bitmap");
+  jclass configClass = env->FindClass("android/graphics/Bitmap$Config");
+  jfieldID argb8888 =
+      env->GetStaticFieldID(configClass, "ARGB_8888", "Landroid/graphics/Bitmap$Config;");
+  jobject config = env->GetStaticObjectField(configClass, argb8888);
+  jmethodID createBitmap = env->GetStaticMethodID(
+      bitmapClass, "createBitmap", "(IILandroid/graphics/Bitmap$Config;)Landroid/graphics/Bitmap;");
+  jobject bitmap = env->CallStaticObjectMethod(bitmapClass, createBitmap, width, height, config);
+  return env->ExceptionCheck() ? nullptr : bitmap;
+}
+
 }  // namespace
 
-// Runs the processors a `processorKey` describes over premultiplied RGBA
-// (an ARGB_8888 Bitmap's memory layout). Null when the key or buffer is
-// invalid. Called on Coil's decode dispatcher; pure (Processing.h).
+// Runs the processors a `processorKey` describes over an ARGB_8888 Bitmap
+// and returns the result as a new one. Null when the key is invalid or the
+// Bitmap is not ARGB_8888 (or cannot be locked). Called on Coil's decode
+// dispatcher; pure (Processing.h).
+//
+// The pixels are copied twice, once into the core and once out of it, both
+// here. ARGB_8888's memory layout is the core's premultiplied RGBA, so no
+// conversion is needed either way. Rows are copied one at a time because a
+// Bitmap's stride may exceed width × 4. (It went through two Java byte
+// arrays before, two more copies of every pixel and two more image-sized
+// allocations on the Java heap.)
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeProcess(JNIEnv* env, jobject /* this */,
-                                                       jbyteArray rgba, jint width, jint height,
-                                                       jstring processorKey) {
+                                                       jobject input, jstring processorKey) {
   return guarded(env, static_cast<jobject>(nullptr), [&]() -> jobject {
-    turboimage::RgbaImage image{.width = width, .height = height, .pixels = {}};
-    image.pixels.resize(static_cast<std::size_t>(env->GetArrayLength(rgba)));
-    env->GetByteArrayRegion(rgba, 0, static_cast<jsize>(image.pixels.size()),
-                            reinterpret_cast<jbyte*>(image.pixels.data()));
+    AndroidBitmapInfo info{};
+    if (AndroidBitmap_getInfo(env, input, &info) != ANDROID_BITMAP_RESULT_SUCCESS ||
+        info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
+      return nullptr;
+    }
+    const std::size_t rowBytes = static_cast<std::size_t>(info.width) * 4;
+    turboimage::RgbaImage image{
+        .width = static_cast<int>(info.width), .height = static_cast<int>(info.height), .pixels = {}};
+    image.pixels.resize(rowBytes * info.height);
+    {
+      const LockedPixels source(env, input);
+      if (source.data() == nullptr) {
+        return nullptr;
+      }
+      for (std::uint32_t row = 0; row < info.height; ++row) {
+        std::memcpy(image.pixels.data() + row * rowBytes, source.data() + row * info.stride, rowBytes);
+      }
+    }
+
     const auto processed = turboimage::processImage(std::move(image), toStdString(env, processorKey));
-    return processed ? toPixels(env, *processed) : nullptr;
+    if (!processed) {
+      return nullptr;
+    }
+
+    jobject output = createArgb8888Bitmap(env, processed->width, processed->height);
+    if (output == nullptr) {
+      throw JavaExceptionPending{};
+    }
+    AndroidBitmapInfo outputInfo{};
+    if (AndroidBitmap_getInfo(env, output, &outputInfo) != ANDROID_BITMAP_RESULT_SUCCESS) {
+      return nullptr;
+    }
+    const std::size_t outputRowBytes = static_cast<std::size_t>(processed->width) * 4;
+    const LockedPixels destination(env, output);
+    if (destination.data() == nullptr) {
+      return nullptr;
+    }
+    for (int row = 0; row < processed->height; ++row) {
+      std::memcpy(destination.data() + static_cast<std::size_t>(row) * outputInfo.stride,
+                  processed->pixels.data() + static_cast<std::size_t>(row) * outputRowBytes,
+                  outputRowBytes);
+    }
+    return output;
   });
 }
 
