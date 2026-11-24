@@ -53,12 +53,22 @@ UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
   UIGraphicsPopContext();
   CGContextRelease(context);
 
-  const auto processed = turboimage::processImage(std::move(rgba), key);
+  auto processed = turboimage::processImage(std::move(rgba), key);
   if (!processed) {
     return nil;
   }
-  NSData *data = [NSData dataWithBytes:processed->pixels.data() length:processed->pixels.size()];
-  CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
+  // The image takes the core's buffer instead of a copy of it (one image
+  // fewer at the peak, ~48 MB for 12 MP): the vector moves to the heap and
+  // the provider frees it when the last CGImage using it goes.
+  auto *pixels = new std::vector<std::uint8_t>(std::move(processed->pixels));
+  CGDataProviderRef provider = CGDataProviderCreateWithData(
+      pixels, pixels->data(), pixels->size(), [](void *info, const void *, size_t) {
+        delete static_cast<std::vector<std::uint8_t> *>(info);
+      });
+  if (provider == nullptr) {
+    delete pixels;
+    return nil;
+  }
   CGImageRef cgImage = CGImageCreate(
       static_cast<size_t>(processed->width), static_cast<size_t>(processed->height), 8, 32,
       static_cast<size_t>(processed->width) * 4, colorSpace,

@@ -431,7 +431,10 @@ void tint(RgbaImage& image, std::uint32_t argb) {
 }
 
 RgbaImage applyProcessing(RgbaImage image, const ProcessingSpec& spec) {
-  if (spec.resizeWidth > 0) {
+  // Only when it shrinks: `resizeToWidth` returns a copy of the whole image
+  // otherwise, and the usual case is a decode already bounded to this width
+  // (rule 3), where there is nothing to resize.
+  if (spec.resizeWidth > 0 && spec.resizeWidth < image.width) {
     image = resizeToWidth(image, spec.resizeWidth);
   }
   gaussianBlur(image, spec.blurRadius);
