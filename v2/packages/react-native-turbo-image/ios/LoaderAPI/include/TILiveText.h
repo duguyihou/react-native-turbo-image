@@ -1,4 +1,4 @@
-// Live Text seam (iOS 16+), backing `enableLiveTextInteraction`.
+// Live Text seam (iOS only), backing `enableLiveTextInteraction`.
 //
 // VisionKit's image-analysis API (`ImageAnalyzer`, `ImageAnalysisInteraction`)
 // is Swift-only, but the Fabric view is ObjC++ and must not import Swift
@@ -15,8 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 NS_SWIFT_UI_ACTOR
 @protocol TILiveTextInteraction <NSObject>
 
-/// nil when the device cannot analyse images (`ImageAnalyzer.isSupported`)
-/// or the OS is older than iOS 16.
+/// nil when the device cannot analyse images (`ImageAnalyzer.isSupported`).
 + (nullable id<TILiveTextInteraction>)makeIfSupported;
 
 /// Attaches to `imageView` (once) and analyses `image`, replacing any

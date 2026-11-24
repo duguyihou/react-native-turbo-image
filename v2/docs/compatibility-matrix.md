@@ -23,7 +23,7 @@ Smoke results are recorded as passed/total of the suite when the row was verifie
 | GoogleTest | 1.17.0 | — | ✅ 98/98 on host (Apple Clang) and on the Android arm64 emulator |
 | Bun | 1.3.13, hoisted linker | — | ✅ |
 | react-native-safe-area-context (example only) | 5.11.1 | — | ✅ |
-| Xcode | 27.2 (local) | Swift tools ≥ 6.2 for Package.swift | ✅ |
+| Xcode | 27.2 (local) | Swift tools ≥ 6.4 for Package.swift (Nuke 14) | ✅ |
 | blurhash / thumbhash (npm, devDependencies) | 2.0.5 / 0.1.1 | Reference implementations for the C++ goldens only | ✅ |
 
 ## Verification log

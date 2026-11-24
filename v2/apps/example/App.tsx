@@ -436,7 +436,7 @@ const SCENARIOS: Scenario[] = [
   },
   {
     id: 'liveText',
-    title: 'Live Text on an image with text (iOS 16+; no-op on Android)',
+    title: 'Live Text on an image with text (iOS only; no-op on Android)',
     // Asserts the load succeeds with the interaction attached, which
     // exercises the runtime lookup of the Swift class. Whether VisionKit
     // found the text is visible in a screenshot (the Live Text button).

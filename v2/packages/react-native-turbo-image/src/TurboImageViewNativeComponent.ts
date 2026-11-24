@@ -135,7 +135,7 @@ export interface NativeProps extends ViewProps {
   // bitmap instead of a GPU-only hardware bitmap. Slower to draw; needed
   // only by code that reads the pixels or draws to a software canvas.
   allowHardware?: CodegenTypes.WithDefault<boolean, true>;
-  // iOS 16+ only (ignored on Android, as in 1.x): select text, scan codes
+  // iOS only (ignored on Android and tvOS, as in 1.x): select text, scan codes
   // and look up subjects in the loaded image with VisionKit.
   enableLiveTextInteraction?: CodegenTypes.WithDefault<boolean, false>;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;

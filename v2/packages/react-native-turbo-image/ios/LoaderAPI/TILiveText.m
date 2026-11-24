@@ -7,14 +7,8 @@
 static NSString *const kLiveTextClassName = @"TurboImageLiveTextInteraction";
 
 id<TILiveTextInteraction> _Nullable TIMakeLiveTextInteraction(void) {
-  // The Swift class is registered with the runtime on iOS 15 too (only its
-  // VisionKit calls are gated), so the OS check has to happen here. On tvOS
-  // the check passes and the class is simply absent (it is compiled for iOS
-  // only), so the lookup below returns nil.
-  if (@available(iOS 16.0, *)) {
-  } else {
-    return nil;
-  }
+  // No OS check: the floor is iOS 16, VisionKit's own. On tvOS the Swift
+  // class is compiled out, so the lookup below returns nil.
   Class cls = NSClassFromString(kLiveTextClassName);
   if (![cls conformsToProtocol:@protocol(TILiveTextInteraction)]) {
     return nil;

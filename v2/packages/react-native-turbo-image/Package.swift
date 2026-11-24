@@ -1,4 +1,4 @@
-// swift-tools-version: 6.2
+// swift-tools-version: 6.4
 //
 // TurboImage 2.0 — Swift Package Manager manifest.
 //

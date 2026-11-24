@@ -1,4 +1,4 @@
-// Live Text for TurboImage (iOS 16+), the Swift side of `TILiveTextInteraction`.
+// Live Text for TurboImage, the Swift side of `TILiveTextInteraction`.
 //
 // Only this target imports VisionKit's image-analysis API, which has no
 // Objective-C surface. The Fabric view reaches it through the ObjC protocol
@@ -22,7 +22,6 @@ import VisionKit
   import TurboImageLoaderAPI
 #endif
 
-@available(iOS 16.0, *)
 @objc(TurboImageLiveTextInteraction)
 @MainActor
 public final class LiveTextInteraction: NSObject, TILiveTextInteraction {
