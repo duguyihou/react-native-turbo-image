@@ -3,6 +3,7 @@ package com.turboimage
 import android.content.res.Resources
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.view.View
 import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -206,18 +207,28 @@ class TurboImageViewTest {
   }
 
   @Test
-  fun aSetGivenBeforeLayoutChoosesOnceTheViewHasASize() {
-    // Fabric sets a new view's props before it lays the view out, in the
-    // same turn of the main loop.
+  fun aSetGivenBeforeLayoutChoosesAtTheFirstLayout() {
+    // Fabric may set a preallocated view's props several main-loop turns
+    // before it lays the view out.
+    onMain { setSourceSet() }
+    instrumentation.waitForIdleSync()
     onMain {
-      setSourceSet()
       assertEquals("onStart at once, as for any load", listOf("topStart"), eventNames())
       assertEquals("nothing chosen without a size", 0, loader.loads.size)
-      resize(300, 300)
-    }
-    instrumentation.waitForIdleSync()
 
-    onMain { assertEquals("medium.jpg", fileOf(loader.loads.single())) }
+      resize(300, 300)
+
+      assertEquals("medium.jpg", fileOf(loader.loads.single()))
+    }
+  }
+
+  @Test
+  fun aViewLaidOutWithNoAreaGetsTheLargestSize() = onMain {
+    setSourceSet()
+
+    resize(0, 0)
+
+    assertEquals("large.jpg", fileOf(loader.loads.single()))
   }
 
   @Test
@@ -350,8 +361,13 @@ class TurboImageViewTest {
     view.onTransactionEnd()
   }
 
-  /** What Fabric does when layout gives the view a new frame. */
-  private fun resize(width: Int, height: Int) = view.layout(0, 0, width, height)
+  /** What Fabric does when layout gives the view a frame: measure exactly, then lay out. */
+  private fun resize(width: Int, height: Int) {
+    view.measure(
+      View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+      View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+    view.layout(0, 0, width, height)
+  }
 
   private fun eventNames() = events.map { it.first }
 

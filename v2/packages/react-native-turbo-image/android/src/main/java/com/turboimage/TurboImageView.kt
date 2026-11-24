@@ -3,8 +3,6 @@ package com.turboimage
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
@@ -120,6 +118,11 @@ class TurboImageView(
   )
 
   private var upgradable: Upgradable? = null
+  // Set by the first [onLayout] and never cleared: the view has a size (maybe
+  // none) to choose a source set's candidate by.
+  private var hasLayout = false
+  // A source set's load waiting for the first layout; 0 when none.
+  private var pendingStart = 0L
   // Cancels the image placeholder's load; null when there is none.
   private var placeholderHandle: LoadHandle? = null
 
@@ -225,10 +228,11 @@ class TurboImageView(
     upgradable = null
     progressThrottle = ProgressThrottle()
     lastProgressTotal = -1L
-    // A source set is chosen for the view's size. Fabric sets props before
-    // it lays a new view out, so without a size yet the choice waits for the
-    // layout (see [startWhenLaidOut]); candidate 0 stands in to validate.
-    val laidOut = width > 0 && height > 0
+    // A source set is chosen for the view's size. Fabric may set a new
+    // view's props well before it lays the view out, so before the first
+    // layout the choice waits for it (see [startWhenLaidOut]); candidate 0
+    // stands in to validate.
+    val laidOut = hasLayout
     val candidate = if (laidOut) chooseCandidate() else 0
     val result = resolve(requestFor(candidate))
     perform(
@@ -335,33 +339,47 @@ class TurboImageView(
     else TurboImageCore.chooseSource(candidateSizes(), width, height, request.resizeMode, request.allowDownscaling)
 
   /**
-   * Starts a source set's load once the view has a size to choose by. JS
-   * hears onStart now, as for any load: the lifecycle counts the load as
-   * started, and a reload before the layout ends it with `cancelled`.
-   * Fabric lays a new view out in the mount transaction that attaches it,
-   * before anything posted here runs, so one turn of the main loop is enough
-   * (the Coil adapter waits the same way for a decode size). A view still
-   * without a size then gets the largest candidate, as on iOS. The main
-   * looper's handler, not `View.post`, which holds a runnable until the view
-   * is attached: the wait must be one turn, whatever the attach state.
+   * Starts a source set's load at the view's first layout, when it has a
+   * size to choose by. JS hears onStart now, as for any load: the lifecycle
+   * counts the load as started, and a reload before the layout ends it with
+   * `cancelled`.
+   *
+   * Not one turn of the main loop later: Fabric may create a view and set
+   * its props ahead of the mount (view preallocation), and lay it out
+   * several turns after that; the smoke scenario `sourceSet` then loaded the
+   * largest candidate. Fabric's layout measures and lays the view out, which
+   * runs [onLayout] even for a view with no area; that one gets the largest
+   * candidate, as on iOS. [hasLayout] is never cleared, so a view detached
+   * and reattached without a new layout chooses at once.
    */
   private fun startWhenLaidOut(token: Long) {
     emitStart()
-    mainHandler.post {
-      if (!lifecycle.isInFlight(token)) return@post
-      val candidate = chooseCandidate()
-      when (val result = resolve(requestFor(candidate))) {
-        is ResolvedRequest -> beginLoad(result, candidate, token)
-        is ResolveFailure ->
-          perform(
-            lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure),
-            object : StepEffects() {
-              override fun deliverFailure() =
-                emitFailure(
-                  LoadErrorCode.INVALID_REQUEST.nativeValue,
-                  "Invalid request (core error ${result.errorCode})")
-            })
-      }
+    pendingStart = token
+  }
+
+  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+    super.onLayout(changed, left, top, right, bottom)
+    hasLayout = true
+    val token = pendingStart
+    if (token == 0L) return
+    pendingStart = 0L
+    if (lifecycle.isInFlight(token)) beginChosenLoad(token)
+  }
+
+  /** Picks the candidate for the current size and starts it, or fails the load if the core rejects it. */
+  private fun beginChosenLoad(token: Long) {
+    val candidate = chooseCandidate()
+    when (val result = resolve(requestFor(candidate))) {
+      is ResolvedRequest -> beginLoad(result, candidate, token)
+      is ResolveFailure ->
+        perform(
+          lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure),
+          object : StepEffects() {
+            override fun deliverFailure() =
+              emitFailure(
+                LoadErrorCode.INVALID_REQUEST.nativeValue,
+                "Invalid request (core error ${result.errorCode})")
+          })
     }
   }
 
@@ -619,8 +637,6 @@ class TurboImageView(
   }
 
   private companion object {
-    val mainHandler = Handler(Looper.getMainLooper())
-
     // One background thread is plenty: a decode is ~1 ms, and serialising
     // them bounds memory when a list mounts many placeholders at once.
     val placeholderExecutor: ExecutorService =
