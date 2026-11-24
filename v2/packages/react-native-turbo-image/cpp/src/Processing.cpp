@@ -107,41 +107,120 @@ std::array<int, 3> boxRadiiForSigma(int sigma) {
   return radii;
 }
 
-// One box pass over `count` lines of `length` pixels, in place. `scratch`
-// holds a copy of the current line, because the window reads pixels the pass
-// has already overwritten.
-void boxBlurLines(std::uint8_t* pixels, int length, int count, std::size_t step,
-                  std::size_t lineStride, int radius,
-                  std::vector<std::uint8_t>& scratch) {
-  if (radius <= 0 || length <= 1) {
+// A box's rounded average, `(sum + size / 2) / size`, without dividing.
+// Every output byte of a blur is one, about 290 million for a 12 MP image,
+// and `size` is not a compile-time constant, so the compiler cannot turn the
+// division into a multiplication; a hardware divide costs tens of cycles.
+// This multiplies by `m = ceil(2^32 / size)` and shifts, which gives the
+// same quotient exactly: for x = sum + size / 2 <= 255 * size + size / 2
+// < 2^18 and size <= 1023, the error x * (m * size - 2^32) / 2^32 stays
+// below 2^-4, too little to cross to the next integer. (Checked exhaustively
+// for every such size and x when this was written; the blur tests compare
+// with a reference that divides.) Box sizes here are at most 501
+// (`kMaxBlurRadius` 250).
+class BoxAverage {
+ public:
+  explicit BoxAverage(std::uint32_t size)
+      : half_(size / 2), reciprocal_(((std::uint64_t{1} << 32) + size - 1) / size) {}
+
+  std::uint8_t operator()(std::uint32_t sum) const {
+    return static_cast<std::uint8_t>(((sum + half_) * reciprocal_) >> 32);
+  }
+
+ private:
+  std::uint32_t half_;
+  std::uint64_t reciprocal_;
+};
+
+// The horizontal box pass, in place: a running sum along each row, all four
+// channels in one sweep. `scratch` holds a copy of the current row, because
+// the window reads pixels the pass has already overwritten.
+void boxBlurRows(std::uint8_t* pixels, int width, int height, int radius,
+                 std::vector<std::uint8_t>& scratch) {
+  if (radius <= 0 || width <= 1) {
     return;
   }
-  const auto size = static_cast<std::uint32_t>(2 * radius + 1);
-  const auto last = length - 1;
-  scratch.resize(static_cast<std::size_t>(length) * 4);
+  const BoxAverage average(static_cast<std::uint32_t>(2 * radius + 1));
+  const auto rowStride = static_cast<std::size_t>(width) * 4;
+  const int last = width - 1;
+  scratch.resize(rowStride);
+  auto at = [&](int x) {
+    return scratch.data() + static_cast<std::size_t>(std::clamp(x, 0, last)) * 4;
+  };
 
-  for (int line = 0; line < count; ++line) {
-    std::uint8_t* base = pixels + static_cast<std::size_t>(line) * lineStride;
-    for (int x = 0; x < length; ++x) {
-      std::copy_n(base + static_cast<std::size_t>(x) * step, 4,
-                  scratch.begin() + static_cast<std::ptrdiff_t>(x) * 4);
+  for (int y = 0; y < height; ++y) {
+    std::uint8_t* out = pixels + static_cast<std::size_t>(y) * rowStride;
+    std::copy_n(out, rowStride, scratch.begin());
+    // Window [x - radius, x + radius] for x = 0, edges clamped.
+    std::array<std::uint32_t, 4> sums{};
+    for (int k = -radius; k <= radius; ++k) {
+      const std::uint8_t* in = at(k);
+      for (std::size_t c = 0; c < 4; ++c) {
+        sums[c] += in[c];
+      }
     }
-    auto sample = [&](int x, int c) -> std::uint32_t {
-      return scratch[static_cast<std::size_t>(std::clamp(x, 0, last)) * 4 +
-                     static_cast<std::size_t>(c)];
+    for (int x = 0; x < width; ++x, out += 4) {
+      const std::uint8_t* entering = at(x + radius + 1);
+      const std::uint8_t* leaving = at(x - radius);
+      for (std::size_t c = 0; c < 4; ++c) {
+        out[c] = average(sums[c]);
+        sums[c] += entering[c];
+        sums[c] -= leaving[c];
+      }
+    }
+  }
+}
+
+// The vertical box pass. The same running sum as `boxBlurRows`, with the
+// same arithmetic and so the same output, but over a strip of
+// `kColumnBlock` columns at a time: every row it reads is then one
+// contiguous run of the strip's pixels instead of one pixel a whole row
+// apart, which kept the CPU cache missing on every sample (a column pass
+// over a 12 MP image took about three times the row pass).
+constexpr int kColumnBlock = 16;
+
+void boxBlurColumns(std::uint8_t* pixels, int width, int height, int radius,
+                    std::vector<std::uint8_t>& scratch) {
+  if (radius <= 0 || height <= 1) {
+    return;
+  }
+  const BoxAverage average(static_cast<std::uint32_t>(2 * radius + 1));
+  const auto rowStride = static_cast<std::size_t>(width) * 4;
+  const int last = height - 1;
+  std::array<std::uint32_t, kColumnBlock * 4> sums{};
+
+  for (int x0 = 0; x0 < width; x0 += kColumnBlock) {
+    const auto stripBytes =
+        static_cast<std::size_t>(std::min(kColumnBlock, width - x0)) * 4;
+    std::uint8_t* strip = pixels + static_cast<std::size_t>(x0) * 4;
+    // A copy of the strip, because the window reads rows the pass has
+    // already overwritten.
+    scratch.resize(stripBytes * static_cast<std::size_t>(height));
+    for (int y = 0; y < height; ++y) {
+      std::copy_n(strip + static_cast<std::size_t>(y) * rowStride, stripBytes,
+                  scratch.begin() + static_cast<std::ptrdiff_t>(y * stripBytes));
+    }
+    auto row = [&](int y) {
+      return scratch.data() +
+             static_cast<std::size_t>(std::clamp(y, 0, last)) * stripBytes;
     };
 
-    for (int c = 0; c < 4; ++c) {
-      // Window [x - radius, x + radius] for x = 0, edges clamped.
-      std::uint32_t sum = 0;
-      for (int k = -radius; k <= radius; ++k) {
-        sum += sample(k, c);
+    // Window [y - radius, y + radius] for y = 0, edges clamped.
+    std::fill(sums.begin(), sums.end(), 0u);
+    for (int k = -radius; k <= radius; ++k) {
+      const std::uint8_t* in = row(k);
+      for (std::size_t i = 0; i < stripBytes; ++i) {
+        sums[i] += in[i];
       }
-      for (int x = 0; x < length; ++x) {
-        base[static_cast<std::size_t>(x) * step + static_cast<std::size_t>(c)] =
-            static_cast<std::uint8_t>((sum + size / 2) / size);
-        sum += sample(x + radius + 1, c);
-        sum -= sample(x - radius, c);
+    }
+    for (int y = 0; y < height; ++y) {
+      std::uint8_t* out = strip + static_cast<std::size_t>(y) * rowStride;
+      const std::uint8_t* entering = row(y + radius + 1);
+      const std::uint8_t* leaving = row(y - radius);
+      for (std::size_t i = 0; i < stripBytes; ++i) {
+        out[i] = average(sums[i]);
+        sums[i] += entering[i];
+        sums[i] -= leaving[i];
       }
     }
   }
@@ -299,16 +378,11 @@ void gaussianBlur(RgbaImage& image, int radius) {
     return;
   }
   radius = std::min(radius, kMaxBlurRadius);
-  // TODO: the column passes stride a whole row per sample, which dominates
-  // the ~270 ms a 12 MP blur takes. Blurring a transposed copy (or tiles)
-  // would keep them cache-friendly.
-  const auto rowStride = static_cast<std::size_t>(image.width) * 4;
   std::vector<std::uint8_t> scratch;
   for (const int box : boxRadiiForSigma(radius)) {
-    boxBlurLines(image.pixels.data(), image.width, image.height, 4, rowStride,
-                 box, scratch);
-    boxBlurLines(image.pixels.data(), image.height, image.width, rowStride, 4,
-                 box, scratch);
+    boxBlurRows(image.pixels.data(), image.width, image.height, box, scratch);
+    boxBlurColumns(image.pixels.data(), image.width, image.height, box,
+                   scratch);
   }
 }
 

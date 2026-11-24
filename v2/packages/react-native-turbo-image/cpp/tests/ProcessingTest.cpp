@@ -273,6 +273,61 @@ TEST(GaussianBlur, IsSymmetricAndKeepsPremultipliedInvariant) {
   EXPECT_TRUE(isPremultiplied(noisy));
 }
 
+// The blur's exact output, pinned. A processed image is cached under its
+// processor key, so a change to any output byte must come with a new
+// `kKeyVersion`, or apps would keep showing variants cached by the old code.
+// The hashes were taken from the implementation before the passes were
+// rewritten for speed (2026-11-24), which this one must match bit for bit.
+// Cases: an odd-sized image at small to maximum radius, strips narrower and
+// wider than the column pass's 16-column block, a single column and row.
+//
+// The noise uses raw `std::mt19937` output only, which the standard fully
+// specifies, so the hashes hold on every toolchain; `randomPremultiplied`
+// uses a distribution, whose output is up to the standard library.
+TEST(GaussianBlur, OutputIsPinned) {
+  auto portableNoise = [](int width, int height, unsigned seed) {
+    std::mt19937 rng(seed);
+    RgbaImage image{.width = width, .height = height, .pixels = {}};
+    image.pixels.resize(static_cast<std::size_t>(width) * height * 4);
+    for (std::size_t i = 0; i < image.pixels.size(); i += 4) {
+      const auto a = static_cast<std::uint8_t>(rng() % 256);
+      image.pixels[i + 3] = a;
+      for (std::size_t c = 0; c < 3; ++c) {
+        image.pixels[i + c] = static_cast<std::uint8_t>(a == 0 ? 0 : rng() % (a + 1u));
+      }
+    }
+    return image;
+  };
+  auto fnv1a = [](const RgbaImage& image) {
+    std::uint64_t hash = 1469598103934665603ull;
+    for (const auto byte : image.pixels) {
+      hash = (hash ^ byte) * 1099511628211ull;
+    }
+    return hash;
+  };
+  struct Case {
+    int width, height, radius;
+    unsigned seed;
+    std::uint64_t hash;
+  };
+  const Case cases[] = {
+      {301, 203, 1, 11, 0xee12cb3c180489e5ull},
+      {301, 203, 6, 12, 0xe9c641629144f8e6ull},
+      {301, 203, 40, 13, 0x08f9d94182d2e280ull},
+      {301, 203, 250, 14, 0x8f3b29ae90ef25c0ull},
+      {15, 40, 3, 15, 0xb1a0aef961765131ull},
+      {17, 40, 3, 16, 0x39e40155001f03b8ull},
+      {1, 64, 4, 17, 0x32cdd4c563fffe59ull},
+      {64, 1, 4, 18, 0x8042b65bce527039ull},
+  };
+  for (const auto& c : cases) {
+    RgbaImage image = portableNoise(c.width, c.height, c.seed);
+    gaussianBlur(image, c.radius);
+    EXPECT_EQ(fnv1a(image), c.hash)
+        << c.width << "x" << c.height << " radius " << c.radius;
+  }
+}
+
 TEST(GaussianBlur, RadiusLargerThanTheImageIsSafe) {
   auto image = randomPremultiplied(3, 2, 4);
   gaussianBlur(image, kMaxBlurRadius);
