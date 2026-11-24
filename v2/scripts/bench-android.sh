@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
-# Benchmarks TurboImage vs expo-image vs RN <Image> on Android, using the
-# apps/bench release build. Each run is done cold (`pm clear`) and warm
-# (relaunch, disk cache kept). Libraries are interleaved so device heating
-# affects all of them alike. Use a physical device, screen on and unlocked.
+# Benchmarks TurboImage against expo-image (and optionally RN <Image>) on
+# Android with the apps/bench release build. Each preset runs cold (`pm
+# clear`: no disk cache) and warm (relaunch: disk cache kept, memory empty),
+# RUNS times, libraries alternating. Use a physical device, screen on and
+# unlocked, not charging if possible. Methodology:
+# docs/benchmark/BENCHMARK_METHODOLOGY.md.
 #
 # Usage: scripts/bench-android.sh [path/to/app-release.apk]
 # Env:
-#   LIBS       libraries (default: "turbo expo rn")
-#   SCENARIOS  scenario:source pairs
-#              (default: "load:photo load:large grid:photo grid:large")
-#   RUNS       iterations (default: 5)
-#   COUNT      images in `load` (default: the app's, 30)
-# Output: tmp/bench/android-<timestamp>.jsonl, then a bench-summary.py table.
+#   LIBS     libraries (default: "turbo expo expoMem"; add "rn" for RN <Image>).
+#            expoMem is expo-image with cachePolicy="memory-disk" (see adapters.tsx)
+#   PRESETS  presets from bench-common.sh (default: all)
+#   RUNS     iterations (default: 5)
+#   CACHES   cache states (default: "cold warm")
+# Output: tmp/bench/android-<timestamp>.jsonl (one line per run), then
+# bench-summary.py's tables.
 
 set -euo pipefail
 
@@ -19,10 +22,10 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 v2_root="$(cd "${script_dir}/.." && pwd)"
 apk="${1:-${v2_root}/apps/bench/android/app/build/outputs/apk/release/app-release.apk}"
 package="com.turboimagebench"
-libs="${LIBS:-turbo expo rn}"
-scenarios="${SCENARIOS:-load:photo load:large grid:photo grid:large}"
+read -r -a libs <<< "${LIBS:-turbo expo expoMem}"
+presets="${PRESETS:-}"
 runs="${RUNS:-5}"
-count_param="${COUNT:+&n=${COUNT}}"
+caches="${CACHES:-cold warm}"
 timeout_s=120
 
 if [[ ! -f "${apk}" ]]; then
@@ -35,9 +38,11 @@ if [[ ! -x "${adb}" ]]; then
   adb="adb"
 fi
 
-# shellcheck source=./fixture-server.sh source-path=SCRIPTDIR
-source "${script_dir}/fixture-server.sh"
-trap 'kill ${fixture_server_pid} 2> /dev/null || true' EXIT
+# shellcheck source=./bench-common.sh source-path=SCRIPTDIR
+source "${script_dir}/bench-common.sh"
+presets="${presets:-${BENCH_ALL_PRESETS}}"
+sampler_pid=""
+trap 'kill ${fixture_server_pid} ${sampler_pid} 2> /dev/null || true' EXIT
 start_fixture_server
 
 "${adb}" wait-for-device
@@ -45,9 +50,17 @@ start_fixture_server
 "${adb}" uninstall "${package}" > /dev/null 2>&1 || true
 "${adb}" install "${apk}" > /dev/null
 
+# What the results were measured on, recorded with every row.
+device_json="$(printf '{"model":"%s","android":"%s","sdk":"%s","emulator":%s}' \
+  "$("${adb}" shell getprop ro.product.model | tr -d '\r')" \
+  "$("${adb}" shell getprop ro.build.version.release | tr -d '\r')" \
+  "$("${adb}" shell getprop ro.build.version.sdk | tr -d '\r')" \
+  "$([[ "$("${adb}" shell getprop ro.kernel.qemu | tr -d '\r')" == "1" ]] && echo true || echo false)")"
+
 out_dir="${v2_root}/tmp/bench"
 mkdir -p "${out_dir}"
 out="${out_dir}/android-$(date +%Y%m%d-%H%M%S).jsonl"
+samples="$(mktemp "${out_dir}/pss-samples.XXXXXX")"
 
 # Waits for the first app log line that contains $1 and prints it.
 wait_for_log() {
@@ -80,57 +93,119 @@ gfx_json() {
 
 # The app's total PSS in KB ("TOTAL PSS: n" on newer Android, "TOTAL n" on older).
 pss_kb() {
-  "${adb}" shell dumpsys meminfo "${package}" | awk '
+  "${adb}" shell dumpsys meminfo "${package}" 2> /dev/null | awk '
     /TOTAL PSS:/ { print $3; found = 1; exit }
     /^ *TOTAL +[0-9]/ && !found { print $2; exit }'
 }
 
+# Samples PSS into ${samples} until killed. One `dumpsys meminfo` takes
+# 0.3-1 s, so this is about one sample a second; the peak is the highest
+# sample, not the true peak between samples.
+start_memory_sampler() {
+  : > "${samples}"
+  (
+    while true; do
+      pss_kb >> "${samples}" || true
+    done
+  ) &
+  sampler_pid=$!
+}
+
+stop_memory_sampler() {
+  kill "${sampler_pid}" 2> /dev/null || true
+  wait "${sampler_pid}" 2> /dev/null || true
+  sampler_pid=""
+  local end_kb
+  end_kb="$(pss_kb)"
+  awk -v end="${end_kb:-0}" '
+    $1 ~ /^[0-9]+$/ { n++; if ($1 > peak) peak = $1 }
+    END { printf "{\"kind\":\"pss\",\"peakKb\":%s,\"endKb\":%s,\"samples\":%d}",
+      (n ? peak : "null"), (end ? end : "null"), n }' "${samples}"
+}
+
 run_once() {
-  local lib="$1" scenario="$2" source="$3" cache="$4" iteration="$5"
-  local result gfx="null" pss
+  local lib="$1" preset="$2" cache="$3" iteration="$4"
+  local query result gfx="null" memory before after offline=false
+
+  query="$(bench_preset_query "${preset}")"
+  if [[ "${preset}" == "offline" ]]; then
+    if ! bench_can_stop_server; then
+      echo "SKIP: offline needs a fixture server this script started; stop the running one" >&2
+      return 1
+    fi
+    offline=true
+  fi
 
   "${adb}" shell am force-stop "${package}"
   if [[ "${cache}" == "cold" ]]; then
     "${adb}" shell pm clear "${package}" > /dev/null
   fi
   "${adb}" logcat -c
-  "${adb}" shell am start -a android.intent.action.VIEW \
-    -d "'turboimagebench://run?lib=${lib}&scenario=${scenario}&source=${source}${count_param}'" \
-    "${package}" > /dev/null
 
-  if [[ "${scenario}" == "grid" ]]; then
-    if ! wait_for_log 'TURBOIMAGE_BENCH_READY' > /dev/null; then
-      echo "FAIL: ${lib} ${scenario}:${source} ${cache} never became ready" >&2
+  if [[ "${offline}" == true ]]; then
+    bench_stop_server
+    before='{"count":0,"conditional":0,"aborted":0}'
+  else
+    before="$(bench_server_hits)"
+  fi
+
+  "${adb}" shell am start -a android.intent.action.VIEW \
+    -d "'turboimagebench://run?lib=${lib}&${query}'" "${package}" > /dev/null
+  start_memory_sampler
+
+  if ! wait_for_log 'TURBOIMAGE_BENCH_READY' > /dev/null; then
+    stop_memory_sampler > /dev/null
+    echo "FAIL: ${lib} ${preset} ${cache} never became ready" >&2
+    [[ "${offline}" == true ]] && start_fixture_server
+    return 1
+  fi
+  "${adb}" shell dumpsys gfxinfo "${package}" reset > /dev/null
+
+  if [[ "${offline}" == true ]]; then
+    if ! wait_for_log 'TURBOIMAGE_BENCH_OFFLINE' > /dev/null; then
+      stop_memory_sampler > /dev/null
+      echo "FAIL: ${lib} offline ${cache}: the images never all failed" >&2
+      start_fixture_server
       return 1
     fi
-    "${adb}" shell dumpsys gfxinfo "${package}" reset > /dev/null
+    start_fixture_server
+    "${adb}" reverse "tcp:${fixture_server_port}" "tcp:${fixture_server_port}" > /dev/null
   fi
 
   if ! result="$(wait_for_log 'TURBOIMAGE_BENCH {')"; then
-    echo "FAIL: ${lib} ${scenario}:${source} ${cache} logged no result within ${timeout_s}s" >&2
+    stop_memory_sampler > /dev/null
+    echo "FAIL: ${lib} ${preset} ${cache} logged no result within ${timeout_s}s" >&2
     return 1
   fi
-  if [[ "${scenario}" == "grid" ]]; then
-    gfx="$(gfx_json)"
-  fi
-  pss="$(pss_kb)"
+  gfx="$(gfx_json)"
+  memory="$(stop_memory_sampler)"
+  after="$(bench_server_hits)"
 
-  printf '{"platform":"android","cache":"%s","iteration":%s,"pssKb":%s,"gfx":%s,"app":%s}\n' \
-    "${cache}" "${iteration}" "${pss:-null}" "${gfx}" "${result#TURBOIMAGE_BENCH }" >> "${out}"
-  echo "  ${lib} ${scenario}:${source} ${cache}: ${result#TURBOIMAGE_BENCH }"
+  printf '{"platform":"android","device":%s,"preset":"%s","lib":"%s","cache":"%s","iteration":%s,"memory":%s,"gfx":%s,"serverBefore":%s,"serverAfter":%s,"app":%s}\n' \
+    "${device_json}" "${preset}" "${lib}" "${cache}" "${iteration}" "${memory}" "${gfx}" \
+    "${before}" "${after}" "${result#TURBOIMAGE_BENCH }" >> "${out}"
+  echo "  ${preset} ${lib} ${cache}: done"
 }
 
+echo "device ${device_json}"
 echo "writing ${out}"
 for ((iteration = 1; iteration <= runs; iteration++)); do
   echo "iteration ${iteration}/${runs}"
-  for pair in ${scenarios}; do
-    for lib in ${libs}; do
-      # A failed run is skipped so the other libraries' results are kept.
-      run_once "${lib}" "${pair%%:*}" "${pair##*:}" cold "${iteration}" || true
-      run_once "${lib}" "${pair%%:*}" "${pair##*:}" warm "${iteration}" || true
+  for preset in ${presets}; do
+    bench_preset_query "${preset}" > /dev/null || {
+      echo "FAIL: unknown preset ${preset}" >&2
+      exit 1
+    }
+    read -r -a order <<< "$(bench_lib_order "${iteration}" "${libs[@]}")"
+    for lib in "${order[@]}"; do
+      for cache in ${caches}; do
+        # A failed run is skipped so the other libraries' results are kept.
+        run_once "${lib}" "${preset}" "${cache}" "${iteration}" || true
+      done
     done
   done
 done
 "${adb}" shell am force-stop "${package}"
+rm -f "${samples}"
 
 python3 "${script_dir}/bench-summary.py" "${out}"

@@ -7,7 +7,11 @@
     "android": "react-native run-android",
     "typecheck": "tsc --noEmit",
     "build:android:release": "cd android && ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=arm64-v8a",
-    "bench:android": "bash ../../scripts/bench-android.sh"
+    "bench:android": "bash ../../scripts/bench-android.sh",
+    "ios": "react-native run-ios",
+    "pods": "cd ios && pod install",
+    "build:ios:release": "xcodebuild -workspace ios/TurboImageBench.xcworkspace -scheme TurboImageBench -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build build",
+    "bench:ios": "bash ../../scripts/bench-ios.sh"
   },
   "dependencies": {
     "@shopify/flash-list": "2.3.2",
@@ -23,6 +27,7 @@
     "@babel/runtime": "^7.25.0",
     "@react-native-community/cli": "20.2.0",
     "@react-native-community/cli-platform-android": "20.2.0",
+    "@react-native-community/cli-platform-ios": "20.2.0",
     "@react-native/babel-preset": "0.88.1",
     "@react-native/metro-config": "0.88.1",
     "@react-native/typescript-config": "0.88.1",
