@@ -118,6 +118,23 @@ std::optional<RgbaImage> decodeBlurhash(std::string_view hash, int width,
                   .height = height,
                   .pixels = std::vector<std::uint8_t>(
                       static_cast<std::size_t>(width * height * 4))};
+  // Each cosine depends on one axis only, so it is computed once per column
+  // (or row) and component: (width + height) × components calls instead of
+  // two per pixel per component (~2.6 M for a 128 px, 9×9 hash). The
+  // expressions are the reference's, so the values, and the pixels, are
+  // bit-identical (the golden tests hash them).
+  std::vector<double> cosX(static_cast<std::size_t>(width * numX));
+  for (int x = 0; x < width; ++x) {
+    for (int i = 0; i < numX; ++i) {
+      cosX[static_cast<std::size_t>(x * numX + i)] = std::cos(kPi * x * i / width);
+    }
+  }
+  std::vector<double> cosY(static_cast<std::size_t>(height * numY));
+  for (int y = 0; y < height; ++y) {
+    for (int j = 0; j < numY; ++j) {
+      cosY[static_cast<std::size_t>(y * numY + j)] = std::cos(kPi * y * j / height);
+    }
+  }
   for (int y = 0; y < height; ++y) {
     for (int x = 0; x < width; ++x) {
       double r = 0;
@@ -126,8 +143,8 @@ std::optional<RgbaImage> decodeBlurhash(std::string_view hash, int width,
       for (int j = 0; j < numY; ++j) {
         for (int i = 0; i < numX; ++i) {
           // Same operation order as the reference; see FP_CONTRACT above.
-          const double basis = std::cos(kPi * x * i / width) *
-                               std::cos(kPi * y * j / height);
+          const double basis = cosX[static_cast<std::size_t>(x * numX + i)] *
+                               cosY[static_cast<std::size_t>(y * numY + j)];
           const Rgb& c = colours[static_cast<std::size_t>(i + j * numX)];
           r += c[0] * basis;
           g += c[1] * basis;
@@ -280,22 +297,29 @@ std::optional<RgbaImage> decodeThumbhash(std::string_view base64Hash) {
                   .height = h,
                   .pixels = std::vector<std::uint8_t>(
                       static_cast<std::size_t>(w * h * 4))};
-  std::array<double, 7> fx{};
   std::array<double, 7> fy{};
   const int nx = std::max(lx, hasAlpha ? 5 : 3);
   const int ny = std::max(ly, hasAlpha ? 5 : 3);
+  // The reference computes both factors for every pixel, though `fx` depends
+  // on the column only and `fy` on the row only. Same expressions, so the
+  // same values (see the blurhash decoder above).
+  std::vector<std::array<double, 7>> columns(static_cast<std::size_t>(w));
+  for (int x = 0; x < w; ++x) {
+    for (int cx = 0; cx < nx; ++cx) {
+      columns[static_cast<std::size_t>(x)][static_cast<std::size_t>(cx)] =
+          std::cos(kPi / w * (x + 0.5) * cx);
+    }
+  }
   for (int y = 0, i = 0; y < h; ++y) {
+    for (int cy = 0; cy < ny; ++cy) {
+      fy[static_cast<std::size_t>(cy)] = std::cos(kPi / h * (y + 0.5) * cy);
+    }
     for (int x = 0; x < w; ++x, i += 4) {
       double l = lDc;
       double p = pDc;
       double q = qDc;
       double a = aDc;
-      for (int cx = 0; cx < nx; ++cx) {
-        fx[static_cast<std::size_t>(cx)] = std::cos(kPi / w * (x + 0.5) * cx);
-      }
-      for (int cy = 0; cy < ny; ++cy) {
-        fy[static_cast<std::size_t>(cy)] = std::cos(kPi / h * (y + 0.5) * cy);
-      }
+      const std::array<double, 7>& fx = columns[static_cast<std::size_t>(x)];
       for (int cy = 0, j = 0; cy < ly; ++cy) {
         const double fy2 = fy[static_cast<std::size_t>(cy)] * 2;
         for (int cx = cy ? 0 : 1; cx * ly < lx * (ly - cy); ++cx, ++j) {
