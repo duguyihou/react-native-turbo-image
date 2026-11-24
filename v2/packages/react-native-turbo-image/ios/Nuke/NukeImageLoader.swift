@@ -473,11 +473,14 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     return request
   }
 
+  /// Parsed once: a sweep builds one of these requests per variant.
+  private static let keyOnlyURL = URL(string: "turboimage://cache-key")
+
   /// Nuke derives both cache keys from `imageID` when it is set, so a request
   /// carrying only the key addresses the same entries a view load wrote. The
   /// URL is never fetched; it only has to be non-nil.
   private static func keyOnlyRequest(_ cacheKey: String) -> ImageRequest {
-    var request = ImageRequest(url: URL(string: "turboimage://cache-key"))
+    var request = ImageRequest(url: keyOnlyURL)
     request.imageID = cacheKey
     return request
   }
