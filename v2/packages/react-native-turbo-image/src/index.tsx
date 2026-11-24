@@ -278,11 +278,10 @@ export type Indicator = {
   color?: ColorValue | number;
 };
 
-// A load that finishes sooner than this never shows the spinner. Memory and
-// disk hits complete within a frame or two; a spinner that appears and
-// vanishes that fast reads as flicker (1.x avoided it only because Nuke and
-// Coil resolved memory hits synchronously). As a side effect such loads
-// cause no extra React render at all.
+// A load that finishes sooner than this never shows the spinner. Disk hits
+// complete within a frame or two (memory hits inside the load call); a
+// spinner that appears and vanishes that fast reads as flicker. As a side
+// effect such loads cause no extra React render at all.
 const INDICATOR_DELAY_MS = 150;
 
 // Maps 1.x's 'dataCache' onto 2.0: it was 1.x iOS's aggressive data cache,

@@ -179,6 +179,21 @@ struct LoadingTests {
     #expect(await adapter.prefetch(adapter.request(for: Fixture.missing(), memoryCacheWrite: false)) == false)
   }
 
+  /// A memory hit completes before `loadImage` returns, so a recycled view
+  /// shows its cached image in the same frame (no blank or placeholder
+  /// frame first).
+  @Test func aMemoryHitCompletesInsideTheCall() async throws {
+    let request = adapter.request(for: try Fixture.png(), decodeSize: CGSize(width: 20, height: 15))
+    _ = await adapter.load(request)
+
+    let fromMemory = Recorded<Bool>()
+    _ = adapter.loader.loadImage(with: request, progress: nil) { image, _, fromMemoryCache, _ in
+      fromMemory.value = image != nil && fromMemoryCache
+    }
+
+    #expect(fromMemory.value == true)
+  }
+
   // MARK: Image size (`TurboImage.getSize`)
 
   @Test func theSizeIsTheImagesOwnInPixels() async throws {

@@ -43,6 +43,11 @@ private final class NukeLoadTask: NSObject, TIImageLoadTask, @unchecked Sendable
   }
 }
 
+/// The handle of a load that completed inside `loadImage`: nothing to cancel.
+private final class FinishedTask: NSObject, TIImageLoadTask, @unchecked Sendable {
+  func cancel() {}
+}
+
 /// The handle of `imageSize` and of a disk-only prefetch: cancelling the
 /// Swift Task cancels the awaited Nuke work and drops the result.
 private final class AsyncTask: NSObject, TIImageLoadTask, @unchecked Sendable {
@@ -201,7 +206,27 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
       // the entry the load is about to write.
       remember(variant, of: cacheKey)
     }
-    let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
+    let pipeline = pipeline(for: request)
+
+    // A memory hit completes inside this call, as 1.x's did. Through an
+    // image task it would come back a run-loop turn or more later (Nuke's
+    // queue, then the main actor): a recycled list cell would show nothing,
+    // or flash its placeholder, for a frame before its cached image. The
+    // view handles a completion that runs before this returns. The lookup
+    // is the one the image task would make first (same request, same key).
+    // A progressive preview is not the image; the task replaces it.
+    if request.memoryCacheRead,
+      let cached = pipeline.cache.cachedImage(for: nukeRequest, caches: .memory),
+      !cached.isPreview
+    {
+      let animation = cached.animation.map {
+        PlayableAnimation(source: $0, fitsView: nukeRequest.thumbnail != nil)
+      }
+      completion(cached.image, animation, true, nil)
+      return FinishedTask()
+    }
+
+    let imageTask = pipeline.imageTask(with: nukeRequest)
 
     // Progress runs in its own MainActor task. The completion path cancels
     // it *before* calling completion; because both run on the main actor,
