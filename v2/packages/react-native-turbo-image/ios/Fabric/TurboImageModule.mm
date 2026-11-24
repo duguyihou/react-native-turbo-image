@@ -6,6 +6,7 @@
 #import "TurboImageModule.h"
 
 #import <React/RCTInvalidating.h>
+#import <React/RCTUtils.h>
 #import <TurboImageSpec/TurboImageSpec.h>
 
 #include <turboimage/ImageRequest.h>
@@ -52,19 +53,29 @@ SourceFields sourceFields(id source) {
   return fields;
 }
 
-// A request for the original image: no processors, and no downscaling,
-// because the module has no view to size a decode for. Prefetch therefore
-// fills the disk cache with the original bytes (which every view variant is
-// derived from) and the memory cache with the full-size image.
-turboimage::ImageRequest coreRequest(const SourceFields &fields, turboimage::CachePolicy policy) {
+// Without `resize`: the original image, no processors and no downscaling,
+// because the module has no view to size a decode for. Prefetch then fills
+// the disk cache with the original bytes (which every view variant is
+// derived from) and, for 'memory', the memory cache with the full-size
+// image.
+//
+// With `resize`: what a view with that `resize` prop and no other
+// processing resolves, `allowDownscaling` on and the same screen scale, so
+// the decode bound and the memory key are that view's. A `resize` decode
+// does not depend on the view's size, so no view is needed.
+turboimage::ImageRequest coreRequest(const SourceFields &fields,
+                                     turboimage::CachePolicy policy,
+                                     double resize = 0) {
+  const bool resized = resize > 0;
   return {
       .uri = fields.uri,
       .cacheKey = TIOptionalCacheKey(fields.cacheKey),
       .cachePolicy = policy,
-      .processing = {},
-      .pixelRatio = 1,
+      .processing = {.resize = resized ? resize : 0},
+      // As the view passes it (TurboImageComponentView's request).
+      .pixelRatio = resized ? RCTScreenScale() : 1,
       .headers = fields.headers,
-      .allowDownscaling = false,
+      .allowDownscaling = resized,
       .resizeMode = turboimage::ResizeMode::Contain,
   };
 }
@@ -126,6 +137,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
 - (void)prefetch:(NSArray *)sources
      cachePolicy:(NSString *)cachePolicy
      destination:(NSString *)destination
+          resize:(double)resize
          resolve:(RCTPromiseResolveBlock)resolve
           reject:(RCTPromiseRejectBlock)reject {
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -153,7 +165,9 @@ RCT_EXPORT_MODULE(TurboImageModule)
 
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    const auto built = TIMakeImageRequest(coreRequest(fields, policy));
+    // JS never sends `resize` with 'disk' (the types forbid it); were it
+    // sent, the disk copy is the original either way.
+    const auto built = TIMakeImageRequest(coreRequest(fields, policy, resize));
     if (built.request == nil) {
       finishOne(NO);
       continue;

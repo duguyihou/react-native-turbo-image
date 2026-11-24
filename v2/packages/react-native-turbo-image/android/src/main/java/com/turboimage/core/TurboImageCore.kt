@@ -72,6 +72,35 @@ object TurboImageCore {
       resizeMode.nativeValue,
     )
 
+  /**
+   * Resolves a source for the cache module (`prefetch`, `getSize`,
+   * `dispose`), which has no view.
+   *
+   * Without [resize]: the original, unprocessed and not downscaled, as
+   * there is no view size to decode to. With it: exactly what a view with
+   * that `resize` prop, no other processing and `allowDownscaling` on
+   * resolves at the same [pixelRatio], whatever its `resizeMode` or size
+   * (a `resize` decode depends on neither), so a prefetch's memory entry is
+   * the one that view looks up. `CacheTest` pins that equality.
+   */
+  fun resolveForCache(
+    uri: String,
+    cacheKey: String?,
+    cachePolicy: CachePolicy,
+    headers: List<Pair<String, String>>,
+    resize: Double,
+    pixelRatio: Double,
+  ): ResolveResult =
+    resolve(
+      uri,
+      cacheKey,
+      cachePolicy,
+      processing = Processing(resize = resize),
+      pixelRatio = pixelRatio,
+      headers = headers,
+      allowDownscaling = resize > 0,
+    )
+
   // An ARGB Int widened without sign extension, or -1 for "unset" (JNI side).
   private fun Int?.toNativeColor(): Long = this?.toLong()?.and(0xffffffffL) ?: -1L
 

@@ -33,18 +33,33 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   override fun getName() = NAME
 
   // `{ uri, cacheKey? }` from JS → core resolution. null for invalid input.
-  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy): ResolvedRequest? {
+  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy, resize: Double = 0.0): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
-    return resolve(sources.getMap(index) ?: return null, policy)
+    return resolve(sources.getMap(index) ?: return null, policy, resize)
   }
 
-  private fun resolve(source: ReadableMap, policy: CachePolicy): ResolvedRequest? {
+  // See `TurboImageCore.resolveForCache` for what `resize` changes.
+  private fun resolve(source: ReadableMap, policy: CachePolicy, resize: Double = 0.0): ResolvedRequest? {
     val uri = resolveSourceUri(context, if (source.hasKey("uri")) source.getString("uri").orEmpty() else "")
     val cacheKey = if (source.hasKey("cacheKey")) source.getString("cacheKey") else null
-    return TurboImageCore.resolve(uri, cacheKey, policy, headers = readHeaders(source)) as? ResolvedRequest
+    return TurboImageCore.resolveForCache(
+      uri,
+      cacheKey,
+      policy,
+      readHeaders(source),
+      resize,
+      // As the view passes it (TurboImageView.resolve).
+      pixelRatio = context.resources.displayMetrics.density.toDouble(),
+    ) as? ResolvedRequest
   }
 
-  override fun prefetch(sources: ReadableArray, cachePolicy: String, destination: String, promise: Promise) {
+  override fun prefetch(
+    sources: ReadableArray,
+    cachePolicy: String,
+    destination: String,
+    resize: Double,
+    promise: Promise,
+  ) {
     // The loader seam is main-thread only.
     UiThreadUtil.runOnUiThread {
       val loader = TurboImageLoaders.get(context)
@@ -60,7 +75,9 @@ class TurboImageModule(private val context: ReactApplicationContext) :
         if (--pending == 0) promise.resolve(allSucceeded)
       }
       for (i in 0 until sources.size()) {
-        val request = resolve(sources, i, policy)?.let { if (destination == "disk") diskOnly(it) else it }
+        // JS never sends `resize` with 'disk' (the types forbid it); were it
+        // sent, the disk copy is the original either way.
+        val request = resolve(sources, i, policy, resize)?.let { if (destination == "disk") diskOnly(it) else it }
         if (request == null) {
           finishOne(false)
           continue

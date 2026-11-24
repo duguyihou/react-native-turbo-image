@@ -51,9 +51,10 @@ export function Avatar({ uri }: { uri: string }) {
 Cache management:
 
 ```ts
+// Download only (the default):
 await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }]);
-// Download only, without decoding into memory (for thumbnails):
-await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }], 'default', 'disk');
+// Also decode into memory for views with `resize={120}`:
+await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }], { resize: 120 });
 await TurboImage.dispose([{ uri: 'https://example.com/photo.jpg' }]);
 await TurboImage.clearMemoryCache();
 await TurboImage.clearDiskCache();

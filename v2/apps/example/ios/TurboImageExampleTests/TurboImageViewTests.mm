@@ -18,16 +18,29 @@
 //
 // Covered: upgrades (a view that outgrows its image loads it again at its
 // new size), source sets (`sources`) and image placeholders
-// (`placeholder.uri`). TODO: hash placeholders, `recyclingKey` and Live Text.
+// (`placeholder.uri`), and that a resized prefetch asks the loader for
+// what a view with that `resize` does. TODO: hash placeholders, `recyclingKey` and Live Text.
 
 #import <XCTest/XCTest.h>
 
+#import <React/RCTBridgeModule.h>
 #import <React/RCTComponentViewProtocol.h>
 #import <React/RCTUtils.h>
 #import <TurboImage/TIImageLoading.h>
 #import <react/renderer/components/TurboImageSpec/Props.h>
 
 using namespace facebook::react;
+
+/// The cache module's `prefetch`, as its spec declares it; the module's
+/// class is private to the pod.
+@interface NSObject (TIPrefetching)
+- (void)prefetch:(NSArray *)sources
+     cachePolicy:(NSString *)cachePolicy
+     destination:(NSString *)destination
+          resize:(double)resize
+         resolve:(RCTPromiseResolveBlock)resolve
+          reject:(RCTPromiseRejectBlock)reject;
+@end
 
 #pragma mark - Fake loader
 
@@ -90,6 +103,8 @@ using namespace facebook::react;
 /// cancel (the seam's contract).
 @interface TIFakeLoader : NSObject <TIImageLoading>
 @property(nonatomic, readonly) NSMutableArray<TIFakeLoad *> *loads;
+/// What the cache module asked to prefetch. Never completed.
+@property(nonatomic, readonly) NSMutableArray<TIImageRequest *> *prefetches;
 @end
 
 @implementation TIFakeLoader
@@ -97,6 +112,7 @@ using namespace facebook::react;
 - (instancetype)init {
   if ((self = [super init])) {
     _loads = [NSMutableArray new];
+    _prefetches = [NSMutableArray new];
   }
   return self;
 }
@@ -117,10 +133,9 @@ using namespace facebook::react;
   imageView.image = image;
 }
 
-// The view tests never reach the cache module's half of the seam.
 - (id<TIImageLoadTask>)prefetchRequest:(TIImageRequest *)request completion:(void (^)(BOOL))completion {
-  [NSException raise:NSInternalInconsistencyException format:@"not used"];
-  return nil;
+  [_prefetches addObject:request];
+  return [[TIFakeLoad alloc] initWithRequest:request completion:^(UIImage *, id, BOOL, NSError *) {}];
 }
 - (void)removeCachedImageForRequest:(TIImageRequest *)request {}
 - (void)clearMemoryCache {}
@@ -415,6 +430,42 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertEqualObjects(thumb.headers, (@[ @[ @"Authorization", @"Bearer t0ken" ] ]));
   XCTAssertEqualObjects(thumb.processorKey, @"");
   XCTAssertNotEqualObjects([self loadOf:kURL].request.processorKey, @"");
+}
+
+#pragma mark Prefetching at a view's resize
+
+/// `TurboImage.prefetch(…, { resize })` asks for what a view with that
+/// `resize` asks for, whatever the view's size or `resizeMode`: Nuke's
+/// memory key is built from these fields, so the view finds the prefetched
+/// image in memory.
+- (void)testAResizedPrefetchAsksForWhatTheViewDoes {
+  id module = [NSClassFromString(@"TurboImageModule") new];
+  [module prefetch:@[ @{@"uri" : kURL} ]
+       cachePolicy:@"default"
+       destination:@"memory"
+            resize:120
+           resolve:^(id) {}
+            reject:^(NSString *, NSString *, NSError *) {}];
+  XCTAssertEqual(_loader.prefetches.count, 1u);
+  TIImageRequest *prefetched = _loader.prefetches[0];
+
+  [self resize:CGSizeMake(300, 80)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.resize = 120;
+    props.resizeMode = TurboImageViewResizeMode::Cover;
+  }];
+  TIImageRequest *shown = _loader.loads[0].request;
+
+  XCTAssertEqualObjects(prefetched.cacheKey, shown.cacheKey);
+  XCTAssertEqualObjects(prefetched.processorKey, shown.processorKey);
+  XCTAssertTrue(CGSizeEqualToSize(prefetched.decodeSize, shown.decodeSize));
+  XCTAssertEqual(prefetched.decodeFill, shown.decodeFill);
+  XCTAssertTrue(CGSizeEqualToSize(prefetched.vectorDecodeSize, shown.vectorDecodeSize));
+  XCTAssertEqual(prefetched.vectorDecodeFill, shown.vectorDecodeFill);
+  XCTAssertEqual(prefetched.displayScale, shown.displayScale);
+  XCTAssertTrue(prefetched.memoryCacheWrite);
+  XCTAssertEqual(prefetched.decodeSize.width, 120 * _scale);
 }
 
 #pragma mark contentPosition and own-size modes

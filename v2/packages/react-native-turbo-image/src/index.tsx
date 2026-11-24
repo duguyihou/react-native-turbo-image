@@ -428,15 +428,30 @@ const styles = StyleSheet.create({
 type CacheSource = Source;
 
 /**
- * Where `TurboImage.prefetch` leaves an image. `'memory'` (the default, as
- * in 1.x) also decodes it, at its own size, into the memory cache. `'disk'`
- * only downloads it: no decode and no memory, so a view that shows it later
- * decodes it from the disk, at the view's size. Prefer `'disk'` for images
- * shown smaller than their files, such as list thumbnails: a full-size decode
- * in memory is of no use to them. Under `memoryOnly`, and for a local file,
- * there is no disk tier, so `'disk'` loads into memory as `'memory'` does.
+ * `TurboImage.prefetch`'s options.
+ *
+ * Without `resize`, a prefetch only downloads: no decode and no memory, so a
+ * view that shows the image later decodes it from the disk, at its own size.
+ *
+ * `resize` also decodes it into the memory cache, for the views that will
+ * then find it there and decode nothing:
+ * - a width, in the same units as the `resize` prop: views with that
+ *   `resize`, no other processing (`blur`, `tint`, `monochrome`) and
+ *   `allowDownscaling` left on;
+ * - `'original'`, at full size: views that show the image at its own size,
+ *   with `allowDownscaling={false}` (a zoomable photo), `resizeMode="center"`
+ *   or `blur` without `resize`.
+ * Other views have memory entries of their own size, so a decode they do not
+ * match costs memory and evicts images in use for nothing; they are served
+ * by the disk copy either way. A width that is not positive and finite is
+ * no `resize`. Under `memoryOnly`, and for a local file, there is no disk
+ * tier, so even without `resize` the image is decoded, at full size.
  */
-export type PrefetchDestination = 'memory' | 'disk';
+export type PrefetchOptions = {
+  /** As the `cachePolicy` prop; `'default'` when unset. */
+  cachePolicy?: TurboImageProps['cachePolicy'];
+  resize?: number | 'original';
+};
 
 /** `TurboImage.configureCache`'s sizes, in bytes; unset keeps the default. */
 export type CacheSizes = { maxDiskSize?: number; maxMemoryCost?: number };
@@ -446,21 +461,41 @@ function cacheBytes(bytes: number | undefined): number {
   return bytes !== undefined && Number.isFinite(bytes) && bytes > 0 ? Math.floor(bytes) : 0;
 }
 
+// The native call's `destination` and `resize`: a width native can use is
+// positive and finite, and 0 is none. A width is filtered here, not left to
+// the core: natively a resize also turns downscaling on, which with no width
+// to bound it and no view would leave the decode unsized.
+function prefetchTarget(resize: PrefetchOptions['resize']): ['memory' | 'disk', number] {
+  if (resize === 'original') {
+    return ['memory', 0];
+  }
+  return resize !== undefined && Number.isFinite(resize) && resize > 0
+    ? ['memory', resize]
+    : ['disk', 0];
+}
+
 /** What `TurboImage.getSize` resolves with, in pixels. */
 export type ImageSize = { width: number; height: number };
 
 // 1.x exposed these as statics on the component; kept for compatibility.
 export const TurboImage = Object.assign(TurboImageComponent, {
+  // A string is 1.x's second argument, the cache policy alone.
   prefetch: (
     sources: CacheSource[],
-    cachePolicy: TurboImageProps['cachePolicy'] = 'default',
-    destination: PrefetchDestination = 'memory'
-  ): Promise<boolean> =>
-    NativeTurboImageModule.prefetch(
+    optionsOrCachePolicy: PrefetchOptions | TurboImageProps['cachePolicy'] = {}
+  ): Promise<boolean> => {
+    const options: PrefetchOptions =
+      typeof optionsOrCachePolicy === 'object'
+        ? optionsOrCachePolicy
+        : { cachePolicy: optionsOrCachePolicy };
+    // 1.x decoded every prefetch at full size; 2.0 only downloads unless
+    // asked (see `PrefetchOptions`).
+    return NativeTurboImageModule.prefetch(
       sources.map(toNativeSource),
-      resolveCachePolicy(cachePolicy) ?? 'default',
-      destination
-    ),
+      resolveCachePolicy(options.cachePolicy ?? 'default') ?? 'default',
+      ...prefetchTarget(options.resize)
+    );
+  },
   // `dispose` and `clearDiskCache` reject (code 'disk') if the disk cache
   // could not be written to. Android only: iOS stages the removal and has
   // no failure to report.

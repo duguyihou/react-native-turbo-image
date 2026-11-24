@@ -141,15 +141,28 @@ Give `source` the sizes your CDN serves, with each file's size in pixels, and th
 - A view that grows past its size later loads the next one up, silently, keeping the image on screen meanwhile (as for `allowDownscaling`). It never switches to a smaller one.
 - The first entry's `headers` are sent with every size; other entries' headers are ignored (a development warning says so). `onSuccess.source` is the URL that loaded.
 
-### Prefetching to the disk only
+### Prefetching: disk by default, memory at a size
 
-`TurboImage.prefetch` takes a third argument, `destination`. The default, `'memory'`, works as in 1.x: it also decodes each image into the memory cache at its own size. `'disk'` only downloads, with no decode and no memory used:
+`TurboImage.prefetch` now only downloads by default: no decode and no memory used. A view that shows the image later decodes it from the disk, at the view's size. 1.x also decoded each image into the memory cache at its own size, which no view showing it smaller ever reads: views decode at their own size, under their own memory entries, so a full-size decode only pushed other images out of the cache.
+
+The second argument is now an options object, with the cache policy inside it. 1.x's form, a policy string, still works. To have views find the image in memory, prefetch at their `resize`:
 
 ```ts
-TurboImage.prefetch(thumbnailSources, 'default', 'disk');
+// For <TurboImage source={source} resize={120} />:
+TurboImage.prefetch(thumbnailSources, { resize: 120 });
+// 1.x's form, still accepted:
+TurboImage.prefetch(sources, 'urlCache');
+// The same with options:
+TurboImage.prefetch(sources, { cachePolicy: 'urlCache', resize: 120 });
+// For a full-screen viewer with allowDownscaling={false}:
+TurboImage.prefetch(nextPhotos, { resize: 'original' });
 ```
 
-Use `'disk'` for images that will be shown smaller than their files, such as list thumbnails. A full-size decode in memory is no use to a view that decodes at its own size, and it pushes other images out of the cache. A view that shows the image later decodes it from the disk. Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so `'disk'` loads into memory as `'memory'` does. If you replaced the loader, your adapter's `prefetch` / `prefetchRequest:completion:` sees the memory write turned off and should store the bytes without decoding them.
+`resize` decodes into memory at that width, the same as the views with that `resize` prop, so they decode nothing. It only serves views with exactly that `resize`, no other processing (`blur`, `tint`, `monochrome`) and `allowDownscaling` left on; other views still get the disk copy. A view without `resize` decodes at its laid-out size, which a prefetch cannot predict to the pixel, so it is not offered.
+
+`resize: 'original'` keeps 1.x's full-size decode. Only views that show the image at its own size use it: `allowDownscaling={false}`, `resizeMode="center"`, and `blur` without `resize`.
+
+Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the default loads into memory at full size, as 1.x did. If you replaced the loader, your adapter's `prefetch` / `prefetchRequest:completion:` sees the memory write turned off for a prefetch without `resize` and should store the bytes without decoding them; a `resize` prefetch reaches it as a view's request does.
 
 ### An image's size before rendering
 
@@ -241,6 +254,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 
 - `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`.
 - `TurboImage.prefetch` resolves `false` when any source fails. 1.x always resolved `true`.
+- `TurboImage.prefetch` only downloads unless asked to decode; see [Prefetching](#prefetching-disk-by-default-memory-at-a-size).
 - `TurboImage.dispose` now removes the image from memory and disk. It did nothing in 1.x.
 - On Android, `dispose` and `clearDiskCache` reject with code `disk` if the disk cache cannot be written to.
 - Scheme and host are lower-cased and the `#fragment` is dropped when a URL becomes a cache key, so `HTTPS://CDN.example.com/a.png#x` and `https://cdn.example.com/a.png` share one entry. An explicit `cacheKey` is used as written.

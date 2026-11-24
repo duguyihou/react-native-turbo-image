@@ -553,13 +553,33 @@ describe('cache statics', () => {
     expect(module.prefetch).toHaveBeenCalledWith(
       [{ uri: AVATAR.uri, headers: [{ name: 'Accept', value: 'image/png' }] }],
       'default',
-      'memory'
+      'disk',
+      0
     );
   });
 
-  it('prefetch passes a disk destination through', async () => {
-    await TurboImage.prefetch([AVATAR], 'urlCache', 'disk');
-    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache', 'disk');
+  it('prefetch decodes into memory at a resize width', async () => {
+    await TurboImage.prefetch([AVATAR], { cachePolicy: 'urlCache', resize: 120 });
+    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache', 'memory', 120);
+  });
+
+  it('prefetch decodes into memory at full size for an original resize', async () => {
+    await TurboImage.prefetch([AVATAR], { resize: 'original' });
+    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'default', 'memory', 0);
+  });
+
+  it('prefetch only downloads for an unusable resize width', async () => {
+    await TurboImage.prefetch([AVATAR], { resize: Number.NaN });
+    await TurboImage.prefetch([AVATAR], { resize: -1 });
+    expect(module.prefetch.mock.calls.map((call) => call.slice(2))).toEqual([
+      ['disk', 0],
+      ['disk', 0],
+    ]);
+  });
+
+  it("prefetch takes 1.x's policy string as its second argument", async () => {
+    await TurboImage.prefetch([AVATAR], 'urlCache');
+    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache', 'disk', 0);
   });
 
   it('prefetch maps a legacy policy and passes a 2.0 policy through', async () => {
