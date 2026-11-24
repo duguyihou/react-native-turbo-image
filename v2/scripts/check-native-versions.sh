@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
 #
-# Asserts every manifest pins the same native dependency versions as
-# scripts/native-versions.env (RFC rules 6 and 7). Runs first in CI so a
-# half-updated bump fails in seconds instead of after a 20-minute build.
+# Checks every manifest pins the versions in native-versions.env
+# (RFC rules 6 and 7). Runs first in CI so a partial bump fails fast.
+#
+# Usage: scripts/check-native-versions.sh
+# Exit: 1 on any mismatch.
 
 set -euo pipefail
 
@@ -39,8 +41,7 @@ expect "${pkg}/cpp/CMakeLists.txt" "googletest/archive/refs/tags/v${GOOGLETEST_V
 expect "${v2_root}/apps/example/package.json" "\"react-native\": \"${REACT_NATIVE_VERSION}\"" "example react-native ${REACT_NATIVE_VERSION}"
 expect "${v2_root}/apps/example/android/build.gradle" "kotlinVersion = \"${KOTLIN_VERSION}\"" "example Kotlin ${KOTLIN_VERSION}"
 
-# The CocoaPods path vendors an xcframework; if one is present locally it
-# must have been built from the pinned tag.
+# A locally vendored Nuke.xcframework must match the pinned tag.
 vendored="${pkg}/ios/vendor/Nuke.version"
 if [[ -f "${vendored}" ]]; then
   expect "${vendored}" "${NUKE_VERSION}" "vendored Nuke.xcframework ${NUKE_VERSION}"

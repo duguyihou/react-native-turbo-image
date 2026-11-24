@@ -25,9 +25,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * What a load through the adapter does to its view and tells its listener:
- * the image at the size the request bounds it to, or a failure under one of
- * the seam's codes, and nothing at all after a cancel.
+ * A load through the adapter: the decode size, the failure codes, progress,
+ * and silence after a cancel.
  */
 @RunWith(AndroidJUnit4::class)
 internal class LoadingTest : AdapterTest() {
@@ -43,11 +42,7 @@ internal class LoadingTest : AdapterTest() {
     assertNotNull(outcome.view.drawable)
   }
 
-  /**
-   * `loadPlaceholder`: the image comes back sized for the view, and the
-   * adapter leaves the view alone, because the view decides whether a
-   * placeholder may still be shown.
-   */
+  /** `loadPlaceholder` returns a view-sized image; the view decides whether to show it. */
   @Test
   fun aPlaceholderLoadReturnsTheImageWithoutPaintingTheView() {
     val view = addView()
@@ -82,7 +77,7 @@ internal class LoadingTest : AdapterTest() {
     assertEquals(PHOTO_WIDTH to PHOTO_HEIGHT, outcome.width to outcome.height)
   }
 
-  /** `cover` needs the image to cover the view, so the shorter side binds. */
+  /** Under `cover` the shorter side binds. */
   @Test
   fun aViewTheImageMustCoverGetsMorePixelsThanOneItFitsInside() {
     // A 300×100 view: fitting inside it takes 150×100, covering it 300×200.
@@ -93,7 +88,7 @@ internal class LoadingTest : AdapterTest() {
     assertEquals(300 to 200, covering.width to covering.height)
   }
 
-  /** `resize` in dp is a width in pixels, whatever the view's size. */
+  /** `resize` bounds the width, whatever the view's size. */
   @Test
   fun aResizeWidthBoundsTheDecode() {
     val outcome = load(resolve(photo(), processing = Processing(resize = 150.0)))
@@ -112,9 +107,8 @@ internal class LoadingTest : AdapterTest() {
   }
 
   /**
-   * An HTML error page sent with a 200 is the usual case. Android's
-   * `ImageDecoder` reports it with an `IOException` subclass, which once
-   * made this `network` on Android and `decode` on iOS.
+   * E.g. an HTML page with a 200. `ImageDecoder` throws an `IOException`
+   * here, which must still map to `decode`, as on iOS.
    */
   @Test
   fun aBodyNoDecoderRecognisesIsADecodeError() {
@@ -133,10 +127,7 @@ internal class LoadingTest : AdapterTest() {
     assertEquals("cacheOnly must not reach the network", 0, requestsReceived(uri))
   }
 
-  /**
-   * A failed load paints nothing: what stays on screen (the previous image,
-   * a placeholder) is the view's decision, made by the core's lifecycle.
-   */
+  /** A failed load paints nothing; what stays on screen is the view's call. */
   @Test
   fun aFailedLoadLeavesTheViewsDrawableAlone() {
     val view = addView()
@@ -167,11 +158,7 @@ internal class LoadingTest : AdapterTest() {
 
   // MARK: Cancel
 
-  /**
-   * The seam's cancel contract carries more weight here than on iOS: the
-   * adapter paints the view itself, so a load that outlives its cancel puts
-   * a stale image on screen without the view having a say (ADR 0004).
-   */
+  /** The adapter paints the view itself, so a late load would show a stale image. */
   @Test
   fun aCancelledLoadNeitherCompletesNorPaints() {
     val view = addView()
@@ -179,7 +166,7 @@ internal class LoadingTest : AdapterTest() {
 
     onMain { pending.handle.cancel() }
 
-    // The slow photo takes about a third of a second when left alone.
+    // Well past the slow photo's normal load time.
     assertFalse("a cancelled load called back", pending.await(seconds = 2))
     assertNull(view.drawable)
     assertFalse(pending.outcome().completed)
@@ -217,12 +204,7 @@ internal class LoadingTest : AdapterTest() {
     assertEquals(1, requestsReceived(uri))
   }
 
-  /**
-   * A prefetch (memory write off): the bytes
-   * reach the disk and no decoded bitmap is kept. Before, a prefetch decoded
-   * the full-size image under the key unprocessed views share, so a list
-   * thumbnail was then drawn from that bitmap.
-   */
+  /** With memory writes off, a prefetch stores only the bytes on disk. */
   @Test
   fun aDiskOnlyPrefetchStoresTheBytesAndNoBitmap() {
     val uri = photo()

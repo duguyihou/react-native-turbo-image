@@ -2,8 +2,7 @@
 
 NSErrorDomain const TIImageLoadErrorDomain = @"com.turboimage.load";
 
-// The ObjC runtime name pinned by `@objc(TurboImageNukeLoader)` in
-// ios/Nuke/NukeImageLoader.swift.
+// Pinned by `@objc(TurboImageNukeLoader)` in NukeImageLoader.swift.
 static NSString *const kDefaultLoaderClassName = @"TurboImageNukeLoader";
 
 @implementation TIImageLoaderRegistry
@@ -23,8 +22,7 @@ static NSInteger sCacheMaxMemoryCost;
   }
 }
 
-// Read by the adapter's initializer, which `sharedLoader` calls inside its
-// @synchronized block; the lock is recursive.
+// Called from the adapter's init inside `sharedLoader`'s lock (it is recursive).
 + (NSInteger)cacheMaxDiskSize {
   @synchronized(self) {
     return sCacheMaxDiskSize;
@@ -37,14 +35,9 @@ static NSInteger sCacheMaxMemoryCost;
   }
 }
 
-// The default adapter is resolved by class name instead of being referenced
-// directly. Referencing it would require this C-family target to import the
-// Swift adapter's generated `-Swift.h` header, i.e. a dependency from
-// LoaderAPI → Nuke adapter. That inverts the layering (the adapter depends
-// on the seam, not the other way round) and creates a cycle in SwiftPM.
-//
-// Trade-off: a typo in the class name fails at runtime, not at link time.
-// The example app's smoke test exercises this lookup on every CI run.
+// Found by class name: importing the Swift adapter would invert the layering
+// and make a SwiftPM cycle. Trade-off: a typo fails at runtime (smoke test
+// covers it).
 + (nullable id<TIImageLoading>)sharedLoader {
   @synchronized(self) {
     if (sSharedLoader == nil) {

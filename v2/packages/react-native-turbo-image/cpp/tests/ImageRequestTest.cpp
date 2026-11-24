@@ -33,16 +33,13 @@ TEST(CanonicalCacheKey, KeepsUserinfoCase) {
 }
 
 TEST(CanonicalCacheKey, LowercasesAsciiOnly) {
-  // Bytes above 0x7F (here UTF-8 "É") must pass through whatever the C
-  // locale is; `std::tolower` would map some of them in a Latin-1 locale.
+  // Non-ASCII bytes pass through regardless of the C locale.
   EXPECT_EQ(canonicalCacheKey("https://\xC3\x89XAMPLE.com/a.png"),
             "https://\xC3\x89xample.com/a.png");
 }
 
 TEST(MemoryCacheKeyCandidates, TriesAnExplicitKeyVerbatimFirst) {
-  // `source.cacheKey` is stored as given, so a key with a '#' or a
-  // scheme-like prefix must be looked up as given, before the form a URI
-  // source would have been stored under.
+  // As given first (an explicit `cacheKey`), then canonical (a URI).
   EXPECT_EQ(memoryCacheKeyCandidates("Avatar#42"),
             (std::vector<std::string>{"Avatar#42", "Avatar"}));
   EXPECT_EQ(memoryCacheKeyCandidates("HTTPS://CDN.Example.com/a.png#thumb"),
@@ -188,8 +185,7 @@ TEST(LoadErrorCodeName, OutOfRangeIsUnknown) {
   EXPECT_EQ(loadErrorCodeName(static_cast<LoadErrorCode>(99)), "unknown");
 }
 
-// The cache-tier matrix is the contract both adapters are tested against, so
-// spell every policy out explicitly.
+// The cache-tier matrix both adapters are tested against, spelled out.
 struct PolicyCase {
   CachePolicy policy;
   TierAccess memory;
@@ -325,8 +321,7 @@ TEST(ResolveVectorDecodeSize, MatchesTheBitmapTargetWhileDownscalingIsOn) {
 }
 
 TEST(ResolveVectorDecodeSize, OptOutStillDrawsAtTheViewSize) {
-  // A bitmap's original is every pixel it has. A vector's would be its own
-  // nominal size, smaller than the view more often than not.
+  // A vector's "original" is its nominal size, usually smaller than the view.
   const ImageRequest optOut{.uri = kLogo, .allowDownscaling = false};
   EXPECT_EQ(decodeOf(optOut).kind, DecodeSize::Kind::Original);
   EXPECT_EQ(vectorDecodeOf(optOut),
@@ -353,8 +348,7 @@ TEST(ResolveVectorDecodeSize, OptOutKeepsTheRulesAboutTheImagesOwnSize) {
             (DecodeSize{.kind = DecodeSize::Kind::Width, .width = 360, .fill = false}));
 }
 
-// The views start a new load when this comparison says the request changed,
-// so every prop that affects a load must take part in it.
+// Views reload when this differs, so every load-affecting prop must count.
 TEST(ImageRequestEquality, EveryFieldTakesPart) {
   const ImageRequest base{.uri = "https://example.com/a.jpg"};
   EXPECT_EQ(base, ImageRequest{.uri = "https://example.com/a.jpg"});
@@ -403,8 +397,7 @@ TEST(NeedsLargerDecode, FitFollowsTheSideThatBinds) {
 }
 
 TEST(NeedsLargerDecode, NeverForASourceAlreadyAtItsOwnSize) {
-  // 100x50 decoded for a 300x200 view: it stopped short of the view, so it
-  // is the whole source, and another decode would give the same pixels.
+  // 100x50 for a 300x200 view: capped by the source, so reloading gains nothing.
   EXPECT_FALSE(needsLargerDecode({100, 50}, {300, 200}, {900, 600}, false));
   // Fill: covering 300x300 needed 450x300; it came out 200x100.
   EXPECT_FALSE(needsLargerDecode({200, 100}, {300, 300}, {900, 900}, true));
@@ -426,8 +419,7 @@ TEST(NeedsLargerDecode, UnknownSizesNeverReload) {
 
 // placeImage: where a view draws its image.
 
-// A 200x100 box and a square image: the shapes differ, so every mode
-// leaves free space or overflow on one axis.
+// A 200x100 box and a square image, so every mode leaves space or overflow.
 constexpr PixelSize kBox{200, 100};
 constexpr ContentPosition kCentre{};
 constexpr ContentPosition kTopLeft{.x = 0, .y = 0};

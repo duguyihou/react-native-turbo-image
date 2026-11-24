@@ -1,18 +1,7 @@
-// Fabric host view for <TurboImage> on iOS.
-//
-// Responsibilities, in order:
-//   1. Receive codegen props from React.
-//   2. Ask the shared C++ core to resolve them into a `ResolvedRequest`
-//      (same code Android runs, RFC rule 4).
-//   3. Hand the resolved request to whichever `TIImageLoading` adapter is
-//      registered (Nuke by default) and display the result.
-//
-// When each of those happens, what stays on screen meanwhile and which load
-// events JS sees is not decided here: the core's `ViewLifecycle` decides, and
-// this view carries out the effects it returns (`perform:step:`).
-//
-// This file is the *only* place where React Native, the C++ core and the
-// loader seam meet. It must not import Nuke.
+// Fabric host view for <TurboImage> on iOS: props -> core request -> loader
+// seam -> display. The core's `ViewLifecycle` decides what shows and which
+// events fire; this view carries out its effects (`perform:step:`).
+// The only place RN, the core and the seam meet. Never import Nuke here.
 
 #import "TurboImageComponentView.h"
 
@@ -36,9 +25,7 @@ using namespace facebook::react;
 
 namespace {
 
-// The seam's error codes are the core's, repeated in plain ObjC because the
-// seam header cannot include C++. `loadDidFinishWithImage:` casts one to the
-// other, so a value added or renumbered on one side only must not compile.
+// The seam's codes are cast to the core's, so they must match exactly.
 #define TI_ASSERT_SAME_CODE(seam, core)                                              \
   static_assert(static_cast<int>(seam) == static_cast<int>(turboimage::LoadErrorCode::core), \
                 "TIImageLoadErrorCode and turboimage::LoadErrorCode disagree")
@@ -90,13 +77,13 @@ UIViewContentMode toContentMode(TurboImageViewResizeMode mode) {
     case TurboImageViewResizeMode::Center:
       return UIViewContentModeCenter;
     case TurboImageViewResizeMode::ScaleDown:
-      // No UIKit mode: placeImage computes it. Fit until there is an image.
+      // placeImage handles it; fit until there is an image.
       return UIViewContentModeScaleAspectFit;
   }
 }
 
 
-// RN's colour as the core's 0xAARRGGBB, or nullopt when the prop is unset.
+// RN colour as 0xAARRGGBB, or nullopt if unset.
 std::optional<std::uint32_t> toArgb(const SharedColor &color) {
   if (!color) {
     return std::nullopt;
@@ -107,8 +94,7 @@ std::optional<std::uint32_t> toArgb(const SharedColor &color) {
          static_cast<std::uint32_t>(blueFromColor(color));
 }
 
-// Codegen's header structs have no operator==; this is the comparison and
-// the conversion in one place.
+// Codegen header structs have no operator==, so compare after converting.
 std::vector<turboimage::Header> toHeaders(const TurboImageViewSourceStruct &source) {
   std::vector<turboimage::Header> headers;
   headers.reserve(source.headers.size());
@@ -127,9 +113,7 @@ turboimage::ProcessingOptions toProcessing(const TurboImageViewProps &props) {
   };
 }
 
-// Loud where a developer will see it (a redbox in development), harmless
-// where a user would: the effect is skipped, which at worst leaves one image
-// unloaded.
+// Redbox in development; in production the effect is just skipped.
 void TIUnexpectedEffect(NSString *kind) {
   RCTLogError(@"TurboImage: the lifecycle sent %@ from a step that cannot produce it", kind);
 }
@@ -139,13 +123,11 @@ const std::shared_ptr<const TurboImageViewProps> &defaultViewProps() {
   return defaultProps;
 }
 
-// Wraps premultiplied RGBA from the core in a UIImage. Copies the pixels so
-// the UIImage owns its memory independently of the C++ buffer.
+// Core RGBA to UIImage, copying the pixels.
 UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   NSData *data = [NSData dataWithBytes:rgba.pixels.data() length:rgba.pixels.size()];
   CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
-  // sRGB: blurhash/thumbhash operate in sRGB. (1.x used DeviceRGB, which is
-  // sRGB on iOS anyway; naming it is explicit.)
+  // blurhash/thumbhash are sRGB.
   CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
   CGImageRef cgImage = CGImageCreate(
       static_cast<size_t>(rgba.width), static_cast<size_t>(rgba.height), 8, 32,
@@ -161,15 +143,9 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
 
 }  // namespace
 
-// The effects of the lifecycle that only one kind of step can produce, and
-// that need what that step knows: the request a reload resolved, or what the
-// adapter called back with. Each caller of perform:step: sets the ones its
-// step can produce, as blocks closing over that knowledge, so no effect has
-// to dig its context out of a loosely typed argument.
-//
-// The lifecycle never sends an effect from a step that cannot produce it
-// (`StartLoad` from a callback, say). If it ever did, the block is nil: that
-// is a bug in the core or here, and it is reported, not acted on.
+// Step-specific effects, as blocks closing over what the step knows. A nil
+// block means the lifecycle sent an effect its step can't produce: a bug,
+// reported and skipped.
 struct TIStepEffects {
   void (^deliverInvalidRequest)(void) = nil;
   void (^startLoad)(int64_t token) = nil;
@@ -177,12 +153,9 @@ struct TIStepEffects {
   void (^deliverFailure)(void) = nil;
 };
 
-// The view's content view: it clips to the content box (inside the border
-// and padding) and holds the image view, which `placeImage` may make larger
-// than the box (cover) or smaller (contain) and move off centre
-// (`contentPosition`). UIKit's content modes cannot combine a scale with an
-// edge, so the image view's frame does it. Its layoutSubviews asks the view
-// to place the image again whenever the box changes.
+// Clips to the content box and holds the image view, whose frame
+// `placeImage` sets (UIKit modes can't combine scale with `contentPosition`).
+// Re-places the image on every layout.
 @interface TIImageContainer : UIView
 @property(nonatomic, copy, nullable) void (^onLayout)(void);
 @end
@@ -202,43 +175,33 @@ struct TIStepEffects {
 @implementation TurboImageComponentView {
   UIImageView *_imageView;
   TIImageContainer *_container;
-  // Every decision about what the view shows and which load events JS sees
-  // is the core's (the same code the Android view runs). This view says what
-  // happened and carries out the effects it gets back; see perform:step:.
+  // Decides what shows and which events fire (shared with Android).
   turboimage::ViewLifecycle _lifecycle;
   // Cancels the load in flight; nil when there is none.
   id<TIImageLoadTask> _task;
   // Set by updateProps, consumed by finalizeUpdates.
   BOOL _propsChanged;
-  // The request the current load was started for; empty before a view's
-  // first load, and again after a recycle.
+  // The current load's request; empty before the first load and after recycle.
   std::optional<turboimage::ImageRequest> _loadedRequest;
   BOOL _needsPlaceholder;
   BOOL _needsLiveTextUpdate;
-  // `recyclingKey` changed in this transaction: the next load must not keep
-  // the previous image.
+  // `recyclingKey` changed: the next load must not keep the previous image.
   BOOL _recyclingKeyChanged;
-  // Per-load progress throttle (core rule shared with Android).
+  // Per-load progress throttle (shared with Android).
   turboimage::ProgressThrottle _progressThrottle;
-  // Last Content-Length seen this load, for the throttle's finish() step.
+  // Last total seen this load, for the throttle's finish().
   int64_t _lastProgressTotal;
   // Created on first use; nil while Live Text is off or unsupported.
   id<TILiveTextInteraction> _liveText;
-  // Set by prepareForRecycle, consumed by the next updateProps: this view's
-  // own state was reset to the spec defaults, so that is what the incoming
-  // props must be compared with. See updateProps.
+  // Set by prepareForRecycle: compare the next props with defaults.
   BOOL _recycled;
-  // The request of the image on screen, when it was decoded for this view's
-  // size and could be loaded again larger if the view grows
-  // (`turboimage::needsLargerDecode`); nil otherwise. With the image's size
-  // in pixels, and the view's when the image was loaded (the request's
-  // `decodeSize`, or the size an upgrade failed at, see upgradeIfOutgrown).
+  // The on-screen image's request if it was decoded for the view size and
+  // may need a larger reload when the view grows; nil otherwise. Plus its
+  // decoded size and the view size it was loaded for.
   TIImageRequest *_upgradable;
   turboimage::PixelSize _upgradableDecoded;
   turboimage::PixelSize _upgradableLoadedFor;
-  // The placeholder's own load, for a placeholder given as an image
-  // (`placeholder.uri`). Never reported to JS; cancelled when a newer
-  // placeholder, the image itself or a recycle makes it moot.
+  // Load for `placeholder.uri`. Never reported to JS; cancelled when moot.
   id<TIImageLoadTask> _placeholderTask;
 }
 
@@ -250,13 +213,10 @@ struct TIStepEffects {
   if ((self = [super initWithFrame:frame])) {
     _props = defaultViewProps();
 
-    // The loader's image view, because playing an animation takes one of its
-    // own (TIImageLoading.h). A plain one if no adapter is linked: such a
-    // view only ever reports that, and shows placeholders.
+    // The loader's image view (it plays animations); plain if none is linked.
     _imageView = [TIImageLoaderRegistry.sharedLoader makeImageView] ?: [UIImageView new];
     _imageView.clipsToBounds = YES;
-    // The spec default (`contain`, 1.x's default), read from the default
-    // props so the two cannot drift apart.
+    // Read from the default props so it can't drift from the spec.
     _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);
     _container = [[TIImageContainer alloc] initWithFrame:self.bounds];
     _container.clipsToBounds = YES;
@@ -272,32 +232,21 @@ struct TIStepEffects {
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps {
-  // Fabric keeps `_props` across a recycle and remounts the view with
-  // `oldProps:nullptr`, so `_props` is still the previous life's props here.
-  // The base class needs exactly that: it diffs against `_props` to undo
-  // what the previous life set on the UIView (accessibility, opacity, ...).
-  // This view's own state was instead reset by prepareForRecycle, so its
-  // props are compared with the defaults. Comparing them with `_props` would
-  // leave a recycled view without the placeholder or Live Text of its new
-  // life when they equal the previous life's. (The request needs no such
-  // care: prepareForRecycle forgets `_loadedRequest`, so the first props of
-  // a new life always load. Smoke scenario `recycledSameSource`.)
+  // After a recycle Fabric keeps the old `_props` (the base class diffs
+  // against them), but our state was reset, so diff against the defaults.
+  // Otherwise a recycled view could miss its placeholder or Live Text.
   const auto &oldViewProps =
       *std::static_pointer_cast<const TurboImageViewProps>(_recycled ? defaultViewProps() : _props);
   const auto &newViewProps = *std::static_pointer_cast<const TurboImageViewProps>(props);
   _recycled = NO;
 
-  // Whether the request props changed is not worked out here: finalizeUpdates
-  // compares the whole request with the one the current load was started
-  // for, once `_props` holds the new values.
+  // finalizeUpdates compares the whole request once `_props` is updated.
   _propsChanged = YES;
-  // Not a request prop: a new key alone starts no load, because the image
-  // on screen is still the one `source` names. It only decides how the load
-  // started in this same transaction treats the previous image.
+  // Not a request prop: only affects a load started in this transaction.
   if (oldViewProps.recyclingKey != newViewProps.recyclingKey) {
     _recyclingKeyChanged = YES;
   }
-  // Any placeholder field: a change to it alone starts no reload.
+  // Placeholder changes alone start no reload.
   if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
       oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash ||
       oldViewProps.placeholder.memoryCacheKey != newViewProps.placeholder.memoryCacheKey ||
@@ -308,34 +257,29 @@ struct TIStepEffects {
     // Applied in finalizeUpdates, once `_props` holds the new value.
     _needsLiveTextUpdate = YES;
   }
-  // resizeMode and contentPosition are applied in finalizeUpdates, by
-  // placeImage, once `_props` holds them.
+  // resizeMode and contentPosition: applied by placeImage in finalizeUpdates.
 
   [super updateProps:props oldProps:oldProps];
 }
 
-// Loading is deferred to finalizeUpdates so a single transaction that
-// changes several request props starts exactly one load.
+// Deferred here so one transaction starts at most one load.
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask {
   [super finalizeUpdates:updateMask];
   [self placeImage];
   if (_propsChanged) {
     _propsChanged = NO;
-    // A new load whenever the request differs from the one on screen, and for
-    // a view's first props whatever they say: a view mounted without a source
-    // reports that (`invalidRequest`) instead of staying silent. Comparing
-    // the core's request, not a list of props kept here, means a field added
-    // to it can never be forgotten on one platform.
+    // Load when the core request changed, and always on first props (so a
+    // missing source reports `invalidRequest`). Comparing the whole request
+    // means no new field can be forgotten.
     auto request = [self coreRequest];
     if (!_loadedRequest.has_value() || *_loadedRequest != request) {
       _loadedRequest = std::move(request);
-      // A reload may clear the view, so the placeholder must be (re)applied.
+      // A reload may clear the view, so reapply the placeholder.
       _needsPlaceholder = YES;
       [self reload];
     }
   }
-  // Consumed by the load above, or dropped: the key applies only to a load
-  // in its own transaction.
+  // Only applies to a load in its own transaction.
   _recyclingKeyChanged = NO;
   if (_needsPlaceholder) {
     _needsPlaceholder = NO;
@@ -349,8 +293,7 @@ struct TIStepEffects {
 
 #pragma mark - Live Text
 
-// Analyses the loaded image only: never a placeholder, and nothing while a
-// load is in flight. Turning the prop off removes the interaction at once.
+// Analyses only the loaded image, never a placeholder.
 - (void)updateLiveText {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   if (!props.enableLiveTextInteraction) {
@@ -369,15 +312,13 @@ struct TIStepEffects {
 
 #pragma mark - Lifecycle
 
-// The props the core's lifecycle depends on, as they are now.
+// The props the lifecycle depends on.
 - (turboimage::LifecycleProps)lifecycleProps {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
-  // JS allows one placeholder kind at a time; `memoryCacheKey` wins if an
-  // app passes several anyway, as it always has.
+  // `memoryCacheKey` wins if several kinds are passed.
   const auto kind = !props.placeholder.memoryCacheKey.empty()
                         ? turboimage::PlaceholderKind::MemoryCacheKey
-                        // An image placeholder arrives later, like a decoded
-                        // hash, and the lifecycle treats it the same way.
+                        // An image placeholder arrives late, like a hash.
                         : !props.placeholder.blurhash.empty() || !props.placeholder.thumbhash.empty() ||
                                   !props.placeholder.uri.empty()
                               ? turboimage::PlaceholderKind::Hash
@@ -385,19 +326,16 @@ struct TIStepEffects {
   return {.placeholder = kind, .showPlaceholderOnFailure = props.showPlaceholderOnFailure};
 }
 
-// A request prop changed: resolve the new request and let the lifecycle end
-// the old load, decide what stays on screen, and start the new one.
+// A request prop changed: resolve it and let the lifecycle swap loads.
 - (void)reload {
-  // The image on screen is about to be replaced; there is nothing to upgrade
-  // until the new one arrives. (A running upgrade is cancelled by the
-  // lifecycle, below.)
+  // Nothing to upgrade until the new image arrives.
   _upgradable = nil;
   // The old image's analysis must not outlive its request.
   [_liveText detach];
   _progressThrottle = turboimage::ProgressThrottle{};
   _lastProgressTotal = -1;
 
-  // Requests that cannot be started fail before onStart: no load ever began.
+  // Unstartable requests fail without onStart.
   TIRequestResult built = [self makeRequest:*_loadedRequest];
   if (built.request != nil && TIImageLoaderRegistry.sharedLoader == nil) {
     built = {.request = nil,
@@ -422,11 +360,8 @@ struct TIStepEffects {
            step:step];
 }
 
-// Carries out the lifecycle's effects, in order. The lifecycle decided;
-// nothing here chooses whether an effect applies.
-//
-// The blocks in `step` capture `self` strongly. They run before this
-// returns and the struct lives on the caller's stack, so that is no cycle.
+// Carries out the lifecycle's effects in order, without second-guessing.
+// `step` blocks capture `self` strongly, but run before return: no cycle.
 - (void)perform:(const turboimage::LifecycleEffects &)effects step:(const TIStepEffects &)step {
   using Kind = turboimage::LifecycleEffect::Kind;
   for (const auto &effect : effects) {
@@ -492,13 +427,9 @@ struct TIStepEffects {
 
   [self emitStart];
 
-  // The adapter drops callbacks after cancel, but the lifecycle guards by
-  // token as well: a callback from a load that was replaced gets no effects
-  // back, so it cannot touch this view. The blocks only pass on what
-  // happened; what it means for the view is the lifecycle's to say.
+  // The lifecycle also guards by token, so a stale callback does nothing.
   __weak __typeof(self) weakSelf = self;
-  // No `onProgress` handler in JS: no block, so the loader tracks no
-  // progress (Nuke: no progress task per load) and no events are sent.
+  // No progress block without a JS `onProgress` handler.
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   TIImageLoadProgress progress = nil;
   if (props.progressEnabled) {
@@ -516,7 +447,7 @@ struct TIStepEffects {
         if (strongSelf == nil) {
           return;
         }
-        // `image` is nil when the load failed; `error` then says why.
+        // nil `image` means failure; `error` says why.
         TIStepEffects step;
         if (image != nil) {
           step.deliverSuccess = ^{
@@ -536,21 +467,16 @@ struct TIStepEffects {
                          step:step];
         }
       }];
-  // Already finished if the completion ran inside the call above: there is
-  // nothing left to cancel, so the task is not kept.
+  // A memory hit may have completed synchronously; keep the task only if not.
   if (_lifecycle.isInFlight(token)) {
     _task = task;
   }
 }
 
-// Turns the request and the view's size into a seam request, through
-// the same factory as the cache module, so prefetched keys always match.
+// Same factory as the cache module, so prefetched keys match.
 - (TIRequestResult)makeRequest:(const turboimage::ImageRequest &)request {
   const CGFloat pixelRatio = request.pixelRatio;
-  // The view's size bounds the decode (`allowDownscaling`). Fabric applies
-  // layout metrics before finalizeUpdates, on mount as on update, so the
-  // bounds are this transaction's. A view that grows later loads the image
-  // again at its new size (upgradeIfOutgrown), through this same method.
+  // Bounds are already this transaction's (layout precedes finalizeUpdates).
   const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
                                           self.bounds.size.height * pixelRatio);
   return TIMakeImageRequest(request, viewPixelSize);
@@ -562,26 +488,19 @@ struct TIStepEffects {
   return {self.bounds.size.width * pixelRatio, self.bounds.size.height * pixelRatio};
 }
 
-// The current props as the core's request: everything they say about which
-// image to load and how.
+// The current props as the core's request.
 - (turboimage::ImageRequest)coreRequest {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   return {
       .uri = props.source.uri,
       .cacheKey = TIOptionalCacheKey(props.source.cacheKey),
       .cachePolicy = toCorePolicy(props.cachePolicy),
-      // Processors change the pixels, so they need a new load (served from
-      // the disk original, or memory if this variant is cached).
+      // Processors change pixels, so they need a new load.
       .processing = toProcessing(props),
-      // Fabric applies props (and so starts loads) before mounting, when
-      // there is no window to ask; RN's own screen scale is what `PixelRatio`
-      // reports to JS, so `resize` means the same here as in the app's
-      // layout maths.
+      // No window before mount; RN's scale matches JS `PixelRatio`.
       .pixelRatio = RCTScreenScale(),
       .headers = toHeaders(props.source),
-      // Both decide how large the image is decoded (the core's decode-size
-      // rule): `contain` needs fewer pixels than `cover`, `center` needs
-      // them all. The image on screen may be too small for the new answer.
+      // Both decide the decode size.
       .allowDownscaling = props.allowDownscaling,
       .resizeMode = toCoreResizeMode(props.resizeMode),
   };
@@ -598,15 +517,13 @@ struct TIStepEffects {
              animation:(nullable id)animation
        fromMemoryCache:(BOOL)fromMemoryCache
                 source:(NSString *)source {
-  // A successful load ends progress at 100% (core rule, see finish()).
+  // Success ends progress at 100%.
   if (_progressThrottle.finish(_lastProgressTotal)) {
     [self emitProgress:_lastProgressTotal total:_lastProgressTotal];
   }
   [self showFinalImage:image animation:animation fade:!fromMemoryCache];
   [self updateLiveText];
-  // In pixels, as on Android. `size` alone is in points, which differs for
-  // any image whose scale is not 1: a processed SVG drawn at its own size
-  // carries the screen's scale so that it keeps its size in points.
+  // In pixels, as on Android.
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   [self emitSuccess:CGSizeMake(image.size.width * scale, image.size.height * scale)
              source:source];
@@ -614,8 +531,7 @@ struct TIStepEffects {
 
 #pragma mark - Upgrades
 
-// A view outgrows its image when it is resized after the load: a zoom, a
-// rotation, a card that expands. Fabric applies the new frame here.
+// A view may outgrow its image when resized after the load.
 - (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics
            oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics {
   [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
@@ -626,14 +542,9 @@ struct TIStepEffects {
   }
 }
 
-// Notes an image that was sized for this view, then sees whether the view
-// already outgrew it.
-//
-// Not for an animated image: Nuke's player decodes its frames for the view's
-// size itself, and replacing the image would restart it. Not for a vector
-// (SVG): it has no pixels (`CGImage` is nil) and is drawn sharp at any size.
-// Not for a request whose decode does not follow the view: `decodeSize`
-// with no height is a `resize` width, and zero is the original size.
+// Remembers an image sized for this view, then checks if it's outgrown.
+// Skips animations (the player sizes frames; a swap restarts it), vectors,
+// and decodes not bounded by the view.
 - (void)rememberImage:(UIImage *)image
             animation:(nullable id)animation
               request:(TIImageRequest *)request {
@@ -650,9 +561,8 @@ struct TIStepEffects {
   [self upgradeIfOutgrown];
 }
 
-// Loads the image again at the view's size if the view has grown past it
-// (`turboimage::needsLargerDecode`). Silent: no events, no progress, and on
-// failure the image already shown stays (`ViewLifecycle::startUpgrade`).
+// Reloads at the view's size if it grew past the image. Silent: no events,
+// and on failure the current image stays.
 - (void)upgradeIfOutgrown {
   if (_upgradable == nil || !_loadedRequest.has_value()) {
     return;
@@ -662,7 +572,6 @@ struct TIStepEffects {
                                      _upgradable.decodeFill)) {
     return;
   }
-  // The request at the view's current size, through the same factory.
   TIRequestResult built = [self makeRequest:*_loadedRequest];
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   if (built.request == nil || loader == nil) {
@@ -687,9 +596,7 @@ struct TIStepEffects {
           }
           strongSelf->_lifecycle.upgradeFailed(token);
           strongSelf->_task = nil;
-          // Not again for this image: recorded as loaded for the size it
-          // failed at, the rule takes the image for the source at its own
-          // size. A new source, or a reload, starts over.
+          // Don't retry at this size; a new source or reload starts over.
           strongSelf->_upgradableLoadedFor = now;
           return;
         }
@@ -697,35 +604,29 @@ struct TIStepEffects {
           return;  // superseded by a reload, recycle or drop
         }
         strongSelf->_task = nil;
-        // No fade: the same picture, only sharper, replaces itself.
+        // No fade: same picture, sharper.
         [loader displayImage:image animation:animation inImageView:strongSelf->_imageView];
         [strongSelf placeImage];
         [strongSelf updateLiveText];
-        // Records the new image and asks again, in case the view kept
-        // growing meanwhile.
+        // Check again in case the view kept growing.
         [strongSelf rememberImage:image animation:animation request:request];
       }];
-  // Already finished if the completion ran inside the call above.
+  // Keep the task only if it didn't complete synchronously.
   if (_lifecycle.isUpgrading(token)) {
     _task = task;
   }
 }
 
 - (void)deliverFailure:(NSError *)error {
-  // The seam guarantees TIImageLoadErrorDomain; anything else is an adapter
-  // bug, reported as unknown.
+  // Other domains are adapter bugs: unknown.
   const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
                         ? static_cast<turboimage::LoadErrorCode>(error.code)
                         : turboimage::LoadErrorCode::Unknown;
   [self emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
 }
 
-// Cross-fades from whatever is shown (placeholder, previous image or
-// blank). Memory-cache hits appear instantly, the same rule as Coil's crossfade on Android, so
-// scrolling back through a list does not re-fade every cell.
-//
-// The loader puts it on screen, because an animated image is played by the
-// loader (`animation`); placeholders and clearing are plain `image` sets.
+// Cross-fades from whatever is shown; memory hits appear instantly (like
+// Coil). The loader displays it, since it plays animations.
 - (void)showFinalImage:(UIImage *)image animation:(nullable id)animation fade:(BOOL)fade {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -740,7 +641,7 @@ struct TIStepEffects {
                              UIViewAnimationOptionAllowUserInteraction
                   animations:^{
                     [loader displayImage:image animation:animation inImageView:self->_imageView];
-                    // Inside the transition, so its end state has the new frame.
+                    // Inside the transition so its end state has the new frame.
                     [self placeImage];
                   }
                   completion:nil];
@@ -748,24 +649,10 @@ struct TIStepEffects {
 
 #pragma mark - Placeholder
 
-// memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk).
-// The core says which keys the prop may name (an explicit cacheKey as
-// written, or a URI's canonical form); the first hit wins, and a miss clears
-// the view.
-// Places the image view in the content box for resizeMode and
-// contentPosition. Cover and contain centred: UIKit's content mode, with the
-// image view filling the box, as before contentPosition existed. Otherwise
-// the core's placeImage gives the rectangle, the same one Android draws
-// into. Called whenever the image, the props or the box change, since the
-// rectangle depends on all three.
-//
-// Center and scale-down always go through placeImage, because they draw the
-// image at its own size and UIKit takes that from `UIImage.size`, in points
-// at the image's scale. The adapter decodes at scale 1, so a 600 px image
-// was 600 points wide under UIKit's center mode, three times its size on
-// Android, where a bitmap's own size is its pixels at the screen's density.
-// Both now use pixels over the screen scale; a vector (no CGImage) keeps
-// its canvas, which is already in points.
+// Lays out the image view for resizeMode and contentPosition. Centred
+// cover/contain use UIKit's content mode; otherwise the core's placeImage
+// computes the rect, as on Android. Center and scale-down always compute it:
+// UIKit would size a scale-1 bitmap in points, not pixels / screen scale.
 - (void)placeImage {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   const CGRect box = _container.bounds;
@@ -794,6 +681,7 @@ struct TIStepEffects {
   _imageView.frame = CGRectMake(placed.x, placed.y, placed.width, placed.height);
 }
 
+// Sync memory lookup over the core's candidate keys; a miss clears the view.
 - (void)showCachedPlaceholder {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -808,9 +696,7 @@ struct TIStepEffects {
   [self placeImage];
 }
 
-// Decodes the placeholder off the main thread with the shared C++ core and
-// shows it unless the real image (or a newer placeholder) got there first,
-// which the lifecycle answers by the decode's generation.
+// Decodes off main; shown only if the lifecycle says it's still current.
 - (void)decodePlaceholder:(int64_t)generation {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   if (!props.placeholder.uri.empty()) {
@@ -823,9 +709,7 @@ struct TIStepEffects {
 
   __weak __typeof(self) weakSelf = self;
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{
-    // A C++ exception that leaves this block terminates the app, and the
-    // decode allocates. A placeholder is optional: without memory for it,
-    // the view simply shows none.
+    // A C++ exception leaving the block would crash; just show no placeholder.
     UIImage *placeholder = nil;
     try {
       const auto rgba = turboimage::decodePlaceholder(blurhash, thumbhash);
@@ -845,10 +729,8 @@ struct TIStepEffects {
   });
 }
 
-// An image placeholder: loaded like a source (from the caches when it is
-// there), at the view's size, with the source's headers, unprocessed and
-// without events, then shown unless the image or a newer placeholder got
-// there first, which the lifecycle answers by generation as for a decode.
+// `placeholder.uri`: loaded like the source (headers, view size) but
+// unprocessed and silent; shown only if still current.
 - (void)loadPlaceholder:(const std::string &)uri generation:(int64_t)generation {
   [self cancelPlaceholderLoad];
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -878,13 +760,12 @@ struct TIStepEffects {
         strongSelf->_placeholderTask = nil;
         if (image != nil &&
             strongSelf->_lifecycle.placeholderDecoded(generation, [strongSelf lifecycleProps])) {
-          // A still, even of an animated image: it is only a stand-in.
+          // A still, even if animated.
           strongSelf->_imageView.image = image;
           [strongSelf placeImage];
         }
       }];
-  // Already finished if the completion ran inside the call (a memory hit):
-  // nothing is left to cancel.
+  // Keep the task only if it didn't complete synchronously.
   if (!finished) {
     _placeholderTask = task;
   }
@@ -898,8 +779,7 @@ struct TIStepEffects {
 - (void)prepareForRecycle {
   [super prepareForRecycle];
   [self cancelPlaceholderLoad];
-  // Stops the load and any decode and clears the image, with no event: the
-  // component that was listening is gone.
+  // Stops everything and clears the image, without events.
   [self perform:_lifecycle.recycle() step:TIStepEffects{}];
   _upgradable = nil;
   _propsChanged = NO;
@@ -909,32 +789,23 @@ struct TIStepEffects {
   [_liveText detach];
   _liveText = nil;
   _recyclingKeyChanged = NO;
-  // Back to the spec default, like the image above: the next updateProps
-  // compares this view's props with the defaults (see `_recycled`).
+  // Back to the default; the next updateProps diffs against defaults.
   _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);
   _imageView.frame = _container.bounds;
-  // `_props` is deliberately left alone. It belongs to the base class, which
-  // diffs the next life's props against it; replacing it with the defaults
-  // made a recycled view keep the previous life's accessibilityLabel,
-  // testID and shadow whenever the new life left them unset. (Not opacity:
-  // the base class re-applies that one on every update.) Checked once with
-  // a temporary log of `accessibilityLabel` and `layer.shadowOpacity` across
-  // a recycle; no smoke scenario can see either from JS.
+  // Leave `_props` alone: the base class diffs against it to reset
+  // accessibilityLabel, testID, shadow, etc.
   _recycled = YES;
 }
 
 #pragma mark - Events
 
-// One accessor so every emitter shares the "no emitter yet" check (events
-// fired before mount, or after unmount, are dropped).
+// nil before mount and after unmount; events are then dropped.
 - (std::shared_ptr<const TurboImageViewEventEmitter>)emitter {
   return std::static_pointer_cast<const TurboImageViewEventEmitter>(_eventEmitter);
 }
 
-// `loadEventMask`'s bits (TurboImageViewNativeComponent.ts): the events JS
-// has a handler for. The others are not built or sent; JS would drop them.
-// Read now, not when the load started, as JS looks for its handler on
-// arrival. `onProgress` is gated by `progressEnabled` instead.
+// `loadEventMask` bits: events JS has a handler for; others aren't sent.
+// Read at emit time. `onProgress` uses `progressEnabled` instead.
 typedef NS_OPTIONS(int, TILoadEvent) {
   TILoadEventStart = 1 << 0,
   TILoadEventSuccess = 1 << 1,

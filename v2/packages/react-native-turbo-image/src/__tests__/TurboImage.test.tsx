@@ -1,6 +1,5 @@
-// Unit tests for the JS layer: what <TurboImage> and its statics do before
-// anything reaches native. The native view and the TurboModule are replaced
-// by mocks, so these tests assert the props and arguments native *receives*.
+// JS-layer tests: native view and module are mocked, so these assert what
+// native *receives*.
 
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, createRef } from 'react';
@@ -13,9 +12,8 @@ import NativeTurboImageModule from '../NativeTurboImageModule';
 import { TurboImage } from '../index';
 import type { TurboImageInstance, TurboImageProps } from '../index';
 
-// Stands in for the Fabric view: renders a host element named
-// 'TurboImageView' carrying the exact props native would get, and counts
-// mounts, because remounting the real view restarts its load.
+// Fake Fabric view: records the props and counts mounts (a remount restarts
+// the real view's load).
 const mockNativeView = { mounts: 0 };
 jest.mock('../TurboImageViewNativeComponent', () => {
   const { createElement, useEffect } = require('react') as typeof import('react');
@@ -205,9 +203,7 @@ describe('cachePolicy', () => {
   });
 
   it('warns once for the legacy name, not once per use', () => {
-    // The "already warned" flag is module state, so use a fresh copy of the
-    // module. The statics need no React, which keeps the isolated registry
-    // from clashing with the test renderer's React instance.
+    // Fresh module copy to reset the "already warned" flag.
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.isolateModules(() => {
       const fresh = require('../index') as typeof import('../index');
@@ -330,8 +326,7 @@ describe('layout', () => {
 
   it('gives the style to the native view when no container is needed', () => {
     const renderer = render({ style });
-    // Plus `overflow: 'hidden'`, which is what makes iOS clip the image to
-    // a `borderRadius` in the style (as React Native's <Image> does).
+    // `overflow: 'hidden'` makes iOS clip to `borderRadius`.
     expect(StyleSheet.flatten(nativeProps(renderer).style)).toEqual({
       ...style,
       overflow: 'hidden',
@@ -384,8 +379,7 @@ describe('layout', () => {
   });
 });
 
-// The test renderer has no native views; this stands in for one and says
-// which host element a ref was attached to.
+// Fake native node that says which host element a ref landed on.
 const createNodeMock = (element: { type: unknown }) => ({ hostType: element.type });
 
 function refOf(props: Partial<TurboImageProps>) {
@@ -408,9 +402,7 @@ describe('ref', () => {
   );
 
   it('is the container when the indicator adds one, as in 1.x', () => {
-    // React Native's Jest preset mocks <View>, so the container's instance
-    // is that mock's and not a node from createNodeMock. What matters is
-    // that there is one, and that it is not the image view.
+    // RN's Jest preset mocks <View>, so just check it is not the image view.
     const instance = refOf({ indicator: { style: 'medium' } });
     expect(instance).not.toBeNull();
     expect(instance?.hostType).not.toBe('TurboImageView');

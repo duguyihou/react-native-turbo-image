@@ -1,10 +1,8 @@
 package com.turboimage.core
 
 /**
- * The load lifecycle of one view; every decision is the C++ core's
- * (`turboimage::ViewLifecycle`, shared with the iOS view). Each step says
- * what happened and returns the [Effect]s the view must carry out, in
- * order. Holds only state, owned by one view and used on the main thread.
+ * One view's load lifecycle, decided by the C++ core (shared with iOS). Each
+ * step returns the [Effect]s to run in order. Main thread only.
  */
 class ViewLifecycle {
   /** Mirrors `turboimage::PlaceholderKind`; the ints are a pinned ABI. */
@@ -16,10 +14,7 @@ class ViewLifecycle {
 
   /** One thing the view must do; see `turboimage::LifecycleEffect`. */
   data class Effect(val kind: Kind, val value: Long) {
-    /**
-     * Mirrors `turboimage::LifecycleEffect::Kind`, in the same order:
-     * effects are decoded by position. `TurboImageJni.cpp` asserts it.
-     */
+    /** Same order as `turboimage::LifecycleEffect::Kind` (decoded by position). */
     enum class Kind {
       CANCEL_LOAD,
       CLEAR_IMAGE,
@@ -34,8 +29,7 @@ class ViewLifecycle {
     }
   }
 
-  // Mirrors ViewLifecycle's fields: showing, inFlight, lastToken,
-  // placeholderGeneration, upgrading. All start at 0, as in C++.
+  // showing, inFlight, lastToken, placeholderGeneration, upgrading.
   private val state = LongArray(5)
 
   fun reload(
@@ -64,10 +58,7 @@ class ViewLifecycle {
 
   fun drop(): List<Effect> = effects(TurboImageCore.nativeLifecycleDrop(state))
 
-  /**
-   * The view has grown past its image: the token of a silent reload at the
-   * new size, or 0 if none may start. See `ViewLifecycle::startUpgrade`.
-   */
+  /** Token for a silent reload at the larger size, or 0 if none may start. */
   fun startUpgrade(): Long = TurboImageCore.nativeLifecycleStartUpgrade(state)
 
   fun isUpgrading(token: Long): Boolean = TurboImageCore.nativeLifecycleIsUpgrading(state, token)

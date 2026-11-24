@@ -11,13 +11,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * [TurboImageCore.process]: a Bitmap in, the core's processors run over its
- * pixels in native code, a new Bitmap out.
- *
- * The core's pixel maths has its own tests (cpp/tests/ProcessingTest.cpp).
- * These check the crossing: that the pixels arrive in the core and come back
- * in the right places, whatever the input's config. The loader tests only
- * see a processed image's size, which a row or channel mix-up keeps.
+ * [TurboImageCore.process] across JNI: pixels reach the core and come back in
+ * place, whatever the input's config. The maths is tested in C++.
  */
 @RunWith(AndroidJUnit4::class)
 class ProcessingTest {
@@ -47,8 +42,7 @@ class ProcessingTest {
 
     assertNotNull(output)
     assertEquals(Bitmap.Config.ARGB_8888, output!!.config)
-    // The tint recolours what is there and keeps its coverage: the opaque
-    // row turns blue, the transparent row stays transparent.
+    // Tint keeps alpha: the opaque row turns blue, the clear row stays clear.
     assertEquals(
       listOf(List(3) { Color.BLUE }, List(3) { Color.TRANSPARENT }),
       rows(output),

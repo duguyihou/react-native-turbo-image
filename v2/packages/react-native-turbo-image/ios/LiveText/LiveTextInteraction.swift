@@ -1,17 +1,7 @@
-// Live Text for TurboImage, the Swift side of `TILiveTextInteraction`.
-//
-// Only this target imports VisionKit's image-analysis API, which has no
-// Objective-C surface. The Fabric view reaches it through the ObjC protocol
-// in ios/LoaderAPI/include/TILiveText.h.
-//
-// Differences from 1.x, which added a new `ImageAnalysisInteraction` on
-// every load completion: one interaction per view, attached once; an
-// analysis for an image that has since been replaced is dropped; and turning
-// the prop off removes the interaction instead of waiting for the next load.
+// Swift side of `TILiveTextInteraction` (TILiveText.h): VisionKit has no ObjC API.
+// One interaction per view; stale analyses are dropped.
 
-// tvOS has no VisionKit and no Live Text, so this file compiles to nothing
-// there. `TIMakeLiveTextInteraction` then finds no class and returns nil,
-// which makes `enableLiveTextInteraction` a no-op on Apple TV.
+// Empty on tvOS (no VisionKit), so Live Text is a no-op there.
 #if os(iOS)
 
 import UIKit
@@ -27,11 +17,8 @@ import VisionKit
 public final class LiveTextInteraction: NSObject, TILiveTextInteraction {
   // Apple recommends reusing one analyzer; it is safe to share.
   private static let analyzer = ImageAnalyzer()
-  // 1.x's analysis types: text, QR/barcodes, and Visual Look Up subjects.
-  // Visual Look Up needs iOS 17; on 16 the other two still work. Built per
-  // analysis: `Configuration` is not Sendable, so a shared instance cannot
-  // be handed to the (nonisolated) analyzer under Swift 6. A fresh value
-  // from a nonisolated function is disconnected, so it can be sent.
+  // Text, codes, and Visual Look Up (iOS 17+). Built per analysis because
+  // `Configuration` is not Sendable; a fresh value can be sent.
   nonisolated private static func makeConfiguration() -> ImageAnalyzer.Configuration {
     var types: ImageAnalyzer.AnalysisTypes = [.text, .machineReadableCode]
     if #available(iOS 17.0, *) {

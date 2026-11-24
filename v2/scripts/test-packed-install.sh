@@ -1,30 +1,16 @@
 #!/usr/bin/env bash
-# Installs the package the way an app developer gets it, and runs it.
+# Packs the npm tarball, installs it into a new app from the RN template
+# (react-native-tvos for `tvos`), builds a release app, and waits for it to
+# report an image loaded. Checks the *published* files are complete. The app
+# lives outside the repo so the workspace's node_modules can't hide a gap.
 #
-# Everything else in this repository tests the workspace copy of the
-# library: the example app resolves it through a symlink, with every file on
-# disk. That cannot show whether the *published* files are complete. This
-# packs the tarball `npm publish` would upload, installs it into a new app
-# made from React Native's own template, builds a release app, runs it, and
-# waits for the app to report that an image loaded through TurboImage.
-#
-# The app lives outside the repository on purpose: inside it, Node would
-# resolve modules from the workspace's node_modules and hide a missing
-# dependency.
-#
-# `tvos` does the same against react-native-tvos, the fork Apple TV apps
-# use in place of React Native (see step 2 for how its app is put together).
-#
-# Needs network (the template and its dependencies come from npm), a booted
-# simulator for ios, a booted Apple TV simulator for tvos, and a connected
-# device or emulator for android.
+# Needs network, and a booted simulator (ios), Apple TV simulator (tvos), or
+# connected device (android).
 #
 # Usage: scripts/test-packed-install.sh <ios|tvos|android> [work-dir]
-#        work-dir defaults to a new temporary directory; it is left in place
-#        so a failed run can be inspected.
-# Exit:  0 when the app reports a loaded image, 1 otherwise. tvos only: 3
-#        when the app built but no Apple TV simulator is booted to run it on
-#        (Xcode does not install the tvOS runtime by default).
+#        work-dir defaults to a new temp dir, kept for inspection.
+# Exit:  0 on a loaded image, 1 on failure, 2 on bad usage; 3 (tvos) when it
+#        built but no Apple TV simulator is booted.
 
 set -euo pipefail
 
@@ -40,9 +26,7 @@ pkg="${v2_root}/packages/react-native-turbo-image"
 # shellcheck source=./native-versions.env source-path=SCRIPTDIR
 source "${script_dir}/native-versions.env"
 
-# react-native-tvos numbers its releases <React Native version>-<revision>.
-# Its app template is published less often than the fork itself, so the
-# newest one is older than the React Native we test against.
+# Fork versions are <RN version>-<revision>; its template lags behind RN.
 tvos_fork_version="${REACT_NATIVE_VERSION}-0"
 tvos_template_version="0.83.0-0"
 
@@ -73,18 +57,14 @@ mkdir -p "${work}/template"
   && npm pack --silent "@react-native-community/template@${REACT_NATIVE_VERSION}" > /dev/null \
   && tar -xzf ./*.tgz)
 cp -R "${work}/template/package/template" "${app}"
-# The template ships its dot-files under other names; the CLI's `init`
-# renames them, and the iOS build needs `.xcode.env`.
+# Rename the template's dot-files, as the CLI's `init` would.
 mv "${app}/_gitignore" "${app}/.gitignore"
 mv "${app}/_watchmanconfig" "${app}/.watchmanconfig"
 mv "${app}/ios/_xcode.env" "${app}/ios/.xcode.env"
 
 if [[ "${platform}" == "tvos" ]]; then
-  # An Apple TV app is the same app with a tvOS Xcode project and Podfile,
-  # and with `react-native` installed from the fork. Take the native project
-  # from the tvOS template and keep everything else (dependency versions,
-  # TypeScript and Babel setup) from the React Native template above, so the
-  # JavaScript side matches the React Native version under test.
+  # Take only the iOS project from the tvOS template; keep the RN template's
+  # JS side so it matches the RN version under test.
   (cd "${work}/template" \
     && mkdir tv \
     && npm pack --silent --pack-destination tv "@react-native-tvos/template-tv@${tvos_template_version}" > /dev/null \
@@ -92,38 +72,27 @@ if [[ "${platform}" == "tvos" ]]; then
   rm -rf "${app}/ios"
   cp -R "${work}/template/tv/package/template/ios" "${app}/ios"
   mv "${app}/ios/_xcode.env" "${app}/ios/.xcode.env"
-  # The tvOS template (0.83) starts React Native from its app delegate,
-  # without a scene. Built with the tvOS 27 SDK, such an app is stopped by
-  # UIKit at launch (`_UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption`,
-  # a trap, not a log). React Native's own 0.88 template has adopted the
-  # scene lifecycle, so take its delegates and scene manifest. The scene
-  # delegate goes in the app delegate's file because the tvOS Xcode project
-  # compiles that one file and nothing else.
-  # TODO: drop this once a tvOS template with a scene delegate is published.
+  # The tvOS SDK 27 traps apps without a scene lifecycle, which the tvOS
+  # template lacks; borrow the RN template's delegates and scene manifest
+  # (in AppDelegate.swift, the only file the tvOS project compiles).
+  # TODO: drop once a tvOS template with a scene delegate is published.
   rn_template_app="${work}/template/package/template/ios/HelloWorld"
   cat "${rn_template_app}/AppDelegate.swift" "${rn_template_app}/SceneDelegate.swift" \
     > "${app}/ios/HelloWorld/AppDelegate.swift"
   scene_manifest="$(plutil -extract UIApplicationSceneManifest xml1 -o - "${rn_template_app}/Info.plist")"
   plutil -insert UIApplicationSceneManifest -xml "${scene_manifest}" "${app}/ios/HelloWorld/Info.plist"
-  # The fork is installed under React Native's name, as its README directs.
-  # `@react-native/new-app-screen` goes because it pins the exact upstream
-  # version as a peer, which the fork's version can never equal; the app
-  # written below does not use it.
+  # Install the fork as `react-native`. Drop new-app-screen: it peers on the
+  # exact upstream version, and the app below doesn't use it.
   sed -i.bak -E \
     -e "s|\"react-native\": \"${REACT_NATIVE_VERSION}\"|\"react-native\": \"npm:react-native-tvos@${tvos_fork_version}\"|" \
     -e '/@react-native\/new-app-screen/d' \
     "${app}/package.json"
   rm "${app}/package.json.bak"
   grep -q "npm:react-native-tvos@${tvos_fork_version}" "${app}/package.json"
-  # The fork's own `@react-native-tvos/virtualized-lists` peers on exactly
-  # `react-native@<upstream version>`, which the fork's pre-release version
-  # never satisfies, so npm installs upstream React Native *inside* the fork
-  # as well. Two React Natives in one bundle break every Fabric component a
-  # library registers (the renderer reads the other copy's view-config
-  # registry: "View config getter callback for component `TurboImageView`
-  # must be a function"). npm's `overrides` make every `react-native` the
-  # app's own; any Apple TV app installed with npm needs the same. Spelled
-  # out: npm cannot resolve the `$react-native` reference to an alias.
+  # A fork dependency peers on upstream RN, so npm nests a second RN copy,
+  # which breaks Fabric components ("View config getter callback ... must be
+  # a function"). `overrides` forces one copy; spelled out because npm can't
+  # resolve `$react-native` to an alias.
   # shellcheck disable=SC2016 # JavaScript, not shell: nothing to expand.
   node -e '
     const fs = require("fs");
@@ -134,10 +103,8 @@ if [[ "${platform}" == "tvos" ]]; then
   ' "${app}/package.json" "npm:react-native-tvos@${tvos_fork_version}"
 fi
 
-# The one Android change the migration guide asks of every app: the template
-# ships a Kotlin older than Coil needs. Both lines matter. The template
-# declares the Kotlin Gradle plugin without a version, so the `kotlinVersion`
-# property alone does not change the compiler.
+# Migration-guide step: raise Kotlin for Coil. The plugin line needs the
+# version too, or the compiler stays on the old Kotlin.
 # shellcheck disable=SC2016 # `$kotlinVersion` is Gradle's variable, written literally.
 sed -i.bak -E \
   -e "s/kotlinVersion = \"[^\"]+\"/kotlinVersion = \"${KOTLIN_VERSION}\"/" \
@@ -148,10 +115,8 @@ grep -q "kotlinVersion = \"${KOTLIN_VERSION}\"" "${app}/android/build.gradle"
 # shellcheck disable=SC2016 # as above
 grep -qF 'kotlin-gradle-plugin:$kotlinVersion' "${app}/android/build.gradle"
 
-# The one iOS change the migration guide asks of every app: the templates
-# target React Native's floor (15.1), below the 16.0 TurboImage's pod
-# declares for Nuke 14, and `pod install` refuses the lower target. The
-# Podfile decides the pods' target, the project the app's own.
+# Migration-guide step: raise the iOS/tvOS target to 16.0 (Nuke 14), in both
+# the Podfile and the Xcode project.
 sed -i.bak -E \
   -e "s/^platform :(ios|tvos), .*/platform :\1, '16.0'/" \
   "${app}/ios/Podfile"
@@ -162,8 +127,7 @@ sed -i.bak -E \
   "${app}/ios"/*.xcodeproj/project.pbxproj
 rm "${app}/ios"/*.xcodeproj/project.pbxproj.bak
 
-# A bundled image, so the check needs no server: it goes through the same
-# native view, core and loader as a remote one.
+# A bundled image, so no server is needed; it uses the same native path.
 cp "${v2_root}/apps/example/assets/local-fixture.png" "${app}/fixture.png"
 cat > "${app}/App.tsx" <<'TSX'
 // Written by scripts/test-packed-install.sh: loads one image through the
@@ -207,8 +171,7 @@ TSX
 
 (cd "${app}" && npm install --no-audit --no-fund --loglevel=error)
 (cd "${app}" && npm install --no-audit --no-fund --loglevel=error "${tarball}")
-# Type-check the app against the package's built declarations, as a
-# consumer's `tsc` would.
+# Type-check against the package's built declarations.
 (cd "${app}" && npx tsc --noEmit)
 if [[ "${platform}" == "tvos" ]]; then
   echo "Installed into a new react-native-tvos ${tvos_fork_version} app; types check"
@@ -227,9 +190,7 @@ if [[ "${platform}" == "android" ]]; then
   "${adb}" wait-for-device
   abi="$("${adb}" shell getprop ro.product.cpu.abi | tr -d '\r')"
   (cd "${app}/android" && ./gradlew assembleRelease --console=plain -q "-PreactNativeArchitectures=${abi}")
-  # Uninstall first rather than `install -r`, as smoke-android.sh does: a
-  # run that was interrupted before the uninstall below leaves the app
-  # behind, and `install -r` then needs room for both APKs at once.
+  # Uninstall rather than `install -r` (see smoke-android.sh).
   # `|| true`: normally there is nothing to uninstall.
   "${adb}" uninstall com.helloworld > /dev/null 2>&1 || true
   "${adb}" install "${app}/android/app/build/outputs/apk/release/app-release.apk" > /dev/null
@@ -242,13 +203,12 @@ if [[ "${platform}" == "android" ]]; then
   done
   "${adb}" uninstall com.helloworld > /dev/null || true
 else
-  # Both kinds of simulator can be booted at once; take one of the right kind.
+  # Pick a booted simulator of the right kind.
   if [[ "${platform}" == "tvos" ]]; then
     sdk="appletvsimulator"
     udid="$(xcrun simctl list devices booted | grep 'Apple TV' | grep -m1 -oE '[0-9A-F-]{36}' || true)"
     destination="${udid:+id=${udid}}"
-    # Without a simulator the build is still worth having: it compiles and
-    # links the Fabric view against the fork, which nothing else does.
+    # Still build without a simulator: nothing else links the view against the fork.
     destination="${destination:-generic/platform=tvOS Simulator}"
   else
     sdk="iphonesimulator"

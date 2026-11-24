@@ -1,10 +1,6 @@
-// SVG through the adapter. It is decoded with Apple's private CoreSVG into a
-// vector `UIImage` (ADR 0008), which has no pixels until something draws it:
-// an image view draws it sharp at any size, but a processor needs a bitmap,
-// made at the size the request names (`vectorDecodeSize`).
-//
-// These tests also notice the day a new iOS removes a CoreSVG symbol: every
-// one of them then fails with `decode`, which is what an app would see.
+// SVG decodes via private CoreSVG to a vector `UIImage` (ADR 0008); a
+// processor gets it rasterized at `vectorDecodeSize`. If iOS drops a CoreSVG
+// symbol, these all fail with `decode`.
 
 import Testing
 import TurboImageLoaderAPI
@@ -27,8 +23,7 @@ struct SVGTests {
     #expect(loaded.animation == nil)
   }
 
-  /// The decode bound is for bitmaps. Shrinking a vector to it would only
-  /// rasterise it early; the image view draws it at the view's size anyway.
+  /// The decode bound is for bitmaps; a vector stays a vector.
   @Test func aDecodeBoundLeavesTheVectorAlone() async throws {
     let loaded = await adapter.load(
       adapter.request(for: try Fixture.svg(), decodeSize: CGSize(width: 30, height: 20)))
@@ -49,9 +44,7 @@ struct SVGTests {
     #expect(seen.value == CGSize(width: 60, height: 40))
   }
 
-  /// No size of the view's to draw for (`center`, or `allowDownscaling` off
-  /// without `resize`): the image's own size, at the screen's scale, so it
-  /// is as sharp as the vector would be and keeps its size in points.
+  /// No view size: own size at screen scale, same size in points.
   @Test func withoutASizeAProcessorGetsTheVectorAtScreenScale() async throws {
     let seen = Recorded<[CGFloat]>()
     _ = await adapter.load(
@@ -65,8 +58,7 @@ struct SVGTests {
     #expect(seen.value == [canvas.width, canvas.height, 2])
   }
 
-  /// Two views of different sizes showing one processed SVG must not share
-  /// an entry: the second would be handed the first one's bitmap.
+  /// Different drawn sizes must not share a cache entry.
   @Test func aProcessedSVGIsCachedPerDrawnSize() async throws {
     let file = try Fixture.svg()
     let key = UUID().uuidString

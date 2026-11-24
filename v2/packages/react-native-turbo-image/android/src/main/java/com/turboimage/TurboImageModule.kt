@@ -18,21 +18,18 @@ import com.turboimage.loader.LoadHandle
 import com.turboimage.loader.TurboImageLoaders
 
 /**
- * Cache-management TurboModule (Android), the counterpart of
- * ios/Fabric/TurboImageModule.mm. Every source goes through the C++ core
- * first, like a view's source, so prefetched entries are exactly the ones a
- * view will later hit.
+ * Cache-management TurboModule. Sources resolve through the C++ core like a
+ * view's, so prefetched entries match the keys a view will hit.
  */
 class TurboImageModule(private val context: ReactApplicationContext) :
   NativeTurboImageModuleSpec(context) {
 
-  // In-flight prefetches, kept so they are not garbage-collected mid-flight.
-  // Main thread only.
+  // In-flight prefetches, kept alive until they settle. Main thread only.
   private val prefetches = mutableSetOf<LoadHandle>()
 
   override fun getName() = NAME
 
-  // `{ uri, cacheKey? }` from JS → core resolution. null for invalid input.
+  // null for invalid input.
   private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
     return resolve(sources.getMap(index) ?: return null, policy)
@@ -75,10 +72,8 @@ class TurboImageModule(private val context: ReactApplicationContext) :
           finishOne(false)
           continue
         }
-        // A prefetch already in the memory cache calls back inside
-        // `prefetch()`, before `handle` is assigned. `done` records that, so
-        // a finished handle (which pins the decoded bitmap through Coil's
-        // result) is never added to the set with nothing left to remove it.
+        // A memory hit calls back inside `prefetch()`, before `handle` is set;
+        // `done` keeps that finished handle out of the set so it can't leak.
         var done = false
         var handle: LoadHandle? = null
         handle =
@@ -92,9 +87,8 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     }
   }
 
-  // A prefetch only downloads: the memory write off tells the adapter not to
-  // decode. Without a disk tier (`memoryOnly`, a local file) it decodes, or
-  // nothing would be stored.
+  // Prefetch downloads only (no decode), unless there is no disk tier, in
+  // which case it must decode to store anything.
   private fun diskOnly(request: ResolvedRequest): ResolvedRequest =
     if (request.diskWrite) request.copy(memoryWrite = false) else request
 
@@ -105,8 +99,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
         promise.reject(TurboImageCore.loadErrorCodeName(LoadErrorCode.INVALID_REQUEST.nativeValue), "Invalid request")
         return@runOnUiThread
       }
-      // Kept like a prefetch until it settles; `done` as there, for a
-      // callback that runs inside `imageSize()`.
+      // Kept until it settles; `done` as in `prefetch`.
       var done = false
       var handle: LoadHandle? = null
       fun settled() {
@@ -134,13 +127,13 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     }
   }
 
-  // Synchronous, on the JS thread: TurboImageLoaders is synchronised for it.
+  // Runs on the JS thread; TurboImageLoaders is synchronised for it.
   override fun configureCache(maxDiskSize: Double, maxMemoryCost: Double): Boolean =
     TurboImageLoaders.configureCache(CacheSizes(maxDiskSize.toLong(), maxMemoryCost.toLong()))
 
   override fun dispose(sources: ReadableArray, promise: Promise) {
     UiThreadUtil.runOnUiThread {
-      // Policy is irrelevant for the key; DEFAULT resolves it like a view.
+      // The policy does not affect the key.
       val requests =
         (0 until sources.size()).mapNotNull { resolve(sources, it, CachePolicy.DEFAULT) }
       TurboImageLoaders.get(context).remove(requests) { settle(promise, it) }
@@ -160,16 +153,14 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     }
   }
 
-  // A disk cache that could not be written to is the only way these calls
-  // fail. Android only: on iOS the removal is staged and cannot fail here.
+  // Only a failed disk-cache write rejects (Android only).
   private fun settle(promise: Promise, failure: Throwable?) {
     if (failure == null) promise.resolve(null)
     else promise.reject("disk", failure.message ?: "Disk cache operation failed", failure)
   }
 
-  // The module is going away (reload, or the host is destroyed): stop the
-  // prefetches it started. Their promises are left unsettled on purpose; the
-  // JS runtime they belong to is being torn down too.
+  // Cancel prefetches on teardown. Promises stay unsettled on purpose: their
+  // JS runtime is going away too.
   override fun invalidate() {
     UiThreadUtil.runOnUiThread {
       prefetches.forEach { it.cancel() }

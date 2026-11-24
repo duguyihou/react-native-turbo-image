@@ -1,29 +1,18 @@
 #!/usr/bin/env bash
-# Fails if a build artifact was not built from the sources as they are now.
+# Fails if a build artifact is older than the current sources, so a smoke
+# test never passes on a stale binary. Sourced by smoke-*.sh and
+# build-stamped.sh.
 #
-# The smoke scripts install whatever artifact is on disk. If the preceding
-# build failed (or was skipped), they would happily test a stale binary and
-# report a PASS that says nothing about the current sources. Sourced by
-# smoke-{ios,android}.sh before installing, and by build-stamped.sh.
-#
-# Two ways to be current, either is enough:
-#   * the artifact carries a stamp (written by build-stamped.sh) with the
-#     fingerprint of the sources it was built from, and the sources still
-#     have that fingerprint. Exact: it survives a checkout or a restored
-#     backup that rewrites files with the content they already had, which
-#     leaves the artifact alone because the build tools compare content;
-#   * no source is newer than the artifact. For builds that were not
-#     stamped (Xcode, Android Studio, a bare `./gradlew` in CI).
+# Current means either: the artifact's stamp (from build-stamped.sh) matches
+# the sources' fingerprint, or no source is newer than the artifact (for
+# unstamped builds: Xcode, Android Studio, CI).
 #
 # Usage: assert_fresh_build <artifact-path> <ios|android> [stamp-path]
 #        source_fingerprint <ios|android>
-# The platform selects which native sources count: an iOS-only change must
-# not make an otherwise current APK look stale, and vice versa.
+# The platform picks which native sources count.
 
-# Prints the paths of the sources that end up in the binary, NUL-separated:
-# the library's JS and C++, this platform's native code, and the example
-# app's JS. Build outputs and unit tests (src/__tests__, never bundled) are
-# excluded. Extra arguments are appended to the `find` expression.
+# Prints the bundled sources, NUL-separated (tests and vendor excluded).
+# Extra arguments are appended to the `find` expression.
 _fresh_build_sources() {
   local platform="$1"
   shift
@@ -47,7 +36,7 @@ _fresh_build_sources() {
     -type f "$@"
 }
 
-# One hash over the names and contents of those sources.
+# One hash over those sources' names and contents.
 source_fingerprint() {
   local platform="$1"
   _fresh_build_sources "${platform}" -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1

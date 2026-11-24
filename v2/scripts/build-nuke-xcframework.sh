@@ -1,18 +1,11 @@
 #!/usr/bin/env bash
-# Builds Nuke.xcframework and NukeUI.xcframework from a pinned Nuke tag for
-# the CocoaPods path. The adapter imports both: Nuke is the pipeline, NukeUI
-# the animated-image player.
-#
-# Why this exists: Nuke stopped publishing to CocoaPods trunk after 9.5, so
-# `s.dependency "Nuke", "14.0.0"` cannot resolve. SwiftPM consumers get Nuke
-# from Package.swift (`.package(url:exact:)`); CocoaPods consumers get the
-# *same tag* as vendored xcframeworks built here. Both paths read the
-# version from scripts/native-versions.env so they cannot drift (RFC rule 6).
-#
-# Output: packages/react-native-turbo-image/ios/vendor/{Nuke,NukeUI}.xcframework
-# (gitignored; built in CI and before `npm publish`).
+# Builds Nuke and NukeUI xcframeworks from the pinned Nuke tag for CocoaPods.
+# Nuke stopped publishing to CocoaPods trunk after 9.5, so we vendor it;
+# SwiftPM uses the same tag from native-versions.env (RFC rule 6).
 #
 # Usage: scripts/build-nuke-xcframework.sh [nuke-tag]
+# Output: packages/react-native-turbo-image/ios/vendor/{Nuke,NukeUI}.xcframework
+# (gitignored; built in CI and before publish).
 
 set -euo pipefail
 
@@ -31,17 +24,16 @@ mkdir -p "${work_dir}" "${out_dir}"
 git clone --quiet --depth 1 --branch "${nuke_tag}" \
   https://github.com/kean/Nuke.git "${work_dir}/src"
 
-# One slice per platform the podspec declares (iOS and tvOS), device and
-# simulator each. visionOS is a TODO until the library targets it.
+# Device and simulator slices for each podspec platform.
+# TODO: add visionOS once the library targets it.
 destinations=(
   "generic/platform=iOS"
   "generic/platform=iOS Simulator"
   "generic/platform=tvOS"
   "generic/platform=tvOS Simulator"
 )
-# One archive per destination holds both frameworks: the NukeUI scheme
-# builds Nuke as its dependency, and SKIP_INSTALL=NO on the command line
-# applies to every target, so both are installed into the archive.
+# The NukeUI scheme builds Nuke too, and SKIP_INSTALL=NO installs both
+# into each archive.
 archives=()
 for destination in "${destinations[@]}"; do
   archive="${work_dir}/${destination//[^A-Za-z]/_}.xcarchive"
@@ -57,12 +49,8 @@ for destination in "${destinations[@]}"; do
   archives+=("${archive}")
 done
 
-# Debug symbols for the device slices only. These are dynamic frameworks
-# inside the app, and without their dSYMs a crash in a shipped build cannot
-# be symbolicated; CocoaPods copies them into the app's archive. Simulator
-# builds are never archived or shipped, and their dSYMs would double the
-# gzipped tarball (about 10 MB of 19.5) for crashes a developer reproduces
-# locally, where the binary's exported symbols still name the frames.
+# dSYMs for device slices only, so shipped crashes can be symbolicated.
+# Simulator dSYMs would roughly double the tarball for no shipped benefit.
 for framework in Nuke NukeUI; do
   create_args=()
   for archive in "${archives[@]}"; do

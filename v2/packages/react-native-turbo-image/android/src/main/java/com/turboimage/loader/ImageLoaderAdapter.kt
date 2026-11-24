@@ -6,44 +6,27 @@ import android.widget.ImageView
 import com.turboimage.core.ResolvedRequest
 
 /**
- * The Android loader seam, the counterpart of `TIImageLoading` on iOS.
- *
- * Internal (ADR 0014): it keeps Coil out of the views and lets tests use a
- * fake loader. Apps cannot replace it.
- *
- * Not the iOS seam's shape, on purpose (docs/adr/0004): there the adapter
- * returns an image and the view shows it. Here [load] is given the
- * `ImageView`, and the adapter owns
- *  * putting the result in the view and cross-fading to it,
- *  * playing animated results, and
- *  * waiting for the view's first layout before it sizes the decode.
- * What stays on screen while a load runs, placeholders and events remain the
- * view's (decided by the core's lifecycle). An adapter must therefore never
- * touch the view after [LoadHandle.cancel]: the view cannot veto a paint.
+ * The Android loader seam (internal, ADR 0014; counterpart of iOS's
+ * `TIImageLoading`). Unlike iOS (ADR 0004), the adapter gets the `ImageView`
+ * and paints, fades and animates the result itself, so it must never touch
+ * the view after [LoadHandle.cancel].
  *
  * Contract:
  *  * [load] is called on the main thread.
- *  * Exactly one of [Listener.onSuccess]/[Listener.onError] fires, on the
- *    main thread, unless the handle is cancelled first, in which case none
- *    fire. [Listener.onProgress] may fire before that, never after it or
- *    after cancel, unthrottled (the view applies the core's throttle).
+ *  * Exactly one of [Listener.onSuccess]/[Listener.onError] fires, on the main
+ *    thread, unless cancelled first. [Listener.onProgress] fires only before
+ *    that, unthrottled.
  *  * [LoadHandle.cancel] is idempotent and safe after completion.
  */
 internal interface ImageLoaderAdapter {
   /**
-   * How to decode and show one load. These are view-level choices, not part
-   * of the request's identity, so they are not in [ResolvedRequest] and never
-   * affect cache keys.
+   * View-level display choices; never part of cache keys.
    *
-   * @property fadeMillis cross-fade from the current drawable to the result;
-   *   0 disables it. Adapters must skip it for memory-cache hits (the rule
-   *   the iOS view applies too).
-   * @property allowHardware false forces a software bitmap, for callers that
-   *   read pixels or draw to a software canvas (e.g. shared-element
-   *   transitions). Android-only; iOS has no equivalent distinction.
-   * @property reportProgress false when nothing listens for progress (no
-   *   `onProgress` in JS, or an upgrade): adapters should not track it, and
-   *   need not call [Listener.onProgress]. iOS passes a nil progress block.
+   * @property fadeMillis cross-fade duration; 0 disables it. Skipped for
+   *   memory-cache hits.
+   * @property allowHardware false forces a software bitmap.
+   * @property reportProgress false when nothing listens; adapters need not
+   *   call [Listener.onProgress].
    */
   data class DisplayOptions(
     val fadeMillis: Int = 300,
@@ -53,26 +36,19 @@ internal interface ImageLoaderAdapter {
 
   fun load(target: ImageView, request: ResolvedRequest, options: DisplayOptions, listener: Listener): LoadHandle
 
-  // Cache management, backing TurboImageModule. Requests are resolved by the
-  // core, like a view's, so views and the module agree on every key.
+  // Cache management, backing TurboImageModule.
 
   /**
-   * Loads an image placeholder (`placeholder.uri`): like [load], through the
-   * same caches and sized for [sizeOf] as [load] sizes for its target, but
-   * the adapter never touches the view. The view decides whether the result
-   * may still be shown, because the image it stands in for may have got
-   * there first. [onDone] fires once on the main thread, with null when the
-   * load failed, unless the handle is cancelled first.
+   * Loads `placeholder.uri` like [load], sized for [sizeOf], but never touches
+   * the view. [onDone] fires once on the main thread (null on failure),
+   * unless cancelled first.
    */
   fun loadPlaceholder(sizeOf: ImageView, request: ResolvedRequest, onDone: (Drawable?) -> Unit): LoadHandle
 
   /**
-   * `TurboImage.getSize`: loads [request] into the caches like [prefetch],
-   * then reports the image's own size in pixels with its orientation applied
-   * ([onSize]), or why it could not ([onError], a `turboimage::LoadErrorCode`
-   * value). Adapters should read the size from the file's header rather than
-   * decode the image. Exactly one callback, once, on the main thread, unless
-   * the handle is cancelled first.
+   * `TurboImage.getSize`: caches [request] like [prefetch] and reports its
+   * oriented pixel size, ideally from the header. Exactly one callback, on
+   * the main thread, unless cancelled first.
    */
   fun imageSize(
     request: ResolvedRequest,
@@ -81,36 +57,22 @@ internal interface ImageLoaderAdapter {
   ): LoadHandle
 
   /**
-   * Loads into the caches without a view; [onDone] once on the main thread.
-   * A request whose `memoryWrite` is off (a prefetch) is only
-   * downloaded: adapters should store the bytes without decoding them.
+   * Loads into the caches; [onDone] once on the main thread. With
+   * `memoryWrite` off, store the bytes without decoding.
    */
   fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
 
   /**
-   * Evicts the images [requests] name from memory (every processed and sized
-   * variant), from the key-addressed disk cache, and from the HTTP cache.
-   * Only a request's `cacheKey` and `url` matter; its policy does not.
-   *
-   * Called on the main thread, but the disk work must not run there: Coil's
-   * `DiskCache` writes its journal and deletes files in the calling thread.
-   * Hence the callback, where iOS's `removeCachedImageForRequest:` simply
-   * returns: Nuke's `DataCache` only stages a removal (hidden from reads at
-   * once, deleted later on its own queue), so that call never blocks.
-   * [onDone] fires once on the main thread: with null when everything is
-   * gone, or with the I/O failure that stopped the disk work (the memory
-   * entries are evicted either way). iOS has no such failure to report: a
-   * staged removal cannot fail in the caller.
+   * Evicts [requests] (all variants) from memory, the disk cache and the
+   * HTTP cache, by `cacheKey` and `url`. Called on the main thread; disk work
+   * must run off it (Coil's `DiskCache` blocks). [onDone] once on the main
+   * thread with null, or the I/O failure.
    */
   fun remove(requests: List<ResolvedRequest>, onDone: (Throwable?) -> Unit)
 
   fun clearMemoryCache()
 
-  /**
-   * Empties both disk stores: the key-addressed cache and the HTTP cache.
-   * Same threading as [remove]: called on the main thread, works off it,
-   * [onDone] once on the main thread, with the failure if there was one.
-   */
+  /** Empties the disk cache and the HTTP cache. Same threading as [remove]. */
   fun clearDiskCache(onDone: (Throwable?) -> Unit)
 
   /** Synchronous memory lookup for the `memoryCacheKey` placeholder. Main thread. */
@@ -123,9 +85,8 @@ internal interface ImageLoaderAdapter {
     fun onSuccess(width: Int, height: Int)
 
     /**
-     * @param code a `turboimage::LoadErrorCode` value; adapters classify
-     *   their loader's errors so JS sees the same code on both platforms.
-     * @param message diagnostic text only; not part of the contract.
+     * @param code a `turboimage::LoadErrorCode` value.
+     * @param message diagnostic text only.
      */
     fun onError(code: Int, message: String)
   }

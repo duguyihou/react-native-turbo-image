@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Generates the smoke test's image fixtures into apps/example/fixtures/.
 
-The fixtures are committed, so this only needs to run when one changes. They
-are generated rather than downloaded so the repository carries no third-party
-artwork, and so every size the smoke scenarios assert is stated here.
+The fixtures are committed; rerun only to change one. Generated, not
+downloaded, so the repo carries no third-party artwork.
 
-Standard library only for PNG, APNG, GIF and SVG. Two formats need a tool:
-JPEG uses `sips` (macOS) and animated WebP uses `img2webp` (libwebp).
+Needs `sips` (macOS) for JPEG and `img2webp` (libwebp) for animated WebP.
 
 Usage: python3 scripts/generate-fixtures.py
 """
@@ -85,12 +83,10 @@ def lzw(indices: bytes, min_code_size: int) -> bytes:
         emit(prefix, size)
         table[(prefix, k)] = next_code
         next_code += 1
-        # The decoder widens its codes one entry later than it learns them,
-        # which is exactly when the code just assigned no longer fits.
+        # Widen once the code just assigned no longer fits (as the decoder does).
         if next_code > (1 << size) and size < 12:
             size += 1
-        # Well short of the 4096-entry limit, so the width rule above never
-        # meets the 12-bit cap.
+        # Reset well before the 4096-entry limit, so width never hits 12 bits.
         if next_code == 4000:
             emit(clear, size)
             table.clear()
@@ -221,8 +217,7 @@ def main() -> None:
     steps = 8
     (OUT / "anim-120x120.gif").write_bytes(
         gif(120, 120, PALETTE, [ball_frame(120, 120, s, steps) for s in range(steps)], delay_cs=10))
-    # Larger than any card, so the downscaling scenario has something to
-    # shrink. Two frames keep the pure-Python LZW quick and the file small.
+    # Large, for the downscaling scenario; two frames keep it quick and small.
     (OUT / "anim-1500x1000.gif").write_bytes(
         gif(1500, 1000, PALETTE, [ball_frame(1500, 1000, s, 2) for s in range(2)], delay_cs=50))
     (OUT / "anim-100x100.png").write_bytes(

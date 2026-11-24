@@ -1,17 +1,8 @@
 // JNI bridge to the shared C++ core.
 //
-// Ownership: every jstring/jobject created here is a local reference owned by
-// the JVM frame of the calling Kotlin method; nothing is cached across calls,
-// so there are no global references to leak.
-//
-// Threading: `turboimage::resolveRequest` is pure (see ImageRequest.h), so
-// this may be called from any thread. Kotlin calls it on the UI thread.
-//
-// Exceptions: a C++ exception that unwinds into the JVM aborts the process,
-// so every entry point runs its body through `guarded` below, which turns it
-// into a Java exception. The core reports bad input through return values;
-// what can throw is allocation (a blur of a large bitmap needs several
-// copies of it), and Kotlin can handle a Java OutOfMemoryError.
+// Only local references; nothing is cached across calls. The core is pure,
+// so any thread is fine. A C++ exception reaching the JVM aborts, so every
+// entry point runs through `guarded`, which turns it into a Java exception.
 
 #include <android/bitmap.h>
 #include <jni.h>
@@ -32,11 +23,7 @@
 
 namespace {
 
-// The integers Kotlin holds for the core's enums (TurboImageCore.kt:
-// `CachePolicy`, `ResizeMode`, `LoadErrorCode`, `CoreAbi`). They cross this
-// bridge as plain integers and are cast, so nothing else would notice a value
-// renumbered on one side only. A failure here means: change TurboImageCore.kt
-// to match, then this list.
+// Enums cross as plain ints; these catch a value renumbered on one side only.
 #define TI_ASSERT_ABI(value, expected) \
   static_assert(static_cast<jint>(value) == (expected), "TurboImageCore.kt mirrors " #value)
 TI_ASSERT_ABI(turboimage::CachePolicy::Default, 0);
@@ -57,8 +44,7 @@ TI_ASSERT_ABI(turboimage::LoadErrorCode::Decode, 4);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Original, 0);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::View, 1);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Width, 2);
-// `TurboImageCore.ViewLifecycle`: `PlaceholderKind` and `Effect.Kind`, the
-// latter decoded by position, so its order is part of the ABI too.
+// `Effect.Kind` is decoded by position, so its order is ABI too.
 TI_ASSERT_ABI(turboimage::PlaceholderKind::None, 0);
 TI_ASSERT_ABI(turboimage::PlaceholderKind::Hash, 1);
 TI_ASSERT_ABI(turboimage::PlaceholderKind::MemoryCacheKey, 2);
@@ -74,17 +60,14 @@ TI_ASSERT_ABI(turboimage::LifecycleEffect::Kind::ShowCachedPlaceholder, 8);
 TI_ASSERT_ABI(turboimage::LifecycleEffect::Kind::DecodePlaceholder, 9);
 #undef TI_ASSERT_ABI
 
-// The throttle's state crosses as a LongArray(3), field by field (see
-// nativeShouldReportProgress). A fourth field would silently not round-trip.
+// State crosses as a LongArray(3); a new field would not round-trip.
 static_assert(sizeof(turboimage::ProgressThrottle) == 3 * sizeof(jlong),
               "ProgressThrottle no longer fits the LongArray(3) Kotlin keeps it in");
-// Likewise the view lifecycle, a LongArray(5) (see `withLifecycle`).
+// Likewise the view lifecycle, a LongArray(5).
 static_assert(sizeof(turboimage::ViewLifecycle) == 5 * sizeof(jlong),
               "ViewLifecycle no longer fits the LongArray(5) Kotlin keeps it in");
 
-// Thrown when a JNI call failed and left its own Java exception pending.
-// No further JNI calls are allowed in that state, so this unwinds to
-// `guarded`, which returns to the JVM and lets that exception propagate.
+// A Java exception is already pending; unwind to `guarded` without more JNI calls.
 struct JavaExceptionPending {};
 
 void throwJava(JNIEnv* env, const char* className, const char* message) {
@@ -95,12 +78,10 @@ void throwJava(JNIEnv* env, const char* className, const char* message) {
   if (exceptionClass != nullptr) {
     env->ThrowNew(exceptionClass, message);
   }
-  // Otherwise FindClass left a NoClassDefFoundError pending, which will do.
+  // Otherwise FindClass left a NoClassDefFoundError pending.
 }
 
-// Runs `body` and returns its result. If it throws, a Java exception is left
-// pending and `fallback` is returned (the JVM ignores the return value of a
-// native method that raised).
+// Runs `body`; if it throws, leaves a Java exception pending and returns `fallback`.
 template <typename Result, typename Body>
 Result guarded(JNIEnv* env, Result fallback, Body&& body) noexcept {
   try {
@@ -130,8 +111,7 @@ std::string toStdString(JNIEnv* env, jstring value) {
   return out;
 }
 
-// Kotlin passes colours as a jlong: the 0xAARRGGBB value, or -1 for "unset"
-// (a jint cannot express both every ARGB value and "absent").
+// Colours are a jlong 0xAARRGGBB, or -1 for unset.
 std::optional<std::uint32_t> toArgb(jlong value) {
   if (value < 0) {
     return std::nullopt;
@@ -139,8 +119,7 @@ std::optional<std::uint32_t> toArgb(jlong value) {
   return static_cast<std::uint32_t>(value & 0xffffffff);
 }
 
-// `String[]` of alternating names and values <-> core headers. A trailing
-// odd element is ignored (Kotlin always passes pairs).
+// `String[]` of alternating names and values <-> core headers.
 std::vector<turboimage::Header> toHeaders(JNIEnv* env, jobjectArray flat) {
   std::vector<turboimage::Header> headers;
   const jsize length = flat == nullptr ? 0 : env->GetArrayLength(flat);
@@ -170,9 +149,7 @@ jobjectArray fromHeaders(JNIEnv* env, const std::vector<turboimage::Header>& hea
 
 }  // namespace
 
-// Returns a `com.turboimage.core.ResolvedRequest`, or an
-// `com.turboimage.core.ResolveFailure` when the request is invalid. Both
-// classes are kept by consumer-rules.pro because R8 cannot see JNI usage.
+// Returns `ResolvedRequest` or `ResolveFailure` (kept in consumer-rules.pro).
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* this */,
                                                        jstring uri, jstring cacheKey,
@@ -222,8 +199,7 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
 
 namespace {
 
-// Wraps core pixels as `com.turboimage.core.PlaceholderPixels` (the class is
-// just "premultiplied RGBA plus a size"; it predates processing).
+// Wraps core pixels as `PlaceholderPixels` (premultiplied RGBA plus a size).
 jobject toPixels(JNIEnv* env, const turboimage::RgbaImage& image) {
   const auto size = static_cast<jsize>(image.pixels.size());
   jbyteArray bytes = env->NewByteArray(size);
@@ -236,8 +212,7 @@ jobject toPixels(JNIEnv* env, const turboimage::RgbaImage& image) {
   return env->NewObject(pixelsClass, ctor, image.width, image.height, bytes);
 }
 
-// A Bitmap's pixels, locked for as long as this lives, so nothing (a throw
-// from the core included) can leave the Bitmap locked.
+// RAII lock on a Bitmap's pixels, so a throw can't leave it locked.
 class LockedPixels {
  public:
   LockedPixels(JNIEnv* env, jobject bitmap) : env_(env), bitmap_(bitmap) {
@@ -261,8 +236,7 @@ class LockedPixels {
   void* pixels_ = nullptr;
 };
 
-// `Bitmap.createBitmap(width, height, ARGB_8888)`. Null with an exception
-// pending (an OutOfMemoryError) when the JVM could not make it.
+// `Bitmap.createBitmap(width, height, ARGB_8888)`; null with an OOM pending.
 jobject createArgb8888Bitmap(JNIEnv* env, int width, int height) {
   jclass bitmapClass = env->FindClass("android/graphics/Bitmap");
   jclass configClass = env->FindClass("android/graphics/Bitmap$Config");
@@ -277,17 +251,9 @@ jobject createArgb8888Bitmap(JNIEnv* env, int width, int height) {
 
 }  // namespace
 
-// Runs the processors a `processorKey` describes over an ARGB_8888 Bitmap
-// and returns the result as a new one. Null when the key is invalid or the
-// Bitmap is not ARGB_8888 (or cannot be locked). Called on Coil's decode
-// dispatcher; pure (Processing.h).
-//
-// The pixels are copied twice, once into the core and once out of it, both
-// here. ARGB_8888's memory layout is the core's premultiplied RGBA, so no
-// conversion is needed either way. Rows are copied one at a time because a
-// Bitmap's stride may exceed width × 4. (It went through two Java byte
-// arrays before, two more copies of every pixel and two more image-sized
-// allocations on the Java heap.)
+// Applies `processorKey` to an ARGB_8888 Bitmap, returning a new one; null
+// if the key or Bitmap is unusable. Copies row by row: stride may exceed
+// width × 4.
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeProcess(JNIEnv* env, jobject /* this */,
                                                        jobject input, jstring processorKey) {
@@ -338,9 +304,7 @@ Java_com_turboimage_core_TurboImageCore_nativeProcess(JNIEnv* env, jobject /* th
   });
 }
 
-// Returns `com.turboimage.core.PlaceholderPixels` (premultiplied RGBA, the
-// byte layout of an ARGB_8888 Bitmap), or null if neither hash decodes.
-// Called on a background thread; the decode is pure (Placeholder.h).
+// Returns `PlaceholderPixels`, or null if neither hash decodes.
 extern "C" JNIEXPORT jobject JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeDecodePlaceholder(JNIEnv* env, jobject /* this */,
                                                                  jstring blurhash,
@@ -352,8 +316,7 @@ Java_com_turboimage_core_TurboImageCore_nativeDecodePlaceholder(JNIEnv* env, job
   });
 }
 
-// The throttle's state lives in a Kotlin LongArray(3) owned by the view, so
-// the per-load state needs no native handle. Read, decide, write back.
+// State lives in a Kotlin LongArray(3): read, decide, write back.
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeShouldReportProgress(JNIEnv* env, jobject /* this */,
                                                                     jlongArray state,
@@ -372,8 +335,7 @@ Java_com_turboimage_core_TurboImageCore_nativeShouldReportProgress(JNIEnv* env, 
   });
 }
 
-// Same LongArray state as nativeShouldReportProgress; see
-// ProgressThrottle::finish for why a success may need a final event.
+// Same state; see ProgressThrottle::finish.
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeFinishProgress(JNIEnv* env, jobject /* this */,
                                                               jlongArray state, jlong total) {
@@ -401,8 +363,7 @@ Java_com_turboimage_core_TurboImageCore_nativeParseCachePolicy(JNIEnv* env, jobj
   });
 }
 
-// `String[]` of the keys a `memoryCacheKey` placeholder may name, in lookup
-// order (see memoryCacheKeyCandidates in ImageRequest.h).
+// Keys a `memoryCacheKey` placeholder may name, in lookup order.
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeMemoryCacheKeyCandidates(JNIEnv* env,
                                                                         jobject /* this */,
@@ -443,10 +404,8 @@ Java_com_turboimage_core_TurboImageCore_nativeCoreVersion(JNIEnv* env, jobject /
 // ---------------------------------------------------------------------------
 // View lifecycle (turboimage/ViewLifecycle.h).
 //
-// The state lives in a Kotlin LongArray(5) owned by the view, as with the
-// progress throttle: read, take one step, write back. Effects go back as a
-// LongArray of (kind, value) pairs, in the order the view must carry them
-// out.
+// State lives in a Kotlin LongArray(5): read, step, write back. Effects
+// return as (kind, value) pairs, in order.
 
 namespace {
 

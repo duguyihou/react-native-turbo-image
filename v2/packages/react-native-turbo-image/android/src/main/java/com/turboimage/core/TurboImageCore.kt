@@ -4,13 +4,8 @@ import android.graphics.Bitmap
 import android.util.Log
 
 /**
- * Kotlin face of the shared C++ core (cpp/). Android never re-implements
- * request semantics; it asks the core, exactly like the iOS Fabric view does.
- *
- * This object holds the core's functions and every JNI declaration (the
- * native library binds them by this class's name). The types they take and
- * return are next to it: `ImageRequest.kt`, `ProgressThrottle.kt`,
- * `ViewLifecycle.kt`.
+ * Kotlin face of the shared C++ core; Android never re-implements request
+ * semantics. Holds every JNI declaration (bound by this class's name).
  */
 object TurboImageCore {
   init {
@@ -20,11 +15,7 @@ object TurboImageCore {
   /** A `turboimage::CachePolicy` value, or -1 for an unknown spelling. */
   internal fun parseCachePolicy(js: String): Int = nativeParseCachePolicy(js)
 
-  /**
-   * The cache keys a `placeholder.memoryCacheKey` may name, in lookup order:
-   * the key as written (an explicit `source.cacheKey`), then its canonical
-   * form (a source URI). The core decides, so iOS tries the same keys.
-   */
+  /** Keys a `placeholder.memoryCacheKey` may name, in lookup order (same as iOS). */
   fun memoryCacheKeyCandidates(key: String): Array<String> = nativeMemoryCacheKeyCandidates(key)
 
   /** The JS spelling of a load error code, owned by the C++ core. */
@@ -43,11 +34,7 @@ object TurboImageCore {
       request.resizeMode,
     )
 
-  /**
-   * [allowDownscaling] defaults to false here, unlike the view prop: the
-   * cache module resolves without a view, and a prefetch has no view size to
-   * decode to. Views always pass their prop.
-   */
+  /** [allowDownscaling] defaults to false: the cache module has no view size. */
   fun resolve(
     uri: String,
     cacheKey: String?,
@@ -72,10 +59,7 @@ object TurboImageCore {
       resizeMode.nativeValue,
     )
 
-  /**
-   * Resolves a source for the cache module (`prefetch`, `getSize`,
-   * `dispose`): the original, since there is no view to size it for.
-   */
+  /** Resolves a source for the cache module, at original size. */
   fun resolveForCache(
     uri: String,
     cacheKey: String?,
@@ -83,21 +67,15 @@ object TurboImageCore {
     headers: List<Pair<String, String>>,
   ): ResolveResult = resolve(uri, cacheKey, cachePolicy, headers = headers, allowDownscaling = false)
 
-  // An ARGB Int widened without sign extension, or -1 for "unset" (JNI side).
+  // ARGB widened without sign extension; -1 means unset.
   private fun Int?.toNativeColor(): Long = this?.toLong()?.and(0xffffffffL) ?: -1L
 
-  /**
-   * Runs the processors a `ResolvedRequest.processorKey` describes over a
-   * bitmap. Returns null if the key is invalid. Pure; call it off the main
-   * thread (a 12 MP blur takes a few hundred ms).
-   */
+  /** Applies a `processorKey` to a bitmap; null if the key is invalid. Call off the main thread. */
   fun process(input: Bitmap, processorKey: String): Bitmap? {
-    // The core works on premultiplied RGBA8, which is exactly ARGB_8888's
-    // memory layout. Other configs (RGB_565, RGBA_F16, HARDWARE) are copied.
+    // The core needs ARGB_8888 (premultiplied RGBA8); copy other configs.
     val source =
       if (input.config == Bitmap.Config.ARGB_8888) input
       else input.copy(Bitmap.Config.ARGB_8888, false) ?: return null
-    // Reads `source`'s pixels and writes the result's in native code.
     return nativeProcess(source, processorKey)
   }
 
@@ -105,12 +83,8 @@ object TurboImageCore {
     get() = nativeCoreVersion()
 
   /**
-   * Decodes a blurhash or base64 thumbhash with the shared C++ core. Pure and
-   * thread-safe; call it off the main thread (it can take ~1 ms).
-   *
-   * Null when neither hash decodes, and also when the core ran out of memory:
-   * a placeholder is optional, and this runs on an executor thread, where a
-   * thrown error would take the app down.
+   * Decodes a blurhash or thumbhash; call off the main thread. Null on failure
+   * or OOM: a throw on the executor thread would crash the app.
    */
   fun decodePlaceholder(blurhash: String, thumbhash: String): PlaceholderPixels? =
     try {
@@ -121,12 +95,8 @@ object TurboImageCore {
     }
 
   // ---------------------------------------------------------------------
-  // JNI declarations (android/src/main/cpp/TurboImageJni.cpp).
-  //
-  // Those used only above are private. The ones `ProgressThrottle` and
-  // `ViewLifecycle` call are `internal`, and Kotlin would otherwise append
-  // the module's name to an internal function's JVM name, which the native
-  // library does not know: hence the `@JvmName` on each.
+  // JNI declarations (TurboImageJni.cpp). `internal` ones need `@JvmName`,
+  // or Kotlin mangles the JVM name and JNI can't bind it.
 
   private external fun nativeParseCachePolicy(js: String): Int
 
@@ -214,11 +184,7 @@ object TurboImageCore {
   @JvmName("nativeLifecycleUpgradeFailed")
   internal external fun nativeLifecycleUpgradeFailed(state: LongArray, token: Long)
 
-  /**
-   * `turboimage::placeImage`: the rectangle (x, y, width, height) an image of
-   * [imageWidth]×[imageHeight] is drawn in, inside a box of
-   * [boxWidth]×[boxHeight] with its origin at 0,0.
-   */
+  /** `turboimage::placeImage`: the (x, y, width, height) to draw the image in the box. */
   fun placeImage(
     imageWidth: Double,
     imageHeight: Double,
@@ -253,8 +219,5 @@ object TurboImageCore {
   ): Boolean
 }
 
-/**
- * Premultiplied RGBA8, row-major: the in-memory layout of an ARGB_8888
- * Bitmap. Constructed from JNI; constructor pinned in consumer-rules.pro.
- */
+/** Premultiplied RGBA8 (ARGB_8888's layout). Built from JNI; kept in consumer-rules.pro. */
 class PlaceholderPixels(val width: Int, val height: Int, val rgba: ByteArray)

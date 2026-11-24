@@ -1,9 +1,6 @@
-// Builds the loader-seam request from the C++ core's resolution.
-//
-// Shared by the Fabric view and the cache TurboModule so a prefetch and a
-// later display resolve to the *same* cache key and tier policy. Contains
-// C++ types, so it is private to the ObjC++ target and must never be
-// imported from a public (Swift-visible) header.
+// Builds the seam request from the core's resolution. Shared by the view and
+// the cache module so prefetch and display get the same cache key. Has C++
+// types: never import it from a public header.
 
 #pragma once
 
@@ -24,14 +21,9 @@ struct TIRequestResult {
   NSString *_Nullable message = nil;
 };
 
-// Resolves `request` with the core and converts the result for the seam.
-//
-// `viewPixelSize` is the size of the view the image is for, in pixels. The
-// core decides whether the decode is bounded by it (`DecodeSize::Kind::View`)
-// and this turns that into a concrete size. The cache module has no view
-// and passes none: it also sets `allowDownscaling = false`, so the core
-// never asks for one. A zero size (a view not laid out yet) decodes the
-// original instead of nothing.
+// Resolves `request` with the core and converts it for the seam.
+// `viewPixelSize` bounds the decode when the core asks for it; zero (no
+// layout yet, or the cache module) decodes the original.
 TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &request,
                                    CGSize viewPixelSize = CGSizeZero);
 

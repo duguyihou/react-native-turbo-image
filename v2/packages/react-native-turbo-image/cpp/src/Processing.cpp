@@ -7,12 +7,8 @@
 #include <cstdio>
 #include <vector>
 
-// Same reason as Placeholder.cpp: the box sizes come from a sqrt and a
-// division, and a fused multiply-add would round differently on arm64. All
-// per-pixel work is integer arithmetic, so this is the only floating point
-// that could make the platforms disagree. Clang only, as there: GCC does
-// not know the pragma (a warning, so an error where warnings are errors)
-// and does not contract in strict ISO mode anyway.
+// No FMA, as in Placeholder.cpp: box sizes use floating point and must match
+// across platforms. Clang only; GCC warns on the pragma and does not fuse.
 #if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
@@ -21,11 +17,10 @@ namespace turboimage {
 
 namespace {
 
-// Bumped whenever any stage's output changes for the same spec, so stale
-// memory-cached variants are never mistaken for new ones.
+// Bump whenever any stage's output changes, to invalidate cached variants.
 constexpr std::string_view kKeyVersion = "ti1";
 
-// Large enough for any real image; keeps every product below 2^63.
+// Large enough for any real image; keeps products below 2^63.
 constexpr int kMaxResizeWidth = 65535;
 
 bool isUsable(double value) { return std::isfinite(value) && value > 0; }
@@ -37,18 +32,13 @@ bool hasValidBuffer(const RgbaImage& image) {
 }
 
 // ---------------------------------------------------------------------------
-// Resize: exact area averaging (a box filter whose footprint is the output
-// pixel). It is the best-quality pure downscaler and needs only integers.
-//
-// Place source pixel i on [i*dst, (i+1)*dst) and output pixel j on
-// [j*src, (j+1)*src). Both spans are integers, so every overlap is an
-// integer weight and each output's weights sum to exactly `src`.
+// Resize: exact area averaging, in integers. Source pixel i spans
+// [i*dst, (i+1)*dst) and output j spans [j*src, (j+1)*src), so overlaps are
+// integer weights summing to `src`.
 // ---------------------------------------------------------------------------
 
-// Resamples `count` lines of `src` samples to `dst` samples. `step` is the
-// distance between consecutive samples of one line and `lineStride` the
-// distance between lines, both in bytes, so one routine serves rows and
-// columns.
+// Resamples `count` lines from `src` to `dst` samples. Byte strides let one
+// routine serve rows and columns.
 void resampleLines(const std::uint8_t* in, std::uint8_t* out, int src, int dst,
                    int count, std::size_t inStep, std::size_t inLineStride,
                    std::size_t outStep, std::size_t outLineStride) {
@@ -78,11 +68,9 @@ void resampleLines(const std::uint8_t* in, std::uint8_t* out, int src, int dst,
 }
 
 // ---------------------------------------------------------------------------
-// Blur: three successive box blurs approximate a Gaussian of the requested
-// standard deviation (central limit theorem; box sizes from W. Kovesi, "Fast
-// almost-Gaussian filtering", 2010). Each box is a running sum, so the cost
-// is independent of the radius. Edges repeat the border pixel, so the image
-// keeps its size and the borders do not fade to transparent.
+// Blur: three box blurs approximate a Gaussian (box sizes from Kovesi, "Fast
+// almost-Gaussian filtering"). Running sums make cost independent of radius.
+// Edges repeat the border pixel so borders do not fade.
 // ---------------------------------------------------------------------------
 
 std::array<int, 3> boxRadiiForSigma(int sigma) {
@@ -93,7 +81,7 @@ std::array<int, 3> boxRadiiForSigma(int sigma) {
     --lower;
   }
   const int upper = lower + 2;
-  // How many of the n boxes use the lower width so the variances add up.
+  // How many boxes use the lower width so the variances add up.
   const double idealLowerCount =
       (variance12 - n * lower * lower - 4.0 * n * lower - 3.0 * n) /
       (-4.0 * lower - 4.0);
@@ -107,17 +95,9 @@ std::array<int, 3> boxRadiiForSigma(int sigma) {
   return radii;
 }
 
-// A box's rounded average, `(sum + size / 2) / size`, without dividing.
-// Every output byte of a blur is one, about 290 million for a 12 MP image,
-// and `size` is not a compile-time constant, so the compiler cannot turn the
-// division into a multiplication; a hardware divide costs tens of cycles.
-// This multiplies by `m = ceil(2^32 / size)` and shifts, which gives the
-// same quotient exactly: for x = sum + size / 2 <= 255 * size + size / 2
-// < 2^18 and size <= 1023, the error x * (m * size - 2^32) / 2^32 stays
-// below 2^-4, too little to cross to the next integer. (Checked exhaustively
-// for every such size and x when this was written; the blur tests compare
-// with a reference that divides.) Box sizes here are at most 501
-// (`kMaxBlurRadius` 250).
+// `(sum + size / 2) / size` via multiply by ceil(2^32 / size) and shift, to
+// avoid a hardware divide per byte. Exact for size <= 1023 and
+// sum <= 255 * size (error < 2^-4); boxes here are at most 501.
 class BoxAverage {
  public:
   explicit BoxAverage(std::uint32_t size)
@@ -132,9 +112,8 @@ class BoxAverage {
   std::uint64_t reciprocal_;
 };
 
-// The horizontal box pass, in place: a running sum along each row, all four
-// channels in one sweep. `scratch` holds a copy of the current row, because
-// the window reads pixels the pass has already overwritten.
+// Horizontal box pass, in place. `scratch` copies the row, since the window
+// reads pixels already overwritten.
 void boxBlurRows(std::uint8_t* pixels, int width, int height, int radius,
                  std::vector<std::uint8_t>& scratch) {
   if (radius <= 0 || width <= 1) {
@@ -171,12 +150,8 @@ void boxBlurRows(std::uint8_t* pixels, int width, int height, int radius,
   }
 }
 
-// The vertical box pass. The same running sum as `boxBlurRows`, with the
-// same arithmetic and so the same output, but over a strip of
-// `kColumnBlock` columns at a time: every row it reads is then one
-// contiguous run of the strip's pixels instead of one pixel a whole row
-// apart, which kept the CPU cache missing on every sample (a column pass
-// over a 12 MP image took about three times the row pass).
+// Vertical box pass, same arithmetic as `boxBlurRows`, over strips of
+// `kColumnBlock` columns so each row read is contiguous (cache-friendly).
 constexpr int kColumnBlock = 16;
 
 void boxBlurColumns(std::uint8_t* pixels, int width, int height, int radius,
@@ -193,8 +168,7 @@ void boxBlurColumns(std::uint8_t* pixels, int width, int height, int radius,
     const auto stripBytes =
         static_cast<std::size_t>(std::min(kColumnBlock, width - x0)) * 4;
     std::uint8_t* strip = pixels + static_cast<std::size_t>(x0) * 4;
-    // A copy of the strip, because the window reads rows the pass has
-    // already overwritten.
+    // Copy the strip, since the window reads rows already overwritten.
     scratch.resize(stripBytes * static_cast<std::size_t>(height));
     for (int y = 0; y < height; ++y) {
       std::copy_n(strip + static_cast<std::size_t>(y) * rowStride, stripBytes,
@@ -260,8 +234,7 @@ ProcessingSpec resolveProcessing(const ProcessingOptions& options,
         std::clamp(pixels, 1.0, static_cast<double>(kMaxResizeWidth)));
   }
   if (isUsable(options.blur)) {
-    // Rounds to whole pixels like 1.x (`blur.intValue`); below 0.5 a
-    // Gaussian is invisible, so it rounds to "no blur".
+    // Whole pixels; below 0.5 rounds to "no blur" (invisible anyway).
     spec.blurRadius = static_cast<int>(std::clamp(
         std::round(options.blur), 0.0, static_cast<double>(kMaxBlurRadius)));
   }
@@ -333,10 +306,8 @@ std::optional<ProcessingSpec> parseProcessorKey(std::string_view key) {
         return std::nullopt;
     }
   }
-  // Strictness without a grammar: a key is valid only if it is exactly what
-  // processorKey would write for the spec it parsed to. That rejects field
-  // reordering, duplicates, leading zeros, upper-case hex, out-of-range
-  // values and the empty spec in one comparison.
+  // Valid only if re-encoding gives the same key: rejects reordering,
+  // duplicates, leading zeros, upper-case hex, out-of-range and empty.
   if (spec.resizeWidth > kMaxResizeWidth || spec.blurRadius > kMaxBlurRadius ||
       processorKey(spec) != key) {
     return std::nullopt;
@@ -354,8 +325,7 @@ RgbaImage resizeToWidth(const RgbaImage& image, int width) {
   const int height = static_cast<int>(
       std::max<std::int64_t>(1, (srcH * width + srcW / 2) / srcW));
 
-  // Horizontal pass (rows), then vertical (columns). Separable area
-  // averaging is exactly equivalent to the 2-D box footprint.
+  // Rows, then columns; separable area averaging is exact.
   std::vector<std::uint8_t> rows(static_cast<std::size_t>(width) *
                                  static_cast<std::size_t>(image.height) * 4);
   resampleLines(image.pixels.data(), rows.data(), image.width, width,
@@ -386,10 +356,8 @@ void gaussianBlur(RgbaImage& image, int radius) {
   }
 }
 
-// Maps each pixel's luminance onto the colour: white becomes the colour,
-// black stays black, so `monochrome="white"` is plain greyscale. The colour's
-// alpha is the effect's intensity (blend with the original), which gives the
-// otherwise meaningless alpha of a monochrome colour a useful job.
+// Maps luminance onto the colour (white = greyscale). The colour's alpha is
+// the effect's intensity.
 void monochrome(RgbaImage& image, std::uint32_t argb) {
   if (!hasValidBuffer(image)) {
     return;
@@ -397,8 +365,8 @@ void monochrome(RgbaImage& image, std::uint32_t argb) {
   const Argb color = unpack(argb);
   for (std::size_t i = 0; i < image.pixels.size(); i += 4) {
     std::uint8_t* px = &image.pixels[i];
-    // Rec. 709 luma weights scaled to sum to 256. Computed on premultiplied
-    // values, so the result is already premultiplied (luma <= alpha).
+    // Rec. 709 weights summing to 256; on premultiplied values, so
+    // luma <= alpha.
     const std::uint32_t luma = (54u * px[0] + 183u * px[1] + 19u * px[2] + 128u) >> 8;
     const std::array<std::uint32_t, 3> channel = {color.r, color.g, color.b};
     for (std::size_t c = 0; c < 3; ++c) {
@@ -408,10 +376,8 @@ void monochrome(RgbaImage& image, std::uint32_t argb) {
   }
 }
 
-// Porter-Duff "source atop" with a solid colour, the same operation as 1.x
-// Android's ColorFilterTransformation and iOS's template tinting: opaque
-// pixels take the colour, transparency is kept. A translucent colour mixes
-// with the original.
+// Porter-Duff "source atop" with a solid colour: keeps transparency; a
+// translucent colour mixes with the original.
 void tint(RgbaImage& image, std::uint32_t argb) {
   if (!hasValidBuffer(image)) {
     return;
@@ -422,8 +388,7 @@ void tint(RgbaImage& image, std::uint32_t argb) {
     std::uint8_t* px = &image.pixels[i];
     const std::uint32_t alpha = px[3];
     for (std::size_t c = 0; c < 3; ++c) {
-      // Colour premultiplied by the pixel's coverage, then mixed by the
-      // colour's own alpha.
+      // Premultiply by the pixel's alpha, then mix by the colour's alpha.
       const std::uint32_t source = div255(channel[c] * alpha);
       px[c] = div255(source * color.a + px[c] * (255u - color.a));
     }
@@ -431,9 +396,8 @@ void tint(RgbaImage& image, std::uint32_t argb) {
 }
 
 RgbaImage applyProcessing(RgbaImage image, const ProcessingSpec& spec) {
-  // Only when it shrinks: `resizeToWidth` returns a copy of the whole image
-  // otherwise, and the usual case is a decode already bounded to this width
-  // (rule 3), where there is nothing to resize.
+  // Skip when not shrinking: `resizeToWidth` would copy the whole image, and
+  // the decode is usually already this width.
   if (spec.resizeWidth > 0 && spec.resizeWidth < image.width) {
     image = resizeToWidth(image, spec.resizeWidth);
   }

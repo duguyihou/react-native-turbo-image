@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 # On-device smoke test for the iOS example (Release, simulator).
+# Reinstalls the app (cold caches), serves fixtures via fixture-server.py,
+# and reads the `TURBOIMAGE_SMOKE {...}` line from os_log.
 #
-# Reinstalls the app (uninstalling first wipes its caches), launches it, and
-# waits for the `TURBOIMAGE_SMOKE {...}` line App.tsx logs once every
-# scenario settles. In Release, React Native forwards console.error to
-# os_log, which is where we read it from.
-#
-# The app loads its fixtures from scripts/fixture-server.py, started here on
-# the host; the simulator shares the host's loopback interface.
-#
-# Env: SMOKE_SCREENSHOT=<png path> saves a screenshot after the run.
 # Usage: scripts/smoke-ios.sh [path/to/App.app] [simulator-udid]
+# Env: SMOKE_SCREENSHOT=<png path> saves a screenshot after the run.
 # Exit: 0 when the app reports pass=true, 1 otherwise (including timeout).
 
 set -euo pipefail
@@ -23,9 +17,8 @@ timeout_s=120
 
 # shellcheck source=./assert-fresh-build.sh source-path=SCRIPTDIR
 source "${script_dir}/assert-fresh-build.sh"
-# An .app directory's mtime does not change when Xcode rewrites files inside
-# it, so compare against whichever of the executable and the JS bundle was
-# written last (a JS-only change re-bundles without relinking, and vice versa).
+# The .app dir's mtime doesn't change on rebuild, so use the newer of the
+# executable and the JS bundle.
 newest_artifact="${app}/TurboImageExample"
 if [[ "${app}/main.jsbundle" -nt "${newest_artifact}" ]]; then
   newest_artifact="${app}/main.jsbundle"
@@ -39,8 +32,7 @@ trap 'kill ${log_pid} ${fixture_server_pid} 2> /dev/null || true' EXIT
 start_fixture_server
 
 # Default to the first available iPhone simulator.
-# `|| true`: with no match grep fails, and under `set -e -o pipefail` that
-# would end the script here, before the message below.
+# `|| true` so a no-match grep doesn't exit before the message below.
 udid="${2:-$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]*\(([0-9A-F-]{36})\)' | grep -oE '[0-9A-F-]{36}' || true)}"
 if [[ -z "${udid}" ]]; then
   echo "FAIL: no available iPhone simulator" >&2
@@ -75,8 +67,7 @@ if [[ -z "${line}" ]]; then
 fi
 
 echo "${line}"
-# Optional: capture what the smoke run left on screen (placeholders must
-# still be visible on the failing scenarios).
+# Optional screenshot (placeholders should show on the failing scenarios).
 if [[ -n "${SMOKE_SCREENSHOT:-}" ]]; then
   xcrun simctl io "${udid}" screenshot "${SMOKE_SCREENSHOT}" > /dev/null 2>&1 || true
 fi
@@ -84,16 +75,12 @@ if [[ "${line}" == *'"pass":true'* ]]; then
   echo "PASS (ios)"
 else
   echo "FAIL (ios)" >&2
-  # What the fixture server received says whether a failing load reached the
-  # host at all, and with which headers. A server that was already running
-  # logs wherever it was told to, not here.
+  # Show what reached the fixture server (only if this run started it).
   if [[ -n "${fixture_server_log}" ]]; then
     echo "last requests seen by the fixture server (${fixture_server_log}):" >&2
     tail -n 25 "${fixture_server_log}" >&2 || true
   fi
-  # Keep the result: callers often filter this script's output, and the next
-  # run reinstalls the app. (The log stream above is filtered to the result
-  # line, so there is no wider device log to save, unlike on Android.)
+  # Save the result line, as callers often filter this script's output.
   failure_log="${v2_root}/tmp/smoke-ios-failure-$(date +%Y%m%d-%H%M%S).log"
   mkdir -p "${v2_root}/tmp"
   echo "${line}" > "${failure_log}"

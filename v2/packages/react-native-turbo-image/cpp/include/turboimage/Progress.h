@@ -1,13 +1,8 @@
-// TurboImage core: download-progress event throttling.
+// TurboImage core: download-progress throttling, so both platforms emit
+// the same `onProgress` events whatever rate their loader reports at
+// (RFC rule 3).
 //
-// Loaders report progress at very different rates (Nuke per URLSession
-// chunk, OkHttp per read() call). Forwarding every callback would flood the
-// JS thread with `onProgress` events, and the number of events JS sees would
-// differ by platform. Both views run each update through this one rule
-// instead (RFC rule 3).
-//
-// Ownership/threading: a plain value type holding per-load state. Each view
-// owns one per load and uses it on the main thread only.
+// Plain value type; each view owns one per load, main thread only.
 
 #pragma once
 
@@ -15,35 +10,25 @@
 
 namespace turboimage {
 
-// Per-load throttle state. Three integers so the Android view can keep it
-// in a LongArray and pass it through JNI, keeping the logic only here.
+// Per-load throttle state. Three int64s so Android can keep it in a
+// LongArray across JNI.
 struct ProgressThrottle {
-  // Bytes between reports when the total size is unknown (no
-  // Content-Length): ~16 events per MiB.
+  // Report step when the total is unknown (no Content-Length).
   static constexpr std::int64_t kUnknownTotalStepBytes = 64 * 1024;
 
   std::int64_t lastPercent = -1;
   std::int64_t lastReportedBytes = -1;
   std::int64_t reportedCompletion = 0;  // 0/1; int64 for the JNI LongArray
 
-  // Returns true if this update should become an `onProgress` event:
-  //   * known total: whenever the whole-percent value increases, and always
-  //     once for completion (completed >= total);
-  //   * unknown total (<= 0): every kUnknownTotalStepBytes.
-  // Updates that go backwards (a retried request restarting) are dropped
-  // until they pass the last reported point.
+  // Whether this update becomes an `onProgress` event: on each whole-percent
+  // increase and once at completion (known total), or every
+  // kUnknownTotalStepBytes (unknown total). Backwards updates (a retry) are
+  // dropped until they pass the last reported point.
   [[nodiscard]] bool shouldReport(std::int64_t completed, std::int64_t total);
 
-  // Called once when the load succeeds, with the last total seen. Returns
-  // true if a final {total, total} event must still be emitted, i.e. the
-  // total is known and completion was not reported yet.
-  //
-  // Why: a decoder may stop reading once the image is complete (Coil
-  // decoding a `noCache` response straight from the network stream stops
-  // at the JPEG end marker), so the byte count can end short of
-  // Content-Length on Android while Nuke on iOS always reads to EOF. A
-  // successful load is complete from the app's point of view, so both
-  // platforms end with 100%.
+  // On success: true if a final {total, total} event is still owed. A
+  // decoder may stop reading before Content-Length (Coil at a JPEG end
+  // marker), but a successful load always ends at 100%.
   [[nodiscard]] bool finish(std::int64_t total);
 };
 

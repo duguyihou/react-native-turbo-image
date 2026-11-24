@@ -1,11 +1,6 @@
-// Live Text seam (iOS only), backing `enableLiveTextInteraction`.
-//
-// VisionKit's image-analysis API (`ImageAnalyzer`, `ImageAnalysisInteraction`)
-// is Swift-only, but the Fabric view is ObjC++ and must not import Swift
-// (RFC §4.7: no Swift/C++ interop, no `-Swift.h` across targets). So the
-// Swift implementation (ios/LiveText) conforms to this plain-ObjC protocol and
-// is found by class name, exactly like the Nuke adapter and
-// `TIImageLoaderRegistry`.
+// Live Text seam (iOS only) for `enableLiveTextInteraction`. VisionKit is
+// Swift-only and the Fabric view can't import Swift (RFC §4.7), so the Swift
+// side conforms to this ObjC protocol and is found by class name.
 
 #import <UIKit/UIKit.h>
 
@@ -18,8 +13,7 @@ NS_SWIFT_UI_ACTOR
 /// nil when the device cannot analyse images (`ImageAnalyzer.isSupported`).
 + (nullable id<TILiveTextInteraction>)makeIfSupported;
 
-/// Attaches to `imageView` (once) and analyses `image`, replacing any
-/// earlier analysis. An analysis still running for an older image is
+/// Attaches to `imageView` once and analyses `image`. A stale analysis is
 /// cancelled and never applied.
 - (void)analyzeImage:(UIImage *)image inImageView:(UIImageView *)imageView;
 
@@ -28,8 +22,8 @@ NS_SWIFT_UI_ACTOR
 
 @end
 
-/// Returns a new interaction from the bundled implementation, or nil if it
-/// is unsupported here (always the case on tvOS) or not linked. Main thread.
+/// A new interaction, or nil if unsupported (always on tvOS) or not linked.
+/// Main thread.
 FOUNDATION_EXPORT id<TILiveTextInteraction> _Nullable TIMakeLiveTextInteraction(void)
     NS_SWIFT_UI_ACTOR;
 

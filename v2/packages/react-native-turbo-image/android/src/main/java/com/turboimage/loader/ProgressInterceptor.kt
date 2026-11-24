@@ -12,20 +12,11 @@ import okio.ForwardingSource
 import okio.buffer
 
 /**
- * Routes OkHttp download progress to the load that issued the request.
+ * Routes OkHttp download progress to its load. Coil has no progress API, so
+ * each request carries a per-load token header, stripped here.
  *
- * Coil has no progress API, so the adapter tags each request with a
- * per-load token header; this interceptor strips it before the request
- * leaves the device, and wraps the response body to count bytes.
- *
- * A token per *load* rather than per view (1.x used the view tag): a view
- * that switched `source` while its old request is still downloading must not
- * receive the old request's progress.
- *
- * Known gap vs iOS: with DeDupeConcurrentRequestStrategy only the leading
- * request of N identical concurrent loads reaches the network, so the
- * followers get no progress (they complete from the disk cache). Nuke's
- * coalescing forwards progress to every subscriber.
+ * Known gap vs iOS: of deduplicated concurrent loads, only the leader gets
+ * progress.
  */
 internal class ProgressInterceptor : Interceptor {
   override fun intercept(chain: Interceptor.Chain): Response {
@@ -44,8 +35,7 @@ internal class ProgressInterceptor : Interceptor {
     fun onBytes(completed: Long, total: Long)
   }
 
-  // `body`, not `delegate`: inside the ForwardingSource below, `delegate`
-  // would resolve to ForwardingSource.delegate (the okio Source).
+  // Not named `delegate`: that would clash with ForwardingSource.delegate.
   private class CountingBody(
     private val body: ResponseBody,
     private val listener: Listener,

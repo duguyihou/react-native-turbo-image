@@ -1,13 +1,5 @@
-// Codegen spec for the TurboImage Fabric component.
-//
-// This file is the cross-platform contract between JS and native. Codegen
-// reads it at build time to generate the C++ props/event structs (shared by
-// iOS and Android), the ObjC++ `RCTComponentViewProtocol` glue, and the
-// Kotlin `TurboImageViewManagerInterface`.
-//
-// Keep this spec free of loader concepts. Nothing here mentions Nuke or
-// Coil: request semantics are owned by TurboImage (RFC rule 2) and the
-// loaders are adapters behind the native layer (RFC rule 1).
+// Codegen spec for the TurboImage Fabric component: the JS/native contract.
+// Keep it free of loader concepts (no Nuke or Coil; RFC rules 1 and 2).
 import { codegenNativeComponent } from 'react-native';
 import type { CodegenTypes, ColorValue, HostComponent, ViewProps } from 'react-native';
 
@@ -16,43 +8,33 @@ export type NativeHeader = Readonly<{ name: string; value: string }>;
 export type NativeSource = Readonly<{
   uri: string;
   cacheKey?: string;
-  // Sent with the request (e.g. auth). Not part of the cache key. An array
-  // because Codegen props cannot express a free-form dictionary; the public
-  // API accepts 1.x's record/pairs/Headers forms and converts them.
+  // Not part of the cache key. An array: Codegen has no free-form dictionary.
   headers?: ReadonlyArray<NativeHeader>;
 }>;
 
-// Shown until the image loads. If the load fails it is removed, unless
-// `showPlaceholderOnFailure` is set. Decoded by the shared C++ core off the
-// main thread. Provide at most one (validated in JS, development only).
+// Shown until the image loads; removed on failure unless
+// `showPlaceholderOnFailure`. Set at most one field.
 export type NativePlaceholder = Readonly<{
   blurhash?: string;
-  // Base64, as produced by `thumbhash`'s rgbaToThumbHash + base64 encoding.
+  // Base64 of `thumbhash`'s rgbaToThumbHash output.
   thumbhash?: string;
-  // Show an image already in the *memory* cache (e.g. a thumbnail shown on
-  // the previous screen) while this one loads. Pass the URI (or explicit
-  // cacheKey) that image was loaded with: the core tries the key as written
-  // (an explicit cacheKey) and then in canonical form (a URI).
+  // An image already in the *memory* cache: the URI or cacheKey it was
+  // loaded with.
   memoryCacheKey?: string;
-  // Any image, typically a small thumbnail of this one: loaded (from the
-  // caches when it is there) with the source's headers, unprocessed, and
-  // without events. Never shown over the loaded image. New in 2.0; what
-  // expo-image's `placeholder` takes as a source.
+  // Any image, e.g. a thumbnail. Loaded with the source's headers,
+  // unprocessed, without events; never shown over the loaded image.
   uri?: string;
 }>;
 
-// Event payloads keep 1.x's names and fields so app handlers keep working
-// (docs/migration-plan.md). Lifecycle per load:
+// Event payloads keep 1.x's names. Per load:
 //   onStart → onProgress* → (onSuccess | onFailure) → onCompletion
-// A load superseded by a newer one ends with onCompletion {state:'cancelled'}
-// and no success/failure (new in 2.0; 1.x declared but never sent it).
+// A superseded load ends with onCompletion {state:'cancelled'} only.
 export type StartEvent = Readonly<{
   state: string; // 'running'
 }>;
 
 export type ProgressEvent = Readonly<{
-  // Bytes. `total` is -1 when the server sends no Content-Length. Throttled
-  // by the core to ~100 events per load (cpp/include/turboimage/Progress.h).
+  // Bytes; `total` is -1 without Content-Length. ~100 events per load at most.
   completed: CodegenTypes.Double;
   total: CodegenTypes.Double;
 }>;
@@ -65,12 +47,10 @@ export type SuccessEvent = Readonly<{
 }>;
 
 export type FailureEvent = Readonly<{
-  // Stable, cross-platform classification; one of
+  // Stable across platforms (`turboimage::LoadErrorCode`):
   // 'invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown'.
-  // Defined by `turboimage::LoadErrorCode` in cpp/include. New in 2.0.
   code: string;
-  // Diagnostic text from the platform loader (1.x field name). Not stable
-  // across platforms or versions; branch on `code` instead.
+  // Loader diagnostic text; not stable, branch on `code` instead.
   error: string;
 }>;
 
@@ -81,94 +61,57 @@ export type CompletionEvent = Readonly<{
 export interface NativeProps extends ViewProps {
   source: NativeSource;
   placeholder?: NativePlaceholder;
-  // These string unions mirror `turboimage::CachePolicy`; the native side
-  // converts them to the pinned integer values in cpp/include.
-  //
-  // 'urlCache' is the only policy that obeys HTTP `Cache-Control`: its disk
-  // tier is the platform's HTTP cache (keyed by URL, entries expire and are
-  // revalidated, `no-store` is never stored), separate from the disk cache
-  // the other policies share. So a 'cacheOnly' load does not see what a
-  // 'urlCache' load stored on disk. The memory cache is shared by all.
-  // On iOS a response over 7.5 MB (5% of the 150 MB URLCache) is never
-  // stored, so such an image is fetched again on every memory miss.
+  // Mirrors `turboimage::CachePolicy`. Only 'urlCache' obeys HTTP
+  // `Cache-Control`; its disk store is the platform HTTP cache, separate from
+  // the others' (so 'cacheOnly' can't see it). The memory cache is shared.
+  // On iOS, responses over 7.5 MB are never stored by 'urlCache'.
   cachePolicy?: CodegenTypes.WithDefault<
     'default' | 'memoryOnly' | 'noCache' | 'cacheOnly' | 'urlCache',
     'default'
   >;
-  // 'contain' is 1.x's default (React Native's <Image> defaults to 'cover');
-  // kept for compatibility, see docs/migration-plan.md. 'scale-down' (new
-  // in 2.0, expo-image's contentFit): 'center' when the image fits, else
-  // 'contain'.
+  // Defaults to 'contain' as in 1.x (RN <Image> uses 'cover').
+  // 'scale-down': 'center' if the image fits, else 'contain'.
   resizeMode?: CodegenTypes.WithDefault<
     'cover' | 'contain' | 'stretch' | 'center' | 'scale-down',
     'contain'
   >;
-  // Where the image sits in the view when it overflows (cover) or leaves
-  // space (contain, center, scale-down): fractions of that space, 0 = left /
-  // top, 0.5 = centred, 1 = right / bottom (`turboimage::ContentPosition`).
-  // JS turns expo-image's `contentPosition` into these. New in 2.0.
+  // Fraction of the free space: 0 = left/top, 0.5 = centred, 1 = right/bottom.
   contentPositionX?: CodegenTypes.WithDefault<CodegenTypes.Double, 0.5>;
   contentPositionY?: CodegenTypes.WithDefault<CodegenTypes.Double, 0.5>;
-  // Identifies what this view is showing, for lists that reuse views
-  // (FlashList). When a request prop changes, the image already on screen
-  // stays until the new one has loaded, unless this key changed with it:
-  // then the view is blanked (or shows the placeholder) first, so a reused
-  // row never shows the previous row's image. New in 2.0; the same contract
-  // as expo-image's prop of this name.
+  // For recycled list rows. On a source change the old image stays until
+  // the new one loads, unless this key also changed: then the view clears
+  // first, so a reused row never shows the previous row's image.
   recyclingKey?: string;
-  // 1.x semantics: by default the placeholder is removed when the load
-  // fails; true keeps it.
+  // Keep the placeholder when the load fails.
   showPlaceholderOnFailure?: CodegenTypes.WithDefault<boolean, false>;
-  // Cross-fade from what is shown (the placeholder, the previous image or
-  // blank) to the loaded image, in ms.
-  // Skipped for memory-cache hits on both platforms. 0 disables it.
+  // Cross-fade to the loaded image, in ms. Skipped on memory hits; 0 = off.
   fadeDuration?: CodegenTypes.WithDefault<CodegenTypes.Int32, 300>;
-  // Image processors, applied by the shared C++ core in this order (see
-  // cpp/include/turboimage/Processing.h). Each processed variant is its own
-  // memory-cache entry; the disk cache keeps one original.
+  // Processors, applied in this order. Each variant is cached in memory
+  // separately; disk keeps one original.
   // Target width in points/dp; aspect kept, never upscaled. 0 = off.
   resize?: CodegenTypes.WithDefault<CodegenTypes.Double, 0>;
-  // Gaussian standard deviation in pixels of the (resized) image. 0 = off.
+  // Gaussian sigma in pixels of the (resized) image. 0 = off.
   blur?: CodegenTypes.WithDefault<CodegenTypes.Double, 0>;
-  // Luminance mapped onto this colour ('white' = greyscale). The colour's
-  // alpha is the effect's intensity.
+  // Map luminance onto this colour ('white' = greyscale); alpha = intensity.
   monochrome?: ColorValue;
-  // Fills the image's opaque area with this colour, keeping transparency.
+  // Fill the opaque area with this colour.
   tint?: ColorValue;
-  // Decode the image no larger than it is shown: at the view's size, or at
-  // `resize`'s width when that is set. A 12 MP photo in a thumbnail then
-  // costs the thumbnail's memory, not 48 MB. Never upscales. `onSuccess`
-  // reports the decoded size. Not applied with `resizeMode="center"` (drawn
-  // 1:1) or `blur` without `resize` (its radius is in image pixels).
-  //
-  // A view whose layout grows to more than 1.5x what its image was decoded
-  // for loads it again at the new size, silently (no events), keeping the
-  // image on screen meanwhile. A zoom by `transform` does not change the
-  // layout, so set false for a zoomable image. New in 2.0; expo-image's
-  // prop of the same name.
-  // An SVG has no pixels to keep, so false changes nothing for one: it is
-  // drawn for the view either way.
+  // Decode no larger than shown (view size, or `resize`). `onSuccess` reports
+  // the decoded size. Not applied with `resizeMode="center"` or with `blur`
+  // but no `resize`. Growing past 1.5x reloads silently at the new size; set
+  // false for images zoomed by `transform`. No effect on SVGs.
   allowDownscaling?: CodegenTypes.WithDefault<boolean, true>;
-  // Android only (ignored on iOS, as in 1.x): false decodes to a software
-  // bitmap instead of a GPU-only hardware bitmap. Slower to draw; needed
-  // only by code that reads the pixels or draws to a software canvas.
+  // Android only. False uses a software bitmap, needed only to read pixels
+  // or draw to a software canvas.
   allowHardware?: CodegenTypes.WithDefault<boolean, true>;
-  // iOS only (ignored on Android and tvOS, as in 1.x): select text, scan codes
-  // and look up subjects in the loaded image with VisionKit.
+  // iOS only (not tvOS): VisionKit Live Text on the loaded image.
   enableLiveTextInteraction?: CodegenTypes.WithDefault<boolean, false>;
-  // Set by <TurboImage> when `onProgress` has a handler. Off, the views ask
-  // the loader for no progress at all: no byte counting on the network
-  // thread, no main-thread hops, and none of the ~100 `onProgress` events
-  // per load reaching JS for nothing. Read when a load starts, so a handler
-  // attached mid-load hears from the next one. Not a public prop.
+  // Internal: set by <TurboImage> when `onProgress` has a handler, so loads
+  // skip progress work otherwise. Read at load start.
   progressEnabled?: CodegenTypes.WithDefault<boolean, false>;
-  // Set by <TurboImage>: which of `onStart` (1), `onSuccess` (2),
-  // `onFailure` (4) and `onCompletion` (8) have a handler. The views build
-  // and send only those; JS would drop the others on arrival anyway. Read
-  // when each event is emitted, which is when JS would look for the handler,
-  // so what JS hears is unchanged. The core still runs every load's events;
-  // only the sending is skipped. All on by default, for the component used
-  // without <TurboImage>. Not a public prop.
+  // Internal: bits for which of onStart (1), onSuccess (2), onFailure (4),
+  // onCompletion (8) have handlers; others are not sent. Read at emit time.
+  // All on by default, for use without <TurboImage>.
   loadEventMask?: CodegenTypes.WithDefault<CodegenTypes.Int32, 15>;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
   onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;

@@ -1,19 +1,6 @@
-// TurboImage loader seam (iOS).
-//
-// This is the only contract between the Fabric view (ObjC++) and an image
-// loader adapter (Swift, e.g. Nuke). It is deliberately plain Objective-C:
-//
-//   * Swift can conform to it without C++ interop, so the Swift adapter
-//     target stays free of C-family sources (RFC rule 5) and does not force
-//     `-cxx-interoperability-mode` onto everything that imports it.
-//   * It exposes no loader types, so Nuke never leaks into TurboImage's
-//     public surface (RFC "avoid exposing Nuke types").
-//
-// Internal (ADR 0014): it bridges the ObjC++ view and the Swift adapter,
-// and lets tests use a fake loader. Apps cannot replace it.
-//
-// Headers in this directory are the *only* public headers of the iOS
-// module. Keep them free of C++ so the module stays importable from Swift.
+// Loader seam (iOS): the only contract between the Fabric view and the Swift
+// adapter. Plain ObjC so Swift needs no C++ interop and Nuke types never leak.
+// Internal (ADR 0014); tests swap in a fake loader. Keep this dir C++-free.
 
 #import <UIKit/UIKit.h>
 
@@ -21,15 +8,13 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Handle for one in-flight load. Cancelling must be idempotent and safe to
-/// call after completion.
+/// One in-flight load. `cancel` is idempotent and safe after completion.
 @protocol TIImageLoadTask <NSObject>
 - (void)cancel;
 @end
 
-/// Error domain every adapter must report failures in. Codes mirror
-/// `turboimage::LoadErrorCode` (cpp/include/turboimage/ImageRequest.h); the
-/// integer values are a pinned ABI.
+/// Domain for all adapter errors. Codes mirror `turboimage::LoadErrorCode`;
+/// the values are a pinned ABI.
 FOUNDATION_EXPORT NSErrorDomain const TIImageLoadErrorDomain;
 
 typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
@@ -40,27 +25,17 @@ typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
     TIImageLoadErrorDecode = 4,
 };
 
-/// Completion contract: called exactly once, on the main thread, unless the
-/// task was cancelled first (then it may not be called at all). A non-nil
-/// error is always in `TIImageLoadErrorDomain`; adapters classify their
-/// loader's errors so JS sees the same code on both platforms.
-/// `fromMemoryCache` lets the view skip the fade for memory hits, which is
-/// what Coil's crossfade does on Android.
-///
-/// `image` is always a still: for an animated image, its first frame. What
-/// plays it is `animation`, which is nil for everything else. It is opaque
-/// here because how an animation is played is the loader's business (Nuke:
-/// frames decoded lazily into a shared pool). The view only hands it back,
-/// to `displayImage:animation:inImageView:` of the loader it came from.
+/// Called once on the main thread, or maybe never after cancel. Errors are in
+/// `TIImageLoadErrorDomain`. `fromMemoryCache` skips the fade (like Coil).
+/// `image` is a still (first frame if animated); `animation` is opaque and
+/// only goes back to this loader's `displayImage:animation:inImageView:`.
 typedef void (^TIImageLoadCompletion)(UIImage *_Nullable image,
                                       id _Nullable animation,
                                       BOOL fromMemoryCache,
                                       NSError *_Nullable error);
 
-/// Progress contract: bytes received / expected (`total` <= 0 if unknown).
-/// Called on the main thread, zero or more times, only before completion and
-/// never after cancel. Unthrottled: the view applies the core's
-/// `ProgressThrottle` so both platforms emit the same event cadence.
+/// Bytes received / expected (`total` <= 0 if unknown). Main thread, only
+/// before completion, never after cancel. Unthrottled; the view throttles.
 typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 
 @protocol TIImageLoading <NSObject>
@@ -68,68 +43,42 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
                                    progress:(nullable TIImageLoadProgress)progress
                                  completion:(TIImageLoadCompletion)completion;
 
-// Display. The view owns what is on screen and when (the core's lifecycle
-// decides); the loader only supplies the image view and plays animations in
-// it, because an animation needs a player and a plain UIImageView has none.
-// The Android seam goes further and hands the adapter the whole display
-// (ADR 0004); here it is only these two calls.
+// Display. The view decides what shows when; the loader only supplies the
+// image view and plays animations in it.
 
-/// A new image view for one TurboImage view. Any UIImageView will do for a
-/// loader that plays no animations. Main thread.
-///
-/// The view sets placeholders and clears the image through `image`, so
-/// setting `image` must stop an animation that is playing, as it does for
-/// UIImageView's own animated images.
+/// A new image view for one TurboImage view. Main thread. Setting `image`
+/// must stop any playing animation.
 - (UIImageView *)makeImageView NS_SWIFT_UI_ACTOR;
 
-/// Shows the result of a load: `image`, and `animation` playing over it if
-/// there is one. Both are what this loader's completion delivered. Main
-/// thread.
-///
-/// `imageView` usually comes from `makeImageView`, but not always (the
-/// registry's loader can be replaced while views exist), so a view the
-/// loader cannot play in must still get the still image.
+/// Shows a load result, playing `animation` if any. Main thread. `imageView`
+/// may not be from `makeImageView` (loader swapped); still show `image` then.
 - (void)displayImage:(UIImage *)image
            animation:(nullable id)animation
          inImageView:(UIImageView *)imageView NS_SWIFT_UI_ACTOR;
 
-// Cache management, backing the TurboImageModule (prefetch/dispose/clear*).
-// Every request and key is already resolved by the core
-// (`turboimage::ResolvedRequest`), so views and the module agree on keys.
+// Cache management for TurboImageModule. Keys come from the core, so views
+// and the module agree.
 
-/// Loads `request` into the caches without displaying it. `completion` is
-/// called once on the main thread (not at all after cancel). A request whose
-/// `memoryCacheWrite` is off (a prefetch) is only downloaded:
-/// adapters should store the bytes without decoding them.
+/// Loads into the caches. `completion` once on main, never after cancel.
+/// With `memoryCacheWrite` off, store the bytes without decoding.
 - (id<TIImageLoadTask>)prefetchRequest:(TIImageRequest *)request
                             completion:(void (^)(BOOL succeeded))completion;
 
-/// Evicts the image `request` names from memory (every processed and sized
-/// variant), from the key-addressed disk cache, and from the HTTP cache.
-/// Only the request's `cacheKey` and `url` matter; its policy does not.
-///
-/// Main thread, so it must not do disk I/O in the caller: the entry has to
-/// be gone for the next read when this returns, with the files deleted
-/// later. That is why it takes no completion block where the Android seam's
-/// `remove` takes `onDone`: Coil's disk cache deletes in the calling thread,
-/// Nuke's `DataCache` stages the removal and returns.
+/// Evicts every memory variant, the disk entry and the HTTP cache entry for
+/// `cacheKey`/`url`. Main thread, no disk I/O inline: gone for the next read
+/// on return, files deleted later (hence no completion, unlike Android).
 - (void)removeCachedImageForRequest:(TIImageRequest *)request;
 
 - (void)clearMemoryCache;
-/// Empties both disk stores: the key-addressed cache and the HTTP cache.
-/// Same threading rule as `removeCachedImageForRequest:`.
+/// Empties both disk stores. Same threading as `removeCachedImageForRequest:`.
 - (void)clearDiskCache;
 
-/// Synchronous memory-cache lookup, for the `memoryCacheKey` placeholder.
-/// Main thread; must be cheap (no disk I/O).
+/// Memory-only lookup for the `memoryCacheKey` placeholder. Main thread, cheap.
 - (nullable UIImage *)memoryCachedImageForKey:(NSString *)cacheKey;
 
-/// `TurboImage.getSize`: loads `request` into the caches like
-/// `prefetchRequest:`, then reports the image's own size in pixels with its
-/// orientation applied, or the error (in `TIImageLoadErrorDomain`) that
-/// stopped it. Adapters should read the size from the file's header rather
-/// than decode the image. `completion` is called once on the main thread
-/// (not at all after cancel).
+/// `TurboImage.getSize`: caches like `prefetchRequest:`, then reports the
+/// oriented pixel size (from the header, not a decode) or the error.
+/// `completion` once on main, never after cancel.
 - (id<TIImageLoadTask>)imageSizeForRequest:(TIImageRequest *)request
                                 completion:(void (^)(CGSize size, NSError *_Nullable error))completion;
 @end
@@ -137,14 +86,11 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 /// Process-wide loader selection. Thread-safe.
 @interface TIImageLoaderRegistry : NSObject
 
-/// The bundled Nuke adapter, found by name at run time (see the .m).
-/// nil only if no adapter is linked.
+/// The bundled Nuke adapter, found by name; nil if not linked.
 @property(class, atomic, readonly, nullable) id<TIImageLoading> sharedLoader;
 
-/// `TurboImage.configureCache`: the cache sizes, in bytes, the default
-/// adapter is created with; 0 keeps the adapter's own default. An adapter
-/// reads them when it is created, so this only works before any loader
-/// exists: NO, and nothing changes, once `sharedLoader` has made one.
+/// `TurboImage.configureCache`: sizes in bytes (0 = default). Only works
+/// before `sharedLoader` exists; returns NO after.
 + (BOOL)configureCacheWithMaxDiskSize:(NSInteger)maxDiskSize maxMemoryCost:(NSInteger)maxMemoryCost;
 @property(class, atomic, readonly) NSInteger cacheMaxDiskSize;
 @property(class, atomic, readonly) NSInteger cacheMaxMemoryCost;

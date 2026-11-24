@@ -13,10 +13,8 @@ import okio.ByteString.Companion.encodeUtf8
 import okio.ByteString.Companion.toByteString
 
 /**
- * Animated PNG for Coil 3. Android's ImageDecoder animates GIF, WebP and
- * HEIF but shows only the first frame of an APNG, so 1.x used LINE's
- * `com.linecorp:apng` and so does 2.0 (iOS gets APNG from ImageIO).
- * Registered ahead of Coil's bitmap decoder; static PNGs fall through to it.
+ * APNG via LINE's `com.linecorp:apng`; Android's ImageDecoder shows only the
+ * first frame. Static PNGs fall through to Coil's decoder.
  */
 internal class ApngDecoder(private val result: SourceFetchResult) : Decoder {
 
@@ -36,11 +34,7 @@ internal class ApngDecoder(private val result: SourceFetchResult) : Decoder {
     private val ACTL = "acTL".encodeUtf8()
     private val IDAT = "IDAT".encodeUtf8()
 
-    /**
-     * The APNG spec requires `acTL` before the first `IDAT`, so walking the
-     * chunk headers up to `IDAT` decides it. Uses `peek()`, so the source is
-     * not consumed for the decoder that runs next.
-     */
+    /** True if `acTL` comes before the first `IDAT`. Peeks; consumes nothing. */
     fun isApng(source: BufferedSource): Boolean {
       val peek = source.peek()
       return try {

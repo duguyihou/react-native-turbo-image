@@ -1,7 +1,5 @@
-// Cache-management TurboModule (iOS): prefetch, dispose, clearMemoryCache,
-// clearDiskCache. Every source goes through the C++ core first, via the same
-// factory the view uses, so prefetched entries are exactly the ones a view
-// will later hit.
+// Cache TurboModule (iOS). Uses the view's request factory, so prefetched
+// entries match what a view later loads.
 
 #import "TurboImageModule.h"
 
@@ -17,11 +15,8 @@
 
 namespace {
 
-// `{ uri, cacheKey?, headers? }` from JS (headers already normalised to
-// `[{name, value}]` by index.tsx). Anything malformed becomes something the
-// core rejects: a non-dictionary source an empty URI, a malformed header an
-// empty name (InvalidHeader), so a bad source fails instead of loading
-// without its auth header.
+// `{ uri, cacheKey?, headers? }` from JS. Malformed input maps to values the
+// core rejects, so a bad header fails rather than loads without auth.
 struct SourceFields {
   std::string uri;
   std::string cacheKey;
@@ -67,9 +62,8 @@ turboimage::ImageRequest coreRequest(const SourceFields &fields,
   };
 }
 
-// A prefetch only downloads: the memory write off tells the adapter not to
-// decode. Without a disk tier (`memoryOnly`, a local file) it decodes, or
-// nothing would be stored.
+// Prefetch only downloads (memory write off = don't decode), unless there is
+// no disk tier, or nothing would be stored.
 TIImageRequest *diskOnly(TIImageRequest *request) {
   if (!request.diskCacheWrite) {
     return request;
@@ -153,8 +147,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
       finishOne(NO);
       continue;
     }
-    // Capture the set, not `self`: `weakSelf->_prefetches` would dereference
-    // nil if the module were torn down mid-prefetch.
+    // Capture the set, not `self`, so teardown mid-prefetch is safe.
     NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
     __block id<TIImageLoadTask> task = nil;
     task = [loader prefetchRequest:diskOnly(built.request)
@@ -166,12 +159,10 @@ RCT_EXPORT_MODULE(TurboImageModule)
   }
 }
 
-// The module is going away (reload, or the host is destroyed): stop the
-// prefetches it started. Their promises are left unsettled on purpose; the
-// JS runtime they belong to is being torn down too.
+// Cancel prefetches on teardown. Promises stay unsettled: their runtime is
+// going away too.
 - (void)invalidate {
-  // `_prefetches` is main-thread only, and nothing promises which thread
-  // this arrives on. The set is captured, not `self` (see prefetch).
+  // May arrive off main; `_prefetches` is main-only.
   NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
   void (^cancelAll)(void) = ^{
     for (id<TIImageLoadTask> task in prefetches) {
@@ -190,8 +181,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
     cachePolicy:(NSString *)cachePolicy
         resolve:(RCTPromiseResolveBlock)resolve
          reject:(RCTPromiseRejectBlock)reject {
-  // The rejection code is the failure's `turboimage::LoadErrorCode` name, as
-  // in `onFailure.code`.
+  // Rejection code is the `LoadErrorCode` name, as in `onFailure.code`.
   auto rejectWith = ^(turboimage::LoadErrorCode code, NSString *message) {
     const auto name = turboimage::loadErrorCodeName(code);
     reject([[NSString alloc] initWithBytes:name.data() length:name.size() encoding:NSUTF8StringEncoding],
@@ -209,7 +199,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
     rejectWith(built.error, built.message);
     return;
   }
-  // Kept like a prefetch until it settles (see prefetch for the capture).
+  // Kept alive like a prefetch.
   NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
   __block id<TIImageLoadTask> task = nil;
   __block BOOL done = NO;
@@ -223,9 +213,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
                               resolve(@{@"width" : @(size.width), @"height" : @(size.height)});
                               return;
                             }
-                            // The seam promises TIImageLoadErrorDomain;
-                            // anything else is an adapter bug, reported as
-                            // unknown.
+                            // Other domains are adapter bugs: unknown.
                             const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
                                                   ? static_cast<turboimage::LoadErrorCode>(error.code)
                                                   : turboimage::LoadErrorCode::Unknown;
@@ -236,8 +224,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
   }
 }
 
-// Synchronous, on the JS thread, so it has taken effect before the app
-// renders its first image; the registry is thread-safe.
+// Sync on the JS thread so it applies before the first image renders.
 - (NSNumber *)configureCache:(double)maxDiskSize maxMemoryCost:(double)maxMemoryCost {
   return @([TIImageLoaderRegistry configureCacheWithMaxDiskSize:static_cast<NSInteger>(maxDiskSize)
                                                   maxMemoryCost:static_cast<NSInteger>(maxMemoryCost)]);
@@ -249,8 +236,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    // The policy is irrelevant for the key and the URL; Default resolves
-    // them like a view would.
+    // Policy doesn't affect key or URL.
     const auto built = TIMakeImageRequest(coreRequest(fields, turboimage::CachePolicy::Default));
     if (built.request != nil) {
       [loader removeCachedImageForRequest:built.request];

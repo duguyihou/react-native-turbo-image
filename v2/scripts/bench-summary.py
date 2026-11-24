@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Summarises a benchmark run from scripts/bench-android.sh as Markdown.
+"""Summarises a scripts/bench-android.sh run as Markdown tables.
 
-One table per scenario, source and cache state, one row per library, with
-the median over iterations of each metric. Medians rather than means: a
-single run disturbed by the OS (a GC, a background job) should not move the
-result.
+One table per scenario, source and cache state; one row per library, with
+medians (not means, so one disturbed run does not skew the result).
 
 Usage: python3 scripts/bench-summary.py tmp/bench/android-<timestamp>.jsonl
 """
@@ -42,12 +40,9 @@ def main(path):
             by_lib[row["app"]["lib"]].append(row)
 
         print(f"\n### {scenario} · {source} · {cache}  (median of runs)\n")
-        # Load times are from mount, which for `load` is when every request
-        # starts. In `grid` most images mount only as the list scrolls to
-        # them, so their time from mount is mostly scroll position; the grid
-        # table shows the first screen's time, frames and memory instead.
-        # TODO: per-image latency (load start to success) for `grid`, from
-        # each library's start event.
+        # `grid` images mount as the list scrolls, so time from mount is
+        # meaningless there; show first-screen time and frame stats instead.
+        # TODO: per-image latency (start to success) for `grid`.
         header = ["lib", "runs", "failed", "first", "PSS"]
         if scenario == "load":
             header[4:4] = ["p50 load", "p90 load", "last load"]

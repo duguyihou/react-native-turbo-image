@@ -1,9 +1,7 @@
 const path = require('path');
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 
-// Monorepo wiring: Bun hoists every dependency to v2/node_modules, and the
-// library is a workspace symlink under packages/. Metro has to watch both
-// and resolve from the hoisted root.
+// Monorepo: watch the workspace root and resolve from its hoisted node_modules.
 const workspaceRoot = path.resolve(__dirname, '../..');
 
 const config = {

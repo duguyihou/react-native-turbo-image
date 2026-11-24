@@ -9,15 +9,10 @@ import coil3.decode.Decoder
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
 
-// `TurboImage.getSize` on Android: the Coil request runs as usual (fetch,
-// disk cache), but this decoder reads only the size from the file's header,
-// so a 12 MP photo costs a download, not a 48 MB bitmap. Coil has no
-// "fetch without decoding", hence a decoder that answers with a size.
+// `TurboImage.getSize`: Coil has no "fetch without decoding", so this decoder
+// reads only the header size instead of decoding a full bitmap.
 
-/**
- * An image with a size and no pixels: what [HeaderSizeDecoder] returns.
- * Never drawn and never cached (the request disables memory writes).
- */
+/** A size with no pixels; never drawn or cached. */
 internal class SizeOnlyImage(override val width: Int, override val height: Int) : coil3.Image {
   override val size: Long = 0
   override val shareable: Boolean = false
@@ -26,12 +21,8 @@ internal class SizeOnlyImage(override val width: Int, override val height: Int) 
 }
 
 /**
- * Reads the size of a bitmap format Android can bound (JPEG, PNG, WebP, GIF,
- * HEIF and AVIF where the OS decodes them) and turns it by the EXIF
- * orientation, as a decode would. Anything else (SVG) goes to the loader's
- * own decoders, in full, and reports the size they draw it at: for an SVG,
- * its canvas at the screen's density (`scaleToDensity`, CoilLoaderSetup.kt),
- * which is what iOS reports too.
+ * Reads a bitmap's header size, EXIF-oriented. Other formats (SVG) fall back
+ * to a full decode, matching the size iOS reports.
  */
 internal class HeaderSizeDecoder(
   private val result: SourceFetchResult,
@@ -46,9 +37,9 @@ internal class HeaderSizeDecoder(
     return delegate.decode() ?: throw IllegalStateException("The image could not be decoded")
   }
 
-  /** (width, height) in pixels after the orientation, or null when the header is not one BitmapFactory reads. */
+  /** Oriented (width, height), or null if BitmapFactory can't read the header. */
   private fun headerSize(): Pair<Int, Int>? {
-    // Peeks, so a fallback to a full decode still reads the bytes from the start.
+    // Peek, so a fallback decode still starts at byte 0.
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     result.source.source().peek().inputStream().use { BitmapFactory.decodeStream(it, null, bounds) }
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null

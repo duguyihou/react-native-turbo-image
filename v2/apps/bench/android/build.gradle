@@ -5,12 +5,8 @@ buildscript {
         compileSdkVersion = 37
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
-        // Raised from RN 0.88's default 2.2.0: Coil 3.6.3 is compiled with
-        // Kotlin 2.4.10, and a 2.2 compiler cannot read 2.4 metadata.
-        // 2.4.20, not the example's 2.4.21 (KOTLIN_VERSION in
-        // v2/scripts/native-versions.env): Expo publishes its Kotlin
-        // compiler plugins (pika-compiler, expo-modules-v2-compiler-plugin)
-        // per Kotlin version, and SDK 58 has none for 2.4.21.
+        // Above RN's default: Coil needs Kotlin 2.4 metadata. 2.4.20, not
+        // KOTLIN_VERSION, because Expo SDK 58's compiler plugins lack 2.4.21.
         kotlinVersion = "2.4.20"
     }
     repositories {

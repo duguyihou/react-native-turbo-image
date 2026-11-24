@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
-# Runs the C++ core GoogleTest suite *on* the connected Android device or
-# emulator, built with the pinned NDK.
-#
-# Why: the placeholder decoders are checked byte for byte against the JS
-# references. Host runs prove that for Apple Clang / GCC, but Android uses
-# NDK Clang and bionic's libm, whose cos()/pow() may differ in the last bit.
-# Running the same goldens on-device is what backs the "identical pixels on
-# iOS and Android" claim (RFC rule 3).
+# Runs the C++ core GoogleTest suite on the connected Android device, built
+# with the pinned NDK for its ABI. Bionic's libm may differ from the host's,
+# so this checks the placeholder goldens hold on Android too (RFC rule 3).
 #
 # Usage: scripts/test-core-android.sh
-# Builds for the device's primary ABI (arm64-v8a locally on Apple Silicon,
-# x86_64 on the CI emulator).
+# Exit: 1 if the NDK is missing or a test fails.
 
 set -euo pipefail
 
@@ -39,8 +33,7 @@ cmake --build "${build_dir}" -j > /dev/null
 
 remote="/data/local/tmp/turboimage_core_tests"
 "${adb}" push "${build_dir}/turboimage_core_tests" "${remote}" > /dev/null
-# adb shell does not propagate the exit status on every platform, so echo
-# it and check explicitly.
+# adb shell doesn't always propagate the exit status, so echo it.
 output="$("${adb}" shell "${remote}; echo TURBOIMAGE_RC=\$?")"
 echo "${output}" | tail -5
 if [[ "${output}" != *"TURBOIMAGE_RC=0"* ]]; then

@@ -1,26 +1,16 @@
-# Publishes TurboImage 2.x (v2/packages/react-native-turbo-image) to npm.
+# Publishes TurboImage 2.x to npm.
 #
-# Trigger: push a tag `v<version>` matching the package's version, e.g.
-#   git tag v2.0.0-beta.1 && git push origin v2.0.0-beta.1
-# or run it by hand (Actions → v2 publish), which is a dry run unless told
-# otherwise. 1.x tags (`v1.*`) are released with release-it from `main` and
-# never reach this workflow.
+# Trigger: push a `v<version>` tag matching package.json (e.g. v2.0.0-beta.1),
+# or run by hand (dry run by default). 1.x is released separately.
 #
-# Authentication is npm's trusted publishing (OIDC): no token is stored here,
-# and npm attaches a provenance attestation to every version. It needs a
-# one-time setting on npmjs.com: react-native-turbo-image → Settings →
-# Trusted publisher → GitHub Actions, repository duguyihou/react-native-turbo-image,
-# workflow `v2-publish.yml`.
+# Auth: npm trusted publishing (OIDC, with provenance), set up once on
+# npmjs.com for repository duguyihou/react-native-turbo-image and workflow
+# `v2-publish.yml`.
 #
-# What it refuses to publish:
-#   * a version whose tag does not match package.json;
-#   * a commit without a successful `v2 CI` run: the tests are not repeated
-#     here, they are required to have passed;
-#   * a stable version. Pre-releases go out under the `next` dist-tag (the
-#     package's `publishConfig`), so `npm install react-native-turbo-image`
-#     keeps giving 1.x. Making 2.0.0 `latest` moves every 1.x user who
-#     upgrades, a decision to take when 2.0.0 is ready.
-#     TODO: a stable path (dist-tag `latest`, and a GitHub release).
+# Refuses: a tag that doesn't match package.json, a commit without a green
+# `v2 CI` run, and stable versions (pre-releases go to `next`, so `latest`
+# stays on 1.x).
+# TODO: a stable path (dist-tag `latest`, and a GitHub release).
 name: v2 publish
 
 on:
@@ -57,15 +47,14 @@ env:
 jobs:
   publish:
     name: Publish to npm
-    # macOS: the package ships the Nuke and NukeUI xcframeworks, built here
-    # from the pinned tag (scripts/build-nuke-xcframework.sh).
+    # macOS, to build the vendored Nuke xcframeworks.
     runs-on: xcode-27
     timeout-minutes: 40
     permissions:
       contents: read
       # Reads the CI result for this commit.
       actions: read
-      # The OIDC token npm's trusted publishing exchanges for a publish.
+      # OIDC token for trusted publishing.
       id-token: write
     steps:
       - uses: actions/checkout@v5
@@ -104,7 +93,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # The most recent completed run of v2-ci.yml for exactly this commit.
+          # Latest completed v2 CI run for this commit.
           conclusion="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow v2-ci.yml \
             --commit "${GITHUB_SHA}" --status completed --limit 1 \
             --json conclusion --jq '.[0].conclusion // ""')"
@@ -116,8 +105,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bash scripts/check-native-versions.sh
 
-      # As in v2-ci.yml: built from source on a miss, several minutes per
-      # platform. The pack guard below checks the restored version.
+      # As in v2-ci.yml; the pack guard checks the restored version.
       - name: Cache the Nuke and NukeUI xcframeworks
         id: nuke-cache
         uses: actions/cache@v6
@@ -128,9 +116,7 @@ jobs:
         if: steps.nuke-cache.outputs.cache-hit != 'true'
         run: bash scripts/build-nuke-xcframework.sh
 
-      # `npm publish` runs the package's `prepack` (type declarations, then
-      # scripts/check-pack.sh: vendored frameworks present and at the pinned
-      # version, LICENSE and README in place), and fails if it does.
+      # `npm publish` runs `prepack` (types, then check-pack.sh).
       - name: Publish
         working-directory: v2/packages/react-native-turbo-image
         run: |

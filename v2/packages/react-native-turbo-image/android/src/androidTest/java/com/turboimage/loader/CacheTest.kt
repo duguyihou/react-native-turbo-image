@@ -22,14 +22,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The adapter's cache tiers, the part of the cross-platform contract that is
- * easiest to get subtly wrong (RFC §4.2): which policy reads and writes
- * which tier, what eviction reaches, and that `urlCache` obeys
- * `Cache-Control` while every other policy ignores it.
- *
- * Whether a load reached the network is read from the fixture server's
- * request count; the seam's listener does not say. A tier is isolated by
- * emptying the other: [clearMemoryCache] leaves only the disk to hit.
+ * The adapter's cache tiers: which policy reads and writes which tier, what
+ * eviction reaches, and that only `urlCache` obeys `Cache-Control`. Network
+ * hits are counted by the fixture server.
  */
 @RunWith(AndroidJUnit4::class)
 internal class CacheTest : AdapterTest() {
@@ -124,7 +119,7 @@ internal class CacheTest : AdapterTest() {
     assertEquals("the second asked with If-None-Match, and got a 304", 1, conditionalRequestsReceived(uri))
   }
 
-  /** The two disk stores never see each other's entries (RFC §4.2a). */
+  /** The two disk stores never see each other's entries. */
   @Test
   fun urlCacheAndTheKeyedDiskCacheAreSeparate() {
     val uri = photo("cache/fresh")
@@ -203,11 +198,7 @@ internal class CacheTest : AdapterTest() {
 
   // MARK: Original-size entries
 
-  /**
-   * Coil never accepts a "sampled" bitmap, which an SVG drawing is, for an
-   * original-size request, unless the key records that size. Without it,
-   * an SVG under `center` was drawn again from the disk on every load.
-   */
+  /** An SVG under `center` must hit memory, not be redrawn from disk each load. */
   @Test
   fun anOriginalSizeSvgIsServedFromMemory() {
     val context = InstrumentationRegistry.getInstrumentation().targetContext
@@ -221,10 +212,7 @@ internal class CacheTest : AdapterTest() {
     assertEquals(listOf(DataSource.NETWORK, DataSource.MEMORY_CACHE), sources)
   }
 
-  /**
-   * An original-size entry (here a `'memory'` prefetch) is not handed to a
-   * view-sized load: the thumbnail gets its own small decode, from the disk.
-   */
+  /** A full-size entry is not reused for a view-sized load; it decodes from disk. */
   @Test
   fun aViewIsNotGivenAPrefetchedFullSizeBitmap() {
     val uri = photo()
@@ -238,9 +226,7 @@ internal class CacheTest : AdapterTest() {
 
   // MARK: Prefetching
 
-  /**
-   * A prefetch resolves the original, under the view's key.
-   */
+  /** A prefetch resolves the original, under the view's key. */
   @Test
   fun aPrefetchResolvesTheOriginalUnderTheViewsKey() {
     val uri = photo()
@@ -264,10 +250,8 @@ internal class CacheTest : AdapterTest() {
   }
 
   /**
-   * What `memoryCachedDrawable`'s one-lookup path relies on: with an
-   * explicit `memoryCacheKey`, Coil keys an unprocessed entry by the cache
-   * key alone, whatever size it was decoded at. Were that to change (a Coil
-   * upgrade), lookups would silently fall back to scanning every key.
+   * `memoryCachedDrawable`'s single lookup relies on this; if a Coil upgrade
+   * breaks it, lookups silently fall back to scanning every key.
    */
   @Test
   fun anUnprocessedEntryIsKeyedByTheCacheKeyAlone() {
@@ -299,8 +283,7 @@ internal class CacheTest : AdapterTest() {
 
   @Test
   fun aConfiguredMemorySizeIsTheOneCoilIsBuiltWith() {
-    // Memory only: a second disk cache on the shared adapter's directory
-    // would clash with it.
+    // Memory only: a second disk cache would clash with the shared adapter's.
     val loader = buildImageLoader(context(), CacheSizes(maxMemoryCost = 4_000_000))
     assertEquals(4_000_000L, loader.memoryCache?.maxSize)
   }

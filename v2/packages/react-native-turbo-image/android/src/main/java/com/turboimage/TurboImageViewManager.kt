@@ -11,11 +11,7 @@ import com.turboimage.core.readHeaders
 import com.turboimage.core.resolveSourceUri
 import com.turboimage.loader.TurboImageLoaders
 
-/**
- * Codegen-backed view manager. The delegate/interface pair is generated from
- * src/TurboImageViewNativeComponent.ts, so a prop added to the spec but not
- * implemented here is a compile error.
- */
+/** Codegen-backed view manager; an unimplemented spec prop is a compile error. */
 @ReactModule(name = TurboImageViewManager.NAME)
 class TurboImageViewManager :
   SimpleViewManager<TurboImageView>(), TurboImageViewManagerInterface<TurboImageView> {
@@ -28,8 +24,7 @@ class TurboImageViewManager :
   override fun getName() = NAME
 
   override fun createViewInstance(context: ThemedReactContext): TurboImageView {
-    // One adapter (one Coil ImageLoader and cache) per process, shared with
-    // TurboImageModule.
+    // One adapter per process, shared with TurboImageModule.
     return TurboImageView(context, TurboImageLoaders.get(context))
   }
 
@@ -47,8 +42,7 @@ class TurboImageViewManager :
     view.thumbhash = if (value?.hasKey("thumbhash") == true) value.getString("thumbhash") else null
     view.memoryCacheKey =
       if (value?.hasKey("memoryCacheKey") == true) value.getString("memoryCacheKey") else null
-    // Resolved like a source: a `require()` asset is a bare resource name in
-    // release builds.
+    // Resolved like a source (`require()` assets are resource names in release).
     view.placeholderUri =
       if (value?.hasKey("uri") == true) value.getString("uri")?.let { resolveSourceUri(view.context, it) } else null
   }
@@ -105,8 +99,7 @@ class TurboImageViewManager :
     view.request = view.request.copy(allowDownscaling = value)
   }
 
-  // iOS-only (VisionKit Live Text). Android has no equivalent system
-  // interaction, and 1.x ignored the prop there too.
+  // iOS only (VisionKit Live Text).
   override fun setEnableLiveTextInteraction(view: TurboImageView, value: Boolean) = Unit
 
   override fun setProgressEnabled(view: TurboImageView, value: Boolean) {
@@ -117,11 +110,8 @@ class TurboImageViewManager :
     view.loadEventMask = value
   }
 
-  // Fabric sends the view's content insets here (border widths plus the
-  // `padding` style) and the base class drops them. As ImageView padding
-  // they put the image in the same box as on iOS, where the base view lays
-  // its content out inside the border: the picture is scaled to the area
-  // within the border, not scaled to the whole view and then covered by it.
+  // Fabric's content insets (border + padding); the base class drops them.
+  // Applied as padding so the image fits inside the border, as on iOS.
   override fun setPadding(view: TurboImageView, left: Int, top: Int, right: Int, bottom: Int) {
     view.setPadding(left, top, right, bottom)
   }

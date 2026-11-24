@@ -5,8 +5,7 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-# TurboImage needs iOS 16 (Nuke 14); React Native's own floor
-# (`min_ios_version_supported`) is 15.1.
+# TurboImage needs iOS 16 (Nuke 14); React Native's floor is 15.1.
 platform :ios, '16.0'
 prepare_react_native_project!
 
@@ -25,12 +24,9 @@ target 'TurboImageExample' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  # The Fabric view's tests (TurboImageExampleTests/), hosted by the app:
-  # they drive the real TurboImageComponentView, which only builds with
-  # React Native around it. Headers only: the bundle links against the app
-  # (BUNDLE_LOADER). `:complete` would link a second copy of every pod into
-  # it, and the test would register its fake loader in its own copy of
-  # TIImageLoaderRegistry while the app's view read the other one.
+  # Fabric view tests, hosted by the app. Headers only: `:complete` would
+  # link a second copy of every pod, so the test's fake loader would land
+  # in a different TIImageLoaderRegistry than the app's.
   target 'TurboImageExampleTests' do
     inherit! :search_paths
   end

@@ -1,9 +1,7 @@
 package com.turboimage.core
 
-// What a request is, and what the core makes of it: the Kotlin mirrors of
-// cpp/include/turboimage/ImageRequest.h. The integers are a pinned ABI;
-// `TurboImageJni.cpp` asserts each of them against the C++ definitions at
-// compile time.
+// Kotlin mirrors of cpp/include/turboimage/ImageRequest.h. The integers are
+// a pinned ABI, static_asserted in `TurboImageJni.cpp`.
 
 /** Mirrors `turboimage::CachePolicy`. */
 enum class CachePolicy(val nativeValue: Int) {
@@ -14,10 +12,7 @@ enum class CachePolicy(val nativeValue: Int) {
   URL_CACHE(4);
 
   companion object {
-    /**
-     * Parses the JS spelling with the core's parser (one parser for views
-     * and the module, on both platforms). Unknown or null → DEFAULT.
-     */
+    /** Parses the JS spelling via the core. Unknown or null → DEFAULT. */
     fun fromJs(value: String?): CachePolicy {
       val native = TurboImageCore.parseCachePolicy(value.orEmpty())
       return entries.firstOrNull { it.nativeValue == native } ?: DEFAULT
@@ -43,11 +38,7 @@ enum class LoadErrorCode(val nativeValue: Int) {
   DECODE(4),
 }
 
-/**
- * Image processors as the view receives them (see
- * cpp/include/turboimage/Processing.h). `resize` is in dp; colours are
- * ARGB ints, null when unset.
- */
+/** Image processors from props. `resize` is in dp; colours are ARGB, null when unset. */
 data class Processing(
   val resize: Double = 0.0,
   val blur: Double = 0.0,
@@ -56,11 +47,8 @@ data class Processing(
 )
 
 /**
- * Everything a view's props say about which image to load and how; mirrors
- * `turboimage::ImageRequest`. Two equal requests are the same load, which
- * is how the view decides whether a prop change needs a new one: it
- * compares this, so a field added here takes part without further code.
- * An absent source is the empty [uri], which the core rejects.
+ * Mirrors `turboimage::ImageRequest`. Equal requests are the same load; the
+ * view reloads when this changes. No source is an empty [uri].
  */
 data class ImageRequest(
   val uri: String = "",
@@ -72,8 +60,7 @@ data class ImageRequest(
   val resizeMode: ResizeMode = ResizeMode.CONTAIN,
 )
 
-// `turboimage::DecodeSize::Kind` values, which have no enum of their own
-// here: [ResolvedRequest] turns them into its sealed `DecodeSize`.
+// `turboimage::DecodeSize::Kind` values.
 private const val DECODE_VIEW = 1
 private const val DECODE_WIDTH = 2
 
@@ -89,19 +76,13 @@ data class ResolvedRequest(
   val diskWrite: Boolean,
   val allowNetwork: Boolean,
   /**
-   * Empty when unprocessed. Otherwise the identity *and* full description of
-   * the processing step: adapters key memory variants by it (with
-   * `cacheKey` naming the shared original) and pass it to
-   * [TurboImageCore.process].
+   * Empty when unprocessed. Otherwise both the memory-variant key and the
+   * full description passed to [TurboImageCore.process].
    */
   val processorKey: String,
   /** Validated headers as alternating names and values (the JNI shape). */
   private val headerFields: Array<String>,
-  /**
-   * The disk tier is the HTTP cache (`cachePolicy="urlCache"`): keyed by
-   * [url], obeying `Cache-Control`, and separate from the disk cache
-   * [cacheKey] addresses. See `ResolvedRequest::httpCache` in the core.
-   */
+  /** `urlCache`: the disk tier is the HTTP cache, keyed by [url], obeying `Cache-Control`. */
   val httpCache: Boolean,
   private val decodeKind: Int,
   private val decodeWidth: Int,
@@ -126,10 +107,8 @@ data class ResolvedRequest(
     get() = decodeSize(decodeKind, decodeWidth, decodeFill)
 
   /**
-   * The size to draw the image at if it has no pixels of its own (SVG);
-   * see `ResolvedRequest::vectorDecode` in the core. Differs from [decode]
-   * only when `allowDownscaling` is off. [DecodeSize.Original] here is the
-   * image's own size in dp.
+   * Render size for vector images (SVG). Differs from [decode] only when
+   * `allowDownscaling` is off; [DecodeSize.Original] means its size in dp.
    */
   val vectorDecode: DecodeSize
     get() = decodeSize(vectorDecodeKind, vectorDecodeWidth, vectorDecodeFill)

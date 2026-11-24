@@ -1,15 +1,9 @@
-// Generates cpp/tests/PlaceholderGoldens.inc from the canonical reference
-// implementations (npm `blurhash` 2.0.5 by Wolt, npm `thumbhash` 0.1.1 by
-// Evan Wallace). The C++ decoders must reproduce these outputs byte for
-// byte; that is what makes "one C++ implementation on both platforms" a
-// faithful replacement for the two 1.x ports.
+// Generates cpp/tests/PlaceholderGoldens.inc from the reference JS decoders
+// (npm `blurhash` 2.0.5, `thumbhash` 0.1.1), which the C++ must match byte
+// for byte. Run `bun run goldens:placeholder`.
 //
-// Usage (from packages/react-native-turbo-image):
-//   bun run goldens:placeholder
-//
-// Each golden records the decoded size and an FNV-1a 32-bit hash of the
-// straight-alpha RGBA bytes, plus a few spot pixels so a mismatch says
-// *where* the output diverged, not only that it did.
+// Each golden is the size, an FNV-1a hash of the RGBA bytes, and a few spot
+// pixels to show where a mismatch is.
 
 import { decode as decodeBlurhash, encode as encodeBlurhash } from 'blurhash';
 import { rgbaToThumbHash, thumbHashToRGBA } from 'thumbhash';
@@ -23,9 +17,8 @@ function fnv1a(bytes) {
   return hash >>> 0;
 }
 
-// Deterministic synthetic images so the inputs are reproducible without
-// shipping binary fixtures: a two-axis colour gradient, optionally with an
-// alpha ramp.
+// Deterministic gradient input, optionally with an alpha ramp, so no binary
+// fixtures are needed.
 function syntheticRgba(w, h, withAlpha) {
   const out = new Uint8ClampedArray(w * h * 4);
   for (let y = 0; y < h; y++) {
@@ -55,8 +48,7 @@ const lines = [
   '',
 ];
 
-// Double braces: the outer pair initialises std::array, the inner pair its
-// underlying C array (otherwise the first Spot's fields would be consumed).
+// Double braces: std::array plus its inner C array.
 const emitSpots = (s) =>
   `{{${s.map(([x, y, r, g, b, a]) => `{${x}, ${y}, {${r}, ${g}, ${b}, ${a}}}`).join(', ')}}}`;
 

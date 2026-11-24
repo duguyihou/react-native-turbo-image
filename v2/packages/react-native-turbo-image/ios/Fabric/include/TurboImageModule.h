@@ -1,5 +1,4 @@
-// Kept free of C++ (see TurboImageComponentView.h). The Codegen protocol
-// conformance and JSI glue live in the .mm.
+// No C++ here (see TurboImageComponentView.h); Codegen glue is in the .mm.
 #import <Foundation/Foundation.h>
 #import <React/RCTBridgeModule.h>
 

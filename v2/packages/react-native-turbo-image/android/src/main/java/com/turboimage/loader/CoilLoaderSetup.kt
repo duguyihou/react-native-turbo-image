@@ -23,36 +23,20 @@ import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 
-// The one Coil `ImageLoader` TurboImage uses, built once per process: its
-// HTTP client, decoders, caches and disk-cache rules. Part of the Coil
-// adapter; see CoilImageLoaderAdapter.kt for the cache contract these
-// choices implement.
+// Builds TurboImage's single Coil `ImageLoader`: client, decoders, caches.
 
 /** Must equal `NukeImageLoader.diskCacheBytes` on iOS. */
 internal const val DISK_CACHE_BYTES = 150L * 1024 * 1024
 
 @OptIn(ExperimentalCoilApi::class)
 internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSizes()): ImageLoader {
-  // Explicit client rather than RN's shared OkHttpClientProvider so that
-  // TurboImage's network behaviour does not change with the host app's
-  // interceptors.
-  //
-  // No cookie jar, as in 1.x (RFC §4.2). React Native's cookie store
-  // (`ForwardingCookieHandler`) starts the platform CookieManager, and with
-  // it WebView, on first use: that held up a process's first network image
-  // by 0.2–0.6 s in every app. A session goes in `source.headers` instead.
-  // TODO: an opt-in for React Native's cookies, and a hook for default
-  // headers or an interceptor.
-  //
-  // Built on the first network fetch, not here: this runs on the main
-  // thread when the first view mounts, while Coil resolves `callFactory`
-  // lazily on its fetch thread. Building the client and reading the
-  // package info for the User-Agent there takes them off the first frame;
-  // a process that only shows cached or local images never builds them.
+  // Own client, not RN's, so app interceptors don't affect us. No cookie
+  // jar: RN's starts WebView and delays the first image.
+  // TODO: opt-in RN cookies, and a hook for default headers or interceptors.
+  // Built lazily on Coil's fetch thread to keep it off the first frame.
   val buildOkHttpClient = {
     OkHttpClient.Builder()
-      // Application interceptor: sees the token header before the
-      // network layer, strips it, and counts response bytes.
+      // Strips the progress token header and counts bytes.
       .addInterceptor(ProgressInterceptor())
       .addInterceptor(userAgentInterceptor(context))
       .connectTimeout(15, TimeUnit.SECONDS)
@@ -62,24 +46,15 @@ internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSi
 
   return ImageLoader.Builder(context)
     .components {
-      // Format decoders, chosen by content (the iOS adapter does the
-      // same with ImageIO and CoreSVG). Added components are tried before
-      // Coil's built-in bitmap decoder, so these see the bytes first;
-      // a factory that does not recognise them returns null.
+      // Tried before Coil's built-in bitmap decoder.
       add(ApngDecoder.Factory())
       if (Build.VERSION.SDK_INT >= 28) {
         add(AnimatedImageDecoder.Factory())
       } else {
         add(GifDecoder.Factory())
       }
-      // `scaleToDensity`: an SVG's own size is in dp, not raw pixels, the
-      // way iOS reads it in points. It only matters when the request asks
-      // for the original size (`resizeMode="center"`, `blur` without
-      // `resize`); otherwise the SVG is drawn at the view's size whatever
-      // its own size is. Without it a 120×80 SVG came out 120×80 px, a
-      // third of its size on a 2.6× screen. The wrapper covers
-      // `allowDownscaling={false}`, which must not shrink an SVG to its
-      // own size either.
+      // `scaleToDensity`: an SVG's own size is in dp, as iOS uses points.
+      // The wrapper handles `allowDownscaling={false}`.
       add(VectorSizeDecoderFactory(SvgDecoder.Factory(scaleToDensity = true)))
       add(
         OkHttpNetworkFetcherFactory(
@@ -100,7 +75,7 @@ internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSi
     .diskCache {
       DiskCache.Builder()
         .directory(context.cacheDir.resolve("turboimage").toOkioPath())
-        // Also holds the urlCache policy's HTTP responses (`httpDiskKey`).
+        // Also holds `urlCache` HTTP responses (`httpDiskKey`).
         .maxSizeBytes(if (cacheSizes.maxDiskSize > 0) cacheSizes.maxDiskSize else DISK_CACHE_BYTES)
         .build()
     }
@@ -108,17 +83,14 @@ internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSi
 }
 
 /**
- * OkHttp's default `okhttp/x.y` User-Agent is refused by some major image
- * hosts (Wikimedia answers 403), where iOS's CFNetwork default
- * (`<App>/<build> CFNetwork/… Darwin/…`) is accepted. This mirrors that
- * shape: `<App>/<version> TurboImage/<core> (Android <release>)`. A
- * `User-Agent` in `source.headers` wins. 1.x sent OkHttp's default.
+ * Some hosts (e.g. Wikimedia) reject OkHttp's default User-Agent, so send
+ * `<App>/<version> TurboImage/<core> (Android <release>)`, like iOS's shape.
+ * A `User-Agent` in `source.headers` wins.
  */
 private fun userAgentInterceptor(context: Context): okhttp3.Interceptor {
   val packageInfo = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
   val label = context.applicationInfo.loadLabel(context.packageManager).toString()
-  // Product tokens must be ASCII HTTP tokens (OkHttp rejects non-ASCII
-  // header values outright); app labels may hold spaces or any script.
+  // OkHttp rejects non-ASCII header values; app labels may contain any.
   val app =
     label.filter { it.code < 128 && (it.isLetterOrDigit() || it in "!#$%&'*+-.^_`|~") }
       .ifEmpty { context.packageName }
@@ -135,19 +107,9 @@ private fun userAgentInterceptor(context: Context): okhttp3.Interceptor {
 }
 
 /**
- * Picks the disk-cache rules per request. Coil takes one strategy per
- * fetcher factory, but the choice is a property of the request (the core's
- * `httpCache`), so this one delegates on a request extra:
- *
- *  * keyed requests: `CacheStrategy.DEFAULT`, where a disk entry is always
- *    valid and nothing is revalidated;
- *  * HTTP-cache requests: Coil's `CacheControlCacheStrategy`, which serves an
- *    entry only while `Cache-Control`/`Expires` say it is fresh, revalidates
- *    a stale one with `If-None-Match`/`If-Modified-Since`, and refuses to
- *    store `no-store`. That is what `URLCache` does for Nuke on iOS.
- *
- * The two kinds never see each other's entries: the adapter gives HTTP-cache
- * requests their own disk key (see `diskKey`).
+ * Per-request disk-cache rules (Coil allows one strategy per fetcher):
+ * keyed requests use `CacheStrategy.DEFAULT` (always valid); `urlCache`
+ * requests use `CacheControlCacheStrategy`, like `URLCache` on iOS.
  */
 @OptIn(ExperimentalCoilApi::class)
 internal class PolicyCacheStrategy : CacheStrategy {

@@ -1,22 +1,7 @@
-// `TurboImageComponentView` itself, between its props and the loader seam:
-// when it loads, and what it asks the loader for. The iOS counterpart of
-// TurboImageViewTest.kt.
-//
-// The adapter tests (packages/react-native-turbo-image/ios/Tests) drive the
-// real Nuke adapter; these register `TIFakeLoader` instead, so a test
-// decides when each load succeeds or fails and sees every load the view
-// starts. The core is the real one, so the decisions under test are the ones
-// the app makes.
-//
-// The view is driven the way Fabric mounts it: `updateProps:`, then
-// `updateLayoutMetrics:` (the frame), then `finalizeUpdates:`, where loads
-// start. Through React Native's public `RCTComponentViewProtocol`, so the
-// view's own header (private under CocoaPods) is not needed. It has no event
-// emitter here, so events are dropped; which events a load sends is the
-// core's decision and is covered by the Android view test and the smoke
-// suite.
-//
-// Covered: upgrades, image placeholders and prefetch.
+// `TurboImageComponentView` with a fake loader and the real core: when it
+// loads and what it asks for. iOS twin of TurboImageViewTest.kt. Driven in
+// Fabric's order (props, layout, finalizeUpdates); no event emitter, so
+// events are covered elsewhere.
 // TODO: hash placeholders, `recyclingKey` and Live Text.
 
 #import <XCTest/XCTest.h>
@@ -29,8 +14,7 @@
 
 using namespace facebook::react;
 
-/// The cache module's `prefetch`, as its spec declares it; the module's
-/// class is private to the pod.
+/// The cache module's `prefetch` (its class is private to the pod).
 @interface NSObject (TIPrefetching)
 - (void)prefetch:(NSArray *)sources
      cachePolicy:(NSString *)cachePolicy
@@ -79,8 +63,7 @@ using namespace facebook::react;
   _completion(image, animation, NO, nil);
 }
 
-/// What a loader that ignored a cancel would do. The seam forbids it; the
-/// view must still not show what arrives.
+/// Calls back despite a cancel (forbidden); the view must ignore it.
 - (void)deliverDespiteCancelWithPixels:(CGSize)pixels {
   _cancelled = NO;
   [self succeedWithPixels:pixels];
@@ -95,8 +78,7 @@ using namespace facebook::react;
 
 @end
 
-/// A loader whose loads finish when a test says so. Never calls back after a
-/// cancel (the seam's contract).
+/// Loads finish when the test says so; never after a cancel.
 @interface TIFakeLoader : NSObject <TIImageLoading>
 @property(nonatomic, readonly) NSMutableArray<TIFakeLoad *> *loads;
 /// What the cache module asked to prefetch. Never completed.
@@ -163,8 +145,7 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
 }
 
 - (void)setUp {
-  // The host app registered the Nuke adapter; the view reads the registry
-  // when it is created and on every load.
+  // Swap out the app's Nuke adapter; the view reads the registry each load.
   _previousLoader = TIImageLoaderRegistry.sharedLoader;
   _loader = [TIFakeLoader new];
   [TIImageLoaderRegistry setSharedLoaderForTesting:_loader];
@@ -207,8 +188,7 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
 }
 
 - (void)testAnImageSmallerThanItsViewIsNeverLoadedAgain {
-  // The decode never upscales, so an image that came out smaller than its
-  // view is the source at its own size.
+  // Smaller than the view means it's already the original size.
   [self showLoadedImageOfPixels:CGSizeMake(20, 10)];
 
   [self resize:CGSizeMake(300, 300)];
@@ -229,8 +209,7 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
 }
 
 - (void)testAnAnimatedImageIsNeverLoadedAgain {
-  // Nuke's player decodes each frame for the view's size itself, and a new
-  // image would restart the animation.
+  // The player sizes frames itself; a swap would restart it.
   [self resize:CGSizeMake(100, 100)];
   [self setSource:kURL];
   [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(100, 100)] animation:[NSObject new]];
@@ -432,8 +411,7 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
 }
 
 - (void)testCenterDrawsABitmapAtItsPixelsOverTheScreenScale {
-  // The adapter decodes at scale 1. UIKit's center mode would draw 150 px as
-  // 150 points; Android draws it as 150 px, which is what this matches.
+  // 150 px drawn as 150 px (like Android), not 150 points.
   [self resize:CGSizeMake(200, 100)];
   [self setProps:^(TurboImageViewProps &props) {
     props.source.uri = std::string(kURL.UTF8String);
@@ -465,8 +443,7 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   return CGSizeMake(points.width * _scale, points.height * _scale);
 }
 
-/// A transaction that changes props, in Fabric's order: props, then the
-/// frame (unchanged here), then `finalizeUpdates:`, where a load starts.
+/// A props transaction in Fabric's order: props, frame, finalizeUpdates.
 - (void)setProps:(void (^)(TurboImageViewProps &props))change {
   auto next = std::make_shared<TurboImageViewProps>(_props ? *_props : TurboImageViewProps{});
   change(*next);

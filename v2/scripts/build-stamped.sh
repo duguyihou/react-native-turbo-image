@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Runs a build and, if it succeeds, records which sources it was built from.
-#
-# The stamp is what lets assert-fresh-build.sh recognise an artifact as
-# current by content rather than by modification time. The fingerprint is
-# taken before the build starts, so an edit made while it runs cannot be
-# credited to an artifact that does not contain it.
+# Runs a build and, on success, writes <artifact-path>.sources-sha256 with
+# the sources' fingerprint for assert-fresh-build.sh. The fingerprint is
+# taken before the build, so edits made during it are not credited.
 #
 # Usage: scripts/build-stamped.sh <ios|android> <artifact-path> -- <build command...>
-# The stamp is written next to the artifact, as <artifact-path>.sources-sha256.
+# Exit: 2 on bad usage, else the build's status.
 
 set -euo pipefail
 

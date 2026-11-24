@@ -95,8 +95,7 @@ TEST(ResolveProcessing, ColorsPassThrough) {
   const auto spec =
       resolveProcessing({.monochrome = 0xffff0000u, .tint = 0x00000000u}, 1);
   EXPECT_EQ(spec.monochrome, 0xffff0000u);
-  // A fully transparent tint is still a request (it is a no-op on pixels,
-  // but the caller asked for it; keeping it keeps the mapping obvious).
+  // A fully transparent tint is kept: a no-op on pixels, but asked for.
   EXPECT_EQ(spec.tint, 0x00000000u);
 }
 
@@ -236,8 +235,7 @@ TEST(GaussianBlur, SolidImagesAreUnchangedIncludingEdges) {
 }
 
 TEST(GaussianBlur, ApproximatesTheRequestedStandardDeviation) {
-  // A single bright column in a wide image: after a horizontal blur the
-  // column's profile is the kernel, whose variance must be close to sigma^2.
+  // One bright column: its blurred profile's variance should be ~sigma^2.
   for (const int sigma : {2, 5, 12}) {
     const int width = 8 * sigma * 2 + 1;
     const int centre = width / 2;
@@ -273,17 +271,12 @@ TEST(GaussianBlur, IsSymmetricAndKeepsPremultipliedInvariant) {
   EXPECT_TRUE(isPremultiplied(noisy));
 }
 
-// The blur's exact output, pinned. A processed image is cached under its
-// processor key, so a change to any output byte must come with a new
-// `kKeyVersion`, or apps would keep showing variants cached by the old code.
-// The hashes were taken from the implementation before the passes were
-// rewritten for speed (2026-11-24), which this one must match bit for bit.
-// Cases: an odd-sized image at small to maximum radius, strips narrower and
-// wider than the column pass's 16-column block, a single column and row.
+// The blur's exact output, pinned. Any change to an output byte needs a new
+// `kKeyVersion`, or apps keep showing stale cached variants. The hashes come
+// from the slower blur, so they prove the faster one gives the same bytes.
 //
-// The noise uses raw `std::mt19937` output only, which the standard fully
-// specifies, so the hashes hold on every toolchain; `randomPremultiplied`
-// uses a distribution, whose output is up to the standard library.
+// Uses raw `std::mt19937` output only (fully specified by the standard), so
+// the hashes hold on every toolchain.
 TEST(GaussianBlur, OutputIsPinned) {
   auto portableNoise = [](int width, int height, unsigned seed) {
     std::mt19937 rng(seed);

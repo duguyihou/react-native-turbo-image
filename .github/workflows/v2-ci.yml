@@ -1,12 +1,8 @@
-# TurboImage 2.0 CI build matrix (v2/ monorepo).
+# TurboImage 2.0 CI (v2/). Blocking jobs gate merges; `eval-*` jobs only
+# report (RFC rule 8). 1.x is covered by ci.yml.
 #
-# Blocking jobs gate merges. `eval-*` jobs only report (RFC rule 8).
-#
-# The 1.x workflow (ci.yml) is untouched and keeps covering the repo root.
-#
-# Actions: GitHub's own (`actions/*`) are referenced by major version;
-# everyone else's are pinned to a commit, with the release it belongs to in
-# a comment, because a tag can be moved to different code.
+# `actions/*` use a major version; third-party actions are pinned to a commit
+# (release in a comment), since tags can move.
 name: v2 CI
 
 on:
@@ -22,34 +18,22 @@ permissions:
 
 concurrency:
   group: v2-${{ github.ref }}
-  # A newer push to a pull request replaces the run in progress. On `main`
-  # every commit keeps its own result.
+  # Cancel superseded PR runs; keep every run on `main`.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
     working-directory: v2
-    # Named explicitly so every `run:` gets `-eo pipefail`: with the implicit
-    # default, a failing command in front of a pipe goes unnoticed.
+    # Explicit `bash` gives every `run:` `-eo pipefail`.
     shell: bash
 
-# Runners. The iOS jobs need Xcode 27 (XCODE_VERSION below), which GitHub
-# hosts only on the `xcode-27` image for now: `macos-latest` is macOS 26 and
-# stops at Xcode 26.x. Move them back to `macos-latest` once that image
-# carries Xcode 27. The core's macOS leg stays on `macos-latest`; it only
-# needs an Apple Clang.
+# iOS jobs run on `xcode-27` because `macos-latest` lacks Xcode 27; move them
+# back once it has it. The core's macOS leg only needs Apple Clang.
 #
-# setup-node: `package-manager-cache: false` because v5 turns caching on by
-# itself when a package.json names a package manager. The root one names
-# Yarn (for 1.x), v2 installs with Bun, and the job then fails in the
-# post-step that tries to save a Yarn cache that was never filled.
+# setup-node: `package-manager-cache: false`, or v5 tries to cache Yarn (named
+# by the root package.json for 1.x) and fails in its post-step.
 
-# Timeouts are two to three times the longest run each job has had (measured
-# on the three green runs up to 6fd3aaf: the iOS app jobs 13 to 16 minutes,
-# the Android ones 5 to 7, everything else under 5), so a hung emulator or
-# simulator costs minutes, not the hour the first guesses allowed. The iOS
-# app jobs get the most room: a miss of the pod-download cache and a retried
-# `pod install` both add minutes.
+# Timeouts are 2-3x each job's longest run, so a hung emulator fails fast.
 
 env:
   # Keep in sync with v2/scripts/native-versions.env and the RFC matrix.
@@ -74,12 +58,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Three compilers, not just two runners (RFC §8): the placeholder
-        # goldens are byte-exact, and GCC, Clang and Apple Clang differ in
-        # exactly the floating-point defaults that could break that.
-        # Release, because that is the optimisation level apps ship and the
-        # one where the compilers' floating-point choices show. One more leg
-        # runs the same tests unoptimised under ASan and UBSan.
+        # Three compilers in Release (RFC §8): the placeholder goldens are
+        # byte-exact and floating-point defaults differ. Plus an ASan/UBSan leg.
         include:
           - { os: ubuntu-latest, cc: gcc, cxx: g++, build: Release, sanitize: 'OFF' }
           - { os: ubuntu-latest, cc: clang, cxx: clang++, build: Release, sanitize: 'OFF' }
@@ -111,18 +91,16 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: { bun-version: '${{ env.BUN_VERSION }}' }
-      # Jest runs on Node, not Bun (the React Native preset targets Node).
+      # Jest runs on Node (the React Native preset targets it).
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
-      # oxlint and oxfmt, pinned in package.json: cheap, so they run first.
+      # Cheap checks first.
       - run: bun run lint
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run test
-      # The C++ placeholder tests compare against goldens generated from the
-      # reference JS decoders. Regenerate them and fail if the committed file
-      # is not what the generator produces.
+      # Fail if the committed goldens differ from what the JS decoders produce.
       - name: Placeholder goldens are up to date
         working-directory: v2/packages/react-native-turbo-image
         run: |
@@ -152,24 +130,21 @@ jobs:
       - name: Install pinned NDK
         run: |
           source scripts/native-versions.env
-          # `yes` is killed by SIGPIPE when sdkmanager is done reading, which
-          # pipefail would report as this step failing.
+          # `yes` dies of SIGPIPE, which pipefail would report as a failure.
           set +o pipefail
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;${ANDROID_NDK_VERSION}" > /dev/null
       - name: Build
         working-directory: v2/apps/example/android
         run: |
           task=assemble${{ matrix.variant == 'release' && 'Release' || 'Debug' }}
-          # x86_64 for the hosted emulator, arm64-v8a for real devices.
+          # x86_64 for the emulator, arm64-v8a for devices.
           ./gradlew "$task" --console=plain -PreactNativeArchitectures=x86_64,arm64-v8a
       - name: Assert JNI classes survived R8
         if: matrix.variant == 'release'
         working-directory: v2/apps/example/android
         run: |
           mapping=app/build/outputs/mapping/release/mapping.txt
-          # Every class TurboImageJni.cpp looks up by name, plus the class
-          # that declares the native methods. Keep in step with
-          # consumer-rules.pro.
+          # Classes JNI looks up by name; keep in step with consumer-rules.pro.
           for cls in ResolvedRequest ResolveFailure PlaceholderPixels TurboImageCore; do
             grep -q "^com.turboimage.core.${cls} -> com.turboimage.core.${cls}:" "$mapping"
           done
@@ -189,9 +164,7 @@ jobs:
           target: google_apis
           disable-animations: true
           working-directory: v2
-          # Core goldens on-device (x86_64 bionic libm), the Coil adapter's
-          # instrumented tests (a debug build of the library's test APK),
-          # then the app smoke test.
+          # Core goldens, Coil adapter tests, then the app smoke test.
           script: |
             bash scripts/test-core-android.sh
             bash scripts/test-android-adapter.sh
@@ -217,10 +190,8 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
       - run: bun install --frozen-lockfile
-      # The frameworks are built from source (scripts/build-nuke-xcframework.sh,
-      # several minutes per platform) and depend only on the Nuke tag, the
-      # script and Xcode. A cache hit skips the build; check-native-versions.sh
-      # and the pack guard still verify the vendored version.
+      # Building takes minutes and depends only on the Nuke tag, the script
+      # and Xcode, so cache it. The version is still verified after a hit.
       - name: Cache the Nuke and NukeUI xcframeworks
         id: nuke-cache
         uses: actions/cache@v6
@@ -231,18 +202,12 @@ jobs:
         if: steps.nuke-cache.outputs.cache-hit != 'true'
         run: bash scripts/build-nuke-xcframework.sh
       - run: bash scripts/check-native-versions.sh
-      # What `npm publish` would upload: runs the `prepack` guard and fails if
-      # the tarball could not be packed with the xcframework built above.
+      # Runs the `prepack` guard against the xcframework built above.
       - name: Pack the package (dry run)
         working-directory: v2/packages/react-native-turbo-image
         run: npm pack --dry-run
-      # `pod install` downloads React Native's prebuilt core and dependencies
-      # from repo.reactnative.dev and Hermes through CocoaPods, and one failed
-      # download aborts the install. React Native keeps what it downloaded in
-      # ~/Library/Caches/ReactNative and copies from there when the file is
-      # present (the log says "Cache hit: copying ..."); CocoaPods does the
-      # same for Hermes in its own cache. Restoring both removes the
-      # downloads from every run but the first after a version change.
+      # Cache RN's prebuilt and Hermes downloads, since one failed download
+      # aborts `pod install`.
       - name: Cache React Native's pod downloads
         uses: actions/cache@v6
         with:
@@ -250,8 +215,7 @@ jobs:
             ~/Library/Caches/ReactNative
             ~/Library/Caches/CocoaPods
           key: ${{ runner.os }}-pod-downloads-${{ hashFiles('v2/bun.lock', 'v2/apps/example/ios/Podfile.lock') }}
-      # Still three tries: a cache miss downloads as before, and a network
-      # blip should not fail the job.
+      # Retry so a network blip on a cache miss doesn't fail the job.
       - name: pod install
         working-directory: v2/apps/example/ios
         run: |
@@ -265,9 +229,7 @@ jobs:
         run: bun run build:ios:release
       - name: On-simulator smoke test (Release)
         run: bash scripts/smoke-ios.sh
-      # The Fabric view's tests (apps/example/ios/TurboImageExampleTests),
-      # hosted by the Release app built above, so only the test bundle is
-      # built here.
+      # Fabric view tests, hosted by the Release app built above.
       - name: View tests (simulator)
         env: { CONFIGURATION: Release }
         run: bash scripts/test-ios-view.sh
@@ -290,16 +252,12 @@ jobs:
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
       - working-directory: v2/packages/react-native-turbo-image
         run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
-      # The Nuke adapter's own tests (ios/Tests), through the seam with local
-      # files. Among them animated images, which no load event reports and
-      # the smoke suite therefore cannot see. They need UIKit, so they run
-      # on a simulator; any iPhone will do.
+      # Nuke adapter tests; they need UIKit, so any iPhone simulator.
       - name: Adapter tests (simulator)
         working-directory: v2
         run: bash scripts/test-ios-adapter.sh
-      # The only tvOS check in CI: core, seam and Nuke adapter, without the
-      # Fabric view. Building the view needs a react-native-tvos app, which
-      # scripts/test-packed-install.sh does locally.
+      # The only tvOS check in CI (no Fabric view; test-packed-install.sh
+      # covers that locally).
       - name: Build for tvOS
         working-directory: v2/packages/react-native-turbo-image
         run: xcodebuild -scheme TurboImage -destination 'generic/platform=tvOS Simulator' build
@@ -328,10 +286,8 @@ jobs:
         uses: actions/setup-java@v5
         with: { distribution: temurin, java-version: '${{ env.JAVA_VERSION }}' }
       - run: bun install --frozen-lockfile
-      # The frameworks are built from source (scripts/build-nuke-xcframework.sh,
-      # several minutes per platform) and depend only on the Nuke tag, the
-      # script and Xcode. A cache hit skips the build; check-native-versions.sh
-      # and the pack guard still verify the vendored version.
+      # Building takes minutes and depends only on the Nuke tag, the script
+      # and Xcode, so cache it. The version is still verified after a hit.
       - if: matrix.platform == 'ios'
         name: Cache the Nuke and NukeUI xcframeworks
         id: nuke-cache
@@ -342,9 +298,7 @@ jobs:
       - if: matrix.platform == 'ios' && steps.nuke-cache.outputs.cache-hit != 'true'
         run: bash scripts/build-nuke-xcframework.sh
       - name: Prepare workspace copy on RN ${{ env.EVAL_RN_VERSION }}
-        # Assigned first, not expanded inside `echo`: a command substitution
-        # in an argument hides the script's exit status, and the job went on
-        # with an empty EVAL_DIR.
+        # Assign first: a substitution inside `echo` hides the exit status.
         run: |
           eval_dir="$(bash scripts/eval-rn-version.sh "$EVAL_RN_VERSION" | tail -1)"
           echo "EVAL_DIR=${eval_dir}" >> "$GITHUB_ENV"
@@ -352,7 +306,7 @@ jobs:
         if: matrix.platform == 'android'
         run: |
           cd "$EVAL_DIR/apps/example/android"
-          # x86_64 for the hosted emulator, arm64-v8a for real devices.
+          # x86_64 for the emulator, arm64-v8a for devices.
           ./gradlew assembleRelease --console=plain -PreactNativeArchitectures=x86_64,arm64-v8a
       - name: Enable KVM for the emulator
         if: matrix.platform == 'android'
@@ -361,47 +315,35 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
-      # The emulator action installs this same package, but once, with
-      # sdkmanager's output sent to /dev/null. On this leg that download has
-      # failed intermittently ("Failed to download package!", or an install
-      # that "contains no system images"), leaving a package directory that
-      # holds only sdkmanager's `.installer` marker, with 80 GB of disk
-      # free. So the image is installed here first: retried, checked for
-      # the file the emulator needs, and with the output kept, so a failure
-      # that outlasts the retries says why. The action then finds the
-      # package present and skips its own download.
-      #
-      # TODO: the `android` job installs the same package through the
-      # action alone and has not failed yet; give it this step if it does.
+      # The emulator action's own image download fails intermittently on this
+      # leg, so install it here with retries and a check; the action skips it.
+      # TODO: add this step to the `android` job too if it starts failing.
       - name: Install the emulator's system image
         if: matrix.platform == 'android'
         working-directory: .
         run: |
           package='system-images;android-35;google_apis;x86_64'
           installed="$ANDROID_HOME/system-images/android-35/google_apis/x86_64"
-          # `yes` is killed by SIGPIPE when sdkmanager is done reading, which
-          # pipefail would report as the install failing.
+          # `yes` dies of SIGPIPE, which pipefail would report as a failure.
           set +o pipefail
           for attempt in 1 2 3; do
             echo "::group::sdkmanager, attempt ${attempt}"
             yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "$package" --channel=0 \
               && status=0 || status=$?
             echo "::endgroup::"
-            # The exit status alone is not enough: two of the failures were
-            # installs that reported success and left no image behind.
+            # Check the file too: sdkmanager has reported success without it.
             if [ "$status" -eq 0 ] && [ -f "$installed/system.img" ]; then
               exit 0
             fi
             echo "Attempt ${attempt} failed (sdkmanager exit ${status}); left behind:"
             ls -la "$installed" 2>&1 || true
-            # A partial package would make the next attempt a no-op.
+            # Remove a partial install so the retry isn't a no-op.
             rm -rf "$installed"
             sleep 15
           done
           echo "::error::could not install ${package} in 3 attempts"
           exit 1
-      # The evaluation must smoke-test both platforms (RFC §3), not only
-      # build: the copy's own script, so it checks the copy's APK.
+      # Smoke-test, not just build (RFC §3), with the copy's own script.
       - name: On-device smoke test (Android R8 release)
         if: matrix.platform == 'android'
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -412,7 +354,7 @@ jobs:
           disable-animations: true
           working-directory: v2
           script: bash "$EVAL_DIR/scripts/smoke-android.sh"
-      # As in the CocoaPods job, keyed on the evaluated version instead.
+      # As in the CocoaPods job, keyed on the evaluated version.
       - name: Cache React Native's pod downloads
         if: matrix.platform == 'ios'
         uses: actions/cache@v6
@@ -425,7 +367,7 @@ jobs:
         if: matrix.platform == 'ios'
         run: |
           cd "$EVAL_DIR/apps/example/ios"
-          # Same three tries as the CocoaPods job, for the same download.
+          # Retry, as in the CocoaPods job.
           for attempt in 1 2 3; do
             if pod install; then break; fi
             echo "pod install failed (attempt ${attempt} of 3)" >&2

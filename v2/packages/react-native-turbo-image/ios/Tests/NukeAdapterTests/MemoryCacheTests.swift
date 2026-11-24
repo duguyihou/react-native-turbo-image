@@ -1,11 +1,6 @@
-// The adapter's memory tier: which loads hit it, which entries are separate,
-// and what eviction reaches.
-//
-// Nuke keys a memory entry by (imageID, thumbnail, processors), so one cache
-// key has an entry per decode size and per processed variant, and Nuke's
-// cache cannot be enumerated. The adapter keeps an index of the variants it
-// has seen so that `removeCachedImage` and the `memoryCacheKey` placeholder
-// can find them; these tests are what holds that index to its job.
+// Memory tier. One cache key has many Nuke entries (per size and processor)
+// and Nuke can't enumerate them, so the adapter keeps a variant index for
+// eviction and placeholders; these tests cover it.
 
 import Nuke
 import Testing
@@ -65,12 +60,8 @@ struct MemoryCacheTests {
     #expect(other.pixelSize == CGSize(width: 10, height: 8))
   }
 
-  /// A processed image must never be handed to a view that asked for the
-  /// plain one, or for another processing of it.
-  ///
-  /// Told apart by the image, not by `fromMemoryCache`: Nuke makes a
-  /// processed variant from the plain image when that is in memory, and
-  /// reports the result as a memory hit although the variant was not cached.
+  /// Each processing gets its own entry. Checked by identity, since Nuke
+  /// reports a variant derived from the cached plain image as a memory hit.
   @Test func eachProcessingIsItsOwnEntry() async throws {
     let file = try Fixture.png()
     let key = UUID().uuidString
@@ -95,10 +86,7 @@ struct MemoryCacheTests {
   @Test func removingAnImageEvictsEveryVariantOfIt() async throws {
     let file = try Fixture.png()
     let key = UUID().uuidString
-    // Every variant of one key, as a normal load or as a memory-only one.
-    // The memory-only form is how the test looks without loading: a normal
-    // load of the plain image would put it back, and Nuke would then make
-    // the processed variants from it.
+    // Memory-only variants let the test look without re-caching.
     func variants(memoryOnly: Bool) -> [TIImageRequest] {
       [
         adapter.request(for: file, cacheKey: key, allowNetwork: !memoryOnly),
@@ -136,15 +124,13 @@ struct MemoryCacheTests {
 
   // MARK: The index stays bounded
 
-  /// A sizes-only variant of a fresh key, `n` pixels wide: each call is a
-  /// new entry in the index.
+  /// A fresh-key variant `n` pixels wide: a new index entry.
   private func variant(_ n: Int, of file: URL, on adapter: Adapter) -> TIImageRequest {
     adapter.request(for: file, decodeSize: CGSize(width: n, height: n))
   }
 
-  /// Nuke's LRU evicts entries the index cannot see go. Past its threshold
-  /// the index drops them, so it does not grow with every image a long
-  /// list has ever shown.
+  /// Entries Nuke evicted are swept once past the threshold, so the index
+  /// stays bounded.
   @Test func variantsNukeHasEvictedAreSweptFromTheIndex() async throws {
     let file = try Fixture.png()
     let small = Adapter(loader: NukeImageLoader(minimumSweepThreshold: 4))
@@ -153,16 +139,14 @@ struct MemoryCacheTests {
     }
     #expect(small.loader.variantCount == 4)
 
-    // As memory pressure or the LRU would: behind the index's back.
+    // Evict behind the index's back.
     small.loader.pipeline.cache.removeAll(caches: .memory)
     _ = await small.load(variant(5, of: file, on: small))
 
     #expect(small.loader.variantCount == 1)
   }
 
-  /// A sweep keeps every variant still in memory, so eviction and the
-  /// placeholder lookup keep finding them. That includes one whose load was
-  /// still running when the sweep ran (its entry was not written yet).
+  /// A sweep keeps variants still in memory, including one still loading.
   @Test func variantsStillInMemorySurviveASweep() async throws {
     let file = try Fixture.png()
     let small = Adapter(loader: NukeImageLoader(minimumSweepThreshold: 4))
@@ -181,9 +165,7 @@ struct MemoryCacheTests {
 
   // MARK: Sizes (`TurboImage.configureCache`)
 
-  /// The registry hands the sizes to the adapter it creates, and refuses
-  /// them once a loader exists. The suite never registers a loader, so the
-  /// registry starts empty; it is left as found.
+  /// Sizes reach a new adapter, and are refused once a loader exists.
   @Test func configuredSizesReachTheAdapterOnlyBeforeALoaderExists() throws {
     #expect(TIImageLoaderRegistry.configureCache(withMaxDiskSize: 50_000_000, maxMemoryCost: 4_000_000))
     let configured = NukeImageLoader()
@@ -191,8 +173,7 @@ struct MemoryCacheTests {
 
     let memory = try #require(configured.pipeline.configuration.imageCache as? ImageCache)
     #expect(memory.costLimit == 4_000_000)
-    // The disk size is the store every policy but urlCache uses; the HTTP
-    // cache keeps its own 150 MB.
+    // Applies to the key cache; the HTTP cache keeps its default.
     let disk = try #require(configured.pipeline.configuration.dataCache as? DataCache)
     #expect(disk.sizeLimit == 50_000_000)
     #expect(configured.urlCache.diskCapacity == NukeImageLoader.diskCacheBytes)
@@ -224,8 +205,7 @@ struct MemoryCacheTests {
     #expect(adapter.loader.memoryCachedImage(forKey: "never loaded") == nil)
   }
 
-  /// A view usually caches the image at its own size, under a key that
-  /// includes that size. Any size will do for a placeholder.
+  /// Any size will do for a placeholder.
   @Test func aDownscaledImageIsFoundByItsKey() async throws {
     let request = adapter.request(for: try Fixture.png(), decodeSize: bound)
     let loaded = await adapter.load(request)
@@ -243,8 +223,7 @@ struct MemoryCacheTests {
   }
 }
 
-/// A distinct image for a processor block to return, so a test can tell
-/// which processor produced what it was handed. Immutable once made.
+/// A distinct image per processor, to tell results apart.
 private struct UncheckedImage: @unchecked Sendable {
   let image = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { _ in }
 }

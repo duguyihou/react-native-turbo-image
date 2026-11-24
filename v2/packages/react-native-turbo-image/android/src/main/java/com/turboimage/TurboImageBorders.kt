@@ -10,21 +10,9 @@ import com.facebook.react.uimanager.style.BorderStyle
 import com.facebook.react.uimanager.style.LogicalEdge
 
 /**
- * The border style props (`borderWidth`, `borderColor`, `borderRadius`,
- * `borderStyle` and their per-edge and per-corner forms) for
- * [TurboImageView].
- *
- * Why this exists: on iOS every Fabric view draws its border in the base
- * class. On Android only React Native's own view managers do. A codegen
- * manager gets the radius props as a logged "unsupported" warning and never
- * sees width, colour or style at all, so `<TurboImage style={{borderWidth}}>`
- * drew a border on iOS and nothing on Android.
- *
- * The drawing is React Native's own: `BackgroundStyleApplicator` puts the
- * border in the view's background, exactly as `ReactImageManager` does for
- * `<Image>`. [TurboImageView.onDraw] then clips the image to the inside of
- * that border, so the border is not painted over and rounded corners cut the
- * image (and the placeholder, which is drawn the same way).
+ * Border style props for [TurboImageView]. On Android, codegen view managers
+ * never receive them, so we apply them via `BackgroundStyleApplicator` like
+ * `ReactImageManager`; [TurboImageView.onDraw] clips the image inside.
  */
 internal object TurboImageBorders {
 
@@ -70,20 +58,12 @@ internal object TurboImageBorders {
       "borderStartStartRadius" to BorderRadiusProp.BORDER_START_START_RADIUS,
     )
 
-  /**
-   * Applies [propName] to [view] if it is a border prop. Returns false for
-   * any other prop, which the caller then handles as before.
-   *
-   * [value] is what Fabric hands a view manager delegate: a `Double` for a
-   * number, a `String` for a percentage radius or a style name, a processed
-   * colour for a colour, and null when the prop was removed.
-   */
+  /** Applies [propName] if it is a border prop; returns false otherwise. */
   @JvmStatic
   fun apply(view: View, propName: String, value: Any?): Boolean {
     widths[propName]?.let { edge ->
       BackgroundStyleApplicator.setBorderWidth(view, edge, (value as? Number)?.toFloat())
-      // The clip in onDraw follows the border width, and changing a
-      // background drawable's insets does not redraw the image by itself.
+      // The onDraw clip depends on the width; force a redraw.
       view.invalidate()
       return true
     }
@@ -93,8 +73,7 @@ internal object TurboImageBorders {
       return true
     }
     radii[propName]?.let { corner ->
-      // Same conversion as ReactImageManager: a number is in dp, a string a
-      // percentage, anything else (null included) removes the radius.
+      // As ReactImageManager: number = dp, string = percentage, else removed.
       val radius = value?.let { LengthPercentage.setFromDynamic(DynamicFromObject(it)) }
       BackgroundStyleApplicator.setBorderRadius(view, corner, radius)
       view.invalidate()

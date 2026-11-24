@@ -26,10 +26,7 @@ export type {
   SuccessEvent,
 } from './TurboImageViewNativeComponent';
 
-// 1.x's `source.headers` forms: a record, [name, value] pairs, or a fetch
-// `Headers` object (anything with forEach(value, name)).
-// 1.x's exported type names, kept so `import type { Success } from
-// 'react-native-turbo-image'` still compiles. TODO: remove in 3.0.
+// 1.x type names, kept for compatibility. TODO: remove in 3.0.
 export type Start = StartEvent;
 export type Progress = ProgressEvent;
 export type Success = SuccessEvent;
@@ -39,6 +36,7 @@ export type ResizeMode = NonNullable<NativeProps['resizeMode']>;
 export type IndicatorStyle = NonNullable<Indicator['style']>;
 export type Format = 'svg' | 'gif' | 'apng';
 
+// A record, [name, value] pairs, or a fetch `Headers`-like object.
 export type HeadersInput =
   | Readonly<Record<string, string>>
   | ReadonlyArray<readonly [string, string]>
@@ -46,13 +44,11 @@ export type HeadersInput =
 
 export type RemoteSource = Omit<NativeSource, 'headers'> & { headers?: HeadersInput };
 
-// A URI source, or a bundled asset from `require('./logo.png')` (new in 2.0).
-// URIs may be http(s), `file://`, and on Android `content://` or
-// `android.resource://`.
+// A URI (http(s), `file://`; on Android also `content://`, `android.resource://`)
+// or a bundled asset from `require()`.
 export type Source = RemoteSource | number;
 
-// What `placeholder` takes: a blurhash, a thumbhash, a memory-cache key, or
-// any image as `{ uri }` or `require('./thumb.png')` (new in 2.0).
+// A blurhash, thumbhash, memory-cache key, `{ uri }`, or a `require()` asset.
 export type PlaceholderSource = NativePlaceholder | number;
 
 function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | undefined {
@@ -78,7 +74,6 @@ function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | un
 
 function toNativePlaceholder(placeholder: PlaceholderSource | undefined) {
   if (typeof placeholder === 'number') {
-    // A bundled asset, resolved as for `source`.
     return { uri: Image.resolveAssetSource(placeholder)?.uri ?? '' };
   }
   return placeholder;
@@ -86,10 +81,8 @@ function toNativePlaceholder(placeholder: PlaceholderSource | undefined) {
 
 function toNativeSource(source: Source): NativeSource {
   if (typeof source === 'number') {
-    // RN's resolver picks the @2x/@3x file for this screen and returns a
-    // dev-server URL in development, a `file://` bundle URL on iOS release,
-    // and a bare resource name on Android release (resolved natively).
-    // An unknown asset id resolves to null: an empty URI the core rejects.
+    // On Android release this is a bare resource name, resolved natively.
+    // An unknown asset id gives an empty URI, which the core rejects.
     return { uri: Image.resolveAssetSource(source)?.uri ?? '' };
   }
   const { headers, ...rest } = source;
@@ -97,19 +90,15 @@ function toNativeSource(source: Source): NativeSource {
   return native === undefined ? rest : { ...rest, headers: native };
 }
 
-// 2.0's cache policies, owned by the C++ core (cpp/include/turboimage).
+// Defined by the C++ core (cpp/include/turboimage).
 export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 
-// 1.x policy name, still accepted so apps can upgrade without edits. 1.x's
-// other name, 'urlCache', is a real 2.0 policy again (see the native spec).
-// TODO: remove in 3.0.
+// 1.x policy name, still accepted. TODO: remove in 3.0.
 export type LegacyCachePolicy = 'dataCache';
 
-// Where the image sits in its view when it does not fill it exactly
-// (expo-image's `contentPosition`, CSS `object-position`): a keyword or two
-// ('top', 'bottom right', 'left center', ...), or percentages from an edge
-// (`{ top: '20%' }`, `{ right: '10%', bottom: '0%' }`).
-// TODO: offsets in points (`{ top: 10 }`), which expo-image also takes.
+// Like CSS `object-position`: one or two keywords ('bottom right'), or
+// percentages from an edge (`{ top: '20%' }`).
+// TODO: offsets in points (`{ top: 10 }`), as expo-image takes.
 type PositionKeyword = 'center' | 'top' | 'bottom' | 'left' | 'right';
 type Percent = `${number}%`;
 export type ContentPosition =
@@ -125,7 +114,7 @@ const KEYWORD_FRACTIONS: Record<PositionKeyword, { x?: number; y?: number }> = {
   right: { x: 1 },
 };
 
-// A CSS percentage ('20%') as a fraction; anything else is not placed.
+// '20%' -> 0.2; anything else -> undefined.
 function percentFraction(value: string | number | undefined): number | undefined {
   if (typeof value === 'string' && /^-?\d+(\.\d+)?%$/.test(value)) {
     return parseFloat(value) / 100;
@@ -138,7 +127,7 @@ function percentFraction(value: string | number | undefined): number | undefined
   return undefined;
 }
 
-// The native props: fractions of the free space, 0.5 = centred.
+// Fractions of the free space; 0.5 = centred.
 function toContentPosition(position: ContentPosition | undefined): {
   contentPositionX?: number;
   contentPositionY?: number;
@@ -182,41 +171,25 @@ export type TurboImageProps = Omit<
   | 'progressEnabled'
   | 'loadEventMask'
 > & {
-  /**
-   * The outermost native view: the image view itself, or the container
-   * around it when `indicator` needs one (always the container in 1.x).
-   * Either way it is the view that has `style`, so measuring it gives the
-   * image's frame.
-   */
+  /** The outermost native view (the one with `style`), so measuring it gives the image's frame. */
   ref?: Ref<TurboImageInstance>;
   source: Source;
   placeholder?: PlaceholderSource;
-  // See `ContentPosition`. Applies to cover, contain, center and scale-down.
+  // Applies to cover, contain, center and scale-down.
   contentPosition?: ContentPosition;
-  // See the native spec. `null` is accepted and means "no key", so code
-  // written for expo-image (`string | null`) compiles unchanged.
+  // `null` means no key (expo-image compatible).
   recyclingKey?: string | null;
   cachePolicy?: CachePolicy | LegacyCachePolicy;
-  // 1.x also accepted RN's numeric colour form (0xRRGGBBAA); RN's colour
-  // processing handles both, Codegen's ColorValue just doesn't spell it.
+  // Also RN's numeric colour (0xRRGGBBAA), which Codegen's type omits.
   monochrome?: ColorValue | number;
   tint?: ColorValue | number;
-  // 1.x prop: clip the image to a circle/pill. The image view clips to it
-  // itself; toggling it does not remount the view or restart the load.
+  // Clip to a circle/pill. Toggling it does not restart the load.
   rounded?: boolean;
-  // 1.x prop: an activity spinner while the image loads. Not shown when a
-  // `placeholder` is given (1.x Android's rule; on 1.x iOS whichever prop
-  // was set last won).
+  // A spinner while loading. Not shown when `placeholder` is set.
   indicator?: Indicator;
-  /**
-   * @deprecated Ignored. 1.x needed it to pick a GIF/APNG/SVG decoder; 2.0
-   * detects the format from the image bytes on both platforms.
-   */
+  /** @deprecated Ignored; the format is detected from the image bytes. */
   format?: Format | string;
-  /**
-   * @deprecated Ignored, as it effectively was in 1.x: 1.x never enabled
-   * progressive decoding in its Nuke pipeline, so the prop had no effect.
-   */
+  /** @deprecated Ignored (it had no effect in 1.x either). */
   isProgressiveImageRenderingEnabled?: boolean;
 };
 
@@ -228,16 +201,10 @@ export type Indicator = {
   color?: ColorValue | number;
 };
 
-// A load that finishes sooner than this never shows the spinner. Disk hits
-// complete within a frame or two (memory hits inside the load call); a
-// spinner that appears and vanishes that fast reads as flicker. As a side
-// effect such loads cause no extra React render at all.
+// Faster loads (cache hits) never show the spinner, which would just flicker.
 const INDICATOR_DELAY_MS = 150;
 
-// Maps 1.x's 'dataCache' onto 2.0: it was 1.x iOS's aggressive data cache,
-// and 2.0's 'default' is exactly that on both platforms (RFC §4.2).
-// 'urlCache' needs no mapping: it is a core policy, and honours HTTP
-// Cache-Control on both platforms (1.x did so on iOS only).
+// 1.x's 'dataCache' is 2.0's 'default' (RFC §4.2).
 let warnedDataCache = false;
 function resolveCachePolicy(policy: TurboImageProps['cachePolicy']): CachePolicy | undefined {
   if (policy !== 'dataCache') {
@@ -253,9 +220,7 @@ function resolveCachePolicy(policy: TurboImageProps['cachePolicy']): CachePolicy
 }
 
 function TurboImageComponent({
-  // Taken out of `props` so it goes to one view only. Since React 19 a
-  // function component gets `ref` as a prop, and left in the spread below it
-  // would always land on the inner image view.
+  // Kept out of the spread so it reaches one view only (React 19 ref-as-prop).
   ref,
   cachePolicy,
   rounded,
@@ -263,7 +228,7 @@ function TurboImageComponent({
   source,
   placeholder,
   contentPosition,
-  // Accepted for 1.x compatibility and dropped; see the type's notes.
+  // Deprecated and ignored.
   format: _format,
   isProgressiveImageRenderingEnabled: _progressive,
   indicator,
@@ -272,12 +237,8 @@ function TurboImageComponent({
   onCompletion,
   ...props
 }: TurboImageProps) {
-  // The spinner is plain React: an <ActivityIndicator> over the native view,
-  // driven by the load events, so it is identical on both platforms and
-  // needs no native code. `onCompletion` ends every load that `onStart`
-  // began (success, failure or cancelled), so those two events suffice.
-  //
-  // 1.x quirk kept: an empty object (`indicator={{}}`) means no indicator.
+  // The spinner is plain React, driven by onStart/onCompletion (every start
+  // gets exactly one completion). 1.x quirk: `indicator={{}}` means none.
   const showsIndicator =
     indicator != null && Object.keys(indicator).length > 0 && placeholder == null;
   const [spinning, setSpinning] = useState(false);
@@ -291,18 +252,12 @@ function TurboImageComponent({
   };
   const handleCompletion: NativeProps['onCompletion'] = (event) => {
     clearTimeout(spinTimer.current);
-    setSpinning(false); // no re-render if it never started spinning
+    setSpinning(false);
     return onCompletion?.(event);
   };
 
-  // Same rule as 1.x: one placeholder kind at a time. Native would silently
-  // pick one; failing loudly in development is kinder. Unlike 1.x this does
-  // not throw in release builds: a wrong placeholder is not worth a crash.
-  //
-  // Intentionally omitted: 1.x also threw for `showPlaceholderOnFailure`
-  // without a placeholder. That combination is harmless (there is nothing to
-  // keep), so 2.0 accepts it. Both are listed under "Breaking changes" in
-  // docs/migration-plan.md.
+  // One placeholder kind at a time; throws in development only.
+  // `showPlaceholderOnFailure` without a placeholder is harmless, so allowed.
   if (__DEV__ && placeholder != null && typeof placeholder === 'object') {
     const kinds = Object.values(placeholder).filter(Boolean).length;
     if (kinds > 1) {
@@ -312,9 +267,7 @@ function TurboImageComponent({
     }
   }
 
-  // Only the spinner needs a container: it is a second view over the image.
-  // `rounded` is a style on the image view, which clips to its own
-  // `borderRadius` on both platforms.
+  // Only the spinner needs a container (a second view over the image).
   const needsContainer = showsIndicator;
   const imageStyle = [styles.image, style, rounded && styles.rounded];
   const image = (
@@ -323,8 +276,7 @@ function TurboImageComponent({
       ref={needsContainer ? undefined : ref}
       // Codegen strings cannot be null.
       recyclingKey={recyclingKey ?? undefined}
-      // A new object each render is fine: both native views compare the
-      // request fields by value before reloading.
+      // A new object each render is fine: native compares by value.
       source={toNativeSource(source)}
       placeholder={toNativePlaceholder(placeholder)}
       {...toContentPosition(contentPosition)}
@@ -337,7 +289,6 @@ function TurboImageComponent({
         props.onFailure != null,
         showsIndicator || onCompletion != null
       )}
-      // Without an indicator the app's handlers go straight through.
       onStart={showsIndicator ? handleStart : onStart}
       onCompletion={showsIndicator ? handleCompletion : onCompletion}
     />
@@ -345,15 +296,10 @@ function TurboImageComponent({
   if (!needsContainer) {
     return image;
   }
-  // As in 1.x, the container takes `style`, `ref` and the rounding (so the
-  // spinner is clipped with the image), and `testID` and the accessibility
-  // props stay on the image view, which fills the container.
-  //
-  // The container must not come and go with the spinner: that would remount
-  // the native view and restart the load. It does come and go with the
-  // `indicator` prop itself, which remounts the image.
-  // TODO: draw the spinner natively if toggling `indicator` on a mounted
-  // image turns out to matter.
+  // The container takes `style`, `ref` and rounding; `testID` and a11y props
+  // stay on the image. It lives as long as `indicator` is set, not just while
+  // spinning, since remounting the image would restart the load.
+  // TODO: draw the spinner natively if toggling `indicator` matters.
   return (
     <View ref={ref} style={[style, rounded && styles.rounded]}>
       {image}
@@ -371,17 +317,13 @@ function TurboImageComponent({
 }
 
 const styles = StyleSheet.create({
-  // As React Native's <Image>: on iOS a view clips its content to
-  // `borderRadius` only with `overflow: 'hidden'`. Without it a rounded
-  // <TurboImage> kept square corners there, while Android (which clips in
-  // the view's own drawing) rounded them. An app's `overflow: 'visible'`
-  // still wins, since `style` comes after this.
+  // iOS clips to `borderRadius` only with `overflow: 'hidden'` (as RN <Image>).
+  // An app's own `overflow` still wins.
   image: { overflow: 'hidden' },
   rounded: { overflow: 'hidden', borderRadius: 9999 },
 });
 
-// `loadEventMask`: a bit per event that has a handler, in the order the
-// codegen spec lists them (onStart, onSuccess, onFailure, onCompletion).
+// One bit per handled event, in spec order: start, success, failure, completion.
 function loadEventMask(...handled: [boolean, boolean, boolean, boolean]): number {
   return handled.reduce((mask, on, bit) => (on ? mask | (1 << bit) : mask), 0);
 }
@@ -389,10 +331,8 @@ function loadEventMask(...handled: [boolean, boolean, boolean, boolean]): number
 type CacheSource = Source;
 
 /**
- * `TurboImage.prefetch`'s options.
- *
- * A prefetch only downloads, to disk; a view decodes it at its own size.
- * With no disk tier (`memoryOnly`, a local file) it decodes at full size.
+ * `TurboImage.prefetch` options. Prefetch downloads to disk only; with no
+ * disk tier (`memoryOnly`, a local file) it decodes at full size.
  */
 export type PrefetchOptions = {
   /** As the `cachePolicy` prop; `'default'` when unset. */
@@ -402,7 +342,7 @@ export type PrefetchOptions = {
 /** `TurboImage.configureCache`'s sizes, in bytes; unset keeps the default. */
 export type CacheSizes = { maxDiskSize?: number; maxMemoryCost?: number };
 
-// A size native can use: whole bytes, or 0 for the default.
+// Whole bytes, or 0 for the default.
 function cacheBytes(bytes: number | undefined): number {
   return bytes !== undefined && Number.isFinite(bytes) && bytes > 0 ? Math.floor(bytes) : 0;
 }
@@ -410,9 +350,9 @@ function cacheBytes(bytes: number | undefined): number {
 /** What `TurboImage.getSize` resolves with, in pixels. */
 export type ImageSize = { width: number; height: number };
 
-// 1.x exposed these as statics on the component; kept for compatibility.
+// Statics on the component, as in 1.x.
 export const TurboImage = Object.assign(TurboImageComponent, {
-  // A string is 1.x's second argument, the cache policy alone.
+  // A string second argument is 1.x's cache policy.
   prefetch: (
     sources: CacheSource[],
     optionsOrCachePolicy: PrefetchOptions | TurboImageProps['cachePolicy'] = {}
@@ -421,45 +361,23 @@ export const TurboImage = Object.assign(TurboImageComponent, {
       typeof optionsOrCachePolicy === 'object'
         ? optionsOrCachePolicy
         : { cachePolicy: optionsOrCachePolicy };
-    // 1.x also decoded at full size; 2.0 only downloads.
     return NativeTurboImageModule.prefetch(
       sources.map(toNativeSource),
       resolveCachePolicy(options.cachePolicy ?? 'default') ?? 'default'
     );
   },
-  // `dispose` and `clearDiskCache` reject (code 'disk') if the disk cache
-  // could not be written to. Android only: iOS stages the removal and has
-  // no failure to report.
+  // `dispose` and `clearDiskCache` reject with 'disk' on a disk write error
+  // (Android only).
   dispose: (sources: CacheSource[]): Promise<void> =>
     NativeTurboImageModule.dispose(sources.map(toNativeSource)),
   clearMemoryCache: (): Promise<void> => NativeTurboImageModule.clearMemoryCache(),
   clearDiskCache: (): Promise<void> => NativeTurboImageModule.clearDiskCache(),
   /**
-   * The image's own size in pixels, with its EXIF orientation applied, like
-   * React Native's `Image.getSize`: for laying out before rendering. Loads
-   * the image into the caches like `prefetch`, but reads the size from the
-   * file's header, so a 12 MP photo costs a download and a disk write, not a
-   * 48 MB decode. An SVG reports its canvas at this screen's pixel ratio,
-   * the size it draws at by default. Rejects with `onFailure`'s codes
-   * ('invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown').
-   * New in 2.0.
-   */
-  /**
-   * Sizes the caches, in bytes (expo-image's names): `maxDiskSize` for the
-   * disk cache (default 150 MB), `maxMemoryCost` for decoded images in
-   * memory (default: a quarter of the app's memory on Android, Nuke's
-   * default on iOS, both scaled to the device; a fixed size that suits a
-   * large phone can strain a small one, so set it only when measured).
-   *
-   * Call it once at startup, before the first image renders and before any
-   * other TurboImage call (`prefetch`, `getSize` and the rest build the
-   * caches too). It is synchronous, so it has taken effect when it returns.
-   * The caches cannot be resized once built: it returns false then, and
-   * nothing changes.
-   *
-   * `maxDiskSize` sizes the store every policy but `urlCache` uses. On
-   * Android the `urlCache` policy's HTTP responses share it; on iOS they
-   * live in a store of their own, which keeps its 150 MB. New in 2.0.
+   * Sizes the caches in bytes: `maxDiskSize` (default 150 MB) and
+   * `maxMemoryCost` (default scales with the device; set only when measured).
+   * Call once at startup, before any image or other TurboImage call; returns
+   * false, changing nothing, if the caches already exist. On iOS the
+   * `urlCache` policy keeps its own 150 MB store.
    */
   configureCache: (sizes: CacheSizes): boolean => {
     const applied = NativeTurboImageModule.configureCache(
@@ -473,6 +391,11 @@ export const TurboImage = Object.assign(TurboImageComponent, {
     }
     return applied;
   },
+  /**
+   * The image's size in pixels, EXIF orientation applied, like RN's
+   * `Image.getSize`. Caches the image but reads only the file header, not a
+   * full decode. Rejects with `onFailure`'s codes.
+   */
   getSize: (
     source: CacheSource,
     cachePolicy: TurboImageProps['cachePolicy'] = 'default'

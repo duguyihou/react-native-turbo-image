@@ -1,31 +1,16 @@
-// One component per library under test, all with the same props, so a
-// scenario renders the same thing whichever library it was launched with.
+// One component per library, all with the same props, so every library
+// renders the same scenario:
+// - `cover` everywhere (thumbnail grids are what we measure).
+// - Default caches; cold/warm runs come from the bench script clearing app
+//   data, not from each library's cache API.
+// - Default downscaling (on for all three); changing it would measure config.
+// - `recyclingKey` where supported, since FlashList reuses views.
+// "Loaded" is the library's success event (decoded, not yet drawn).
 //
-// What "the same" means here, and why:
-// - `cover` everywhere: grids of thumbnails are the case the benchmark is
-//   about, and every library supports it.
-// - Each library's default cache settings (memory + disk). Cold and warm
-//   runs are produced by the bench script (clearing app data, or not), not
-//   by each library's own cache API, so every library starts from the same
-//   state.
-// - Downscaling to the view's size is left at each library's default: on
-//   for TurboImage and expo-image; RN's <Image> (Fresco) always resizes to
-//   the view on Android. Turning it off for some would measure
-//   configuration, not libraries.
-// - `recyclingKey` for the libraries that have it (TurboImage, expo-image),
-//   because FlashList reuses views and both document the key for that case.
-//
-// "Loaded" is the library's success event: the image is decoded and handed
-// to the view. No library reports when the frame showing it is drawn.
-//
-// Not compared: FastImage (@d11/react-native-fast-image). On Android it and
-// expo-image are both built on Glide, and each ships an `AppGlideModule`;
-// Glide allows one per app, so the two cannot share an APK (R8: "Type
-// com.bumptech.glide.GeneratedAppGlideModuleImpl is defined multiple
-// times").
-// TODO: a second APK without expo-image for FastImage runs. Its adapter
-// also needs a style cast: FastImage 8.13's `ImageStyle` lacks
-// `width`/`height` under RN 0.88's types.
+// FastImage is not compared: it and expo-image both ship an `AppGlideModule`
+// on Android, and Glide allows one per app.
+// TODO: a second APK without expo-image for FastImage runs (its adapter also
+// needs a style cast for `width`/`height`).
 import { Image as ExpoImage } from 'expo-image';
 import type { ComponentType } from 'react';
 import { Image as RNImage } from 'react-native';
@@ -82,7 +67,7 @@ function Core({ uri, size, onStart, onLoad, onError }: BenchImageProps) {
   );
 }
 
-// The `lib` names are what the deep link and the bench script use.
+// Keys are the `lib` names the deep link and bench script use.
 export const LIBRARIES = {
   turbo: Turbo,
   expo: Expo,

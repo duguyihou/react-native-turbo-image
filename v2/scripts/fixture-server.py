@@ -1,28 +1,22 @@
 #!/usr/bin/env python3
-"""Local HTTP server for the on-device smoke test (apps/example/App.tsx).
+"""Local HTTP server for the smoke test (apps/example/App.tsx).
 
-The smoke test used to load from six third-party hosts, so a slow or changed
-host looked like a product bug. This serves the committed fixtures instead
-(apps/example/fixtures/, see generate-fixtures.py), and adds what a public
-host cannot offer: responses that depend on request headers, chosen
-`Cache-Control` headers, throttled bodies, and a count of the requests that
-actually arrived, which is how the app can tell a cache hit from a fetch.
+Serves the committed fixtures (apps/example/fixtures/) with header-dependent
+responses, chosen Cache-Control, throttled bodies, and per-path request
+counts so the app can tell a cache hit from a fetch.
 
-Routes (any name works where one is shown, so each scenario gets a URL, and
-with it a cache entry, of its own):
+Routes (<name> is free, so each scenario gets its own URL and cache entry):
 
   /photo/<name>.jpg            600x400 JPEG
   /large/<name>.jpg            3000x2000 JPEG
-  /slow/photo/<name>.jpg       the same two, sent slowly: several progress
-  /slow/large/<name>.jpg         events, and a load still running when JS reacts
+  /slow/photo/<name>.jpg       the same two, sent slowly (progress events,
+  /slow/large/<name>.jpg         and a load still running when JS reacts)
   /text.png /logo.svg          Live Text image; SVG
   /anim.gif /anim.png /anim.webp   animated GIF, APNG, WebP
   /anim-large.gif              1500x1000 animated GIF (two frames)
   /accept/png                  200 only if `Accept` allows image/png, else 406
-  /not-an-image/<name>         200 with an HTML page, as a server's error page
-                                 often is: the load fails as `decode`
-  /ua/<name>.jpg               403 for OkHttp's default User-Agent, as some
-                                 CDNs answer it
+  /not-an-image/<name>         200 with HTML; the load fails as `decode`
+  /ua/<name>.jpg               403 for OkHttp's default User-Agent (as some CDNs)
   /cookie/set                  200 with Set-Cookie, for the app's `fetch`
   /cookie/photo/<name>.jpg     200 only if that cookie comes back, else 403
   /cache/fresh/<name>.jpg      Cache-Control: max-age=3600
@@ -31,8 +25,7 @@ with it a cache entry, of its own):
   /__hits?path=<path>          JSON {"count", "conditional"} for that path
   /__ping                      200, for the smoke scripts' readiness check
 
-Binds to loopback only. The iOS simulator shares the host's loopback; the
-Android emulator reaches it through `adb reverse` (see fixture-server.sh).
+Loopback only; Android reaches it through `adb reverse`.
 
 Usage: python3 scripts/fixture-server.py [--port 8765] [--log <file>]
 """
@@ -50,9 +43,7 @@ ETAG = '"fixture-v1"'
 # A session cookie as a login endpoint would set one.
 COOKIE = "turboimage_smoke=1"
 
-# Bytes per write and the pause between writes for /slow/ bodies. The large
-# photo (~370 KB) then takes about two seconds: long enough to be cancelled
-# mid-flight, short enough not to slow the suite down.
+# /slow/ pacing: the large photo takes ~2 s, long enough to cancel mid-flight.
 SLOW_CHUNK = 4096
 SLOW_PAUSE_S = 0.02
 
@@ -160,9 +151,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
                 time.sleep(SLOW_PAUSE_S)
         except (BrokenPipeError, ConnectionResetError):
-            # A cancelled load closes the connection mid-body; that is the
-            # supersede scenario working, not an error. The connection cannot
-            # be reused after a short body.
+            # A cancelled load closed the connection; expected, not an error.
             self.close_connection = True
 
     def log_message(self, fmt, *args):

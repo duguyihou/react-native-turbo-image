@@ -1,14 +1,6 @@
-// What every suite here needs: the real adapter, requests shaped like the
-// ones the core resolves, and image files to load.
-//
-// The tests drive `NukeImageLoader` through the seam (`TIImageLoading`), as
-// the Fabric view does, with files on disk in place of a server. So the
-// decoder, the processor step and the memory cache are the ones an app runs.
-// Each suite makes its own loader, and so its own memory cache.
-//
-// Not reachable this way: the key-addressed disk cache and the HTTP cache.
-// Nuke does not store local files, and `urlCache` needs HTTP responses; both
-// are covered on-device by the smoke suite and the fixture server.
+// Shared helpers: drive the real `NukeImageLoader` through the seam with local
+// files. Each suite has its own loader and memory cache. Disk and HTTP caches
+// need a server, so the smoke suite covers them.
 
 import ImageIO
 import NukeUI
@@ -19,22 +11,20 @@ import UniformTypeIdentifiers
 
 @testable import TurboImageNuke
 
-/// What a completion delivered. `@unchecked Sendable` only to cross the
-/// continuation: the seam completes on the main thread and every test runs
-/// on the main actor, so it never leaves it.
+/// A completion's result. `@unchecked Sendable` only to cross the
+/// continuation; it never leaves the main thread.
 struct Loaded: @unchecked Sendable {
   let image: UIImage?
   let animation: Any?
   let fromMemoryCache: Bool
   let error: NSError?
 
-  /// The image's size in pixels, which is what `decodeSize` bounds.
+  /// Size in pixels.
   var pixelSize: CGSize? {
     image.map { CGSize(width: $0.size.width * $0.scale, height: $0.size.height * $0.scale) }
   }
 
-  /// The failure as the seam's code, or nil for a success or for an error
-  /// outside the seam's domain (which the seam forbids).
+  /// The seam error code, or nil.
   var errorCode: TIImageLoadError.Code? {
     guard let error, error.domain == TIImageLoadErrorDomain else { return nil }
     return TIImageLoadError.Code(rawValue: error.code)
@@ -53,8 +43,7 @@ struct Adapter {
     await loadTogether([request])[0]
   }
 
-  /// Starts every load before waiting for any, and returns their results in
-  /// the order of `requests`.
+  /// Starts all loads, then returns results in order.
   func loadTogether(_ requests: [TIImageRequest]) async -> [Loaded] {
     final class Results {
       var loaded: [Loaded?]
@@ -90,17 +79,14 @@ struct Adapter {
     }
   }
 
-  /// The loader's own image view, with a size: a view without one has
-  /// nothing to decode frames for yet.
+  /// The loader's image view, sized so it decodes frames.
   func animatedView() throws -> AnimatedImageView {
     let view = try #require(loader.makeImageView() as? AnimatedImageView)
     view.frame = CGRect(x: 0, y: 0, width: 50, height: 50)
     return view
   }
 
-  /// A request as the core resolves one for a local file: memory tier only.
-  /// `vectorSize` defaults to the decode bound, as it does for a view with
-  /// `allowDownscaling` on.
+  /// A local-file request (memory tier only). `vectorSize` defaults to `decodeSize`.
   func request(
     for file: URL,
     cacheKey: String = UUID().uuidString,
@@ -124,15 +110,14 @@ struct Adapter {
   }
 }
 
-/// Image files written for the test, so the suite carries none of its own.
+/// Image files generated at test time.
 enum Fixture {
   struct Failure: Error {}
 
-  /// The size of every bitmap fixture, in pixels.
+  /// Bitmap fixture size in pixels.
   static let size = CGSize(width: 40, height: 30)
 
-  /// An animated GIF with an explicit loop count ("forever"), as nearly
-  /// every GIF has.
+  /// An animated GIF that loops forever.
   static func gif(frames: Int = 3) throws -> URL {
     let url = temporaryFile("gif")
     let destination = try unwrap(
@@ -157,8 +142,7 @@ enum Fixture {
     return url
   }
 
-  /// A 40×30 JPEG whose EXIF orientation (6, a quarter turn) makes it
-  /// display as 30×40.
+  /// A 40×30 JPEG with EXIF orientation 6, so it displays as 30×40.
   static func rotatedJpeg() throws -> URL {
     let url = temporaryFile("jpg")
     let destination = try unwrap(
@@ -218,8 +202,7 @@ enum Fixture {
   }
 }
 
-/// A value a processor block, which runs on Nuke's processing queue, hands
-/// back to the test.
+/// Passes a value from a processor block (off main) back to the test.
 final class Recorded<Value: Sendable>: @unchecked Sendable {
   private let lock = NSLock()
   private var stored: Value?

@@ -1,32 +1,17 @@
 #!/usr/bin/env bash
-# Image library benchmark on Android: TurboImage vs expo-image
-# vs React Native's <Image>, using the release build of apps/bench.
+# Benchmarks TurboImage vs expo-image vs RN <Image> on Android, using the
+# apps/bench release build. Each run is done cold (`pm clear`) and warm
+# (relaunch, disk cache kept). Libraries are interleaved so device heating
+# affects all of them alike. Use a physical device, screen on and unlocked.
 #
-# For every iteration, scenario and library, this runs the app twice:
-#   cold  app data cleared first (`pm clear`), so memory and disk caches
-#         are empty and every image is downloaded
-#   warm  relaunched without clearing: memory caches died with the process,
-#         disk caches are as the cold run left them
-# Libraries are interleaved within each iteration (turbo, expo, ... then
-# again) rather than run in blocks, so a phone heating up over the session
-# slows all of them alike instead of whichever went last.
-#
-# Each run records the app's TURBOIMAGE_BENCH line (load times from mount),
-# the app's total PSS when the scenario ends, and, for `grid`, frame stats
-# from `dumpsys gfxinfo` over the scrolling only.
-#
-# Run it on a physical device with the screen on and unlocked. Emulator
-# frame times say little about phones.
-#
+# Usage: scripts/bench-android.sh [path/to/app-release.apk]
 # Env:
-#   LIBS       libraries to compare (default: "turbo expo rn")
+#   LIBS       libraries (default: "turbo expo rn")
 #   SCENARIOS  scenario:source pairs
 #              (default: "load:photo load:large grid:photo grid:large")
 #   RUNS       iterations (default: 5)
-#   COUNT      images in the `load` scenario (default: the app's, 30)
-# Usage: scripts/bench-android.sh [path/to/app-release.apk]
-# Output: tmp/bench/android-<timestamp>.jsonl, then a summary table from
-#         scripts/bench-summary.py.
+#   COUNT      images in `load` (default: the app's, 30)
+# Output: tmp/bench/android-<timestamp>.jsonl, then a bench-summary.py table.
 
 set -euo pipefail
 
@@ -78,9 +63,8 @@ wait_for_log() {
   return 1
 }
 
-# Frame stats of the app's window since the last `gfxinfo reset`, as JSON.
-# The first block of `dumpsys gfxinfo` is the app-wide one; later blocks
-# repeat the stats per window.
+# Frame stats since the last `gfxinfo reset`, as JSON. Only the first
+# (app-wide) block of `dumpsys gfxinfo` is read.
 gfx_json() {
   "${adb}" shell dumpsys gfxinfo "${package}" | awk '
     function num(s) { gsub(/[^0-9.]/, "", s); return s }
@@ -94,8 +78,7 @@ gfx_json() {
       f + 0, j + 0, p50 + 0, p90 + 0, p95 + 0, p99 + 0 }'
 }
 
-# The app's total PSS in KB. Newer Android prints "TOTAL PSS: n" in the App
-# Summary; older prints a "TOTAL n ..." row.
+# The app's total PSS in KB ("TOTAL PSS: n" on newer Android, "TOTAL n" on older).
 pss_kb() {
   "${adb}" shell dumpsys meminfo "${package}" | awk '
     /TOTAL PSS:/ { print $3; found = 1; exit }
@@ -142,8 +125,7 @@ for ((iteration = 1; iteration <= runs; iteration++)); do
   echo "iteration ${iteration}/${runs}"
   for pair in ${scenarios}; do
     for lib in ${libs}; do
-      # A failed run is reported and skipped: one library failing a
-      # scenario should not throw away the others' results.
+      # A failed run is skipped so the other libraries' results are kept.
       run_once "${lib}" "${pair%%:*}" "${pair##*:}" cold "${iteration}" || true
       run_once "${lib}" "${pair%%:*}" "${pair##*:}" warm "${iteration}" || true
     done

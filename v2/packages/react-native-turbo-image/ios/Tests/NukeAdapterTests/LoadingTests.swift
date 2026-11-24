@@ -1,10 +1,5 @@
-// What a load through the adapter delivers: the image at the size the
-// request bounds it to, or a failure under one of the seam's codes.
-//
-// The smoke suite checks the same things from JS, on a device, through
-// `onSuccess` and `onFailure`. These run in seconds and name the layer when
-// they fail: the request here is already resolved, so the core is not
-// involved, only the adapter's translation into Nuke.
+// Adapter loads: decode size and seam error codes. The core is not involved,
+// so a failure here points at the adapter.
 
 import Testing
 import TurboImageLoaderAPI
@@ -84,8 +79,7 @@ struct LoadingTests {
     #expect(loaded.errorCode == .notCached)
   }
 
-  /// A processor that cannot produce an image fails the load; the view must
-  /// not get the unprocessed one instead.
+  /// A failed processor fails the load, not falls back to the original.
   @Test func aProcessorThatFailsIsADecodeError() async throws {
     let loaded = await adapter.load(
       adapter.request(for: try Fixture.png(), processorKey: "fails", processor: { _ in nil }))
@@ -105,8 +99,7 @@ struct LoadingTests {
     #expect(loaded.image === replacement)
   }
 
-  /// The processor works on the decoded image, so `resize` and the view's
-  /// bound are applied first and it never sees the full bitmap.
+  /// The processor sees the already-bounded decode, not the full bitmap.
   @Test func theProcessorGetsTheImageAtItsDecodeSize() async throws {
     let seen = Recorded<CGSize>()
     _ = await adapter.load(
@@ -122,8 +115,7 @@ struct LoadingTests {
 
   // MARK: Cancel and prefetch
 
-  /// The seam's cancel contract: a cancelled load never completes. A
-  /// recycled view relies on it not to receive its previous source's image.
+  /// A cancelled load never completes (recycled views rely on this).
   @Test func aCancelledLoadDoesNotComplete() async throws {
     let completed = Recorded<Bool>()
     let task = adapter.loader.loadImage(with: adapter.request(for: try Fixture.png()), progress: nil) {
@@ -131,8 +123,7 @@ struct LoadingTests {
     }
 
     task.cancel()
-    // Long enough for the load to have finished had it not been cancelled:
-    // an uncancelled one of this file completes within a few milliseconds.
+    // Well past when an uncancelled load would finish.
     try await Task.sleep(for: .milliseconds(300))
 
     #expect(completed.value == nil)
@@ -161,9 +152,8 @@ struct LoadingTests {
     #expect(loaded.fromMemoryCache)
   }
 
-  /// A prefetch (memory write off): the
-  /// image is not decoded into memory. The fixtures are local files, so the
-  /// disk side is left to the Android tests, which have an HTTP server.
+  /// A prefetch (memory write off) decodes nothing into memory. Disk side is
+  /// tested on Android, which has an HTTP server.
   @Test func aDiskOnlyPrefetchKeepsNothingInMemory() async throws {
     let file = try Fixture.png()
     let key = UUID().uuidString
@@ -179,9 +169,7 @@ struct LoadingTests {
     #expect(await adapter.prefetch(adapter.request(for: Fixture.missing(), memoryCacheWrite: false)) == false)
   }
 
-  /// A memory hit completes before `loadImage` returns, so a recycled view
-  /// shows its cached image in the same frame (no blank or placeholder
-  /// frame first).
+  /// A memory hit completes synchronously, so a recycled view never flashes blank.
   @Test func aMemoryHitCompletesInsideTheCall() async throws {
     let request = adapter.request(for: try Fixture.png(), decodeSize: CGSize(width: 20, height: 15))
     _ = await adapter.load(request)
@@ -209,8 +197,7 @@ struct LoadingTests {
     #expect(result.size == CGSize(width: Fixture.size.height, height: Fixture.size.width))
   }
 
-  /// An SVG has no pixels; it reports the size it draws at by default, its
-  /// canvas at the screen's scale, as Android does.
+  /// An SVG reports its canvas at screen scale, as on Android.
   @Test func anSvgReportsItsCanvasAtTheScreensScale() async throws {
     let result = await adapter.size(adapter.request(for: try Fixture.svg()))
     let scale = UITraitCollection.current.displayScale

@@ -1,14 +1,7 @@
-// TurboImage 2.0 example and on-device smoke test.
-//
-// Each scenario checks one cross-platform contract through the real Fabric
-// view and the real Nuke/Coil adapter: cache keys, the cache-policy tier
-// matrix, validation, error codes, placeholders, view recycling, and the
-// event lifecycle. Scenarios that depend on cache state mount strictly after
-// the load they depend on, so outcomes are deterministic.
-//
-// When every scenario has settled, the app logs exactly one line:
+// TurboImage example and on-device smoke test. Each scenario checks one
+// cross-platform contract through the real view and loader. When all settle
+// the app logs one line, which scripts/smoke-{android,ios}.sh wait for:
 //   TURBOIMAGE_SMOKE {"pass":true,"passed":N,"total":N,"blocked":N,"failed":{...}}
-// scripts/smoke-{android,ios}.sh wait for that line in release builds.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentRef } from 'react';
 import {
@@ -25,70 +18,54 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
 import type { Source, TurboImageProps } from 'react-native-turbo-image';
 
-// Every remote fixture comes from scripts/fixture-server.py, which the smoke
-// scripts start on the host. The iOS simulator shares the host's loopback;
-// the Android emulator reaches it through `adb reverse`. Nothing depends on
-// a third-party host, and the server can do what a public one cannot: answer
-// by request header, send chosen Cache-Control headers, send slowly, and
-// report how many requests actually arrived (`/__hits`).
+// Remote fixtures come from scripts/fixture-server.py on the host (Android
+// via `adb reverse`). It can vary headers, send slowly, and count hits.
 // The port must match scripts/fixture-server.sh.
 const BASE = 'http://localhost:8765';
 
-// Part of the URLs whose requests the server counts, so a count never
-// includes an earlier run against a server that was left running.
+// Per-run URL tag, so hit counts ignore earlier runs.
 const RUN = Date.now().toString(36);
 
-// One 600×400 JPEG under any name: a distinct name is a distinct URL, so
-// scenarios never share cache entries by accident.
+// One 600×400 JPEG under any name; distinct names never share cache entries.
 const photo = (name: string) => `${BASE}/photo/${name}.jpg`;
 const URI_A = photo('a');
 const URI_NEVER_LOADED = photo('never-loaded');
 const URI_KEYED_1 = photo('keyed-1');
 const URI_KEYED_2 = photo('keyed-2');
-// `/slow/` bodies arrive in small timed writes: several progress events for
-// the lifecycle scenarios, and a large load that is still downloading when
-// JS reacts to onStart, so the supersede scenario can cancel it mid-flight.
+// `/slow/` bodies trickle in: several progress events, and time to cancel.
 const URI_LIFECYCLE = `${BASE}/slow/photo/lifecycle.jpg`;
 const URI_LARGE = `${BASE}/slow/large/superseded.jpg`;
 const URI_SMALL = photo('small');
-// Used only by the cache-module scenarios (prefetch → dispose chain).
+// For the prefetch → dispose chain.
 const URI_PREFETCH = photo('prefetch');
-// Used only by the processed-variant dispose chain.
+// For the processed-variant dispose chain.
 const URI_PROCESSED = photo('processed');
 
-// 3000×2000, far larger than any card: the downscaling scenarios' source.
+// 3000×2000: the downscaling scenarios' source.
 const URI_OVERSIZED = `${BASE}/large/oversized.jpg`;
 
-// Sized at startup, before any image mounts, as apps are told to. The
-// `configureCache` scenario reads the outcome.
+// Sized at startup, before any image mounts; checked by `configureCache`.
 const cacheConfigured: boolean = TurboImage.configureCache({ maxDiskSize: 200 * 1024 * 1024 });
 
-// A card's image is as wide as the window minus the content padding and has
-// the 3:2 shape of every photo fixture, so a downscaled decode of a larger
-// 3:2 image is exactly the card's size in pixels (give or take rounding).
+// Cards are 3:2 like the fixtures, so a downscaled decode is the card's pixel size.
 const CONTENT_PADDING = 16;
 const CARD_WIDTH = Dimensions.get('window').width - 2 * CONTENT_PADDING;
 const CARD_WIDTH_PX = CARD_WIDTH * PixelRatio.get();
 
-// What a 600×400 photo fixture is decoded to in a card: itself, unless the
-// card is narrower than 600 px, in which case the default downscaling brings
-// it to the card's size. Phones have cards wider than that, but the default
-// emulator on CI has a 320 dp, 1× screen (288 px cards), where expecting
-// 600×400 outright failed.
+// A 600×400 photo decodes at its own size, or at the card's on screens
+// narrower than 600 px (e.g. CI's 1× emulator).
 const PHOTO_SCALE = Math.min(1, CARD_WIDTH_PX / 600);
 const PHOTO_DECODED = { width: 600 * PHOTO_SCALE, height: 400 * PHOTO_SCALE };
 
-// `resize` is in points/dp and the core converts it with the screen scale,
-// so the processed bitmap is this many pixels wide on either platform.
+// `resize` is in points/dp, so the bitmap is this many pixels wide.
 const RESIZE_DP = 60;
 const RESIZED_PX = Math.round(RESIZE_DP * PixelRatio.get());
 
-// logo.svg has a 120×80 viewBox and no pixels of its own. Each scenario gets
-// its own URL, so none of them reads another's cache entry.
+// logo.svg: a 120×80 viewBox. One URL per scenario.
 const svg = (name: string) => `${BASE}/logo.svg?v=${name}`;
-// Drawn for a card (3:2, like the SVG), it is the card's size in pixels.
+// Drawn for a card: the card's pixel size.
 const SVG_IN_CARD = { width: CARD_WIDTH_PX, height: (CARD_WIDTH_PX * 2) / 3 };
-// Drawn at its own size, 120×80 is read as points/dp.
+// Drawn at its own size: 120×80 points/dp.
 const SVG_OWN_SIZE = { width: 120 * PixelRatio.get(), height: 80 * PixelRatio.get() };
 
 type Outcome = 'load' | 'error';
@@ -100,9 +77,8 @@ type Scenario = {
   // The cache-module probes also pass it to prefetch/dispose.
   source: Source;
   cachePolicy: NonNullable<TurboImageProps['cachePolicy']>;
-  // Failing scenarios carry a placeholder. With showPlaceholderOnFailure it
-  // must stay visible after the failure, without it the view must be blank
-  // (compare SMOKE_SCREENSHOT output across platforms).
+  // Failing scenarios carry a placeholder: kept with showPlaceholderOnFailure,
+  // else blank.
   placeholder?: TurboImageProps['placeholder'];
   showPlaceholderOnFailure?: boolean;
   rounded?: boolean;
@@ -110,29 +86,25 @@ type Scenario = {
   indicator?: TurboImageProps['indicator'];
   allowHardware?: boolean;
   allowDownscaling?: boolean;
-  // Half a card wide (same 3:2 shape), for scenarios about one image shown
-  // at two sizes.
+  // Half a card wide, for one image at two sizes.
   halfWidth?: boolean;
-  // Image processors, passed straight through to <TurboImage>.
   processing?: Pick<TurboImageProps, 'resize' | 'blur' | 'monochrome' | 'tint'>;
   expect: Outcome;
-  // For expected loads: the exact onSuccess size (in pixels).
+  // Expected loads: the exact onSuccess size in pixels.
   expectSize?: { width: number; height: number };
-  // For expected loads: the onSuccess size, within a couple of pixels (the
-  // two platforms' decoders round a downscaled size differently).
+  // Expected loads: onSuccess size within a few pixels (decoders round differently).
   expectSizeNear?: { width: number; height: number };
-  // For expected loads: the URL onSuccess reports.
+  // Expected loads: the URL onSuccess reports.
   expectSource?: string;
-  // For expected failures: the cross-platform `onFailure.code`.
+  // Expected failures: `onFailure.code`.
   expectCode?: string;
-  // For the getSize probe: what TurboImage.getSize must resolve with.
+  // getSize probe: the expected result.
   expectGetSize?: { width: number; height: number };
-  // For the urlCache probe: the requests the server must have seen for the
-  // source after its two loads, and how many of them were conditional.
+  // urlCache probe: expected server hits after two loads, and how many conditional.
   expectHits?: { count: number; conditional: number };
   // Mount only after these scenarios have settled.
   after?: string | string[];
-  // Scenarios that need more than one load render a probe instead.
+  // Multi-load scenarios render a probe instead.
   kind?:
     | 'recycle'
     | 'reattach'
@@ -176,8 +148,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'memoryCacheKeyPlaceholder',
     title: 'memoryCacheKey placeholder shows the photo loaded above',
-    // The source can never load (cacheOnly miss); the placeholder is the
-    // `network` scenario's image, taken from the memory cache.
+    // cacheOnly miss; the placeholder is `network`'s image from memory.
     source: { uri: photo('never-loaded-2') },
     placeholder: { memoryCacheKey: URI_A },
     showPlaceholderOnFailure: true,
@@ -205,8 +176,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'cacheHitCanonicalKey',
     title: 'cacheOnly hits the entry written above (fragment ignored)',
-    // Upper-case host and a fragment: the core's canonical key must map it
-    // to the entry `network` wrote.
+    // Upper-case host and a fragment must canonicalize to `network`'s key.
     source: { uri: URI_A.replace('localhost', 'LOCALHOST') + '#thumb' },
     cachePolicy: 'cacheOnly',
     expect: 'load',
@@ -238,20 +208,16 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'recycledSameSource',
     title: 'a recycled view with the same source loads again',
-    // Mounts, unmounts once loaded, remounts with the same source: Fabric on
-    // iOS hands back the recycled view, whose stale props used to suppress
-    // the reload.
+    // Mount, unmount, remount with the same source: the recycled iOS view's
+    // stale props once suppressed the reload.
     source: { uri: URI_A },
     cachePolicy: 'default',
     expect: 'load',
     after: 'network',
     kind: 'recycle',
   },
-  // A view that scrolls out of a `removeClippedSubviews` list is detached
-  // from its window on Android and attached again when it scrolls back. Coil
-  // restarts a view's last request on attach, which for a finished load
-  // would fetch a noCache image again, or retry a failure JS already heard
-  // about. The server's request count shows whether it did.
+  // Android detaches clipped views; Coil restarts the last request on
+  // reattach, which must not refetch or re-report. The hit count checks it.
   {
     id: 'reattachLoaded',
     title: 'a loaded noCache image is not fetched again when reattached',
@@ -298,8 +264,7 @@ const SCENARIOS: Scenario[] = [
     kind: 'getSize',
   },
   {
-    // The placeholder's own load is silent: the card sees one start, one
-    // success and one completion, for the image.
+    // The placeholder's load is silent: one start, success and completion.
     id: 'imagePlaceholder',
     title: 'an image placeholder ({ uri }) while a slow image loads',
     source: { uri: `${BASE}/slow/photo/image-placeholder.jpg` },
@@ -345,8 +310,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'clearCaches',
     title: 'clearMemoryCache + clearDiskCache empty both tiers',
-    // Written by explicitKeyWrite, read by explicitKeyRead; after clearing,
-    // a cacheOnly read must miss.
+    // Written by explicitKeyWrite; after clearing, cacheOnly must miss.
     source: { uri: URI_KEYED_1, cacheKey: 'shared-key' },
     cachePolicy: 'cacheOnly',
     expect: 'error',
@@ -366,8 +330,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'processed',
     title: 'resize + tint, served from the shared disk original',
-    // cacheOnly after `network`: the processed variant is not in memory yet,
-    // so this proves it is derived from the original's disk entry.
+    // Not in memory yet, so it is derived from the original's disk entry.
     source: { uri: URI_A },
     processing: { resize: RESIZE_DP, tint: '#2060c0' },
     cachePolicy: 'cacheOnly',
@@ -414,9 +377,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'fullSize',
     title: 'allowDownscaling={false} decodes every pixel, from the disk original',
-    // cacheOnly after `downscaled`: the full-size image is in neither cache
-    // tier as pixels, so this proves the disk kept the original bytes and
-    // not the downscaled image.
+    // Proves disk kept the original bytes, not the downscaled image.
     source: { uri: URI_OVERSIZED },
     allowDownscaling: false,
     cachePolicy: 'cacheOnly',
@@ -424,11 +385,8 @@ const SCENARIOS: Scenario[] = [
     expectSize: { width: 3000, height: 2000 },
     after: 'downscaled',
   },
-  // The HTTP cache obeys the response's Cache-Control (RFC §4.2a). Each
-  // probe loads its URL twice with the memory cache cleared in between, then
-  // asks the server what it saw. Sequential: every probe clears the memory
-  // cache, which `memoryCacheKeyPlaceholder` and others read, so the chain
-  // starts after `clearCaches`, which already runs after all of those.
+  // The HTTP cache obeys Cache-Control (RFC §4.2a). Each probe clears the
+  // memory cache, so the chain runs after `clearCaches`.
   {
     id: 'urlCache',
     title: 'urlCache: a fresh response is fetched once (max-age)',
@@ -462,12 +420,9 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'syncReload',
     title: 'memory-cache hits on a mounted view: one completion per start',
-    // One view, four sources in a row: A, B, A, B. The last two are in the
-    // memory cache at this view's size, so on Android the loader calls back
-    // before `load()` has returned. That once left a finished load looking
-    // in flight, and the next change of source reported it as cancelled.
-    // After the urlCache chain, which is the last thing to clear the memory
-    // cache: a clear between the steps would turn the hits into fetches.
+    // A, B, A, B on one view: the last two are memory hits that call back
+    // inside `load()` on Android, which once looked like a cancel. Runs after
+    // the urlCache chain, the last to clear memory.
     source: { uri: photo('sync-a') },
     cachePolicy: 'default',
     expect: 'load',
@@ -477,17 +432,14 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'liveText',
     title: 'Live Text on an image with text (iOS only; no-op on Android)',
-    // Asserts the load succeeds with the interaction attached, which
-    // exercises the runtime lookup of the Swift class. Whether VisionKit
-    // found the text is visible in a screenshot (the Live Text button).
+    // Loads with Live Text attached (checks the Swift class lookup).
     source: { uri: `${BASE}/text.png` },
     enableLiveTextInteraction: true,
     cachePolicy: 'default',
     expect: 'load',
   },
-  // `/accept/png` answers according to the Accept header (406 when it
-  // cannot), so the outcome proves the header reached the server. noCache
-  // because headers deliberately do not key the cache (RFC §4.1).
+  // `/accept/png` returns 406 without the right Accept header. noCache since
+  // headers don't key the cache (RFC §4.1).
   {
     id: 'headersSent',
     title: 'source.headers reach the server (Accept: image/png → 200)',
@@ -496,9 +448,7 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
   },
   {
-    // A 200 whose body is not an image, as a server's HTML error page often
-    // is. Android once reported this as `network`: its `ImageDecoder`
-    // throws an `IOException` subclass.
+    // A 200 with a non-image body must be `decode`, not `network`.
     id: 'notAnImage',
     title: 'a 200 that is not an image fails as decode',
     source: { uri: `${BASE}/not-an-image/${RUN}.jpg` },
@@ -513,9 +463,8 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'noCache',
     expect: 'error',
     expectCode: 'network',
-    // Sequential on purpose: concurrent loads of one URL are coalesced on
-    // both platforms (Nuke task coalescing, Coil dedup), and headers are not
-    // part of that identity any more than of the cache key (RFC §4.1).
+    // Sequential: concurrent loads of one URL are coalesced, ignoring headers
+    // (RFC §4.1).
     after: 'headersSent',
   },
   {
@@ -526,9 +475,7 @@ const SCENARIOS: Scenario[] = [
     expect: 'error',
     expectCode: 'invalidRequest',
   },
-  // Formats are detected from the bytes (no `format` prop). Whether the
-  // animated ones actually play is checked with two screenshots, since no
-  // event reports animation.
+  // Formats are detected from the bytes; animation is checked by screenshot.
   {
     id: 'gif',
     title: 'animated GIF',
@@ -540,9 +487,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'gifDownscaled',
     title: 'a 1500×1000 animated GIF is decoded at the card size too',
-    // The still of an animated image follows the view's size like any other
-    // image (an earlier iOS decoder kept every frame at full size). The
-    // frames do too, which no event reports.
+    // An animated image's still follows the view size like any other.
     source: { uri: `${BASE}/anim-large.gif` },
     cachePolicy: 'default',
     expect: 'load',
@@ -574,9 +519,8 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'svgFullSize',
     title: 'allowDownscaling={false} does not shrink an SVG to its own size',
-    // A bitmap's original is every pixel; an SVG's would be 120×80, scaled
-    // up by the view. Android draws it for the card. iOS keeps the vector
-    // image, which reports its canvas and is drawn sharp by the view.
+    // Original size: Android draws the SVG for the card; iOS keeps the vector
+    // and reports its canvas.
     source: { uri: svg('full-size') },
     cachePolicy: 'default',
     allowDownscaling: false,
@@ -588,8 +532,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'svgTinted',
     title: 'a processed SVG is drawn at the card size before the processor runs',
-    // The core works on pixels, so here iOS needs a bitmap too. It used to
-    // be the 120×80 canvas at 1×.
+    // Processing needs pixels, so iOS rasterizes the SVG too.
     source: { uri: svg('tinted') },
     processing: { tint: '#2060c0' },
     cachePolicy: 'default',
@@ -609,10 +552,8 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'svgFullSizeTintedSmaller',
     title: 'the same processed SVG in a smaller view is drawn again for that view',
-    // Same source and processing as the card above, so the same cache key.
-    // With allowDownscaling={false} the request carries no decode size, and
-    // on iOS the processed bitmap's memory key had no size in it either:
-    // this view was handed the card-sized bitmap.
+    // Same cache key as the card above, but no decode size: iOS once handed
+    // this view the card-sized bitmap.
     source: { uri: svg('full-size-tinted') },
     processing: { tint: '#2060c0' },
     cachePolicy: 'default',
@@ -625,9 +566,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'svgBlurred',
     title: 'blur without resize acts on an SVG at its own size in points/dp',
-    // `blur` is in image pixels, so the view's size must not matter; the
-    // screen's scale does, or the SVG would be a third of its size on a 3×
-    // screen and the blur three times as strong.
+    // `blur` is in image pixels: the view size must not matter, the screen scale must.
     source: { uri: svg('blurred') },
     processing: { blur: 2 },
     cachePolicy: 'default',
@@ -637,8 +576,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'userAgent',
     title: "the User-Agent is not OkHttp's default, which some CDNs refuse",
-    // `/ua/` answers 403 to `okhttp/x`, as Wikimedia does (RFC §4.5b). iOS
-    // sends CFNetwork's User-Agent and passes either way.
+    // `/ua/` 403s `okhttp/x` like Wikimedia (RFC §4.5b); iOS passes anyway.
     source: { uri: `${BASE}/ua/photo.jpg` },
     cachePolicy: 'default',
     expect: 'load',
@@ -646,13 +584,9 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'cookie',
     title: "a cookie set through React Native's fetch: sent on iOS, not on Android",
-    // `/cookie/set` answers the app's `fetch` with Set-Cookie, as a login
-    // endpoint would; `/cookie/photo/` answers 403 without that cookie. iOS
-    // shares `HTTPCookieStorage` between the two, so the image loads. The
-    // Android client has no cookie jar, as in 1.x: React Native's store
-    // starts WebView on first use, which held up a process's first network
-    // image by 0.2–0.6 s. Apps pass a session in `source.headers` instead.
-    // noCache, so the request is made on every run.
+    // `/cookie/photo/` needs the cookie `fetch` got from `/cookie/set`. iOS
+    // shares cookie storage; Android has no cookie jar (RN's would start
+    // WebView and delay the first image), so apps pass `source.headers`.
     source: { uri: `${BASE}/cookie/photo/session.jpg` },
     cachePolicy: 'noCache',
     ...(Platform.OS === 'android'
@@ -663,9 +597,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'requireAsset',
     title: "require()'d bundled asset loads even with cacheOnly",
-    // Release builds resolve this to a file:// bundle URL on iOS and to a
-    // resource name on Android (mapped to android.resource://). Local
-    // sources are not "network", so cacheOnly must still read them.
+    // A bundled asset is local, so cacheOnly must still read it.
     source: require('./assets/local-fixture.png'),
     cachePolicy: 'cacheOnly',
     expect: 'load',
@@ -674,8 +606,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'softwareBitmap',
     title: 'allowHardware={false} still loads (Android: software bitmap)',
-    // The bitmap's config is not visible from JS; it was checked once with
-    // a temporary log (HARDWARE by default, ARGB_8888 with this prop).
+    // The bitmap config isn't visible from JS; checked once by hand.
     source: { uri: photo('software') },
     allowHardware: false,
     cachePolicy: 'default',
@@ -685,9 +616,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'indicatorEvents',
     title: 'indicator: app handlers still get every event, in order',
-    // The spinner is driven by onStart/onCompletion inside <TurboImage>;
-    // this checks the app's own handlers are still called around it. That
-    // the spinner is drawn was checked by screenshot on a slow load.
+    // The app's own onStart/onCompletion still fire around the spinner.
     source: { uri: `${BASE}/slow/photo/indicator.jpg` },
     indicator: { style: 'large', color: '#e63946' },
     cachePolicy: 'noCache',
@@ -715,7 +644,7 @@ const SCENARIOS: Scenario[] = [
 // The probes that track a source by URI only ever get URI sources.
 const uriOf = (source: Source) => (typeof source === 'number' ? `asset:${source}` : source.uri);
 
-// Fail rather than hang if a callback never arrives (e.g. a lost event).
+// Fail rather than hang if a callback never arrives.
 const TIMEOUT_MS = 45_000;
 
 type Result = { ok: boolean; outcome: string; detail: string };
@@ -729,15 +658,13 @@ type Recorded =
   | { type: 'failure'; code: string }
   | { type: 'completion'; state: string };
 
-// Builds the five handlers for one <TurboImage>, tagging every event with
-// the source the element had when it fired.
+// The five handlers for one <TurboImage>, tagged with its current source.
 function recorder(source: string, push: (e: Recorded) => void) {
   return {
     onStart: () => push({ type: 'start', source }),
     onProgress: (e: { nativeEvent: { completed: number; total: number } }) =>
       push({ type: 'progress', ...e.nativeEvent }),
-    // The native `source` field, not the JS-side URI: proves *which* load
-    // succeeded even if a late callback raced a source change.
+    // Native's `source`: proves which load succeeded despite races.
     onSuccess: (e: { nativeEvent: { source: string } }) =>
       push({ type: 'success', source: e.nativeEvent.source }),
     onFailure: (e: { nativeEvent: { code: string } }) =>
@@ -753,8 +680,7 @@ const describe = (events: Recorded[]) =>
     .filter((t, i, all) => t !== 'progress' || all[i - 1] !== 'progress')
     .join(' → ');
 
-// Validates one complete, successful load: start, monotonic progress that
-// ends at completed == total (when total is known), success, completion.
+// One full successful load: start, monotonic progress, success, completion.
 function validateLoad(events: Recorded[]): string | null {
   const types = events.map((e) => e.type);
   if (types[0] !== 'start') return 'first event is not start';
@@ -794,8 +720,7 @@ function LifecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       source={scenario.source}
       cachePolicy={scenario.cachePolicy}
       indicator={scenario.indicator}
-      // `push` reads the ref, but only when an event fires: `recorder` wraps
-      // it in handlers and never calls it during render.
+      // `push` reads the ref only when an event fires, not during render.
       // oxlint-disable-next-line react/refs
       {...recorder(uriOf(scenario.source), push)}
     />
@@ -827,8 +752,7 @@ function SupersedeProbe({ scenario, settle }: { scenario: Scenario; settle: Sett
       style={styles.image}
       source={{ uri }}
       cachePolicy={scenario.cachePolicy}
-      // `push` reads the ref, but only when an event fires: `recorder` wraps
-      // it in handlers and never calls it during render.
+      // `push` reads the ref only when an event fires, not during render.
       // oxlint-disable-next-line react/refs
       {...recorder(uri, push)}
     />
@@ -839,7 +763,7 @@ function RecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle
   const [phase, setPhase] = useState<'first' | 'gap' | 'second'>('first');
   useEffect(() => {
     if (phase === 'gap') {
-      // One frame with nothing mounted puts the first view in the recycle pool.
+      // One empty frame puts the first view in the recycle pool.
       const id = requestAnimationFrame(() => setPhase('second'));
       return () => cancelAnimationFrame(id);
     }
@@ -865,22 +789,14 @@ function RecycleProbe({ scenario, settle }: { scenario: Scenario; settle: Settle
   );
 }
 
-// How long a detached view stays detached, and how long after it is back
-// the sentinel load starts (the scroll that reattaches it is a native
-// command, so "back" is a few frames after the call).
+// Time detached, and delay before the sentinel load after reattach.
 const DETACHED_MS = 300;
 const REATTACHED_MS = 150;
 
-// Loads the scenario's source, scrolls the image out of a
-// `removeClippedSubviews` scroll view and back, then checks that the load
-// reported exactly one outcome and the server saw `expectHits` requests.
-// Android removes the clipped image from its parent, which detaches it from
-// the window; iOS keeps it attached, so there this is a plain load.
-//
-// "No second request" is not judged by waiting a fixed time. Once the image
-// is back, a sentinel image is loaded through the same loader; a request the
-// reattach should not have made was started before the sentinel's, so it has
-// reached the server by the time the sentinel's load has finished.
+// Load, scroll out of a `removeClippedSubviews` view and back (Android
+// detaches it; iOS doesn't), then check one outcome and `expectHits`.
+// A sentinel load through the same loader stands in for a fixed wait:
+// any stray request reaches the server before it finishes.
 function ReattachProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const outcomes = useRef<string[]>([]);
@@ -955,10 +871,8 @@ function ReattachProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
   );
 }
 
-// A real FlatList, which clips its rows' views on Android by default
-// (`removeClippedSubviews`). Every visible row must load: a row's view that
-// was taken out of its parent and put back before its load could size itself
-// used to wait for a layout pass that never came.
+// A FlatList clips rows on Android; every visible row must still load
+// (a re-parented view once waited for a layout that never came).
 const LIST_ROWS = [0, 1, 2].map((row) => photo(`list-row-${row}`));
 
 function FlatListProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
@@ -991,9 +905,8 @@ function FlatListProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
   );
 }
 
-// One mounted view through four sources, each set when the one before has
-// completed. Nothing is ever superseded, so every start must be answered by
-// exactly one completion, and none of them may say `cancelled`.
+// One view through four sources, each after the last completes: every
+// start gets one completion, never `cancelled`.
 const SYNC_RELOAD_SOURCES = [photo('sync-a'), photo('sync-b'), photo('sync-a'), photo('sync-b')];
 
 function SyncReloadProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
@@ -1027,8 +940,7 @@ function SyncReloadProbe({ scenario, settle }: { scenario: Scenario; settle: Set
       source={{ uri }}
       cachePolicy={scenario.cachePolicy}
       resizeMode="cover"
-      // `push` reads the ref, but only when an event fires: `recorder` wraps
-      // it in handlers and never calls it during render.
+      // `push` reads the ref only when an event fires, not during render.
       // oxlint-disable-next-line react/refs
       {...recorder(uri, push)}
     />
@@ -1083,8 +995,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
   );
 }
 
-// Runs `before` (a cache-module call), then mounts a cacheOnly view of the
-// scenario's source and checks the outcome against `expect`/`expectCode`.
+// Runs `before`, then a cacheOnly view checked against `expect`/`expectCode`.
 function CacheThenView({
   scenario,
   settle,
@@ -1114,10 +1025,7 @@ const PrefetchProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView {...p} before={() => TurboImage.prefetch([p.scenario.source])} />
 );
 
-// getSize reports the full size, then a cacheOnly view proves it left the
-// image in the disk cache, as a prefetch does.
-// The startup call must have resolved, and a call after images exist must
-// be refused: the caches are built by then.
+// The startup call must have applied; a call after images exist is refused.
 function ConfigureCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
   useEffect(() => {
     const later = TurboImage.configureCache({ maxDiskSize: 1 });
@@ -1131,6 +1039,7 @@ function ConfigureCacheProbe({ scenario, settle }: { scenario: Scenario; settle:
   return <View style={styles.image} />;
 }
 
+// getSize reports the full size and leaves the image on disk, like prefetch.
 const GetSizeProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView
     {...p}
@@ -1179,14 +1088,11 @@ function PrefetchInvalidProbe({ scenario, settle }: { scenario: Scenario; settle
   return <View style={styles.image} />;
 }
 
-// The HTTP cache is a store of its own (RFC §4.2a). Three loads of one URL:
-//   1. `urlCache` loads it (network; stored in the HTTP cache if allowed);
-//   2. with the memory cache cleared, `cacheOnly` must miss: the keyed disk
-//      cache was never written;
-//   3. `urlCache` loads it again: from the HTTP cache, from the network, or
-//      revalidated, depending on the response's Cache-Control.
-// Which of those step 3 was is not visible in the events, so the probe then
-// asks the fixture server what it received (`expectHits`).
+// The HTTP cache is its own store (RFC §4.2a). Three loads of one URL:
+//   1. `urlCache` loads it;
+//   2. memory cleared, `cacheOnly` must miss;
+//   3. `urlCache` again: cached, refetched or revalidated per Cache-Control,
+//      checked against the server's hit count.
 function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
   const [phase, setPhase] = useState<'first' | 'clearing' | 'cacheOnly' | 'again' | 'counting'>(
     'first'
@@ -1296,8 +1202,7 @@ export default function App() {
   const [results, setResults] = useState<Record<string, Result>>({});
   const reported = useRef(false);
 
-  // First settle wins: a duplicate callback (e.g. a restarted Coil request
-  // after reattach) must not flip a settled result.
+  // First settle wins, so a duplicate callback can't flip a result.
   const settle = useCallback<Settle>((id, ok, outcome, detail) => {
     setResults((prev) => (prev[id] ? prev : { ...prev, [id]: { ok, outcome, detail } }));
   }, []);
@@ -1314,17 +1219,14 @@ export default function App() {
     }
     reported.current = true;
     const pass = Object.values(results).every((r) => r.ok);
-    // Compact on purpose: iOS os_log truncates messages at ~1 KB, which cut
-    // the full results off mid-JSON. Details are only needed for failures.
-    // Blocked scenarios are only counted: their cause is one of the listed
-    // failures, and listing them would push that cause past the 1 KB cut.
+    // Compact: iOS os_log truncates at ~1 KB. Blocked scenarios are only
+    // counted, so the real failures fit.
     const notOk = Object.entries(results).filter(([, r]) => !r.ok);
     const failed = Object.fromEntries(notOk.filter(([, r]) => r.outcome !== 'blocked'));
     const blocked = notOk.length - Object.keys(failed).length;
     const passed = Object.keys(results).length - notOk.length;
-    // Release builds on iOS drop everything below RCTLogLevelError, and the
-    // smoke scripts run release builds, so the result has to go out as an
-    // error there. Debug keeps console.log to avoid a LogBox error toast.
+    // iOS release builds drop logs below error level; debug uses console.log
+    // to avoid a LogBox toast.
     const report = __DEV__ ? console.log : console.error;
     report(
       `TURBOIMAGE_SMOKE ${JSON.stringify({ pass, passed, total: SCENARIOS.length, blocked, failed })}`
@@ -1336,10 +1238,7 @@ export default function App() {
       setResults((prev) => {
         const next = { ...prev };
         for (const s of SCENARIOS) {
-          // A scenario whose prerequisites never settled was never mounted.
-          // Reporting it as a timeout once made hung network loads look
-          // like hung cache reads, so say which it is. Judged against
-          // `prev`: only what settled before the deadline counts.
+          // Never mounted because a prerequisite never settled: say so, not "timeout".
           const waitingFor = [s.after ?? []].flat().filter((dep) => !prev[dep]);
           next[s.id] ??=
             waitingFor.length > 0
@@ -1391,11 +1290,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontFamily: 'Menlo' },
   image: { width: '100%', aspectRatio: 3 / 2, backgroundColor: '#ddd' },
   halfImage: { width: '50%', aspectRatio: 3 / 2, backgroundColor: '#ddd' },
-  // Explicit sizes: a horizontal scroll view has no height of its own to
-  // give an `aspectRatio` child.
+  // Explicit sizes: a horizontal scroll view can't size an `aspectRatio` child.
   reattachScroll: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3 },
   reattachImage: { width: CARD_WIDTH, height: (CARD_WIDTH * 2) / 3, backgroundColor: '#ddd' },
-  // Out of the layout, so the card keeps its height when it appears.
+  // Absolute, so the card keeps its height.
   sentinel: { position: 'absolute', width: 8, height: 8, opacity: 0 },
   listRow: { width: CARD_WIDTH / 3, height: (CARD_WIDTH * 2) / 3, backgroundColor: '#ddd' },
   // Wide enough to scroll the image two card widths out of the clip rect.

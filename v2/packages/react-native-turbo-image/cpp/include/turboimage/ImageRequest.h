@@ -1,27 +1,11 @@
-// TurboImage core: cross-platform request semantics.
+// TurboImage core: what an image request means, shared by both platforms.
 //
-// This header is the single source of truth for what an image request
-// *means* in TurboImage 2.0. The iOS (Nuke) and Android (Coil) adapters do
-// not interpret JS props themselves; they receive a `ResolvedRequest` from
-// `resolveRequest()` and translate it mechanically into loader options. That
-// way cache keys and cache-tier behaviour cannot drift between platforms
-// (RFC rule 2 and rule 3).
+// Adapters (Nuke, Coil) do not read JS props; they translate a
+// `ResolvedRequest` into loader options, so cache keys and tiers cannot
+// drift between platforms (RFC rules 2 and 3).
 //
-// Ownership contract:
-//   * Every type here is a plain value type. Nothing holds pointers into
-//     caller-owned memory, so results may outlive their inputs.
-//
-// Threading contract:
-//   * Every function here is pure: no global state, no I/O, no allocation
-//     shared across calls. They are safe to call concurrently from any
-//     thread, including the RN JS thread, the UI thread, and loader worker
-//     threads.
-//
-// Dependency contract:
-//   * Standard library only. No React Native, Foundation, UIKit, JNI, or
-//     Android headers may be included from `cpp/` (RFC rule: core has no
-//     platform-framework dependencies). Platform glue lives in
-//     `ios/Fabric/` and `android/src/main/cpp/`.
+// All types are plain values and all functions are pure and thread-safe.
+// Standard library only: no RN, Apple, JNI or Android headers in `cpp/`.
 
 #pragma once
 
@@ -36,62 +20,48 @@
 
 namespace turboimage {
 
-// The JS-facing cache policy. The integer values are part of the ABI shared
-// with the JNI bridge and the ObjC++ bridge, so they are pinned explicitly.
+// The JS cache policy. Values are pinned ABI shared with JNI and ObjC++.
 enum class CachePolicy : std::int32_t {
-  // Read and write memory + disk, fall back to the network.
+  // Memory + disk, then network.
   Default = 0,
-  // Never touch the disk cache; memory and network only.
+  // Memory and network; never disk.
   MemoryOnly = 1,
-  // Skip every cache tier for reads and writes; always hit the network.
+  // No cache reads or writes; always network.
   NoCache = 2,
-  // Serve from memory or disk only; never start a network request.
+  // Memory or disk only; never network.
   CacheOnly = 3,
-  // Memory as usual, but the disk tier is the platform's HTTP cache, which
-  // obeys the response's `Cache-Control` (freshness, revalidation with
-  // ETag/Last-Modified, `no-store`). 1.x's name and, on iOS, 1.x's behaviour.
-  // See `ResolvedRequest::httpCache` for what this means for adapters.
+  // Disk tier is the platform HTTP cache, which obeys `Cache-Control`.
+  // See `ResolvedRequest::httpCache`.
   UrlCache = 4,
 };
 
-// The JS `resizeMode`. The core uses it for how large an image the view
-// needs decoded (`DecodeSize`), and for where a view draws it when the
-// platform's own modes cannot (`placeImage`). Pinned ABI, like `CachePolicy`.
+// The JS `resizeMode`. Drives `DecodeSize` and `placeImage`. Pinned ABI.
 enum class ResizeMode : std::int32_t {
   Contain = 0,
   Cover = 1,
   Stretch = 2,
   Center = 3,
-  // Like `center` when the image fits, like `contain` when it does not
-  // (CSS `object-fit: scale-down`, expo-image's `contentFit`). New in 2.0.
+  // `center` if the image fits, else `contain` (CSS `scale-down`).
   ScaleDown = 4,
 };
 
-// How large the loader should decode the image. Decoding a 12 MP photo for a
-// 100 pt avatar costs ~48 MB of bitmap for pixels nobody sees; downsampling
-// while decoding (ImageIO thumbnails, BitmapFactory sampling) avoids ever
-// allocating them. The core decides *which* target applies; only the loader
-// knows the view's size, so `View` is resolved by the platform.
-//
-// Every target is an upper bound: images are never upscaled to reach it.
-// The exception is a source with no pixels of its own (SVG), which is drawn
-// at the target; see `ResolvedRequest::vectorDecode`.
+// How large the loader should decode the image. Every target is an upper
+// bound (never upscale), except for vector sources; see `vectorDecode`.
+// `View` is resolved by the platform, which knows the view's size.
 struct DecodeSize {
   enum class Kind : std::int32_t {
-    // Decode every pixel of the source.
+    // Every pixel of the source.
     Original = 0,
-    // Decode to the view's size in pixels; see `fill`.
+    // The view's size in pixels; see `fill`.
     View = 1,
-    // Decode to `width` pixels wide, keeping the aspect ratio.
+    // `width` pixels wide, keeping aspect ratio.
     Width = 2,
   };
 
   Kind kind = Kind::Original;
-  // Kind::Width only: the target width in pixels.
+  // Kind::Width only: target width in pixels.
   std::int32_t width = 0;
-  // Kind::View only. true: the image must cover the view (the larger of the
-  // two scale factors), for `cover` and `stretch`. false: it only has to fit
-  // inside it, for `contain`.
+  // Kind::View only. true: cover the view (cover, stretch); false: fit it.
   bool fill = false;
 
   friend bool operator==(const DecodeSize&, const DecodeSize&) = default;
@@ -103,9 +73,8 @@ struct PixelSize {
   double height = 0;
 };
 
-// Where a view draws its image: the rectangle the whole image is scaled
-// into, in the same units as the box, which it may overflow (cover) or not
-// fill (contain, center, scale-down). The view clips to the box.
+// The rect a view draws the whole image into, in the box's units. It may
+// overflow the box; the view clips.
 struct PlacedRect {
   double x = 0;
   double y = 0;
@@ -114,58 +83,28 @@ struct PlacedRect {
   friend bool operator==(const PlacedRect&, const PlacedRect&) = default;
 };
 
-// `contentPosition` as fractions of the free space (CSS `object-position`
-// in percent): 0 puts the image at the box's left / top edge, 0.5 centres
-// it, 1 at the right / bottom edge. Values outside [0, 1] are clamped.
+// `contentPosition` as fractions of the free space (CSS `object-position`):
+// 0 = left/top, 0.5 = centre, 1 = right/bottom. Clamped to [0, 1].
 struct ContentPosition {
   double x = 0.5;
   double y = 0.5;
   friend bool operator==(const ContentPosition&, const ContentPosition&) = default;
 };
 
-// The rectangle `image` (its own size) is drawn in, inside `box` (the view's
-// content box, origin at 0,0), for `resizeMode` and `position`:
-//   cover      scaled to cover the box, the overflow cut by `position`
-//   contain    scaled to fit inside it, the free space split by `position`
-//   stretch    the box exactly (`position` does not apply)
-//   center     at its own size, placed by `position`
-//   scale-down at its own size if it fits, else as contain
-// Views use their platform's modes when `position` is centred and the mode
-// has one (every mode but scale-down on iOS), and this otherwise, so both
-// platforms place the image the same way. An unknown size (not positive)
-// gives the box.
+// The rect `image` is drawn in inside `box` (origin 0,0) for `resizeMode`
+// and `position`. Views use this when the platform has no matching mode, so
+// both platforms place images the same way. Unknown sizes give the box.
 [[nodiscard]] PlacedRect placeImage(PixelSize image, PixelSize box, ResizeMode resizeMode,
                                     ContentPosition position);
 
-// Whether a view should load its image again at its current size, because it
-// has grown past the size the image was decoded for (`DecodeSize::Kind::View`
-// only; the other kinds do not follow the view).
-//
-// `decoded`: the image on screen, in pixels. `loadedFor`: the view's size
-// when that image was loaded. `now`: the view's size now. `fill`: the
-// request's `DecodeSize::fill`.
-//
-// The image is decoded no larger than its view, so a view that grows (a
-// zoom, a rotation, an expanding card) draws it stretched and soft. This says
-// when that is worth a reload:
-//   * the view would draw the image at more than 1.5x its pixels. Not the
-//     first pixel of growth: a view that animates its size would otherwise
-//     reload on every frame. A ratio makes the number of reloads count the
-//     times the view grew by half, however smoothly it grows. (Nuke's
-//     animated-image view uses the same ratio for the same reason.)
-//   * and the image was cut down for its view at all. One that came out
-//     smaller than the view it was loaded for is the source at its own size,
-//     since decoding never upscales, and loading it again gives the same
-//     pixels.
-//
-// A view keeps the image on screen while the larger one loads (see
-// `ViewLifecycle::startUpgrade`), so nothing flashes and JS hears nothing.
+// Whether a view that grew should reload its image at the new size
+// (`DecodeSize::Kind::View` only). True when the view would draw the image
+// at more than 1.5x its pixels (a ratio, so animated resizes do not reload
+// every frame) and the image was actually downscaled for its old size.
 [[nodiscard]] bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bool fill);
 
-// What a loader is allowed to do with one cache tier. This maps 1:1 onto
-// Coil's `CachePolicy` and onto Nuke's `ImageRequest.Options` read/write
-// flags, which is why it is expressed as two booleans instead of a single
-// enum: both loaders model reads and writes independently.
+// Read/write access to one cache tier. Two booleans because both Coil and
+// Nuke model reads and writes separately.
 struct TierAccess {
   bool read = true;
   bool write = true;
@@ -174,9 +113,7 @@ struct TierAccess {
 };
 
 // Parses the JS spelling ('default' | 'memoryOnly' | 'noCache' |
-// 'cacheOnly' | 'urlCache'). Unknown or empty strings yield std::nullopt; callers treat
-// that as Default (Codegen already defaults the view prop). One parser so
-// views and the cache module cannot disagree.
+// 'cacheOnly' | 'urlCache'). Unknown or empty gives nullopt (treat as Default).
 [[nodiscard]] std::optional<CachePolicy> parseCachePolicy(std::string_view js);
 
 // One HTTP request header from `source.headers`. Order is preserved.
@@ -187,29 +124,21 @@ struct Header {
   friend bool operator==(const Header&, const Header&) = default;
 };
 
-// Everything a view's props say about which image to load and how. Two equal
-// requests are the same load, which is how the views decide whether a prop
-// change needs a new one: they compare this, field by field, instead of
-// keeping their own list of "props that reload". A field added here takes
-// part in that on both platforms without further code.
+// Everything a view's props say about which image to load and how. Views
+// reload when this changes, so a new field here triggers reloads on both
+// platforms for free.
 struct ImageRequest {
   std::string uri;
-  // An explicit cache key overrides URI-derived keys. Used when the same
-  // image is served from rotating signed URLs.
+  // Overrides the URI-derived cache key (e.g. for rotating signed URLs).
   std::optional<std::string> cacheKey;
   CachePolicy cachePolicy = CachePolicy::Default;
-  // Pixel processors (resize/blur/monochrome/tint) and the screen scale that
-  // converts `resize` from points/dp to pixels. See Processing.h.
+  // Processors and the screen scale that converts `resize` to pixels.
   ProcessingOptions processing;
   double pixelRatio = 1;
-  // Sent with the network request (1.x `source.headers`), e.g. an auth
-  // token. Deliberately NOT part of the cache key, as in 1.x: a URL is one
-  // cache entry whoever fetched it. Apps that serve per-user content at one
-  // URL must pass a per-user `cacheKey`.
+  // Sent with the request. Not part of the cache key: use a per-user
+  // `cacheKey` for per-user content at one URL.
   std::vector<Header> headers;
-  // The JS `allowDownscaling` prop (default true, expo-image's name and
-  // meaning). false always decodes the original, for views that are zoomed
-  // or grow after the image has loaded.
+  // JS `allowDownscaling` (default true). false always decodes the original.
   bool allowDownscaling = true;
   ResizeMode resizeMode = ResizeMode::Contain;
 
@@ -218,42 +147,25 @@ struct ImageRequest {
 
 struct ResolvedRequest {
   std::string url;
-  // The key adapters MUST use for both memory and disk caches. It names the
-  // *original* image: processed variants share it, and adapters attach
-  // `processorKey` so their loader keeps one memory entry per variant while
-  // the disk tier keeps one copy of the original bytes.
+  // Key for both memory and disk caches. Names the original image;
+  // adapters add `processorKey` so each variant gets its own memory entry
+  // while disk keeps one copy of the original.
   std::string cacheKey;
-  // Empty when no processing is requested; otherwise the identity of the
-  // processing step and its complete description (see Processing.h).
+  // Empty when there is no processing (see Processing.h).
   std::string processorKey;
-  // Validated copies of the request's headers, in order.
+  // Validated headers, in order.
   std::vector<Header> headers;
   TierAccess memory;
   TierAccess disk;
   bool allowNetwork = true;
-  // true: this request's disk tier is the HTTP cache, and `disk` describes
-  // access to that. It is a store of its own, not the key-addressed disk
-  // cache the other policies use:
-  //   * it is keyed by `url` (HTTP caches know nothing of `cacheKey`, which
-  //     still keys the memory tier),
-  //   * an entry is served only while the response's `Cache-Control` /
-  //     `Expires` say it is fresh, is revalidated when stale, and is never
-  //     stored for `no-store`,
-  //   * nothing is read from or written to the key-addressed disk cache, so
-  //     a later `cacheOnly` load does not see what this request stored.
-  // The memory tier holds decoded images and never expires within a process;
-  // that is deliberate (a list must not refetch on every scroll) and the
-  // same on both platforms.
+  // true: the disk tier is the HTTP cache, keyed by `url` and obeying
+  // `Cache-Control`; the key-addressed disk cache is not touched, so a later
+  // `cacheOnly` load will not see it. Memory still uses `cacheKey`.
   bool httpCache = false;
   DecodeSize decode;
-  // The size to draw the image at if it turns out to have no pixels of its
-  // own (SVG). Only the loader learns that, from the bytes, so both targets
-  // are always resolved. It is `decode` as it would be with
-  // `allowDownscaling` left on: a vector has no original to keep, and
-  // drawing it at its own (often small) size and scaling that up is what
-  // the opt-out exists to prevent. `Original` here means the image's own
-  // size read as points/dp, so it draws as large as on a 1x screen and as
-  // sharp as this one allows.
+  // Decode target if the source turns out to be a vector (SVG); only the
+  // loader can tell. Ignores `allowDownscaling = false` (a vector has no
+  // original to keep); `Original` here means its own size in points/dp.
   DecodeSize vectorDecode;
 
   friend bool operator==(const ResolvedRequest&, const ResolvedRequest&) =
@@ -264,9 +176,8 @@ enum class RequestError : std::int32_t {
   None = 0,
   EmptyUri = 1,
   UnsupportedScheme = 2,
-  // A header name that is not an RFC 9110 token, or a value containing CR,
-  // LF or NUL. Rejected rather than dropped: passing it on would allow
-  // header injection, and silently dropping it would hide an auth bug.
+  // Header name not an RFC 9110 token, or value with CR, LF or NUL.
+  // Rejected, not dropped: prevents injection without hiding auth bugs.
   InvalidHeader = 3,
 };
 
@@ -277,49 +188,36 @@ struct ResolveResult {
   [[nodiscard]] bool ok() const { return request.has_value(); }
 };
 
-// Why a load failed, as exposed to JS in `onError.code`. Adapters classify
-// their loader's errors into these buckets so JS sees the same code for the
-// same situation on both platforms (e.g. a `cacheOnly` miss is `NotCached`
-// whether Nuke reports `dataMissingInCache` or Coil synthesises HTTP 504).
-// Integer values are a pinned ABI shared with the ObjC seam and JNI.
+// Why a load failed (JS `onError.code`). Adapters map loader errors into
+// these so both platforms report the same code. Pinned ABI.
 enum class LoadErrorCode : std::int32_t {
   Unknown = 0,
   // The core rejected the request before any loader ran.
   InvalidRequest = 1,
-  // The policy forbade the network and no cache tier had the image.
+  // Network forbidden and no cache tier had the image.
   NotCached = 2,
   // Transport or HTTP failure.
   Network = 3,
-  // Bytes arrived but could not be decoded into an image.
+  // Bytes arrived but could not be decoded.
   Decode = 4,
 };
 
 // The stable JS spelling of a `LoadErrorCode`.
 [[nodiscard]] std::string_view loadErrorCodeName(LoadErrorCode code);
 
-// Normalises a URI into the canonical form used for cache keys:
-//   * scheme and host are lower-cased (they are case-insensitive per
-//     RFC 3986, and the two loaders disagree on whether they normalise them);
-//     ASCII letters only, and not the userinfo in front of the host,
-//   * the fragment is dropped (it never reaches the server).
-// Path and query are preserved byte-for-byte because servers may treat them
-// case-sensitively.
+// Canonical cache-key form of a URI: lower-case ASCII scheme and host (not
+// userinfo), fragment dropped. Path and query are kept byte for byte.
 [[nodiscard]] std::string canonicalCacheKey(std::string_view uri);
 
-// The cache keys a `placeholder.memoryCacheKey` may name, in the order to
-// look them up. The prop takes either what a source would be given as
-// `cacheKey` or what it would be given as `uri`, and the two are stored
-// differently: an explicit key verbatim, a URI in canonical form. So the key
-// is tried as written first and then canonicalised (once, if both are the
-// same). Empty for an empty key.
+// Keys to try, in order, for `placeholder.memoryCacheKey`: as written
+// (an explicit `cacheKey`), then canonicalised (a URI). Deduplicated;
+// empty for an empty key.
 [[nodiscard]] std::vector<std::string> memoryCacheKeyCandidates(std::string_view key);
 
-// Turns JS-facing props into the platform-neutral instructions adapters
-// execute. Validation lives here so both platforms reject the same inputs.
+// Validates JS props and turns them into adapter instructions.
 [[nodiscard]] ResolveResult resolveRequest(const ImageRequest& request);
 
-// A stable, human-readable version string for the core, surfaced in the
-// example app so a build can prove it linked the shared C++ code.
+// Core version string, shown in the example app to prove the C++ is linked.
 [[nodiscard]] std::string_view coreVersion();
 
 }  // namespace turboimage

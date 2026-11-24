@@ -24,23 +24,11 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 
-// What every test class here needs: the real Coil adapter, requests resolved
-// by the real C++ core, an image view in a real window, and images served by
-// scripts/fixture-server.py.
-//
-// The tests drive `CoilImageLoaderAdapter` through the seam
-// (`ImageLoaderAdapter`), as `TurboImageView` does. Nothing is faked: the
-// request goes through JNI into the core, Coil fetches over HTTP, decodes and
-// paints the view. So a failure here is in the core's resolution, the
-// adapter's translation or Coil's behaviour, and not in the view's lifecycle
-// or in JS, which is what the on-device smoke suite adds on top.
-//
-// Why a server and not files: the core treats local files as never cached
-// and never blocked by `cacheOnly`, so they cannot exercise the cache tiers.
-// The fixture server also counts the requests it receives, which is the only
-// way to tell a cache hit from a fetch (the seam's listener does not say).
-// Run through scripts/test-android-adapter.sh, which starts it and maps the
-// device's localhost to the host's.
+// Shared setup for the loader tests: the real Coil adapter driven through the
+// seam, the real core, a real window, and images from scripts/fixture-server.py.
+// A server (not files) because local files skip the cache tiers, and its
+// request counts tell a cache hit from a fetch. Run via
+// scripts/test-android-adapter.sh.
 
 /** An empty window for the image views under test. */
 class TestActivity : Activity() {
@@ -80,13 +68,8 @@ private val sharedAdapter: CoilImageLoaderAdapter by lazy {
 }
 
 /**
- * Base of every test class: a window, the adapter, and helpers that turn the
- * seam's callbacks into values a test can assert on.
- *
- * Tests share the adapter and so its caches, as views in an app do. They
- * stay independent by never sharing an image: [photo] and friends put a
- * random name in every URL, which the fixture server ignores and the cache
- * key does not.
+ * Base test class: a window, the adapter, and helpers. Tests share the
+ * adapter's caches, so [photo] and [fixture] give every URL a random name.
  */
 internal abstract class AdapterTest {
   protected val adapter: CoilImageLoaderAdapter
@@ -117,10 +100,7 @@ internal abstract class AdapterTest {
   /** One of the server's fixed fixtures, under a cache key of its own. */
   protected fun fixture(path: String) = "$BASE/$path?test=${UUID.randomUUID()}"
 
-  /**
-   * [uri] as the core resolves it for a view. Fails the test if the core
-   * rejects the request: none of these tests is about that.
-   */
+  /** [uri] as the core resolves it for a view; fails if the core rejects it. */
   protected fun resolve(
     uri: String,
     cachePolicy: CachePolicy = CachePolicy.DEFAULT,
@@ -144,10 +124,7 @@ internal abstract class AdapterTest {
 
   // MARK: Loading
 
-  /**
-   * Loads [request] into a new image view of [width]×[height] pixels and
-   * waits for the load to complete.
-   */
+  /** Loads [request] into a new [width]×[height] view and waits for it. */
   protected fun load(
     request: ResolvedRequest,
     width: Int = VIEW_WIDTH,
@@ -170,8 +147,7 @@ internal abstract class AdapterTest {
   protected inner class Pending(val view: ImageView) : ImageLoaderAdapter.Listener {
     lateinit var handle: LoadHandle
     private val done = CountDownLatch(1)
-    // Written by the listener and read by `outcome`, both on the main
-    // thread (the seam's contract, and `onMain`).
+    // Only touched on the main thread.
     private var result = Outcome(view)
 
     override fun onProgress(completed: Long, total: Long) {
@@ -218,8 +194,7 @@ internal abstract class AdapterTest {
       view = ImageView(activity)
       activity.root.addView(view, FrameLayout.LayoutParams(width, height))
     }
-    // Laid out before the load starts, as Fabric has done for a view by the
-    // time it loads; the adapter waits for a layout otherwise.
+    // Lay out before loading, as Fabric does.
     InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     return view
   }
@@ -251,10 +226,7 @@ internal abstract class AdapterTest {
     adapter.memoryCachedDrawable(request.cacheKey, InstrumentationRegistry.getInstrumentation().targetContext.resources)
   }
 
-  /**
-   * Whether [request]'s image can be shown without the network: the same
-   * request under `cacheOnly`, which reads both tiers and fetches nothing.
-   */
+  /** Whether [uri] loads under `cacheOnly` (either tier, no network). */
   protected fun isCached(uri: String): Boolean = load(resolve(uri, CachePolicy.CACHE_ONLY)).succeeded
 
   private fun awaitDiskWork(work: ((Throwable?) -> Unit) -> Unit) {
@@ -320,11 +292,7 @@ internal abstract class AdapterTest {
 
     const val TIMEOUT_SECONDS = 20L
 
-    /**
-     * No cross-fade unless a test is about it: a fade keeps the previous
-     * drawable on screen inside a `CrossfadeDrawable` for its duration,
-     * which would hide what the load itself put in the view.
-     */
+    /** No cross-fade, so `view.drawable` is the loaded image, not a `CrossfadeDrawable`. */
     val NO_FADE = ImageLoaderAdapter.DisplayOptions(fadeMillis = 0)
   }
 }

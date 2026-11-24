@@ -26,27 +26,21 @@ bool ViewLifecycle::placeholderAllowed(const LifecycleProps& props) const {
 }
 
 LifecycleEffects ViewLifecycle::applyPlaceholder(const LifecycleProps& props) {
-  // Always: whatever this decides, a decode started for earlier props must
-  // not appear any more.
+  // Always invalidate decodes started for earlier props.
   const std::int64_t generation = ++placeholderGeneration;
   if (!placeholderAllowed(props)) {
     return {};
   }
   switch (props.placeholder) {
     case PlaceholderKind::MemoryCacheKey:
-      // A miss clears the view, for the same reason as `None` below. (JS
-      // allows one placeholder kind at a time, so there is no hash to fall
-      // back on.)
+      // A miss clears the view, as for `None` below.
       return {{.kind = Kind::ShowCachedPlaceholder}};
     case PlaceholderKind::Hash:
       return {{.kind = Kind::DecodePlaceholder, .value = generation}};
     case PlaceholderKind::None:
       break;
   }
-  // No placeholder is asked for (any more). `placeholderAllowed` says the
-  // view holds no loaded image, so whatever it shows is a placeholder the
-  // props have since dropped: remove it, rather than leave it up until the
-  // load ends.
+  // No placeholder wanted: anything shown is a dropped placeholder, so clear it.
   return {{.kind = Kind::ClearImage}};
 }
 
@@ -54,18 +48,16 @@ bool ViewLifecycle::placeholderDecoded(std::int64_t generation, const LifecycleP
   return generation == placeholderGeneration && placeholderAllowed(props);
 }
 
-// What a failure does to the screen, for a load that failed and for a
-// request that could not be started.
+// Screen effects of a failed load or an unstartable request.
 void ViewLifecycle::fail(const LifecycleProps& props, LifecycleEffects& effects) {
-  // A previous image kept during the load goes either way: it is not what
-  // the source names, and leaving it up would hide the failure.
+  // A kept previous image always goes; leaving it would hide the failure.
   const bool hadPreviousImage = showingState() == Showing::PreviousImage;
   showing = toField(Showing::Failed);
   if (!props.showPlaceholderOnFailure) {
     ++placeholderGeneration;  // a decode still in flight must not appear
     effects.push_back({.kind = Kind::ClearImage});
   } else if (hadPreviousImage) {
-    // The placeholder was held back while the previous image stood in.
+    // Show the placeholder held back by the previous image.
     effects.push_back({.kind = Kind::ClearImage});
     const auto placeholder = applyPlaceholder(props);
     effects.insert(effects.end(), placeholder.begin(), placeholder.end());
@@ -75,14 +67,12 @@ void ViewLifecycle::fail(const LifecycleProps& props, LifecycleEffects& effects)
 LifecycleEffects ViewLifecycle::reload(bool recyclingKeyChanged, bool imageOnScreen,
                                        bool requestValid, const LifecycleProps& props) {
   LifecycleEffects effects;
-  // An upgrade of the image being replaced: stop it, and say nothing, since
-  // JS never heard of it.
+  // Cancel any upgrade silently; JS never heard of it.
   if (upgrading != 0) {
     upgrading = 0;
     effects.push_back({.kind = Kind::CancelLoad});
   }
-  // A load still in flight is superseded: tell JS it was cancelled, so
-  // every onStart is matched by exactly one onCompletion.
+  // A superseded load emits cancelled, so every onStart gets one onCompletion.
   if (inFlight != 0) {
     inFlight = 0;
     effects.push_back({.kind = Kind::CancelLoad});

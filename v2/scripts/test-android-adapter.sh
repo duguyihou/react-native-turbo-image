@@ -1,18 +1,7 @@
 #!/usr/bin/env bash
-# Runs the Coil adapter's instrumented tests
-# (packages/react-native-turbo-image/android/src/androidTest) on the connected
-# device or emulator.
-#
-# They drive the real adapter through the seam, with requests resolved by the
-# real core and images served over HTTP by scripts/fixture-server.py: decode
-# sizes, failure codes, cancel, progress, and the cache tiers, including the
-# disk and HTTP caches the iOS adapter tests cannot reach (they load local
-# files). The fixture server counts requests, which is how a cache hit is
-# told from a fetch.
-#
-# Built through the example app's Gradle project, because the library only
-# builds inside an app (android/build.gradle takes AGP, Kotlin and React
-# Native from the host).
+# Runs the Coil adapter's instrumented tests (android/src/androidTest) on the
+# connected device, against fixture-server.py. Built through the example
+# app's Gradle project, since the library only builds inside an app.
 #
 # Usage: scripts/test-android-adapter.sh
 # Exit:  Gradle's; the report is under
@@ -34,12 +23,10 @@ trap 'kill ${fixture_server_pid} 2> /dev/null || true' EXIT
 start_fixture_server
 
 "${adb}" wait-for-device
-# The tests use the same URLs as the example app: the device's localhost,
-# mapped to the host's where the server listens.
+# Map the device's localhost port to the host's fixture server.
 "${adb}" reverse "tcp:${fixture_server_port}" "tcp:${fixture_server_port}" > /dev/null
 
-# Only the device's primary ABI: the test APK carries React Native's native
-# libraries, and every extra ABI makes it larger to build and to install.
+# Build only the device's ABI to keep the test APK small.
 abi="$("${adb}" shell getprop ro.product.cpu.abi | tr -d '\r')"
 
 cd "${v2_root}/apps/example/android"

@@ -64,8 +64,7 @@ TEST(ViewLifecycle, ASupersededLoadIsCancelledForJsAndIgnoredAfterwards) {
                      {.kind = Kind::EmitCancelled},
                      {.kind = Kind::ClearImage},
                      {.kind = Kind::StartLoad, .value = 2}}));
-  // The first load calling back late (an adapter that did not honour the
-  // cancel) must not touch the view.
+  // A late callback from the cancelled load must not touch the view.
   EXPECT_TRUE(lifecycle.loadSucceeded(1).empty());
   EXPECT_TRUE(lifecycle.loadFailed(1, kNoPlaceholder).empty());
   EXPECT_TRUE(lifecycle.isInFlight(2));
@@ -270,15 +269,9 @@ TEST(ViewLifecycle, RecycleAndDropCancelAnUpgrade) {
 // ---------------------------------------------------------------------------
 // Every order of events, to a bounded depth.
 //
-// The tests above each walk one path. The bugs this state machine exists to
-// prevent are in the orderings nobody thought of, so this drives a simulated
-// view through every sequence of steps up to `kDepth` and checks, after each
-// one, the rules a user or JS would notice being broken.
-//
-// The simulated view shows images itself (as the iOS view does) and its
-// loader may call back for any load ever started, cancelled or not, once.
-// That is the weakest adapter the seam allows, so the token guard carries
-// the whole weight.
+// Drives a simulated view through every step sequence up to `kDepth`,
+// checking the visible rules after each. Its loader may call back once for
+// any load ever started, cancelled or not (the weakest adapter allowed).
 
 struct SimulatedView {
   enum class Screen { Blank, Placeholder, Image };
@@ -288,9 +281,8 @@ struct SimulatedView {
   Screen screen = Screen::Blank;
   // The request the props name now; a reload makes a new one.
   int request = 0;
-  // The request each load or upgrade was started for. An upgrade loads the
-  // same request again, so an image is identified by its request, not by
-  // the token that brought it.
+  // The request each load or upgrade was for; images are identified by
+  // request, not token.
   std::map<std::int64_t, int> requestOf;
   // Screen::Image: the request whose image is up.
   int imageOf = -1;
@@ -307,9 +299,8 @@ struct SimulatedView {
         case Kind::DeliverFailure:
           break;
         case Kind::DeliverInvalidRequest:
-          // A request that cannot start gets onFailure and onCompletion but
-          // no onStart (RFC 4.4a). Count its completion as paired, so the
-          // balance below is about loads that did start.
+          // An unstartable request has no onStart (RFC 4.4a); count its
+          // completion as paired.
           ++openEvents;
           break;
         case Kind::ClearImage:
@@ -349,8 +340,7 @@ struct SimulatedView {
     perform(lifecycle.applyPlaceholder(props), 0, false);
   }
 
-  // The view grew past its image: startUpgrade, then the adapter's load,
-  // which may call back inside the call that starts it.
+  // The view grew: startUpgrade, then a load that may call back inline.
   void upgrade(bool completeInsideLoad) {
     const auto token = lifecycle.startUpgrade();
     if (token == 0) {

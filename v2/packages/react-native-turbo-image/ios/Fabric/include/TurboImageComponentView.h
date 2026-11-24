@@ -1,8 +1,5 @@
-// Kept free of C++ so it is safe to appear in an ObjC umbrella header. The
-// C++ surface (codegen props, core types) is confined to the .mm.
-//
-// This directory is the target's public headers under SwiftPM. A header
-// that includes C++ belongs one level up, next to the sources.
+// No C++ here: this is a public SwiftPM header and may land in an ObjC
+// umbrella. C++ headers go one level up, next to the sources.
 #import <React/RCTViewComponentView.h>
 #import <UIKit/UIKit.h>
 

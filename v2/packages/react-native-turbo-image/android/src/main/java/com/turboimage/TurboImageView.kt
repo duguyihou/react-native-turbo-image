@@ -33,9 +33,8 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Fabric host view for <TurboImage> on Android. Mirrors
- * ios/Fabric/TurboImageComponentView.mm step for step:
- * props → C++ core → loader adapter → display + events.
+ * Fabric host view for <TurboImage>: props → C++ core → loader adapter →
+ * display + events. Mirrors the iOS component view.
  */
 @SuppressLint("ViewConstructor")
 class TurboImageView internal constructor(
@@ -43,33 +42,28 @@ class TurboImageView internal constructor(
   private val loader: ImageLoaderAdapter,
 ) : AppCompatImageView(reactContext) {
 
-  // Everything the props say about which image to load. The view manager
-  // replaces it field by field; whether a change needs a new load is decided
-  // once per transaction, by comparing it with [loadedFor].
+  // Which image to load; compared with [loadedFor] once per transaction.
   var request = ImageRequest()
 
-  // Placeholder props. A change re-applies the placeholder; see [onTransactionEnd].
+  // Placeholder props; a change re-applies the placeholder.
   var blurhash: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
   var thumbhash: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
   var memoryCacheKey: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
-  // An image as the placeholder (`placeholder.uri`), loaded through the
-  // adapter without events; see [loadPlaceholder].
+  // `placeholder.uri`; see [loadPlaceholder].
   var placeholderUri: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
 
-  // Not a request prop: a new key alone starts no load, because the image on
-  // screen is still the one the source names. It only decides how the load started
-  // in this same transaction treats the previous image (see [reload]).
+  // Starts no load by itself; only affects how a load in the same
+  // transaction treats the previous image.
   var recyclingKey: String? = null
     set(value) { if (field != value) { field = value; recyclingKeyChanged = true } }
 
   /**
-   * What decides a load besides the request: a change to either starts a new
-   * one. [allowHardware] is not a request field (it never affects cache
-   * keys), but an image decoded for one answer is wrong for the other.
+   * A change to either starts a new load. [allowHardware] is not in the
+   * request (no cache-key effect) but still needs a fresh decode.
    */
   private data class LoadInputs(
     val request: ImageRequest,
@@ -80,23 +74,18 @@ class TurboImageView internal constructor(
   private var loadedFor: LoadInputs? = null
   private var needsPlaceholder = false
   private var recyclingKeyChanged = false
-  // Every decision about what the view shows and which load events JS sees
-  // is the core's (`turboimage::ViewLifecycle`, the same code the iOS view
-  // runs). This view says what happened and carries out the effects it gets
-  // back; see [perform].
+  // The core decides what is shown and which events fire (shared with iOS);
+  // this view reports what happened and runs the returned effects.
   private val lifecycle = ViewLifecycle()
   // Cancels the load in flight; null when there is none.
   private var handle: LoadHandle? = null
   private var progressThrottle = ProgressThrottle()
-  // Last Content-Length seen this load, for the throttle's finish() step.
+  // Last Content-Length seen, for the throttle's finish().
   private var lastProgressTotal = -1L
 
   /**
-   * The image on screen, when it was decoded for this view's size and could
-   * be loaded again larger if the view grows (`turboimage::needsLargerDecode`).
-   * Null otherwise: nothing loaded yet, a load in flight, or a request whose
-   * decode does not follow the view (`allowDownscaling` off, `resize`,
-   * `center`, `blur`). Sizes in pixels.
+   * The shown image if it was decoded for the view's size and can be reloaded
+   * larger when the view grows; null otherwise. Sizes in pixels.
    */
   private data class Upgradable(
     val request: ResolvedRequest,
@@ -111,48 +100,31 @@ class TurboImageView internal constructor(
   // Cancels the image placeholder's load; null when there is none.
   private var placeholderHandle: LoadHandle? = null
 
-  /** 1.x semantics: false removes the placeholder when the load fails. */
+  /** False removes the placeholder when the load fails. */
   var showPlaceholderOnFailure = false
 
-  /** Cross-fade duration in ms; 0 disables it. 1.x default. */
+  /** Cross-fade duration in ms; 0 disables it. */
   var fadeDuration = 300
 
-  /** 1.x prop: false decodes to a software bitmap. Changing it reloads. */
+  /** False decodes to a software bitmap. Changing it reloads. */
   var allowHardware = true
 
-  /**
-   * Whether JS has an `onProgress` handler. Read when a load starts (it
-   * never reloads), so a handler attached mid-load hears from the next one.
-   */
+  /** Whether JS has an `onProgress` handler. Read at load start; never reloads. */
   var progressEnabled = false
 
-  /**
-   * `loadEventMask` (TurboImageViewNativeComponent.ts): which of `onStart`,
-   * `onSuccess`, `onFailure` and `onCompletion` JS has a handler for; [emit]
-   * builds and sends only those. Read when each event is emitted, as JS
-   * looks for its handler on arrival. All on until a prop says otherwise,
-   * the spec's default.
-   */
+  /** Which load events JS has handlers for; [emit] sends only those. */
   var loadEventMask = ALL_LOAD_EVENTS
 
   init {
-    // Matches the spec default (`contain`, 1.x's default).
+    // The spec default, `contain`.
     scaleType = ScaleType.FIT_CENTER
-    // `cover` scales past the view's bounds by design, and ImageView only
-    // clips that if its parent does. Fabric's ReactViewGroup sets
-    // clipChildren=false (to support overflow: visible), so without this an
-    // image whose aspect differs from the view paints over its neighbours.
-    // Mirrors `clipsToBounds = YES` on iOS.
+    // `cover` overflows the bounds, and Fabric parents don't clip children,
+    // so clip here (like `clipsToBounds` on iOS).
     cropToPadding = true
   }
 
-  // Keeps everything this view draws (the image, a placeholder, a cross-fade
-  // between them) inside its border: within the border's width, and within
-  // its rounded corners. The border itself is the view's background (see
-  // [TurboImageBorders]), which is drawn before this and is not clipped.
-  // Without a border this clips to the view's bounds, as `cropToPadding`
-  // already did. The anti-aliased variant is what React Native's <Image>
-  // uses; a plain clipPath leaves jagged corners on API 28 and below.
+  // Clips everything drawn to inside the border and its rounded corners.
+  // Anti-aliased, as RN's <Image>: a plain clipPath is jagged on API <= 28.
   override fun onDraw(canvas: Canvas) {
     BackgroundStyleApplicator.clipToPaddingBoxWithAntiAliasing(this, canvas) { super.onDraw(canvas) }
   }
@@ -167,9 +139,7 @@ class TurboImageView internal constructor(
         else -> ScaleType.FIT_CENTER to ResizeMode.CONTAIN // the default
       }
     centredScaleType = scale
-    // A request prop as well as a drawing one: `contain` needs fewer pixels
-    // than `cover`, and `center` needs them all (the core's decode-size
-    // rule), so an image decoded for one mode can be too small for another.
+    // Also a request prop: the decode size depends on the mode.
     request = request.copy(resizeMode = core)
     updatePlacement()
   }
@@ -183,30 +153,23 @@ class TurboImageView internal constructor(
   // False while ImageView's constructor runs (see [updatePlacement]).
   private var constructed = false
 
-  // The platform's scale type for the resize mode, which places the image
-  // centred. Used as is for a centred position; any other position needs
-  // the core's placement as a matrix ([updatePlacement]).
+  // The platform scale type for the mode, used when the image is centred.
   private var centredScaleType = ScaleType.FIT_CENTER
 
   /**
-   * Places the image for the resize mode and `contentPosition`. Centred, the
-   * platform's own scale types do it, unchanged from before
-   * `contentPosition` existed. Otherwise (and stretch never needs it) the
-   * core's `placeImage` gives the rectangle, the same one iOS uses, applied
-   * as the image matrix. Runs again whenever the drawable, the view's size
-   * or the props change, since the rectangle depends on all three.
+   * Places the image for the resize mode and `contentPosition`. Centred uses
+   * the platform scale type; otherwise the core's `placeImage` (as on iOS)
+   * becomes the image matrix. Rerun on drawable, size or prop changes.
    */
   private fun updatePlacement() {
-    // ImageView's constructor sets a drawable and padding before this class's
-    // fields exist; nothing is shown yet, so there is nothing to place.
+    // ImageView's constructor calls in before our fields exist.
     if (!constructed) return
     val centred = contentPositionX == 0.5 && contentPositionY == 0.5
     if (centred || request.resizeMode == ResizeMode.STRETCH) {
       applyPlacement(centredScaleType, null)
       return
     }
-    // The content box: inside the padding (the border), where ImageView
-    // draws with a matrix.
+    // The content box, inside the padding (the border).
     val boxWidth = width - paddingLeft - paddingRight
     val boxHeight = height - paddingTop - paddingBottom
     val image = drawable
@@ -225,29 +188,19 @@ class TurboImageView internal constructor(
     applyPlacement(ScaleType.MATRIX, placementMatrix)
   }
 
-  // Reused by every placement, which runs on each drawable, padding, size
-  // and prop change: `setImageMatrix` copies its argument, so neither is
-  // held by ImageView. `Matrix` has a native peer, so this saves a native
-  // allocation and its cleanup per call, not just a small object.
+  // Reused (`setImageMatrix` copies), saving a native allocation per call.
   private val placementMatrix = Matrix()
   private val nudgeMatrix = Matrix().apply { setTranslate(1f, 0f) }
   private val identityMatrix = Matrix()
 
   /**
-   * Sets the scale type and, for MATRIX, the matrix, and makes ImageView
-   * apply them now. ImageView recomputes its drawing matrix only in
-   * `configureBounds`, which runs on a layout pass or when `setImageMatrix`
-   * gets a different matrix. `setScaleType` only requests a layout, and
-   * React Native lays a view out only when its frame changes, so a scale
-   * type changed after the first layout (an image arriving, a prop) was
-   * never applied: every contentPosition drew centred. Setting a different
-   * matrix and then the wanted one runs `configureBounds` with the new
-   * scale type, whatever it is (other scale types ignore the matrix).
+   * Sets the scale type (and matrix) and applies them now. `setScaleType`
+   * only requests a layout, which RN skips unless the frame changes; setting
+   * a different matrix forces ImageView's `configureBounds` to run.
    */
   private fun applyPlacement(type: ScaleType, matrix: Matrix?) {
     if (scaleType != type) scaleType = type
-    // Both sets are kept, so the second always differs from the first; the
-    // two invalidates land in the same frame and draw once.
+    // The second set always differs from the first; both draw in one frame.
     imageMatrix = nudgeMatrix
     imageMatrix = matrix ?: identityMatrix
   }
@@ -265,9 +218,8 @@ class TurboImageView internal constructor(
 
   /** Called once per Fabric transaction, after all props have landed. */
   fun onTransactionEnd() {
-    // A new load whenever the request differs from the one on screen, and
-    // for the first transaction whatever it says: a view mounted without a
-    // source reports that (`invalidRequest`) instead of staying silent.
+    // Load on any change, and always on the first transaction, so a view
+    // with no source reports `invalidRequest`.
     val inputs = LoadInputs(request, allowHardware)
     if (inputs != loadedFor) {
       loadedFor = inputs
@@ -275,8 +227,7 @@ class TurboImageView internal constructor(
       needsPlaceholder = true
       reload()
     }
-    // Consumed by the load above, or dropped: the key applies only to a load
-    // in its own transaction.
+    // The key only applies to a load in its own transaction.
     recyclingKeyChanged = false
     if (needsPlaceholder) {
       needsPlaceholder = false
@@ -291,31 +242,25 @@ class TurboImageView internal constructor(
     perform(lifecycle.drop())
   }
 
-  // A size change is when a view outgrows its image: a zoom, a rotation, a
-  // card that expands. Asked here and not in a layout listener because the
-  // view only needs its own size.
+  // Growing may outgrow the decoded image.
   override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
     super.onSizeChanged(width, height, oldWidth, oldHeight)
     updatePlacement()
     if (width > oldWidth || height > oldHeight) upgradeIfOutgrown()
   }
 
-  // JS allows one placeholder kind at a time; `memoryCacheKey` wins if an
-  // app passes several anyway, as it always has.
+  // `memoryCacheKey` wins if several kinds are set.
   private fun placeholderKind() =
     when {
       !memoryCacheKey.isNullOrEmpty() -> PlaceholderKind.MEMORY_CACHE_KEY
-      // An image placeholder arrives later, like a decoded hash, and the
-      // lifecycle treats it the same way.
+      // An image placeholder arrives async, like a decoded hash.
       !blurhash.isNullOrEmpty() || !thumbhash.isNullOrEmpty() || !placeholderUri.isNullOrEmpty() ->
         PlaceholderKind.HASH
       else -> PlaceholderKind.NONE
     }
 
   private fun reload() {
-    // The image on screen is about to be replaced; there is nothing to
-    // upgrade until the new one arrives. (A running upgrade is cancelled by
-    // the lifecycle, below.)
+    // Nothing to upgrade until the new image arrives.
     upgradable = null
     progressThrottle = ProgressThrottle()
     lastProgressTotal = -1L
@@ -346,15 +291,8 @@ class TurboImageView internal constructor(
   }
 
   /**
-   * The effects that only one kind of step can produce, and that need what
-   * that step knows: the request a reload resolved, or what the adapter
-   * called back with. Each caller of [perform] overrides the ones its step
-   * can produce, closing over that knowledge, so no effect has to dig its
-   * context out of a loosely typed argument.
-   *
-   * The lifecycle never sends an effect from a step that cannot produce it
-   * (`StartLoad` from a callback, say). If it ever did, that is a bug in the
-   * core or here, reported by [unexpected] rather than acted on.
+   * Step-specific effects; each [perform] caller overrides the ones its step
+   * can produce. Any other effect is a bug, reported by [unexpected].
    */
   private open inner class StepEffects {
     open fun deliverInvalidRequest(): Unit = unexpected(Effect.Kind.DELIVER_INVALID_REQUEST)
@@ -366,18 +304,14 @@ class TurboImageView internal constructor(
     open fun deliverFailure(): Unit = unexpected(Effect.Kind.DELIVER_FAILURE)
   }
 
-  // Loud where a developer will see it, harmless where a user would: the
-  // effect is skipped, which at worst leaves one image unloaded.
+  // Throws in debug; in release logs and skips the effect.
   private fun unexpected(kind: Effect.Kind) {
     val message = "TurboImage: the lifecycle sent $kind from a step that cannot produce it"
     if (BuildConfig.DEBUG) error(message)
     Log.e("TurboImage", message)
   }
 
-  /**
-   * Carries out the lifecycle's effects, in order. The lifecycle decided;
-   * nothing here chooses whether an effect applies.
-   */
+  /** Runs the lifecycle's effects in order, without second-guessing them. */
   private fun perform(effects: List<Effect>, step: StepEffects = StepEffects()) {
     for (effect in effects) {
       when (effect.kind) {
@@ -404,8 +338,7 @@ class TurboImageView internal constructor(
     }
   }
 
-  // `density` is what RN's PixelRatio reports to JS, so `resize` (dp) means
-  // the same as in the app's layout maths.
+  // `density` matches RN's PixelRatio, so `resize` (dp) matches JS layout.
   private fun resolve(request: ImageRequest) =
     TurboImageCore.resolve(request, resources.displayMetrics.density.toDouble())
 
@@ -413,13 +346,10 @@ class TurboImageView internal constructor(
 
   private fun startLoad(request: ResolvedRequest, token: Long) {
     emitStart()
-    // What the decode is sized for, if the view is laid out already; if not,
-    // the adapter waits for the layout, and the size at success is it.
+    // The decode size if already laid out; otherwise the adapter waits for layout.
     val sizeAtStart = width to height
 
-    // The adapter drops callbacks after cancel, but the lifecycle guards by
-    // token as well: a callback from a load that was replaced gets no
-    // effects back, so it cannot touch this view.
+    // The lifecycle also guards by token, so a stale callback does nothing.
     val thisHandle =
       loader.load(
         this as ImageView,
@@ -456,12 +386,11 @@ class TurboImageView internal constructor(
               })
         },
       )
-    // Already finished if the callback ran inside `load()` (a memory-cache
-    // hit): there is nothing left to cancel, so the handle is not kept.
+    // A memory hit finishes inside `load()`; then there's nothing to keep.
     if (lifecycle.isInFlight(token)) handle = thisHandle
   }
 
-  /** Notes an image that was sized for this view, then sees whether the view already outgrew it. */
+  /** Records a view-sized image, then checks whether the view already outgrew it. */
   private fun remember(request: ResolvedRequest, width: Int, height: Int, sizeAtStart: Pair<Int, Int>) {
     val decode = request.decode as? ResolvedRequest.DecodeSize.View
     if (decode == null) {
@@ -481,14 +410,9 @@ class TurboImageView internal constructor(
   }
 
   /**
-   * Loads the image again at the view's size if the view has grown past it
-   * (`turboimage::needsLargerDecode`). Silent: no events, no progress, and
-   * on failure the image already shown stays (`ViewLifecycle::startUpgrade`).
-   *
-   * Animated images are upgraded too, which restarts their animation. Rare
-   * (the view has to grow by half), and telling an animated drawable apart
-   * here would mean naming Coil's types in the view.
-   * TODO: skip them, or keep the frame, if the restart turns out to matter.
+   * Silently reloads at the view's size if the view outgrew the image; on
+   * failure the shown image stays.
+   * TODO: animated images restart on upgrade; skip them if that matters.
    */
   private fun upgradeIfOutgrown() {
     val shown = upgradable ?: return
@@ -513,8 +437,7 @@ class TurboImageView internal constructor(
           override fun onProgress(completed: Long, total: Long) = Unit
 
           override fun onSuccess(width: Int, height: Int) {
-            // Coil has painted it; false only for an upgrade already
-            // cancelled, which a disposed Coil request never reports.
+            // Coil has painted it; false only if already cancelled.
             if (!lifecycle.upgradeSucceeded(token)) return
             handle = null
             upgradable =
@@ -530,9 +453,7 @@ class TurboImageView internal constructor(
             if (!lifecycle.isUpgrading(token)) return
             lifecycle.upgradeFailed(token)
             handle = null
-            // Not again for this image: recorded as loaded for the size it
-            // failed at, the rule takes the image for the source at its own
-            // size. A new source, or a reload, starts over.
+            // Don't retry at this size; a new source or reload starts over.
             upgradable = shown.copy(loadedForWidth = nowWidth, loadedForHeight = nowHeight)
           }
         },
@@ -540,11 +461,9 @@ class TurboImageView internal constructor(
     if (lifecycle.isUpgrading(token)) handle = thisHandle
   }
 
-  // The adapter (Coil's target) has already put the image in this view; see
-  // `DeliverSuccess` in the core.
+  // The adapter has already put the image in this view.
   private fun deliverSuccess(width: Int, height: Int, url: String) {
-    // A successful load ends progress at 100% (core rule, see finish()):
-    // Coil may decode a noCache response without reading it to EOF.
+    // End progress at 100%: Coil may not read a noCache response to EOF.
     if (progressThrottle.finish(lastProgressTotal)) {
       emitProgress(lastProgressTotal, lastProgressTotal)
     }
@@ -555,10 +474,8 @@ class TurboImageView internal constructor(
     }
   }
 
-  // memoryCacheKey: a synchronous memory-cache lookup (no decode, no disk).
-  // The core says which keys the prop may name (an explicit cacheKey as
-  // written, or a URI's canonical form); the first hit wins, and a miss
-  // clears the view.
+  // Synchronous memory-cache lookup over the core's candidate keys; the
+  // first hit wins, a miss clears the view.
   private fun showCachedPlaceholder() {
     setImageDrawable(
       TurboImageCore.memoryCacheKeyCandidates(memoryCacheKey.orEmpty())
@@ -590,10 +507,8 @@ class TurboImageView internal constructor(
   }
 
   /**
-   * An image placeholder: loaded like the source (from the caches when it is
-   * there), sized for this view, with the source's headers, unprocessed and
-   * without events, then shown unless the image or a newer placeholder got
-   * there first, which the lifecycle answers by generation as for a decode.
+   * Loads an image placeholder like the source (headers, view size) but
+   * unprocessed and without events; shown unless something newer got there first.
    */
   private fun loadPlaceholder(uri: String, generation: Long) {
     cancelPlaceholderLoad()
@@ -642,27 +557,19 @@ class TurboImageView internal constructor(
     eventSink(name, payload)
   }
 
-  /**
-   * Where events go: React Native's event dispatcher. Replaced only by the
-   * instrumented view tests (src/androidTest), which run without a React
-   * instance, so there is no dispatcher to reach (`UIManagerHelper` casts the
-   * context to an interface only React Native's own bridgeless context
-   * implements) and no native map to build the payload in.
-   */
+  /** Where events go. Replaced by instrumented tests, which have no React instance. */
   internal var eventSink: (name: String, payload: WritableMap.() -> Unit) -> Unit = { name, payload ->
     val event = TurboImageEvent(UIManagerHelper.getSurfaceId(this), id, name, Arguments.createMap().apply(payload))
     UIManagerHelper.getEventDispatcher(reactContext)?.dispatchEvent(event)
   }
 
-  // Last in the class body, so that every field above is initialised first
-  // (Kotlin runs initialisers in the order they are written).
+  // Last, so every field above is initialised first.
   init {
     constructed = true
   }
 
   private companion object {
-    // One background thread is plenty: a decode is ~1 ms, and serialising
-    // them bounds memory when a list mounts many placeholders at once.
+    // One thread: decodes are cheap, and serialising bounds memory.
     val placeholderExecutor: ExecutorService =
       Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "TurboImagePlaceholder").apply { isDaemon = true }
@@ -673,9 +580,8 @@ class TurboImageView internal constructor(
     const val ALL_LOAD_EVENTS = 15
   }
 
-  // One event class for all five events; they differ only in name and
-  // payload. Coalescing is off: RN's default would merge same-name events in
-  // one batch, which must never drop an onStart/onCompletion pair.
+  // One class for all events. No coalescing, which could drop an
+  // onStart/onCompletion pair.
   private class TurboImageEvent(
     surfaceId: Int,
     viewTag: Int,

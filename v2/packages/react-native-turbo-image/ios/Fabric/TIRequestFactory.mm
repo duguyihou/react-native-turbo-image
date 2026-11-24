@@ -10,18 +10,10 @@
 
 namespace {
 
-// UIImage -> premultiplied RGBA8 -> core -> UIImage. Drawing through UIKit
-// bakes in the EXIF orientation, so the core always sees upright pixels; the
-// result keeps the input's scale so its size in points is unchanged (unless
-// `resize` changed it on purpose).
-//
-// May throw: the pixel buffer and the core's working copies are plain C++
-// allocations. Callers go through TIProcessImage below.
+// UIImage -> RGBA8 -> core -> UIImage. Drawing via UIKit bakes in orientation;
+// the result keeps the input's scale. May throw: use TIProcessImage.
 UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
-  // Processors apply to still images. An animated image arrives here as its
-  // first frame (the seam's `image` is always a still) and the adapter drops
-  // the animation of a processed image, which is also what Coil does with
-  // transformations on Android (and what 1.x Android did).
+  // Stills only: an animated image is processed as its first frame (as Coil does).
   // TODO: process every frame, on both platforms.
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   const auto width = static_cast<int>(std::lround(image.size.width * scale));
@@ -34,8 +26,7 @@ UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
       .width = width,
       .height = height,
       .pixels = std::vector<std::uint8_t>(static_cast<std::size_t>(width) * height * 4)};
-  // Owned by a guard, not released by hand: `processImage` below can throw
-  // while this is still needed for the result.
+  // Guarded: `processImage` can throw while this is still needed.
   const std::unique_ptr<CGColorSpace, void (*)(CGColorSpaceRef)> colorSpaceOwner(
       CGColorSpaceCreateWithName(kCGColorSpaceSRGB), CGColorSpaceRelease);
   CGColorSpaceRef colorSpace = colorSpaceOwner.get();
@@ -57,9 +48,7 @@ UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
   if (!processed) {
     return nil;
   }
-  // The image takes the core's buffer instead of a copy of it (one image
-  // fewer at the peak, ~48 MB for 12 MP): the vector moves to the heap and
-  // the provider frees it when the last CGImage using it goes.
+  // Hand the core's buffer to the CGImage without copying; the provider frees it.
   auto *pixels = new std::vector<std::uint8_t>(std::move(processed->pixels));
   CGDataProviderRef provider = CGDataProviderCreateWithData(
       pixels, pixels->data(), pixels->size(), [](void *info, const void *, size_t) {
@@ -83,11 +72,8 @@ UIImage *TIProcessImageUnguarded(UIImage *image, const std::string &key) {
   return result;
 }
 
-// The exception barrier for processing. This runs inside a block on the
-// loader's processing queue, and a C++ exception that leaves a block
-// terminates the app. Processing a large image needs several copies of it,
-// so running out of memory here is a failed load (nil: the loader reports a
-// processing failure), not a crash.
+// Exception barrier: a C++ exception leaving the block would crash, so an
+// out-of-memory here becomes a failed load (nil).
 UIImage *TIProcessImage(UIImage *image, const std::string &key) {
   try {
     return TIProcessImageUnguarded(image, key);
@@ -121,8 +107,7 @@ CGSize TIDecodeSize(const turboimage::DecodeSize &decode, CGSize viewPixelSize) 
     case turboimage::DecodeSize::Kind::Width:
       return CGSizeMake(decode.width, 0);
     case turboimage::DecodeSize::Kind::View:
-      // Rounded up, so a fractional layout never decodes a pixel short. A
-      // view with no area yet has nothing to bound the decode with.
+      // Rounded up; no area yet means decode the original.
       return viewPixelSize.width > 0 && viewPixelSize.height > 0
                  ? CGSizeMake(std::ceil(viewPixelSize.width), std::ceil(viewPixelSize.height))
                  : CGSizeZero;
@@ -153,8 +138,7 @@ TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &imageRequest,
             .message = @"Invalid URL"};
   }
 
-  // The block owns a copy of the key: it outlives this call and runs on the
-  // loader's processing queue.
+  // The block copies the key: it outlives this call.
   TIImageProcessor processor = nil;
   if (!resolved.processorKey.empty()) {
     const std::string key = resolved.processorKey;

@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
 # shellcheck source-path=SCRIPTDIR
 #
-# `prepack` guard for packages/react-native-turbo-image: refuses to build a
-# tarball that CocoaPods users could not install.
+# `prepack` guard: refuses to pack without the gitignored vendored Nuke
+# xcframeworks at the pinned version (RFC rule 6). It only checks; building
+# needs Xcode and is too slow to run inside `npm pack`.
 #
-# The podspec vendors ios/vendor/Nuke.xcframework, which is gitignored and
-# built by scripts/build-nuke-xcframework.sh. A tarball packed from a fresh
-# clone would therefore ship without it, and one packed after a Nuke bump
-# could ship the old binary with sources that expect the new one (RFC rule 6).
-#
-# This checks; it does not build. Building needs Xcode and takes minutes,
-# which is the wrong thing to start from inside `npm pack`.
+# Usage: scripts/check-pack.sh
+# Exit: 1 if anything is missing or stale.
 
 set -euo pipefail
 
@@ -39,9 +35,8 @@ if [[ "${vendored_version}" != "${NUKE_VERSION}" ]]; then
   fail "vendored Nuke is ${vendored_version}, but native-versions.env pins ${NUKE_VERSION}."
 fi
 
-# LICENSE and README: npm only picks these up from the package directory
-# itself. The declarations are what `types` in package.json points at;
-# `prepack` builds them just before this runs.
+# npm only packs LICENSE/README from the package dir; the .d.ts is what
+# `types` points at (built by `prepack` just before this).
 for file in LICENSE README.md lib/typescript/index.d.ts; do
   if [[ ! -f "${pkg}/${file}" ]]; then
     echo "check-pack: ${file} is missing from the package directory." >&2
@@ -49,8 +44,8 @@ for file in LICENSE README.md lib/typescript/index.d.ts; do
   fi
 done
 
-# The package's LICENSE is a copy (npm does not follow a link out of the
-# package directory), so make sure it has not drifted from the original.
+# LICENSE is a copy (npm won't follow a link out of the package), so check
+# it matches the root one.
 if ! cmp -s "${pkg}/LICENSE" "${v2_root}/../LICENSE"; then
   echo "check-pack: LICENSE differs from the repository's; copy the root LICENSE over it." >&2
   exit 1

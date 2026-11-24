@@ -1,22 +1,6 @@
-// Animated images through the Nuke adapter, end to end: a real GIF loaded
-// through `TIImageLoading` and shown in the image view the adapter supplies.
-//
-// Why these are native tests: nothing reports to JS whether an image is
-// animating, so the on-device smoke suite cannot see any of this. What it
-// leaves out is exactly what goes wrong unnoticed: an animation that keeps
-// painting frames into a view that has moved on to another image (a recycled
-// list cell), or one that silently became a still.
-//
-// The tests ask the image view whether it has an animation to play. That is
-// the state everything else follows from: NukeUI's `AnimatedImageView` only
-// paints frames of the animation it holds. Whether frames then reach the
-// screen needs a window and a display link, and is NukeUI's own business.
-//
-// Not covered here: the Fabric view (`TurboImageComponentView`), which this
-// package cannot build without a React Native app. What it does on a recycle
-// is decided by the core's lifecycle (`ClearImage`, tested in C++) and carried
-// out as `imageView.image = nil`, which `clearingTheImageStopsTheAnimation`
-// performs on the same view class.
+// Animated GIFs through the adapter into its image view. Native tests because
+// JS can't see whether an image animates (e.g. a stale animation on a recycled
+// cell). They check the view's `animation`; the Fabric view is tested elsewhere.
 
 import ImageIO
 import NukeUI
@@ -38,7 +22,7 @@ struct AnimatedImageTests {
     let loaded = await adapter.load(adapter.request(for: try Fixture.gif(), decodeSize: CGSize(width: 20, height: 15)))
 
     let image = try #require(loaded.image)
-    // The still is one frame, decoded for the view like any other image.
+    // The still is one frame, decoded for the view.
     #expect(image.images == nil)
     #expect(image.size.width * image.scale <= 20)
     #expect(loaded.animation != nil)
@@ -51,8 +35,7 @@ struct AnimatedImageTests {
     #expect(loaded.animation == nil)
   }
 
-  /// Processors apply to the still (ADR 0007). Kept, the animation would
-  /// play the unprocessed frames over the processed first frame.
+  /// Processors apply to the still only, so the animation is dropped (ADR 0007).
   @Test func processedAnimationIsAStill() async throws {
     let loaded = await adapter.load(
       adapter.request(for: try Fixture.gif(), processorKey: "identity", processor: { $0 }))
@@ -83,9 +66,7 @@ struct AnimatedImageTests {
     #expect(view.animation != nil)
   }
 
-  /// A view recycled while it was playing: the Fabric view clears it with
-  /// `image = nil`, and whatever the next component shows must not have the
-  /// old animation painting over it.
+  /// Recycling clears with `image = nil`; the old animation must stop.
   @Test func clearingTheImageStopsTheAnimation() async throws {
     let animated = await adapter.load(adapter.request(for: try Fixture.gif()))
     let still = await adapter.load(adapter.request(for: try Fixture.png()))
@@ -105,9 +86,7 @@ struct AnimatedImageTests {
     #expect(view.image === stillImage)
   }
 
-  /// A mounted view whose source changes from an animation to a still: the
-  /// animation stays on screen until the still has loaded (the lifecycle's
-  /// rule), and then has to go.
+  /// Displaying a still replaces a playing animation.
   @Test func aStillReplacesAPlayingAnimation() async throws {
     let animated = await adapter.load(adapter.request(for: try Fixture.gif()))
     let still = await adapter.load(adapter.request(for: try Fixture.png()))
@@ -121,8 +100,7 @@ struct AnimatedImageTests {
     #expect(view.image === stillImage)
   }
 
-  /// The other direction: a view that showed a still, recycled or not, plays
-  /// the animation it is given next.
+  /// And the other way round.
   @Test func anAnimationReplacesAStill() async throws {
     let animated = await adapter.load(adapter.request(for: try Fixture.gif()))
     let still = await adapter.load(adapter.request(for: try Fixture.png()))
@@ -148,8 +126,7 @@ struct AnimatedImageTests {
     #expect(view.image === placeholder)
   }
 
-  /// The registry's loader can be replaced while views exist, so `display`
-  /// can be handed a view this loader did not make.
+  /// The loader can be swapped while views exist, so it may get a foreign view.
   @Test func aViewTheLoaderDidNotMakeGetsTheStill() async throws {
     let loaded = await adapter.load(adapter.request(for: try Fixture.gif()))
     let view = UIImageView()
@@ -162,14 +139,12 @@ struct AnimatedImageTests {
 
   // MARK: How it plays
 
-  /// Android's animated drawables loop whatever the file says; Nuke's default
-  /// would follow the file and play a GIF without a loop count once.
+  /// Loop forever, like Android (Nuke would play a loop-less GIF once).
   @Test func animationsLoopForever() throws {
     #expect(try adapter.animatedView().playerOptions.loopCount == .infinite)
   }
 
-  /// Frames follow the rule the still was decoded by: for the view, unless
-  /// the request asked for the image at its own size (`allowDownscaling` off).
+  /// Frames are downsampled only when the still was.
   @Test func framesAreSizedLikeTheStill() async throws {
     let gif = try Fixture.gif()
     let fitted = await adapter.load(adapter.request(for: gif, decodeSize: CGSize(width: 20, height: 15)))
@@ -183,14 +158,12 @@ struct AnimatedImageTests {
     #expect(!view.isAutomaticDownsamplingEnabled)
   }
 
-  /// Nuke shares decoded frames between views by the identity of the
-  /// animation. Each view size is its own decode and memory-cache entry, and
-  /// must still get the one animation of its image (`AnimationSources`).
+  /// Nuke shares frames by animation identity, so every size of one image
+  /// must get the same animation (`AnimationSources`).
   @Test func twoSizesOfOneImageShareOneAnimation() async throws {
     let gif = try Fixture.gif()
     let key = UUID().uuidString
-    // Started together, as two views mounted in one transaction are: both
-    // decodes are in flight before either has an animation to share.
+    // Started together, so both decodes race.
     let loaded = await adapter.loadTogether([
       adapter.request(for: gif, cacheKey: key, decodeSize: CGSize(width: 30, height: 30)),
       adapter.request(for: gif, cacheKey: key, decodeSize: CGSize(width: 10, height: 10)),
@@ -205,8 +178,7 @@ struct AnimatedImageTests {
     #expect(animation === smallView.animation)
   }
 
-  /// What a key names can change (disposed of and fetched again, or
-  /// revalidated under `urlCache`); the old animation must not stand in.
+  /// New bytes under the same key get a new animation.
   @Test func aKeyWhoseBytesChangedGetsANewAnimation() async throws {
     let key = UUID().uuidString
     let first = await adapter.load(adapter.request(for: try Fixture.gif(frames: 2), cacheKey: key, memoryCacheRead: false))

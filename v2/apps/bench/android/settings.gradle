@@ -1,8 +1,5 @@
-// The bench app compares TurboImage with expo-image, so it needs Expo
-// modules as well as React Native's autolinking. This is the wiring of
-// Expo SDK 58's bare template (expo-template-bare-minimum), with the
-// plugin paths resolved by Node because Bun hoists every dependency to the
-// monorepo root (v2/node_modules).
+// Expo SDK 58 bare-template wiring (the bench uses expo-image), with plugin
+// paths resolved by Node because Bun hoists to v2/node_modules.
 pluginManagement {
   def reactNativeGradlePlugin = new File(
     providers.exec {
@@ -27,8 +24,7 @@ plugins {
   id("expo-autolinking-settings")
 }
 
-// Expo's command lists both Expo modules and community libraries
-// (TurboImage, FastImage, FlashList), so one autolinking pass covers them.
+// Expo's command lists Expo and community libraries, so one pass links all.
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
   ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
 }

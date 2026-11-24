@@ -5,11 +5,8 @@
 #include <cmath>
 #include <numbers>
 
-// Bit-for-bit agreement with the JS references (and between iOS and
-// Android) requires that `a * b + c` is not fused into an FMA, which rounds
-// once instead of twice. Clang (Apple and NDK) contracts by default on
-// arm64; this pragma turns it off for this file. GCC honours
-// -ffp-contract=off already in strict ISO mode (CXX_EXTENSIONS OFF).
+// Byte-exact output needs `a * b + c` not fused into an FMA. Clang fuses by
+// default on arm64; GCC does not in strict ISO mode.
 #if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
@@ -28,8 +25,7 @@ constexpr std::string_view kBase83Alphabet =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?"
     "@[]^_{|}~";
 
-// Returns -1 for characters outside the alphabet. (The reference silently
-// computes garbage for them; we reject the hash instead.)
+// -1 outside the alphabet, so the hash is rejected (the reference is not).
 int base83Digit(char c) {
   const auto pos = kBase83Alphabet.find(c);
   return pos == std::string_view::npos ? -1 : static_cast<int>(pos);
@@ -86,8 +82,7 @@ std::optional<RgbaImage> decodeBlurhash(std::string_view hash, int width,
   if (hash.size() != static_cast<std::size_t>(4 + 2 * numX * numY)) {
     return std::nullopt;
   }
-  // TurboImage always decodes with punch = 1. (The reference computes
-  // `punch | 1`, which would turn 2 into 3; irrelevant at 1.)
+  // Always punch = 1.
   const double maximumValue = (*quantisedMax + 1) / 166.0;
 
   std::vector<Rgb> colours(static_cast<std::size_t>(numX * numY));
@@ -118,11 +113,8 @@ std::optional<RgbaImage> decodeBlurhash(std::string_view hash, int width,
                   .height = height,
                   .pixels = std::vector<std::uint8_t>(
                       static_cast<std::size_t>(width * height * 4))};
-  // Each cosine depends on one axis only, so it is computed once per column
-  // (or row) and component: (width + height) × components calls instead of
-  // two per pixel per component (~2.6 M for a 128 px, 9×9 hash). The
-  // expressions are the reference's, so the values, and the pixels, are
-  // bit-identical (the golden tests hash them).
+  // Cosines depend on one axis each, so precompute per column and row. Same
+  // expressions as the reference, so output stays bit-identical.
   std::vector<double> cosX(static_cast<std::size_t>(width * numX));
   for (int x = 0; x < width; ++x) {
     for (int i = 0; i < numX; ++i) {
@@ -167,8 +159,7 @@ std::optional<RgbaImage> decodeBlurhash(std::string_view hash, int width,
 
 namespace {
 
-// Standard base64 (RFC 4648 §4), padding optional. Whitespace is rejected:
-// JS callers pass the hash verbatim.
+// Standard base64 (RFC 4648 §4), padding optional, no whitespace.
 std::optional<std::vector<std::uint8_t>> decodeBase64(std::string_view in) {
   while (!in.empty() && in.back() == '=') {
     in.remove_suffix(1);
@@ -214,8 +205,8 @@ int acCount(int nx, int ny) {
   return n;
 }
 
-// Same formula as the reference's `Math.max(0, 255 * Math.min(1, v))`
-// stored into a Uint8Array (which truncates).
+// The reference's `Math.max(0, 255 * Math.min(1, v))` into a Uint8Array
+// (truncating).
 std::uint8_t toByte(double v) {
   return static_cast<std::uint8_t>(std::max(0.0, 255 * std::min(1.0, v)));
 }
@@ -244,8 +235,7 @@ std::optional<RgbaImage> decodeThumbhash(std::string_view base64Hash) {
   const int ly = std::max(3, isLandscape ? static_cast<int>(header16 & 7)
                                          : (hasAlpha ? 5 : 7));
 
-  // Validate the length before reading any AC nibble (the reference does
-  // not, and would read past the end of a truncated hash).
+  // Check length before reading AC nibbles (the reference does not).
   const std::size_t acStart = hasAlpha ? 6 : 5;
   const int totalAc =
       acCount(lx, ly) + 2 * acCount(3, 3) + (hasAlpha ? acCount(5, 5) : 0);
@@ -275,8 +265,8 @@ std::optional<RgbaImage> decodeThumbhash(std::string_view base64Hash) {
   const auto qAc = decodeChannel(3, 3, qScale * 1.25);
   const auto aAc = hasAlpha ? decodeChannel(5, 5, aScale) : std::vector<double>{};
 
-  // thumbHashToApproximateAspectRatio: note it reads the *raw* header nibble
-  // (not clamped to >= 3), exactly like the reference.
+  // thumbHashToApproximateAspectRatio: uses the raw (unclamped) nibble, as
+  // the reference does.
   const int rawHeader = hash[3];
   const bool ratioHasAlpha = (hash[2] & 0x80) != 0;
   const bool ratioLandscape = (hash[4] & 0x80) != 0;
@@ -300,9 +290,8 @@ std::optional<RgbaImage> decodeThumbhash(std::string_view base64Hash) {
   std::array<double, 7> fy{};
   const int nx = std::max(lx, hasAlpha ? 5 : 3);
   const int ny = std::max(ly, hasAlpha ? 5 : 3);
-  // The reference computes both factors for every pixel, though `fx` depends
-  // on the column only and `fy` on the row only. Same expressions, so the
-  // same values (see the blurhash decoder above).
+  // `fx` is per column and `fy` per row, so precompute them; same
+  // expressions as the reference.
   std::vector<std::array<double, 7>> columns(static_cast<std::size_t>(w));
   for (int x = 0; x < w; ++x) {
     for (int cx = 0; cx < nx; ++cx) {
@@ -363,7 +352,7 @@ void premultiplyAlpha(RgbaImage& image) {
     if (a == 255) {
       continue;
     }
-    // Same truncating formula as 1.x's Swift thumbhash path.
+    // Truncating, to match the existing output.
     for (std::size_t c = 0; c < 3; ++c) {
       image.pixels[i + c] = static_cast<std::uint8_t>(image.pixels[i + c] * a / 255);
     }
@@ -374,7 +363,7 @@ std::optional<RgbaImage> decodePlaceholder(std::string_view blurhash,
                                            std::string_view thumbhash) {
   std::optional<RgbaImage> image;
   if (!blurhash.empty()) {
-    // 32x32 matches 1.x; the view scales it up with interpolation.
+    // 32x32; the view scales it up.
     image = decodeBlurhash(blurhash, 32, 32);
   } else if (!thumbhash.empty()) {
     image = decodeThumbhash(thumbhash);

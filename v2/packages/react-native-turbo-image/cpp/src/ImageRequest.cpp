@@ -12,14 +12,8 @@ namespace {
 // Remote sources: fetched over the network, cached in memory and on disk.
 constexpr std::array<std::string_view, 2> kRemoteSchemes = {"http", "https"};
 
-// Local sources (RFC §4.1): `file` (iOS bundled `require()` assets in
-// release builds, documents, photos), and Android's `content` (pickers,
-// MediaStore) and `android.resource` (release `require()` assets, resolved
-// from resource names by the Android view). They are always readable,
-// because reading one is not a network request, so `cacheOnly` still loads
-// them; and they never touch the disk tier, because copying a local file
-// into the cache only costs space. The core does not know the platform: an
-// Android-only scheme on iOS gets past here and fails in the loader.
+// Local sources (RFC §4.1). Always readable (even under `cacheOnly`) and
+// never disk-cached. Android-only schemes on iOS fail in the loader.
 constexpr std::array<std::string_view, 3> kLocalSchemes = {"file", "content",
                                                            "android.resource"};
 
@@ -29,9 +23,7 @@ bool contains(const std::array<std::string_view, N>& schemes,
   return std::find(schemes.begin(), schemes.end(), scheme) != schemes.end();
 }
 
-// Not `std::tolower`: that follows the C locale, and an app that sets a
-// Latin-1 locale would have bytes above 0x7F (half of a UTF-8 character)
-// rewritten, on one platform and not the other.
+// Not `std::tolower`: it is locale-dependent and can rewrite UTF-8 bytes.
 char toLowerAscii(char c) {
   return c >= 'A' && c <= 'Z' ? static_cast<char>(c - 'A' + 'a') : c;
 }
@@ -55,28 +47,17 @@ bool isValidHeader(const Header& header) {
       !std::all_of(header.name.begin(), header.name.end(), isTokenChar)) {
     return false;
   }
-  // Field values may hold any octet except the ones that end a line (or a C
-  // string on the way into the platform HTTP stacks).
+  // Reject CR, LF (header injection) and NUL (truncates C strings).
   return header.value.find_first_of(std::string_view("\r\n\0", 3)) ==
          std::string::npos;
 }
 
-// The decode target, in order of precedence. Each rule exists because the
-// one below it would change what the app asked for:
-//   1. `allowDownscaling` off: the app wants every pixel.
-//   2. `resize`: the app named the width it wants; nothing larger is needed,
-//      whatever the view's size.
-//   3. `blur` without `resize`: its radius is in pixels of the image, so the
-//      same prop must act on the same bitmap in a small view and a large one.
-//   4. `center`: the image is drawn 1:1, not scaled to the view, so a smaller
-//      decode would draw a smaller image.
-//   5. Otherwise the view's size bounds what can be shown.
-// `monochrome` and `tint` work per pixel, so they are indifferent to rule 5.
-//
-// `hasPixels` false asks for the target of a vector source instead
-// (`ResolvedRequest::vectorDecode`): rule 1 does not apply, because there is
-// no "every pixel" to want. Rules 3 and 4 still do: they are about the
-// image's own size, which a vector has too.
+// The decode target, first match wins:
+//   1. `allowDownscaling` off: original (skipped for vectors, `!hasPixels`).
+//   2. `resize`: that width.
+//   3. `blur`: original, since its radius is in image pixels.
+//   4. `center`: original, since it draws 1:1.
+//   5. Otherwise the view's size.
 DecodeSize resolveDecodeSize(const ImageRequest& request,
                              const ProcessingSpec& processing,
                              bool hasPixels) {
@@ -103,28 +84,25 @@ DecodeSize resolveDecodeSize(const ImageRequest& request,
 }  // namespace
 
 std::string canonicalCacheKey(std::string_view uri) {
-  // Drop the fragment first: everything after '#' is client-side only.
+  // The fragment never reaches the server.
   if (const auto hash = uri.find('#'); hash != std::string_view::npos) {
     uri = uri.substr(0, hash);
   }
 
-  // Without "scheme://" there is no authority to normalise; keep the input
-  // as-is rather than guessing.
+  // No "scheme://": nothing to normalise.
   const auto schemeEnd = uri.find("://");
   if (schemeEnd == std::string_view::npos) {
     return std::string(uri);
   }
 
-  // The authority runs until the first '/', '?' (or the end of the string).
   const auto authorityStart = schemeEnd + 3;
   auto authorityEnd = uri.find_first_of("/?", authorityStart);
   if (authorityEnd == std::string_view::npos) {
     authorityEnd = uri.size();
   }
 
-  // "user:password@" in front of the host is case-sensitive and stays as
-  // written. The last '@' ends it: an unencoded '@' inside a password is
-  // malformed but seen in the wild, and the host cannot contain one.
+  // Userinfo is case-sensitive. Split at the last '@', since a password
+  // may hold an unencoded one.
   const auto authority = uri.substr(authorityStart, authorityEnd - authorityStart);
   const auto at = authority.rfind('@');
   const auto hostStart =
@@ -172,8 +150,7 @@ ResolveResult resolveRequest(const ImageRequest& request) {
   const ProcessingSpec processing =
       resolveProcessing(request.processing, request.pixelRatio);
 
-  // Every field is spelled out: NDK clang's -Wmissing-field-initializers
-  // (-Wextra) rejects partial designated initialisers under -Werror.
+  // All fields spelled out for NDK clang's -Wmissing-field-initializers.
   ResolvedRequest resolved{
       .url = request.uri,
       .cacheKey = request.cacheKey.value_or(canonicalCacheKey(request.uri)),
@@ -188,8 +165,7 @@ ResolveResult resolveRequest(const ImageRequest& request) {
           resolveDecodeSize(request, processing, /*hasPixels=*/false),
   };
 
-  // Cache-tier matrix. Keep this switch exhaustive (no `default:`) so adding
-  // a policy is a compile error until both tiers are decided.
+  // Exhaustive (no `default:`) so a new policy fails to compile until handled.
   switch (request.cachePolicy) {
     case CachePolicy::Default:
       break;
@@ -202,8 +178,7 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       break;
     case CachePolicy::CacheOnly:
       resolved.allowNetwork = false;
-      // Writing back what we just read is pointless and, for Coil, would
-      // re-encode the disk entry.
+      // No write-back: pointless, and Coil would re-encode the disk entry.
       resolved.memory.write = false;
       resolved.disk.write = false;
       break;
@@ -211,9 +186,7 @@ ResolveResult resolveRequest(const ImageRequest& request) {
       resolved.httpCache = true;
       break;
   }
-  // Applied after the matrix so every policy agrees on local sources: the
-  // policy still governs the memory tier, never the disk or the "network".
-  // A local file has no HTTP response, so there is no HTTP cache either.
+  // Local sources: the policy governs memory only; no disk, no HTTP cache.
   if (isLocal) {
     resolved.disk = {.read = false, .write = false};
     resolved.allowNetwork = true;
@@ -233,7 +206,7 @@ std::optional<CachePolicy> parseCachePolicy(std::string_view js) {
 }
 
 std::string_view loadErrorCodeName(LoadErrorCode code) {
-  // Exhaustive on purpose (no `default:`), so a new code must get a name.
+  // Exhaustive (no `default:`) so a new code must get a name.
   switch (code) {
     case LoadErrorCode::Unknown:
       return "unknown";
@@ -246,23 +219,21 @@ std::string_view loadErrorCodeName(LoadErrorCode code) {
     case LoadErrorCode::Decode:
       return "decode";
   }
-  // Out-of-range values can arrive from the JNI/ObjC ABI boundary.
+  // Out-of-range values can arrive across the JNI/ObjC boundary.
   return "unknown";
 }
 
 std::string_view coreVersion() { return "2.0.0-alpha.0"; }
 
 bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bool fill) {
-  // Every size must be known and positive; this is false for NaN too.
+  // Also false for NaN.
   const auto positive = [](PixelSize size) { return size.width > 0 && size.height > 0; };
   if (!positive(decoded) || !positive(loadedFor) || !positive(now)) {
     return false;
   }
 
-  // Cut down for its view, or the source at its own size? A decode bounded
-  // by the view touches the view's box on one side (fit) or covers it (fill);
-  // one that stops short of that was capped by the source. One pixel of
-  // slack for the decoders' rounding.
+  // A decode smaller than its view was capped by the source, so reloading
+  // gains nothing. One pixel of slack for decoder rounding.
   constexpr double kRoundingSlack = 1;
   const bool shortOfWidth = loadedFor.width > decoded.width + kRoundingSlack;
   const bool shortOfHeight = loadedFor.height > decoded.height + kRoundingSlack;
@@ -271,9 +242,7 @@ bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bo
     return false;
   }
 
-  // How much the view would scale the image up now, by the same rule the
-  // decode followed: fill takes the larger of the two scales, fit the
-  // smaller.
+  // Upscale now: fill takes the larger scale, fit the smaller.
   const double horizontal = now.width / decoded.width;
   const double vertical = now.height / decoded.height;
   const double upscale = fill ? std::max(horizontal, vertical) : std::min(horizontal, vertical);

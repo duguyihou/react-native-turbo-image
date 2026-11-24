@@ -4,14 +4,10 @@ import androidx.annotation.Nullable;
 import com.facebook.react.viewmanagers.TurboImageViewManagerDelegate;
 
 /**
- * The Codegen delegate, plus the border style props it does not route (see
- * {@link TurboImageBorders}).
+ * The Codegen delegate plus the border props it does not route.
  *
- * <p>Java on purpose, the only Java file in the library. React Native
- * declares {@code ViewManagerDelegate.setProperty} twice, once for Kotlin and
- * once under the JVM name the generated Java delegate overrides. A Kotlin
- * subclass would override the Kotlin one and bypass the generated method; a
- * Java subclass overrides the same method the generated class does.
+ * <p>Java on purpose: a Kotlin override of {@code setProperty} would bind to a
+ * different JVM method than the generated Java delegate and bypass it.
  */
 final class TurboImagePropsDelegate
     extends TurboImageViewManagerDelegate<TurboImageView, TurboImageViewManager> {

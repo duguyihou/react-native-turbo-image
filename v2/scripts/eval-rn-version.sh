@@ -1,21 +1,12 @@
 #!/usr/bin/env bash
-# Prepares a throwaway copy of the v2 workspace on another React Native
-# version, for evaluating upcoming releases without touching production pins
-# (RFC rule 8).
-#
-# The copy goes to v2/tmp/eval-rn-<version>/. It takes the target version's
-# own app template (@react-native-community/template) and applies only what
-# the example app depends on:
-#   * every react / react-native / @react-native/* / CLI version from the
-#     template's package.json, including dependencies the template adds,
-#   * kotlinVersion and ndkVersion from the template's android/build.gradle,
-#     but never a Kotlin below 2.3 (Coil 3.6.3 needs >= 2.3; see RFC §6.2),
-#   * the template's MainActivity.kt.
-# It then runs `bun install`. Building and smoke-testing are left to the
-# caller, because CI runs them per platform.
+# Copies the v2 workspace to tmp/eval-rn-<version>/ and moves it to another
+# React Native version, without touching the real pins (RFC rule 8). From
+# that version's app template it takes the RN-family package versions, NDK
+# and Kotlin (never below 2.3, for Coil), and MainActivity.kt, then runs
+# `bun install`. Building and testing are left to the caller.
 #
 # Usage: scripts/eval-rn-version.sh <react-native-version>
-# Prints the prepared directory on the last line of stdout.
+# Prints the prepared directory on the last stdout line. Exit: 2 on bad usage.
 
 set -euo pipefail
 
@@ -30,8 +21,7 @@ v2_root="$(cd "${script_dir}/.." && pwd)"
 out="${v2_root}/tmp/eval-rn-${rn_version}"
 template_dir="${v2_root}/tmp/template-${rn_version}"
 
-# Template versions for RCs carry a hash suffix (0.89.0-rc.1-8daacc8), so
-# resolve the exact published version first.
+# RC templates carry a hash suffix (0.89.0-rc.1-8daacc8); resolve the exact one.
 # shellcheck disable=SC2016 # ${want} below is a JS template literal, not shell.
 template_version="$(npm view @react-native-community/template versions --json \
   | node -e '

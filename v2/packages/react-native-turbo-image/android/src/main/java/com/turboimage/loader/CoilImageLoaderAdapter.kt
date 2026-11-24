@@ -26,25 +26,13 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * Coil 3 adapter: loads, prefetches and cache operations for the seam.
- * Everything Coil-specific lives in this file and the two beside it:
- * CoilRequests.kt (how a resolved request becomes a Coil request) and
- * CoilLoaderSetup.kt (how the `ImageLoader` is built).
- *
- * Cross-platform cache contract (RFC rule 3, mirrored in NukeImageLoader.swift):
- *  * the disk tier is TurboImage's own Coil DiskCache of original bytes, the
- *    same size as Nuke's DataCache,
- *  * HTTP freshness is ignored there: OkHttp gets no `Cache`, and Coil's
- *    `CacheStrategy.DEFAULT` serves disk hits without consulting
- *    `Cache-Control`, which matches Nuke's `withDataCache` (`urlCache = nil`),
- *  * except for `cachePolicy="urlCache"` requests (`ResolvedRequest.httpCache`),
- *    whose disk tier is an HTTP cache: see [PolicyCacheStrategy],
- *  * concurrent requests for the same cache key are de-duplicated, which
- *    matches Nuke's default task coalescing.
+ * Coil 3 adapter for the seam. Cache contract (RFC rule 3, as on iOS): the
+ * disk tier holds original bytes and ignores HTTP freshness, except under
+ * `urlCache` ([PolicyCacheStrategy]); concurrent same-key requests dedupe.
  */
 internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSizes()) : ImageLoaderAdapter {
   private val appContext = context.applicationContext
-  // Internal for the instrumented tests, which check how Coil keys entries.
+  // Internal for instrumented tests.
   internal val imageLoader: ImageLoader = buildImageLoader(appContext, cacheSizes)
 
   override fun load(
@@ -53,22 +41,14 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
     options: ImageLoaderAdapter.DisplayOptions,
     listener: ImageLoaderAdapter.Listener,
   ): LoadHandle {
-    // `finished` enforces the seam contract on the main thread: no progress
-    // after success/failure/cancel. Progress arrives on OkHttp threads and is
-    // posted to main, where this flag is checked.
+    // No progress after success/failure/cancel; checked on the main thread.
     var finished = false
-    // Null when nothing listens for progress: no listener registered, no
-    // token header, so OkHttp counts no bytes and nothing is posted to main.
+    // Null when nothing listens: no token header, no byte counting.
     val token =
       if (!options.reportProgress) null
       else ProgressInterceptor.register { completed, total ->
-        // Asynchronous, because Coil's own callbacks are: Dispatchers.Main
-        // posts asynchronous messages, which pass the sync barrier the view
-        // system holds from scheduling a traversal until it runs (up to a
-        // frame). A plain `post` waits behind that barrier, so when a small
-        // image downloaded and decoded within one frame, onSuccess overtook
-        // every progress message, `finished` dropped them all, and the load
-        // reported no progress. Same kind of message, same queue: FIFO.
+        // Asynchronous like Coil's own callbacks, so progress stays ordered
+        // before onSuccess; a plain `post` waits behind the sync barrier.
         val message = Message.obtain(mainHandler) { if (!finished) listener.onProgress(completed, total) }
         message.isAsynchronous = true
         mainHandler.sendMessage(message)
@@ -78,25 +58,15 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
       token?.let(ProgressInterceptor::unregister)
     }
 
-    // Coil keeps a view's last request, finished or not, and enqueues it
-    // again every time the view is reattached to a window (FlatList's
-    // removeClippedSubviews, react-native-screens). That restart is wanted
-    // while a load is in flight, since Coil cancels it on detach. For a load
-    // that has completed it is wrong:
-    //   * a failed load would retry behind the view's back, and could paint
-    //     an image JS was told had failed;
-    //   * a view whose source was since cleared would get the old image
-    //     back (the target paints regardless of the view's own guards);
-    //   * a `noCache` source would download again on every reattach.
-    // So a completed load is disposed, which is how Coil is told to forget a
-    // request. It leaves the drawable alone.
+    // Coil re-enqueues a view's last request on every reattach. Fine while in
+    // flight, wrong once done (silent retries, stale images, re-downloads),
+    // so dispose a completed load. The drawable stays.
     var completed = false
     var disposable: Disposable? = null
     fun complete() {
       finish()
       completed = true
-      // Null when a memory-cache hit completes inside `enqueue` below, before
-      // the disposable exists; that case is disposed right after `enqueue`.
+      // Null on a memory hit inside `enqueue`; disposed right after it.
       disposable?.dispose()
     }
 
@@ -108,11 +78,9 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
             .build()
         )
         .target(KeepCurrentImageTarget(target))
-        // Coil's crossfade already skips memory-cache hits (the seam rule)
-        // and fades from the target's current drawable, i.e. the placeholder.
+        // Skips memory hits and fades from the current drawable.
         .crossfade(options.fadeMillis)
-        // Coil's default is true. When false, a hardware bitmap already in
-        // the memory cache is not reused (Coil treats it as a miss).
+        // When false, a cached hardware bitmap counts as a miss.
         .allowHardware(options.allowHardware)
         .listener(
           onSuccess = { _, result ->
@@ -123,8 +91,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
             complete()
             listener.onError(classify(result.throwable, request), result.throwable.message ?: "Unknown error")
           },
-          // Not `complete()`: this is Coil cancelling on detach (or before the
-          // first attach), and the request must survive to restart on attach.
+          // Not `complete()`: a detach cancel must restart on attach.
           onCancel = { finish() },
         )
         .build()
@@ -132,10 +99,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
     val enqueued = imageLoader.enqueue(coilRequest)
     disposable = enqueued
     if (completed) enqueued.dispose()
-    // `dispose()` cancels the job and clears the ViewTarget, so no listener
-    // fires afterwards (RFC §4.8, "Coil and the view's attach state"). A
-    // no-op once Coil has moved on to another request for this view, so safe
-    // after completion too.
+    // `dispose()` stops all listeners; safe after completion.
     return LoadHandle {
       finish()
       enqueued.dispose()
@@ -151,8 +115,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
     val coilRequest =
       request.toCoilRequest(sizeOf.context, sizeOf)
         .httpHeaders(request.networkHeaders().build())
-        // A callback target, not the view: the view shows the result only if
-        // its lifecycle still wants this placeholder.
+        // Not the view: its lifecycle decides whether to show it.
         .target(
           onSuccess = { image ->
             if (!finished) {
@@ -185,8 +148,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
       request.toCoilRequest(appContext, view = null)
         .httpHeaders(request.networkHeaders().build())
         .decoderFactory(HeaderSizeDecoder.Factory())
-        // The size-only result is not the image: never stored in memory. A
-        // full image already there is read (it has the same size).
+        // Never store the size-only result; a cached full image is fine.
         .memoryCachePolicy(if (request.memoryRead) CachePolicy.READ_ONLY else CachePolicy.DISABLED)
         .listener(
           onSuccess = { _, result ->
@@ -216,9 +178,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
       request.toCoilRequest(appContext, view = null)
         .httpHeaders(request.networkHeaders().build())
         .apply {
-          // Nothing will keep a decoded bitmap (a prefetch), so
-          // read only the header, as `imageSize` does: the fetch still
-          // writes the disk cache, and no pixels are allocated.
+          // Disk-only prefetch: read just the header, allocate no pixels.
           if (!request.memoryWrite) decoderFactory(HeaderSizeDecoder.Factory())
         }
         .listener(
@@ -233,11 +193,8 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
     }
   }
 
-  // Coil keys memory entries by key *and* extras (e.g. the resolved size of
-  // the view that loaded it, or the processing step), so an exact
-  // Key(cacheKey) lookup would miss. TurboImage owns the key string; match on
-  // it across the (small) key set. `remove` thereby evicts every processed
-  // variant too.
+  // Coil keys entries by key and extras, so match on the key string alone
+  // to find every variant.
   private fun memoryKeysFor(cacheKey: String) =
     imageLoader.memoryCache?.keys?.filter { it.key == cacheKey }.orEmpty()
 
@@ -245,15 +202,13 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
     onDiskThread(
       work = {
         for (request in requests) {
-          // Both disk namespaces, whichever policy stored the image.
+          // Both disk namespaces.
           imageLoader.diskCache?.remove(request.cacheKey)
           imageLoader.diskCache?.remove(httpDiskKey(request.url))
         }
       },
-      // Memory after disk, not before: a view that reloads in between would
-      // otherwise read the disk copy back into memory, and the entry would
-      // outlive the call that removed it.
-      // Also when the disk work failed: whatever can still be evicted is.
+      // Memory after disk, or a reload in between could repopulate it.
+      // Runs even if the disk work failed.
       thenOnMain = { failure ->
         for (request in requests) {
           memoryKeysFor(request.cacheKey).forEach { imageLoader.memoryCache?.remove(it) }
@@ -264,12 +219,8 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
   }
 
   /**
-   * Runs blocking disk-cache [work] off the main thread, then [thenOnMain].
-   * Coil's `DiskCache` is thread-safe but synchronous: `remove` and `clear`
-   * write the journal and delete files, and the first access opens the cache.
-   *
-   * [thenOnMain] always runs, so the caller's promise always settles: with
-   * null when [work] finished, with what it threw otherwise.
+   * Runs blocking disk-cache [work] off the main thread, then always runs
+   * [thenOnMain] with null or what [work] threw.
    */
   private fun onDiskThread(work: () -> Unit, thenOnMain: (Throwable?) -> Unit) {
     diskExecutor.execute {
@@ -294,39 +245,20 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
   }
 
   override fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable? {
-    // The unprocessed image only, like Nuke's (imageID, no processors) key:
-    // a blurred variant must not stand in as another view's placeholder.
+    // Unprocessed only: a blurred variant must not be another view's placeholder.
     val memoryCache = imageLoader.memoryCache ?: return null
-    // Every request sets `memoryCacheKey`, so Coil keys a view-sized
-    // unprocessed entry `Key(cacheKey)`: one lookup finds it. The scan
-    // copies and filters every key in the cache, on the main thread, for
-    // each candidate key a view tries, so it is only the fallback, for an
-    // original-size entry (`COIL_SIZE_EXTRA`).
+    // Fast path for view-sized entries; the key scan is the fallback for
+    // original-size ones.
     memoryCache[MemoryCache.Key(cacheKey)]?.let { return it.image.asDrawable(resources) }
     val key = memoryKeysFor(cacheKey).firstOrNull { TRANSFORMATIONS_EXTRA !in it.extras } ?: return null
     return memoryCache[key]?.image?.asDrawable(resources)
   }
 
   /**
-   * Maps Coil failures onto `turboimage::LoadErrorCode`. Must stay in step
-   * with `NukeImageLoader.classify` on iOS.
-   *
-   * With network reads disabled Coil asks OkHttp for `only-if-cached`, and
-   * our cache-less client answers with a synthetic HTTP 504. Coil does the
-   * same when the device is offline, so a 504 only means "not cached" when
-   * the *policy* forbade the network; otherwise it is a network failure.
-   *
-   * Anything that is not a transport failure happened after bytes arrived
-   * (fetchers are chosen by the core-validated http(s) scheme), so it is
-   * classified as a decode failure.
-   *
-   * Android's `ImageDecoder.DecodeException` is an `IOException`, and Coil
-   * decodes stills with `ImageDecoder` where it can (`StaticImageDecoder`),
-   * so it is checked before the transport rule. Without that, bytes that are
-   * not an image (an HTML error page sent with a 200) reported `network`
-   * here and `decode` on iOS. The adapter test
-   * `aBodyNoDecoderRecognisesIsADecodeError` caught it; no smoke scenario
-   * expects `decode`.
+   * Maps Coil failures to `turboimage::LoadErrorCode`, in step with iOS.
+   * A 504 means "not cached" only when the policy forbade the network.
+   * `ImageDecoder.DecodeException` is an `IOException`, so check it first.
+   * Anything else non-transport is a decode failure.
    */
   private fun classify(error: Throwable, request: ResolvedRequest): Int =
     when {
@@ -343,7 +275,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    // One thread, so removals and clears run in the order JS asked for them.
+    // One thread, so removals and clears keep JS's order.
     private val diskExecutor: ExecutorService =
       Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "TurboImageDiskCache").apply { isDaemon = true }

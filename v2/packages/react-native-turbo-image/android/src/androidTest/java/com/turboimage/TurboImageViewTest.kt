@@ -26,22 +26,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * `TurboImageView` itself, between its props and the loader seam: when it
- * loads, what it asks the adapter for, and which events JS hears.
+ * `TurboImageView` against a [FakeLoader] and the real core: when it loads,
+ * what it asks for, and which events JS hears. Runs on the main thread with
+ * no window; `layout()` stands in for Fabric setting the frame.
  *
- * The loader tests (`com.turboimage.loader`) drive the real Coil adapter;
- * these replace it with [FakeLoader], so a test decides when each load
- * succeeds or fails and can see every load the view starts. The core is the
- * real one (JNI), so the decisions under test are the ones the app makes.
- *
- * The view is never attached to a window. Fabric sets a view's frame
- * directly, and `layout()` does the same here: it fires `onSizeChanged` as
- * Fabric's layout does. Everything runs on the main thread, as in an app.
- *
- * Covered: upgrades and image placeholders. Load events are gated by
- * `loadEventMask`
- * (all on unless a test sets it). TODO: hash placeholders, `recyclingKey` and
- * progress through the fake.
+ * TODO: hash placeholders, `recyclingKey` and progress.
  */
 @RunWith(AndroidJUnit4::class)
 class TurboImageViewTest {
@@ -90,8 +79,7 @@ class TurboImageViewTest {
 
   @Test
   fun anImageSmallerThanItsViewIsNeverLoadedAgain() = onMain {
-    // The decode never upscales, so an image that came out smaller than its
-    // view is the source at its own size; a larger view gets the same pixels.
+    // Decoding never upscales, so a larger view would get the same pixels.
     showLoadedImage(decodedWidth = 100, decodedHeight = 50)
 
     resize(900, 600)
@@ -101,8 +89,7 @@ class TurboImageViewTest {
 
   @Test
   fun anImageNotDecodedForTheViewIsNeverLoadedAgain() = onMain {
-    // With downscaling off the image is decoded at its own size, whatever
-    // the view's.
+    // With downscaling off, the decode ignores the view's size.
     showLoadedImage(request = ImageRequest(uri = URL, allowDownscaling = false))
 
     resize(900, 600)
@@ -157,13 +144,11 @@ class TurboImageViewTest {
     setSource("$URL?other")
 
     assertTrue("the upgrade is cancelled", upgrade.cancelled)
-    // Only the new load's onStart: the upgrade was never a load JS saw, so
-    // its end is no onCompletion either.
+    // JS never saw the upgrade, so it gets no onCompletion for it.
     assertEquals(listOf("topStart"), eventNames())
     assertEquals(3, loader.loads.size)
 
-    // The adapter never calls back after a cancel; if one did, the view
-    // must ignore it.
+    // A callback after cancel (a seam violation) must be ignored.
     events.clear()
     upgrade.listener.onSuccess(600, 400)
     assertEquals(emptyList<String>(), eventNames())
@@ -210,7 +195,7 @@ class TurboImageViewTest {
     loader.loads.single().succeed(300, 200)
 
     assertTrue("no longer needed", thumb.cancelled)
-    // The seam forbids a callback after cancel; if one came, it must not win.
+    // A callback after cancel (a seam violation) must not win.
     thumb.deliver(SizedDrawable(30, 20))
 
     assertEquals(300, view.drawable.intrinsicWidth)
@@ -252,7 +237,7 @@ class TurboImageViewTest {
     assertEquals(listOf("topFailure", "topCompletion"), eventNames())
   }
 
-  /** The mask is read as each event is sent, as JS looks up its handler. */
+  /** The mask is read per event, not once per load. */
   @Test
   fun aHandlerAddedMidLoadHearsTheRestOfIt() = onMain {
     view.loadEventMask = 0
@@ -267,7 +252,7 @@ class TurboImageViewTest {
 
   // MARK: contentPosition
 
-  /** The matrix ImageView draws with, as (scaleX, scaleY, translateX, translateY). */
+  /** The image matrix as (scaleX, scaleY, translateX, translateY). */
   private fun drawMatrix(): List<Float> {
     val values = FloatArray(9)
     view.imageMatrix.getValues(values)
@@ -304,11 +289,7 @@ class TurboImageViewTest {
 
   // MARK: Helpers
 
-  /**
-   * A 300×200 view showing [request]'s image, decoded at
-   * [decodedWidth]×[decodedHeight]. Clears the events of that load, so a
-   * test sees only what comes after.
-   */
+  /** A 300×200 view showing [request]'s image, with that load's events cleared. */
   private fun showLoadedImage(
     request: ImageRequest = ImageRequest(uri = URL),
     decodedWidth: Int = 300,
@@ -327,7 +308,7 @@ class TurboImageViewTest {
     view.onTransactionEnd()
   }
 
-  /** What Fabric does when layout gives the view a frame: measure exactly, then lay out. */
+  /** Gives the view a frame, as Fabric does. */
   private fun resize(width: Int, height: Int) {
     view.measure(
       View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
@@ -357,9 +338,8 @@ class TurboImageViewTest {
 }
 
 /**
- * A loader adapter whose loads finish when a test says so. Like Coil, it
- * puts the image in the view itself before it reports success (the seam's
- * contract), and it never calls back after a cancel.
+ * An adapter whose loads finish when a test says so. Like Coil, it sets the
+ * image before reporting success and never calls back after a cancel.
  */
 private class FakeLoader : ImageLoaderAdapter {
   inner class Load(
@@ -388,7 +368,7 @@ private class FakeLoader : ImageLoaderAdapter {
   class PlaceholderLoad(val request: ResolvedRequest, private val onDone: (Drawable?) -> Unit) {
     var cancelled = false
 
-    /** Ignores [cancelled] on purpose: tests use it to play a misbehaving adapter too. */
+    /** Ignores [cancelled] so tests can play a misbehaving adapter. */
     fun deliver(drawable: Drawable?) = onDone(drawable)
   }
 
@@ -411,7 +391,7 @@ private class FakeLoader : ImageLoaderAdapter {
     return LoadHandle { load.cancelled = true }
   }
 
-  // The view tests never reach the cache module's half of the seam.
+  // The view never uses the cache module's half of the seam.
   override fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit) = error("not used")
 
   override fun imageSize(
@@ -429,7 +409,7 @@ private class FakeLoader : ImageLoaderAdapter {
   override fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable? = null
 }
 
-/** A stand-in for a decoded bitmap: only its size matters to the view. */
+/** A stand-in for a decoded bitmap; only its size matters. */
 private class SizedDrawable(private val width: Int, private val height: Int) : ColorDrawable(0xFF336699.toInt()) {
   override fun getIntrinsicWidth() = width
 

@@ -3,22 +3,14 @@ package com.turboimage.loader
 import android.content.Context
 
 /**
- * The process-wide loader adapter, shared by every view and by
- * TurboImageModule, so prefetches and evictions act on the caches views
- * read from. The counterpart of `TIImageLoaderRegistry.sharedLoader` on iOS.
- * Synchronised: views and the module call it on the main thread, and
- * `configureCache` on the JS thread (a synchronous TurboModule method).
+ * The process-wide loader adapter, shared by views and TurboImageModule.
+ * Synchronised because `configureCache` runs on the JS thread.
  */
 internal object TurboImageLoaders {
   private var adapter: ImageLoaderAdapter? = null
   private var cacheSizes = CacheSizes()
 
-  /**
-   * `TurboImage.configureCache`: the sizes the bundled adapter's caches are
-   * built with. Coil builds them once and cannot resize them, so this only
-   * works before the adapter exists: false (and nothing changes) after the
-   * first view or cache call.
-   */
+  /** Sets cache sizes. Coil can't resize caches, so false once the adapter exists. */
   @Synchronized
   fun configureCache(sizes: CacheSizes): Boolean {
     if (adapter != null) return false
@@ -26,7 +18,7 @@ internal object TurboImageLoaders {
     return true
   }
 
-  /** The bundled Coil adapter, created on first use because it needs a Context. */
+  /** The Coil adapter, created lazily (it needs a Context). */
   @Synchronized
   fun get(context: Context): ImageLoaderAdapter =
     adapter ?: CoilImageLoaderAdapter(context.applicationContext, cacheSizes).also { adapter = it }
