@@ -3,6 +3,11 @@
 Date: 2026-11-16. Based on React Native 0.88.1 and 0.89.0-rc.1, read from
 source (`react-native/scripts/spm/*`) and tried on TurboImage's example app.
 
+> **Decision, 2026-11-25:** the in-app path is no longer supported, and its
+> CI job is removed ([ADR 0015](adr/0015-cocoapods-only-for-apps.md)).
+> `Package.swift` keeps only the standalone mode, for the adapter tests and
+> tvOS. This assessment is the record of what re-enabling it would take.
+
 ## Verdict
 
 | Question | Answer |

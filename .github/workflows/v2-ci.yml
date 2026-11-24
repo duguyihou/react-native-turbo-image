@@ -1,8 +1,6 @@
 # TurboImage 2.0 CI build matrix (v2/ monorepo).
 #
-# Blocking jobs gate merges. `eval-*` and `ios-spm-app` are informational
-# (continue-on-error): they track beta dependencies and React Native's
-# preview SwiftPM tooling separately from production (RFC rule 8).
+# Blocking jobs gate merges. `eval-*` jobs only report (RFC rule 8).
 #
 # The 1.x workflow (ci.yml) is untouched and keeps covering the repo root.
 #
@@ -282,6 +280,7 @@ jobs:
           if-no-files-found: ignore
 
   ios-spm-standalone:
+    # Adapter tests and the tvOS build. Apps use CocoaPods.
     name: iOS SwiftPM package (standalone)
     needs: core
     runs-on: xcode-27
@@ -290,7 +289,6 @@ jobs:
       - uses: actions/checkout@v5
       - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
       - working-directory: v2/packages/react-native-turbo-image
-        env: { TURBOIMAGE_SPM_STANDALONE: '1' }
         run: xcodebuild -scheme TurboImage -destination 'generic/platform=iOS Simulator' build
       # The Nuke adapter's own tests (ios/Tests), through the seam with local
       # files. Among them animated images, which no load event reports and
@@ -304,61 +302,7 @@ jobs:
       # scripts/test-packed-install.sh does locally.
       - name: Build for tvOS
         working-directory: v2/packages/react-native-turbo-image
-        env: { TURBOIMAGE_SPM_STANDALONE: '1' }
         run: xcodebuild -scheme TurboImage -destination 'generic/platform=tvOS Simulator' build
-
-  ios-spm-app:
-    name: iOS example (RN SwiftPM, preview)
-    # RN 0.88's SwiftPM integration is a preview: tracked, not gating.
-    continue-on-error: true
-    needs: [core, js]
-    runs-on: xcode-27
-    # The Debug-only build took 4 min; the Release build and the smoke run
-    # have not been timed on a hosted runner yet. TODO: cut this to two to
-    # three times the longest green run, like the other jobs.
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v5
-      - run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with: { bun-version: '${{ env.BUN_VERSION }}' }
-      - uses: actions/setup-node@v5
-        with: { node-version: '${{ env.NODE_VERSION }}', package-manager-cache: false }
-      - run: bun install --frozen-lockfile
-      - name: Convert a copy of the example to SwiftPM
-        run: |
-          mkdir -p .spm-trial
-          rsync -a --exclude ios/Pods --exclude android apps/example/ .spm-trial/example/
-          cd .spm-trial/example
-          node ../../node_modules/react-native/scripts/setup-apple-spm.js add --deintegrate --yes
-      # Release, not Debug, because the smoke test below needs the bundled
-      # JS and reads the result from os_log. The Debug configuration of this
-      # path is intentionally no longer built here: one build keeps a
-      # non-gating job short.
-      - name: Build (Release)
-        working-directory: v2/.spm-trial/example
-        run: |
-          xcodebuild -project ios/TurboImageExample.xcodeproj -scheme TurboImageExample \
-            -configuration Release -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath ios/build build
-      # A build alone does not show that this path works: if the Fabric
-      # target drops out of the package (spm-assessment.md, "Layout drift"),
-      # the app still builds and fails at runtime with "Unimplemented
-      # component". The suite only passes when the component renders. It
-      # also keeps the SwiftPM result in the docs from going stale, which it
-      # did while this job only built.
-      - name: On-simulator smoke test (Release)
-        run: |
-          bash scripts/smoke-ios.sh \
-            "$PWD/.spm-trial/example/ios/build/Build/Products/Release-iphonesimulator/TurboImageExample.app"
-      - name: Keep the smoke test's failure log
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: smoke-failure-ios-spm
-          path: v2/tmp/smoke-*-failure-*.log
-          if-no-files-found: ignore
 
   eval-rn-0-89:
     name: Evaluate React Native 0.89 (${{ matrix.platform }}, pre-release)

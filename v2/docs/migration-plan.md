@@ -28,7 +28,7 @@ builds, and the CI matrix.
 - [x] RFC open questions 1–3 resolved (Coil view and Activity lifecycle, deterministic `cacheOnly`).
 - [x] Cross-platform `onFailure.code` taxonomy (RFC §4.4).
 - [x] RN 0.89.0-rc.1 evaluation, scripted (`scripts/eval-rn-version.sh`) and run in CI (non-blocking).
-- [x] iOS Release through RN SwiftPM verified by the smoke test.
+- [x] iOS Release through RN SwiftPM verified by the smoke test. (Path dropped on 2026-11-25, ADR 0015.)
 - [x] Smoke scripts refuse stale build artifacts (`scripts/assert-fresh-build.sh`).
 
 ### Phase 2: pipeline parity with 1.x (ordered by usage)
@@ -51,7 +51,7 @@ builds, and the CI matrix.
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). Cookies: iOS shares React Native's (`HTTPCookieStorage`), Android sends none, both as in 1.x. An app-wide hook for default headers is a TODO |
 | — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
-| — (new in 2.0) `source` as an array of sizes | Core chooses (`chooseSource`); views load the chosen candidate as an ordinary request and switch to a larger one on growth | ✅ done (RFC §4.5c, "Source sets"). expo-image's form |
+| — (new in 2.0) `source` as an array of sizes | — | Removed before 2.0.0 (2026-11-25): no recorded demand, and it added state to both views (`docs/audit/`, S7) |
 | — (new in 2.0) `contentPosition`, `resizeMode="scale-down"` | Core computes the rectangle (`placeImage`); Android draws it as the image matrix, iOS as the image view's frame inside a clipping container | ✅ done (RFC §4.5d). expo-image's props, keywords and percentages; point offsets are a TODO |
 | — (new in 2.0) `TurboImage.configureCache` | Cache module; the sizes reach the adapter when it is created (`TIImageLoaderRegistry`, `TurboImageLoaders`) | ✅ done (RFC §4.4c). expo-image's names; synchronous, before the first load only |
 | — (new in 2.0) `TurboImage.getSize` | Cache module; adapters read the size from the header (`imageSizeForRequest:` / `imageSize`) | ✅ done (RFC §4.4c). React Native's `Image.getSize`, as a promise |
@@ -70,7 +70,7 @@ builds, and the CI matrix.
   - Requirements: New Architecture, RN ≥ 0.88, **Kotlin ≥ 2.3**, iOS 16.0 (Nuke 14).
   - Prop renames and the `cachePolicy` mapping.
   - The pod name changes from `react-native-turbo-image` to `TurboImage`. Autolinking handles this, but apps that reference the pod name directly need updating.
-  - SwiftPM opt-in instructions (`npx react-native spm`).
+  - CocoaPods only; SwiftPM apps are not supported until React Native's integration leaves preview (ADR 0015).
 - 2.0.0 once Phase 2 parity and both iOS integration paths are green in CI.
 
 ## Breaking changes for apps (draft)

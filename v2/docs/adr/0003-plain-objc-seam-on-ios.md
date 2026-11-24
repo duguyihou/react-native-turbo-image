@@ -1,6 +1,6 @@
 # 0003: The iOS seam is plain Objective-C, and the adapter is found by name
 
-Status: accepted
+Status: accepted. Amended by [0014](0014-the-loader-seam-is-internal.md): apps no longer replace the loader
 
 ## Context
 

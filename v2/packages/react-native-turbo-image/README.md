@@ -13,7 +13,7 @@ Performant image component for React Native, backed by
 
 - React Native 0.88 or newer, New Architecture only
 - iOS 16.0 or newer, built with Xcode 27 or newer. React Native's template targets 15.1: raise `platform :ios` in the `Podfile` and the app's deployment target
-- tvOS 16.0 or newer, with react-native-tvos 0.88 or newer (Live Text is iOS only)
+- tvOS 16.0 or newer, with react-native-tvos 0.88 or newer: **experimental**, built in CI but never run on a device (Live Text is iOS only)
 - Android `minSdk` 24, Kotlin 2.3 or newer
 
 ## Installation
@@ -51,10 +51,8 @@ export function Avatar({ uri }: { uri: string }) {
 Cache management:
 
 ```ts
-// Download only (the default):
+// Downloads into the disk cache; views decode it at their own size:
 await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }]);
-// Also decode into memory for views with `resize={120}`:
-await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }], { resize: 120 });
 await TurboImage.dispose([{ uri: 'https://example.com/photo.jpg' }]);
 await TurboImage.clearMemoryCache();
 await TurboImage.clearDiskCache();

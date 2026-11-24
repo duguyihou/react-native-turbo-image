@@ -38,7 +38,7 @@ import java.util.concurrent.Executors
  * props → C++ core → loader adapter → display + events.
  */
 @SuppressLint("ViewConstructor")
-class TurboImageView(
+class TurboImageView internal constructor(
   private val reactContext: ThemedReactContext,
   private val loader: ImageLoaderAdapter,
 ) : AppCompatImageView(reactContext) {
@@ -60,15 +60,6 @@ class TurboImageView(
   var placeholderUri: String? = null
     set(value) { if (field != value) { field = value; needsPlaceholder = true } }
 
-  /** One entry of a source set: its own size in pixels, 0 when unknown. */
-  data class SourceCandidate(val uri: String, val cacheKey: String?, val width: Double, val height: Double)
-
-  // A source set (`sources`): the view loads one candidate, chosen for its
-  // size (`turboimage::chooseSource`). Empty for a single `source`, which
-  // [request] then names. When set, [request] still gives the headers,
-  // policy and processing for whichever candidate loads.
-  var candidates: List<SourceCandidate> = emptyList()
-
   // Not a request prop: a new key alone starts no load, because the image on
   // screen is still the one the source names. It only decides how the load started
   // in this same transaction treats the previous image (see [reload]).
@@ -83,7 +74,6 @@ class TurboImageView(
   private data class LoadInputs(
     val request: ImageRequest,
     val allowHardware: Boolean,
-    val candidates: List<SourceCandidate>,
   )
 
   // The inputs the current load was started for; null before the first load.
@@ -110,8 +100,6 @@ class TurboImageView(
    */
   private data class Upgradable(
     val request: ResolvedRequest,
-    // The source set's candidate on screen; 0 for a single source.
-    val candidate: Int,
     val fill: Boolean,
     val decodedWidth: Int,
     val decodedHeight: Int,
@@ -120,11 +108,6 @@ class TurboImageView(
   )
 
   private var upgradable: Upgradable? = null
-  // Set by the first [onLayout] and never cleared: the view has a size (maybe
-  // none) to choose a source set's candidate by.
-  private var hasLayout = false
-  // A source set's load waiting for the first layout; 0 when none.
-  private var pendingStart = 0L
   // Cancels the image placeholder's load; null when there is none.
   private var placeholderHandle: LoadHandle? = null
 
@@ -285,7 +268,7 @@ class TurboImageView(
     // A new load whenever the request differs from the one on screen, and
     // for the first transaction whatever it says: a view mounted without a
     // source reports that (`invalidRequest`) instead of staying silent.
-    val inputs = LoadInputs(request, allowHardware, candidates)
+    val inputs = LoadInputs(request, allowHardware)
     if (inputs != loadedFor) {
       loadedFor = inputs
       // A reload may clear the view, so the placeholder must be (re)applied.
@@ -336,13 +319,7 @@ class TurboImageView(
     upgradable = null
     progressThrottle = ProgressThrottle()
     lastProgressTotal = -1L
-    // A source set is chosen for the view's size. Fabric may set a new
-    // view's props well before it lays the view out, so before the first
-    // layout the choice waits for it (see [startWhenLaidOut]); candidate 0
-    // stands in to validate.
-    val laidOut = hasLayout
-    val candidate = if (laidOut) chooseCandidate() else 0
-    val result = resolve(requestFor(candidate))
+    val result = resolve(request)
     perform(
       lifecycle.reload(
         recyclingKeyChanged,
@@ -355,9 +332,7 @@ class TurboImageView(
       when (result) {
         is ResolvedRequest ->
           object : StepEffects() {
-            override fun startLoad(token: Long) =
-              if (candidates.isNotEmpty() && !laidOut) startWhenLaidOut(token)
-              else startLoad(result, candidate, token)
+            override fun startLoad(token: Long) = startLoad(result, token)
           }
         is ResolveFailure ->
           object : StepEffects() {
@@ -434,71 +409,10 @@ class TurboImageView(
   private fun resolve(request: ImageRequest) =
     TurboImageCore.resolve(request, resources.displayMetrics.density.toDouble())
 
-  /** [request] with a source set's candidate in place of `source`. */
-  private fun requestFor(candidate: Int): ImageRequest =
-    candidates.getOrNull(candidate)?.let { request.copy(uri = it.uri, cacheKey = it.cacheKey) } ?: request
-
-  private fun candidateSizes() =
-    DoubleArray(candidates.size * 2) { i -> candidates[i / 2].let { if (i % 2 == 0) it.width else it.height } }
-
-  /** The candidate this view loads at its current size; 0 for a single source. */
-  private fun chooseCandidate(): Int =
-    if (candidates.isEmpty()) 0
-    else TurboImageCore.chooseSource(candidateSizes(), width, height, request.resizeMode, request.allowDownscaling)
-
-  /**
-   * Starts a source set's load at the view's first layout, when it has a
-   * size to choose by. JS hears onStart now, as for any load: the lifecycle
-   * counts the load as started, and a reload before the layout ends it with
-   * `cancelled`.
-   *
-   * Not one turn of the main loop later: Fabric may create a view and set
-   * its props ahead of the mount (view preallocation), and lay it out
-   * several turns after that; the smoke scenario `sourceSet` then loaded the
-   * largest candidate. Fabric's layout measures and lays the view out, which
-   * runs [onLayout] even for a view with no area; that one gets the largest
-   * candidate, as on iOS. [hasLayout] is never cleared, so a view detached
-   * and reattached without a new layout chooses at once.
-   */
-  private fun startWhenLaidOut(token: Long) {
-    emitStart()
-    pendingStart = token
-  }
-
-  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-    super.onLayout(changed, left, top, right, bottom)
-    hasLayout = true
-    val token = pendingStart
-    if (token == 0L) return
-    pendingStart = 0L
-    if (lifecycle.isInFlight(token)) beginChosenLoad(token)
-  }
-
-  /** Picks the candidate for the current size and starts it, or fails the load if the core rejects it. */
-  private fun beginChosenLoad(token: Long) {
-    val candidate = chooseCandidate()
-    when (val result = resolve(requestFor(candidate))) {
-      is ResolvedRequest -> beginLoad(result, candidate, token)
-      is ResolveFailure ->
-        perform(
-          lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure),
-          object : StepEffects() {
-            override fun deliverFailure() =
-              emitFailure(
-                LoadErrorCode.INVALID_REQUEST.nativeValue,
-                "Invalid request (core error ${result.errorCode})")
-          })
-    }
-  }
-
   private fun emitStart() = emit("topStart") { putString("state", "running") }
 
-  private fun startLoad(request: ResolvedRequest, candidate: Int, token: Long) {
+  private fun startLoad(request: ResolvedRequest, token: Long) {
     emitStart()
-    beginLoad(request, candidate, token)
-  }
-
-  private fun beginLoad(request: ResolvedRequest, candidate: Int, token: Long) {
     // What the decode is sized for, if the view is laid out already; if not,
     // the adapter waits for the layout, and the size at success is it.
     val sizeAtStart = width to height
@@ -530,7 +444,7 @@ class TurboImageView(
                 override fun deliverSuccess() {
                   cancelPlaceholderLoad()
                   deliverSuccess(width, height, request.url)
-                  remember(request, candidate, width, height, sizeAtStart)
+                  remember(request, width, height, sizeAtStart)
                 }
               })
 
@@ -548,7 +462,7 @@ class TurboImageView(
   }
 
   /** Notes an image that was sized for this view, then sees whether the view already outgrew it. */
-  private fun remember(request: ResolvedRequest, candidate: Int, width: Int, height: Int, sizeAtStart: Pair<Int, Int>) {
+  private fun remember(request: ResolvedRequest, width: Int, height: Int, sizeAtStart: Pair<Int, Int>) {
     val decode = request.decode as? ResolvedRequest.DecodeSize.View
     if (decode == null) {
       upgradable = null
@@ -558,7 +472,7 @@ class TurboImageView(
     val laidOut = startWidth > 0 && startHeight > 0
     upgradable =
       Upgradable(
-        request, candidate, decode.fill, width, height,
+        request, decode.fill, width, height,
         loadedForWidth = if (laidOut) startWidth else this.width,
         loadedForHeight = if (laidOut) startHeight else this.height,
       )
@@ -580,22 +494,13 @@ class TurboImageView(
     val shown = upgradable ?: return
     val nowWidth = width
     val nowHeight = height
-    // A source set may have a larger candidate for the new size; otherwise
-    // the same candidate may need decoding larger.
-    val larger =
-      if (candidates.isEmpty()) null
-      else
-        TurboImageCore.largerSourceFor(
-          candidateSizes(), shown.candidate, nowWidth, nowHeight, request.resizeMode, request.allowDownscaling)
     val outgrown =
-      larger != null ||
-        ViewLifecycle.needsLargerDecode(
-          shown.decodedWidth, shown.decodedHeight,
-          shown.loadedForWidth, shown.loadedForHeight,
-          nowWidth, nowHeight, shown.fill)
+      ViewLifecycle.needsLargerDecode(
+        shown.decodedWidth, shown.decodedHeight,
+        shown.loadedForWidth, shown.loadedForHeight,
+        nowWidth, nowHeight, shown.fill)
     if (!outgrown) return
-    val upgradeRequest =
-      if (larger == null) shown.request else resolve(requestFor(larger)) as? ResolvedRequest ?: return
+    val upgradeRequest = shown.request
     val token = lifecycle.startUpgrade()
     if (token == 0L) return
     val thisHandle =
@@ -614,7 +519,7 @@ class TurboImageView(
             handle = null
             upgradable =
               shown.copy(
-                request = upgradeRequest, candidate = larger ?: shown.candidate,
+                request = upgradeRequest,
                 decodedWidth = width, decodedHeight = height,
                 loadedForWidth = nowWidth, loadedForHeight = nowHeight)
             // It may have kept growing meanwhile.
@@ -628,11 +533,7 @@ class TurboImageView(
             // Not again for this image: recorded as loaded for the size it
             // failed at, the rule takes the image for the source at its own
             // size. A new source, or a reload, starts over.
-            // A larger candidate that failed is not tried on every later
-            // growth step either: no more upgrades for this image.
-            upgradable =
-              if (larger != null) null
-              else shown.copy(loadedForWidth = nowWidth, loadedForHeight = nowHeight)
+            upgradable = shown.copy(loadedForWidth = nowWidth, loadedForHeight = nowHeight)
           }
         },
       )

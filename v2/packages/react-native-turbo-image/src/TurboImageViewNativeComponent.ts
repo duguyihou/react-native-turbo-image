@@ -22,15 +22,6 @@ export type NativeSource = Readonly<{
   headers?: ReadonlyArray<NativeHeader>;
 }>;
 
-// One size of an image offered at several (`sources`). `width` and `height`
-// are the candidate's own size in pixels; 0 means unknown.
-export type NativeSourceCandidate = Readonly<{
-  uri: string;
-  cacheKey?: string;
-  width: CodegenTypes.Double;
-  height: CodegenTypes.Double;
-}>;
-
 // Shown until the image loads. If the load fails it is removed, unless
 // `showPlaceholderOnFailure` is set. Decoded by the shared C++ core off the
 // main thread. Provide at most one (validated in JS, development only).
@@ -89,11 +80,6 @@ export type CompletionEvent = Readonly<{
 
 export interface NativeProps extends ViewProps {
   source: NativeSource;
-  // The same image at several sizes (expo-image's `source` array): the view
-  // loads the smallest candidate it does not have to scale up, and a larger
-  // one, silently, if it grows past that (`turboimage::chooseSource`). When
-  // set, `source` gives only the headers; empty means a single `source`.
-  sources?: ReadonlyArray<NativeSourceCandidate>;
   placeholder?: NativePlaceholder;
   // These string unions mirror `turboimage::CachePolicy`; the native side
   // converts them to the pinned integer values in cpp/include.

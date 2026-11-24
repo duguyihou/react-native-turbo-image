@@ -11,17 +11,11 @@ import type { CodegenTypes, TurboModule } from 'react-native';
 
 export interface Spec extends TurboModule {
   // Resolves true only if every source loaded (1.x resolved true even when
-  // some failed). Invalid sources count as failures. `destination` is
-  // 'memory' or 'disk', from `PrefetchOptions.resize`; 'disk' turns the memory
-  // write off, and adapters then download without decoding. `resize` is
-  // the `resize` prop's width (0 for none): the request is resolved as a
-  // view with that prop would resolve it, so the memory entry is the one
-  // that view looks up. Both new in 2.0.
+  // some failed). Invalid sources count as failures. Downloads to disk
+  // without decoding (1.x decoded at full size).
   prefetch(
     sources: ReadonlyArray<CodegenTypes.UnsafeObject>,
-    cachePolicy: string,
-    destination: string,
-    resize: CodegenTypes.Double
+    cachePolicy: string
   ): Promise<boolean>;
   // Evicts the sources from the memory and disk caches. (Declared in 1.x
   // but never implemented natively on either platform.)

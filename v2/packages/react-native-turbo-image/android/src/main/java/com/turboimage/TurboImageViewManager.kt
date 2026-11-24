@@ -1,6 +1,5 @@
 package com.turboimage
 
-import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.SimpleViewManager
@@ -41,19 +40,6 @@ class TurboImageViewManager :
         cacheKey = if (value?.hasKey("cacheKey") == true) value.getString("cacheKey") else null,
         headers = readHeaders(value),
       )
-  }
-
-  override fun setSources(view: TurboImageView, value: ReadableArray?) {
-    view.candidates =
-      (0 until (value?.size() ?: 0)).mapNotNull { i ->
-        val entry = value?.getMap(i) ?: return@mapNotNull null
-        TurboImageView.SourceCandidate(
-          uri = entry.getString("uri")?.let { resolveSourceUri(view.context, it) }.orEmpty(),
-          cacheKey = if (entry.hasKey("cacheKey")) entry.getString("cacheKey") else null,
-          width = if (entry.hasKey("width")) entry.getDouble("width") else 0.0,
-          height = if (entry.hasKey("height")) entry.getDouble("height") else 0.0,
-        )
-      }
   }
 
   override fun setPlaceholder(view: TurboImageView, value: ReadableMap?) {

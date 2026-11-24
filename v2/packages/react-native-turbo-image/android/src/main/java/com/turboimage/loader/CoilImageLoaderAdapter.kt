@@ -42,7 +42,7 @@ import java.util.concurrent.Executors
  *  * concurrent requests for the same cache key are de-duplicated, which
  *    matches Nuke's default task coalescing.
  */
-class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSizes()) : ImageLoaderAdapter {
+internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSizes()) : ImageLoaderAdapter {
   private val appContext = context.applicationContext
   // Internal for the instrumented tests, which check how Coil keys entries.
   internal val imageLoader: ImageLoader = buildImageLoader(appContext, cacheSizes)
@@ -216,7 +216,7 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
       request.toCoilRequest(appContext, view = null)
         .httpHeaders(request.networkHeaders().build())
         .apply {
-          // Nothing will keep a decoded bitmap (`destination: 'disk'`), so
+          // Nothing will keep a decoded bitmap (a prefetch), so
           // read only the header, as `imageSize` does: the fetch still
           // writes the disk cache, and no pixels are allocated.
           if (!request.memoryWrite) decoderFactory(HeaderSizeDecoder.Factory())

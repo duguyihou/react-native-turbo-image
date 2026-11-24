@@ -33,13 +33,13 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   override fun getName() = NAME
 
   // `{ uri, cacheKey? }` from JS → core resolution. null for invalid input.
-  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy, resize: Double = 0.0): ResolvedRequest? {
+  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
-    return resolve(sources.getMap(index) ?: return null, policy, resize)
+    return resolve(sources.getMap(index) ?: return null, policy)
   }
 
-  // See `TurboImageCore.resolveForCache` for what `resize` changes.
-  private fun resolve(source: ReadableMap, policy: CachePolicy, resize: Double = 0.0): ResolvedRequest? {
+  // See `TurboImageCore.resolveForCache`.
+  private fun resolve(source: ReadableMap, policy: CachePolicy): ResolvedRequest? {
     val uri = resolveSourceUri(context, if (source.hasKey("uri")) source.getString("uri").orEmpty() else "")
     val cacheKey = if (source.hasKey("cacheKey")) source.getString("cacheKey") else null
     return TurboImageCore.resolveForCache(
@@ -47,17 +47,12 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       cacheKey,
       policy,
       readHeaders(source),
-      resize,
-      // As the view passes it (TurboImageView.resolve).
-      pixelRatio = context.resources.displayMetrics.density.toDouble(),
     ) as? ResolvedRequest
   }
 
   override fun prefetch(
     sources: ReadableArray,
     cachePolicy: String,
-    destination: String,
-    resize: Double,
     promise: Promise,
   ) {
     // The loader seam is main-thread only.
@@ -75,9 +70,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
         if (--pending == 0) promise.resolve(allSucceeded)
       }
       for (i in 0 until sources.size()) {
-        // JS never sends `resize` with 'disk' (the types forbid it); were it
-        // sent, the disk copy is the original either way.
-        val request = resolve(sources, i, policy, resize)?.let { if (destination == "disk") diskOnly(it) else it }
+        val request = resolve(sources, i, policy)?.let(::diskOnly)
         if (request == null) {
           finishOne(false)
           continue
@@ -99,10 +92,9 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     }
   }
 
-  // `destination: 'disk'`: the memory write off, which tells the adapter not
-  // to decode at all (`ImageLoaderAdapter.prefetch`). A request with no disk
-  // tier (`memoryOnly`, a local file) keeps its memory write, or the
-  // prefetch would store nothing.
+  // A prefetch only downloads: the memory write off tells the adapter not to
+  // decode. Without a disk tier (`memoryOnly`, a local file) it decodes, or
+  // nothing would be stored.
   private fun diskOnly(request: ResolvedRequest): ResolvedRequest =
     if (request.diskWrite) request.copy(memoryWrite = false) else request
 

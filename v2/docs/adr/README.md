@@ -23,3 +23,5 @@ old one superseded.
 | [0011](0011-local-fixture-server.md) | The smoke suite loads from a local fixture server |
 | [0012](0012-nuke-plays-animations-on-ios.md) | On iOS the adapter plays animations, in an image view it supplies |
 | [0013](0013-silent-upgrade-when-a-view-outgrows-its-image.md) | A view that outgrows its image reloads it silently |
+| [0014](0014-the-loader-seam-is-internal.md) | The loader seam is internal; apps cannot replace the loader |
+| [0015](0015-cocoapods-only-for-apps.md) | Apps integrate through CocoaPods only; Package.swift is for tests |

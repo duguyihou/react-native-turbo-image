@@ -364,7 +364,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // Prefetches yield to on-screen loads.
     nukeRequest.priority = .low
     let completionBox = UncheckedSendable(completion)
-    // Nothing will keep a decoded image (`destination: 'disk'`): fetch the
+    // Nothing will keep a decoded image (a prefetch): fetch the
     // bytes through the same caches as a load, as `imageSize` does, and
     // decode nothing.
     guard request.memoryCacheWrite else {

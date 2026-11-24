@@ -235,9 +235,8 @@ private class CoreProcessingTransformation(private val processorKey: String) : T
  * still sees its real size. That holds for a preallocated view too, whose
  * props (and so its load) can come several main-loop turns before its
  * mount: `View.post` keeps the fallback until the view is attached, and
- * attaching posts it, after the batch that lays the view out. (The source-set
- * choice in TurboImageView.kt, which posted to the main handler instead,
- * did fall through before the layout.) Checked with a temporary log on
+ * attaching posts it, after the batch that lays the view out (a post to the
+ * main handler would run too early). Checked with a temporary log on
  * 2026-11-24: no wait ended in `Size.ORIGINAL` across the smoke suite and
  * the bench's `load` and FlashList `grid` scenarios (about 2,000 waits).
  */

@@ -21,7 +21,6 @@
     "!android/build",
     "!android/.cxx",
     "!android/src/androidTest",
-    "Package.swift",
     "TurboImage.podspec",
     "!**/__tests__",
     "!ios/Tests"
@@ -86,8 +85,5 @@
         "TurboImageModule": "TurboImageModule"
       }
     }
-  },
-  "swiftpmConfig": {
-    "name": "TurboImage"
   }
 }

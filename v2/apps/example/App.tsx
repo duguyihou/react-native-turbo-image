@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
-import type { SizedSource, Source, TurboImageProps } from 'react-native-turbo-image';
+import type { Source, TurboImageProps } from 'react-native-turbo-image';
 
 // Every remote fixture comes from scripts/fixture-server.py, which the smoke
 // scripts start on the host. The iOS simulator shares the host's loopback;
@@ -97,11 +97,8 @@ type Settle = (id: string, ok: boolean, outcome: string, detail: string) => void
 type Scenario = {
   id: string;
   title: string;
-  // A single source: the cache-module probes pass it to prefetch/dispose,
-  // which take no source sets.
+  // The cache-module probes also pass it to prefetch/dispose.
   source: Source;
-  // Passed instead of `source` when set: one image at several sizes.
-  sourceSet?: SizedSource[];
   cachePolicy: NonNullable<TurboImageProps['cachePolicy']>;
   // Failing scenarios carry a placeholder. With showPlaceholderOnFailure it
   // must stay visible after the failure, without it the view must be blank
@@ -124,8 +121,7 @@ type Scenario = {
   // For expected loads: the onSuccess size, within a couple of pixels (the
   // two platforms' decoders round a downscaled size differently).
   expectSizeNear?: { width: number; height: number };
-  // For expected loads: the URL onSuccess reports (which candidate of a
-  // source set loaded).
+  // For expected loads: the URL onSuccess reports.
   expectSource?: string;
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
@@ -300,26 +296,6 @@ const SCENARIOS: Scenario[] = [
     expect: 'load',
     expectGetSize: { width: 3000, height: 2000 },
     kind: 'getSize',
-  },
-  {
-    // The card is CARD_WIDTH_PX wide and 3:2. Only the declared sizes matter
-    // to the choice (the fixture server sends the same photo for each): the
-    // smallest that covers the card is the middle one.
-    id: 'sourceSet',
-    title: 'a source set loads the smallest size that covers the card',
-    source: { uri: photo('set-fit') },
-    sourceSet: [
-      { uri: photo('set-small'), width: CARD_WIDTH_PX / 4, height: CARD_WIDTH_PX / 6 },
-      {
-        uri: photo('set-fit'),
-        width: Math.ceil(CARD_WIDTH_PX * 1.1),
-        height: Math.ceil((CARD_WIDTH_PX * 1.1 * 2) / 3),
-      },
-      { uri: photo('set-huge'), width: CARD_WIDTH_PX * 4, height: (CARD_WIDTH_PX * 8) / 3 },
-    ],
-    cachePolicy: 'default',
-    expect: 'load',
-    expectSource: photo('set-fit'),
   },
   {
     // The placeholder's own load is silent: the card sees one start, one
@@ -1064,7 +1040,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
     <TurboImage
       testID={`image-${scenario.id}`}
       style={scenario.halfWidth ? styles.halfImage : styles.image}
-      source={scenario.sourceSet ?? scenario.source}
+      source={scenario.source}
       placeholder={scenario.placeholder}
       showPlaceholderOnFailure={scenario.showPlaceholderOnFailure}
       rounded={scenario.rounded}

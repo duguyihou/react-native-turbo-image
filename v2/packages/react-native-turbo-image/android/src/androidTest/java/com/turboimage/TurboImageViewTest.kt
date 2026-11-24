@@ -17,7 +17,6 @@ import com.turboimage.core.Processing
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.loader.ImageLoaderAdapter
 import com.turboimage.loader.LoadHandle
-import com.turboimage.loader.TurboImageLoaders
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
@@ -39,10 +38,8 @@ import org.junit.runner.RunWith
  * directly, and `layout()` does the same here: it fires `onSizeChanged` as
  * Fabric's layout does. Everything runs on the main thread, as in an app.
  *
- * Covered: upgrades (a view that outgrows its image loads it again at its new
- * size, silently), source sets ([TurboImageView.candidates]), image
- * placeholders ([TurboImageView.placeholderUri]) and replacing the adapter
- * through [TurboImageLoaders]. Load events are gated by `loadEventMask`
+ * Covered: upgrades and image placeholders. Load events are gated by
+ * `loadEventMask`
  * (all on unless a test sets it). TODO: hash placeholders, `recyclingKey` and
  * progress through the fake.
  */
@@ -183,97 +180,6 @@ class TurboImageViewTest {
     assertEquals(emptyList<String>(), eventNames())
   }
 
-  // MARK: Source sets
-
-  /** Three sizes of one square image, in pixels: half, once and four times a 300 px view. */
-  private fun setSourceSet() {
-    view.candidates =
-      listOf(
-        TurboImageView.SourceCandidate("https://images.example.com/set/small.jpg", null, 150.0, 150.0),
-        TurboImageView.SourceCandidate("https://images.example.com/set/medium.jpg", null, 300.0, 300.0),
-        TurboImageView.SourceCandidate("https://images.example.com/set/large.jpg", null, 1200.0, 1200.0),
-      )
-    view.request = view.request.copy(uri = "https://images.example.com/set/medium.jpg")
-    view.onTransactionEnd()
-  }
-
-  private fun fileOf(load: FakeLoader.Load) = load.request.url.substringAfterLast('/')
-
-  @Test
-  fun aSourceSetLoadsTheSmallestSizeTheViewDoesNotScaleUp() = onMain {
-    resize(300, 300)
-
-    setSourceSet()
-
-    assertEquals("medium.jpg", fileOf(loader.loads.single()))
-  }
-
-  @Test
-  fun aSetGivenBeforeLayoutChoosesAtTheFirstLayout() {
-    // Fabric may set a preallocated view's props several main-loop turns
-    // before it lays the view out.
-    onMain { setSourceSet() }
-    instrumentation.waitForIdleSync()
-    onMain {
-      assertEquals("onStart at once, as for any load", listOf("topStart"), eventNames())
-      assertEquals("nothing chosen without a size", 0, loader.loads.size)
-
-      resize(300, 300)
-
-      assertEquals("medium.jpg", fileOf(loader.loads.single()))
-    }
-  }
-
-  @Test
-  fun aViewLaidOutWithNoAreaGetsTheLargestSize() = onMain {
-    setSourceSet()
-
-    resize(0, 0)
-
-    assertEquals("large.jpg", fileOf(loader.loads.single()))
-  }
-
-  @Test
-  fun aViewThatGrowsPastItsSizeLoadsTheNextOne() = onMain {
-    resize(300, 300)
-    setSourceSet()
-    // Smaller than the view: on its own that is the source at its own size,
-    // which no decode makes sharper. A larger candidate still does.
-    loader.loads[0].succeed(240, 240)
-    events.clear()
-
-    resize(600, 600)
-
-    assertEquals(2, loader.loads.size)
-    assertEquals("large.jpg", fileOf(loader.loads[1]))
-    assertEquals("JS hears nothing", emptyList<String>(), eventNames())
-  }
-
-  @Test
-  fun aFailedLargerSizeIsNotTriedAgain() = onMain {
-    resize(300, 300)
-    setSourceSet()
-    loader.loads[0].succeed(300, 300)
-    resize(600, 600)
-
-    loader.loads[1].fail()
-    resize(900, 900)
-
-    assertEquals(2, loader.loads.size)
-  }
-
-  @Test
-  fun aChangedSetLoadsAgain() = onMain {
-    resize(300, 300)
-    setSourceSet()
-    loader.loads[0].succeed(300, 300)
-
-    view.candidates = view.candidates.toMutableList().also { it[1] = it[1].copy(uri = "https://images.example.com/set/medium-v2.jpg") }
-    view.onTransactionEnd()
-
-    assertEquals("medium-v2.jpg", fileOf(loader.loads[1]))
-  }
-
   // MARK: Image placeholders
 
   private fun setSourceWithThumbnail() {
@@ -396,20 +302,6 @@ class TurboImageViewTest {
     assertEquals(ImageView.ScaleType.CENTER_CROP, view.scaleType)
   }
 
-  // MARK: Replacing the adapter
-
-  @Test
-  fun anAdapterSetForTheAppIsTheOneViewsAreGiven() = onMain {
-    val context = instrumentation.targetContext
-    val previous = TurboImageLoaders.get(context)
-    try {
-      TurboImageLoaders.set(loader)
-      assertSame(loader, TurboImageLoaders.get(context))
-    } finally {
-      TurboImageLoaders.set(previous)
-    }
-  }
-
   // MARK: Helpers
 
   /**
@@ -521,6 +413,12 @@ private class FakeLoader : ImageLoaderAdapter {
 
   // The view tests never reach the cache module's half of the seam.
   override fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit) = error("not used")
+
+  override fun imageSize(
+    request: ResolvedRequest,
+    onSize: (width: Int, height: Int) -> Unit,
+    onError: (code: Int, message: String) -> Unit,
+  ) = error("not used")
 
   override fun remove(requests: List<ResolvedRequest>, onDone: (Throwable?) -> Unit) = error("not used")
 

@@ -1,4 +1,4 @@
-#import "TIImageLoading.h"
+#import "TIImageLoaderRegistry+Testing.h"
 
 NSErrorDomain const TIImageLoadErrorDomain = @"com.turboimage.load";
 
@@ -57,9 +57,9 @@ static NSInteger sCacheMaxMemoryCost;
   }
 }
 
-+ (void)setSharedLoader:(nullable id<TIImageLoading>)sharedLoader {
++ (void)setSharedLoaderForTesting:(nullable id<TIImageLoading>)loader {
   @synchronized(self) {
-    sSharedLoader = sharedLoader;
+    sSharedLoader = loader;
   }
 }
 

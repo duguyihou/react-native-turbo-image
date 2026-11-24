@@ -197,8 +197,8 @@ struct MemoryCacheTests {
     #expect(disk.sizeLimit == 50_000_000)
     #expect(configured.urlCache.diskCapacity == NukeImageLoader.diskCacheBytes)
 
-    TIImageLoaderRegistry.sharedLoader = configured
-    defer { TIImageLoaderRegistry.sharedLoader = nil }
+    TIImageLoaderRegistry.setSharedLoaderForTesting(configured)
+    defer { TIImageLoaderRegistry.setSharedLoaderForTesting(nil) }
     #expect(TIImageLoaderRegistry.configureCache(withMaxDiskSize: 1, maxMemoryCost: 1) == false)
     #expect(TIImageLoaderRegistry.cacheMaxMemoryCost == 0)
   }

@@ -3,14 +3,13 @@ package com.turboimage.loader
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.widget.ImageView
-import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.ResolvedRequest
 
 /**
  * The Android loader seam, the counterpart of `TIImageLoading` on iOS.
  *
- * The view layer only knows this interface, so Coil stays a replaceable
- * adapter (RFC rule 1) and no Coil type appears in TurboImage's API.
+ * Internal (ADR 0014): it keeps Coil out of the views and lets tests use a
+ * fake loader. Apps cannot replace it.
  *
  * Not the iOS seam's shape, on purpose (docs/adr/0004): there the adapter
  * returns an image and the view shows it. Here [load] is given the
@@ -30,7 +29,7 @@ import com.turboimage.core.ResolvedRequest
  *    after cancel, unthrottled (the view applies the core's throttle).
  *  * [LoadHandle.cancel] is idempotent and safe after completion.
  */
-interface ImageLoaderAdapter {
+internal interface ImageLoaderAdapter {
   /**
    * How to decode and show one load. These are view-level choices, not part
    * of the request's identity, so they are not in [ResolvedRequest] and never
@@ -64,14 +63,8 @@ interface ImageLoaderAdapter {
    * may still be shown, because the image it stands in for may have got
    * there first. [onDone] fires once on the main thread, with null when the
    * load failed, unless the handle is cancelled first.
-   *
-   * The default supports no image placeholders: an adapter written before
-   * them keeps compiling, and such views show none.
    */
-  fun loadPlaceholder(sizeOf: ImageView, request: ResolvedRequest, onDone: (Drawable?) -> Unit): LoadHandle {
-    onDone(null)
-    return LoadHandle {}
-  }
+  fun loadPlaceholder(sizeOf: ImageView, request: ResolvedRequest, onDone: (Drawable?) -> Unit): LoadHandle
 
   /**
    * `TurboImage.getSize`: loads [request] into the caches like [prefetch],
@@ -80,22 +73,16 @@ interface ImageLoaderAdapter {
    * value). Adapters should read the size from the file's header rather than
    * decode the image. Exactly one callback, once, on the main thread, unless
    * the handle is cancelled first.
-   *
-   * The default reports `unknown`: an adapter written before `getSize`
-   * keeps compiling, and `getSize` rejects with it.
    */
   fun imageSize(
     request: ResolvedRequest,
     onSize: (width: Int, height: Int) -> Unit,
     onError: (code: Int, message: String) -> Unit,
-  ): LoadHandle {
-    onError(LoadErrorCode.UNKNOWN.nativeValue, "This loader adapter does not report image sizes")
-    return LoadHandle {}
-  }
+  ): LoadHandle
 
   /**
    * Loads into the caches without a view; [onDone] once on the main thread.
-   * A request whose `memoryWrite` is off (`destination: 'disk'`) is only
+   * A request whose `memoryWrite` is off (a prefetch) is only
    * downloaded: adapters should store the bytes without decoding them.
    */
   fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
@@ -144,6 +131,6 @@ interface ImageLoaderAdapter {
   }
 }
 
-fun interface LoadHandle {
+internal fun interface LoadHandle {
   fun cancel()
 }

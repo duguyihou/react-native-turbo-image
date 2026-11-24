@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
  * the seam's codes, and nothing at all after a cancel.
  */
 @RunWith(AndroidJUnit4::class)
-class LoadingTest : AdapterTest() {
+internal class LoadingTest : AdapterTest() {
   // MARK: Decode size
 
   @Test
@@ -218,7 +218,7 @@ class LoadingTest : AdapterTest() {
   }
 
   /**
-   * `destination: 'disk'` (the module turns the memory write off): the bytes
+   * A prefetch (memory write off): the bytes
    * reach the disk and no decoded bitmap is kept. Before, a prefetch decoded
    * the full-size image under the key unprocessed views share, so a list
    * thumbnail was then drawn from that bitmap.

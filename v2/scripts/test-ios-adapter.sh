@@ -28,4 +28,4 @@ fi
 cd "${pkg}"
 # Standalone: without it, a React Native app's build directory next to the
 # package would switch the manifest to its in-app form, which has no tests.
-TURBOIMAGE_SPM_STANDALONE=1 xcodebuild test -scheme TurboImage -destination "id=${udid}"
+xcodebuild test -scheme TurboImage -destination "id=${udid}"

@@ -12,7 +12,6 @@ import type {
   NativePlaceholder,
   NativeProps,
   NativeSource,
-  NativeSourceCandidate,
   ProgressEvent,
   StartEvent,
   SuccessEvent,
@@ -52,12 +51,6 @@ export type RemoteSource = Omit<NativeSource, 'headers'> & { headers?: HeadersIn
 // `android.resource://`.
 export type Source = RemoteSource | number;
 
-// One size of an image offered at several: `source={[thumb, screen, full]}`
-// (expo-image's form). `width` and `height` are this file's size in pixels.
-// The view loads the smallest that it does not have to scale up, and a larger
-// one if it grows. Headers come from the first entry and apply to all.
-export type SizedSource = RemoteSource & { width: number; height: number };
-
 // What `placeholder` takes: a blurhash, a thumbhash, a memory-cache key, or
 // any image as `{ uri }` or `require('./thumb.png')` (new in 2.0).
 export type PlaceholderSource = NativePlaceholder | number;
@@ -81,50 +74,6 @@ function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | un
     }
   }
   return out;
-}
-
-// A source set becomes `sources` plus a `source` that carries its headers.
-// One entry is just a source; none is an empty one, which the core rejects
-// (`invalidRequest`), as it does an empty `uri`.
-function toNativeSources(source: Source | ReadonlyArray<SizedSource>): {
-  source: NativeSource;
-  sources?: NativeSourceCandidate[];
-} {
-  if (!Array.isArray(source)) {
-    return { source: toNativeSource(source as Source) };
-  }
-  const set = source as ReadonlyArray<SizedSource>;
-  // The sizes go to `sources` only; `source` is the plain source.
-  const plain = (entry: SizedSource | undefined): RemoteSource => {
-    if (entry === undefined) {
-      return { uri: '' };
-    }
-    const { width: _width, height: _height, ...rest } = entry;
-    return rest;
-  };
-  if (set.length <= 1) {
-    return { source: toNativeSource(plain(set[0])) };
-  }
-  if (__DEV__ && set.slice(1).some((entry) => entry.headers != null)) {
-    console.warn(
-      "TurboImage: in a source array only the first entry's headers are sent, with every size."
-    );
-  }
-  return {
-    source: toNativeSource(plain(set[0])),
-    sources: set.map(({ uri, cacheKey, width, height }) => {
-      const candidate: { -readonly [K in keyof NativeSourceCandidate]: NativeSourceCandidate[K] } =
-        {
-          uri,
-          width: Number.isFinite(width) ? width : 0,
-          height: Number.isFinite(height) ? height : 0,
-        };
-      if (cacheKey !== undefined) {
-        candidate.cacheKey = cacheKey;
-      }
-      return candidate;
-    }),
-  };
 }
 
 function toNativePlaceholder(placeholder: PlaceholderSource | undefined) {
@@ -226,7 +175,6 @@ export type TurboImageProps = Omit<
   | 'monochrome'
   | 'tint'
   | 'source'
-  | 'sources'
   | 'placeholder'
   | 'recyclingKey'
   | 'contentPositionX'
@@ -241,7 +189,7 @@ export type TurboImageProps = Omit<
    * image's frame.
    */
   ref?: Ref<TurboImageInstance>;
-  source: Source | ReadonlyArray<SizedSource>;
+  source: Source;
   placeholder?: PlaceholderSource;
   // See `ContentPosition`. Applies to cover, contain, center and scale-down.
   contentPosition?: ContentPosition;
@@ -377,7 +325,7 @@ function TurboImageComponent({
       recyclingKey={recyclingKey ?? undefined}
       // A new object each render is fine: both native views compare the
       // request fields by value before reloading.
-      {...toNativeSources(source)}
+      source={toNativeSource(source)}
       placeholder={toNativePlaceholder(placeholder)}
       {...toContentPosition(contentPosition)}
       style={needsContainer ? StyleSheet.absoluteFill : imageStyle}
@@ -443,27 +391,12 @@ type CacheSource = Source;
 /**
  * `TurboImage.prefetch`'s options.
  *
- * Without `resize`, a prefetch only downloads: no decode and no memory, so a
- * view that shows the image later decodes it from the disk, at its own size.
- *
- * `resize` also decodes it into the memory cache, for the views that will
- * then find it there and decode nothing:
- * - a width, in the same units as the `resize` prop: views with that
- *   `resize`, no other processing (`blur`, `tint`, `monochrome`) and
- *   `allowDownscaling` left on;
- * - `'original'`, at full size: views that show the image at its own size,
- *   with `allowDownscaling={false}` (a zoomable photo), `resizeMode="center"`
- *   or `blur` without `resize`.
- * Other views have memory entries of their own size, so a decode they do not
- * match costs memory and evicts images in use for nothing; they are served
- * by the disk copy either way. A width that is not positive and finite is
- * no `resize`. Under `memoryOnly`, and for a local file, there is no disk
- * tier, so even without `resize` the image is decoded, at full size.
+ * A prefetch only downloads, to disk; a view decodes it at its own size.
+ * With no disk tier (`memoryOnly`, a local file) it decodes at full size.
  */
 export type PrefetchOptions = {
   /** As the `cachePolicy` prop; `'default'` when unset. */
   cachePolicy?: TurboImageProps['cachePolicy'];
-  resize?: number | 'original';
 };
 
 /** `TurboImage.configureCache`'s sizes, in bytes; unset keeps the default. */
@@ -472,19 +405,6 @@ export type CacheSizes = { maxDiskSize?: number; maxMemoryCost?: number };
 // A size native can use: whole bytes, or 0 for the default.
 function cacheBytes(bytes: number | undefined): number {
   return bytes !== undefined && Number.isFinite(bytes) && bytes > 0 ? Math.floor(bytes) : 0;
-}
-
-// The native call's `destination` and `resize`: a width native can use is
-// positive and finite, and 0 is none. A width is filtered here, not left to
-// the core: natively a resize also turns downscaling on, which with no width
-// to bound it and no view would leave the decode unsized.
-function prefetchTarget(resize: PrefetchOptions['resize']): ['memory' | 'disk', number] {
-  if (resize === 'original') {
-    return ['memory', 0];
-  }
-  return resize !== undefined && Number.isFinite(resize) && resize > 0
-    ? ['memory', resize]
-    : ['disk', 0];
 }
 
 /** What `TurboImage.getSize` resolves with, in pixels. */
@@ -501,12 +421,10 @@ export const TurboImage = Object.assign(TurboImageComponent, {
       typeof optionsOrCachePolicy === 'object'
         ? optionsOrCachePolicy
         : { cachePolicy: optionsOrCachePolicy };
-    // 1.x decoded every prefetch at full size; 2.0 only downloads unless
-    // asked (see `PrefetchOptions`).
+    // 1.x also decoded at full size; 2.0 only downloads.
     return NativeTurboImageModule.prefetch(
       sources.map(toNativeSource),
-      resolveCachePolicy(options.cachePolicy ?? 'default') ?? 'default',
-      ...prefetchTarget(options.resize)
+      resolveCachePolicy(options.cachePolicy ?? 'default') ?? 'default'
     );
   },
   // `dispose` and `clearDiskCache` reject (code 'disk') if the disk cache

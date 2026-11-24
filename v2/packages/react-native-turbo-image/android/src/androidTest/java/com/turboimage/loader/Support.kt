@@ -88,7 +88,7 @@ private val sharedAdapter: CoilImageLoaderAdapter by lazy {
  * random name in every URL, which the fixture server ignores and the cache
  * key does not.
  */
-abstract class AdapterTest {
+internal abstract class AdapterTest {
   protected val adapter: CoilImageLoaderAdapter
     get() = sharedAdapter
 

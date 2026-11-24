@@ -32,7 +32,7 @@ import org.junit.runner.RunWith
  * emptying the other: [clearMemoryCache] leaves only the disk to hit.
  */
 @RunWith(AndroidJUnit4::class)
-class CacheTest : AdapterTest() {
+internal class CacheTest : AdapterTest() {
   // MARK: The policies (the core's cache matrix)
 
   @Test
@@ -236,44 +236,20 @@ class CacheTest : AdapterTest() {
     assertEquals("from the disk", 1, requestsReceived(uri))
   }
 
-  // MARK: Prefetching at a view's `resize`
+  // MARK: Prefetching
 
   /**
-   * The cache module's request for `prefetch(…, { resize })` is the one a
-   * view with that `resize` resolves, whatever its `resizeMode`, so they
-   * share decode bounds and memory key.
+   * A prefetch resolves the original, under the view's key.
    */
   @Test
-  fun aResizedPrefetchResolvesAsTheViewDoes() {
+  fun aPrefetchResolvesTheOriginalUnderTheViewsKey() {
     val uri = photo()
-    val density = 2.625
-    val prefetched =
-      TurboImageCore.resolveForCache(uri, null, CachePolicy.DEFAULT, emptyList(), resize = 120.0, pixelRatio = density)
-    for (mode in ResizeMode.entries) {
-      val view =
-        TurboImageCore.resolve(
-          ImageRequest(uri = uri, processing = Processing(resize = 120.0), allowDownscaling = true, resizeMode = mode),
-          density,
-        )
-      assertEquals("resizeMode $mode", view, prefetched)
-    }
-  }
+    val prefetched = TurboImageCore.resolveForCache(uri, null, CachePolicy.DEFAULT, emptyList()) as ResolvedRequest
+    val view = resolve(uri, processing = Processing(resize = 120.0, blur = 4.0), resizeMode = ResizeMode.COVER)
 
-  /** A view with the prefetch's `resize` is then served from memory. */
-  @Test
-  fun aViewIsServedAResizedPrefetchFromMemory() {
-    val context = InstrumentationRegistry.getInstrumentation().targetContext
-    val uri = photo()
-    val prefetched =
-      TurboImageCore.resolveForCache(uri, null, CachePolicy.DEFAULT, emptyList(), resize = 120.0, pixelRatio = 1.0)
-        as ResolvedRequest
-    assertTrue(prefetch(prefetched))
-
-    val view = resolve(uri, processing = Processing(resize = 120.0), resizeMode = ResizeMode.COVER)
-    val result = runBlocking { adapter.imageLoader.execute(view.toCoilRequest(context, view = null).build()) }
-
-    assertEquals(DataSource.MEMORY_CACHE, (result as SuccessResult).dataSource)
-    assertEquals(120, result.image.width)
+    assertEquals(view.cacheKey, prefetched.cacheKey)
+    assertEquals("", prefetched.processorKey)
+    assertEquals(ResolvedRequest.DecodeSize.Original, prefetched.decode)
   }
 
   // MARK: The `memoryCacheKey` placeholder

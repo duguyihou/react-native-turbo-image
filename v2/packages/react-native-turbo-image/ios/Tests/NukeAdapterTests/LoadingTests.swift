@@ -161,7 +161,7 @@ struct LoadingTests {
     #expect(loaded.fromMemoryCache)
   }
 
-  /// `destination: 'disk'` (the module turns the memory write off): the
+  /// A prefetch (memory write off): the
   /// image is not decoded into memory. The fixtures are local files, so the
   /// disk side is left to the Android tests, which have an HTTP server.
   @Test func aDiskOnlyPrefetchKeepsNothingInMemory() async throws {

@@ -35,7 +35,7 @@ The short version. Start here; the detail is elsewhere:
 | Core | `cpp/` | Every decision that must be the same on both platforms. See below. |
 | Views | `ios/Fabric/TurboImageComponentView.mm`, `android/…/TurboImageView.kt` | Props in, events out, the image on screen. They carry out what the core decides. |
 | Cache module | `ios/Fabric/TurboImageModule.mm`, `android/…/TurboImageModule.kt` | `prefetch`, `dispose`, `clearMemoryCache`, `clearDiskCache`, through the same core resolution and the same loader as the views. |
-| Seams | `ios/LoaderAPI/include/`, `android/…/loader/ImageLoaderAdapter.kt` | The only contract between a view and an image loader. |
+| Seams | `ios/LoaderAPI/include/`, `android/…/loader/ImageLoaderAdapter.kt` | The only contract between a view and an image loader. Internal: apps cannot replace the loader ([ADR 0014](adr/0014-the-loader-seam-is-internal.md)). |
 | Adapters | `ios/Nuke/`, `android/…/loader/Coil*.kt` | Translating a resolved request into Nuke or Coil calls. The only code that names either library. |
 
 ## What the core decides
@@ -61,12 +61,12 @@ translates a `ResolvedRequest` field by field.
 
 The source comments cite these by number ("RFC rule 3").
 
-1. **Loaders are replaceable adapters.** Nuke and Coil sit behind a seam (`TIImageLoading`, `ImageLoaderAdapter`), and no loader type appears in the views, the public headers or the JS API. An app can replace the adapter: `TIImageLoaderRegistry.sharedLoader` on iOS, `TurboImageLoaders.set` on Android.
+1. **Loaders sit behind an internal seam.** Nuke and Coil are reached through `TIImageLoading` and `ImageLoaderAdapter`, and no loader type appears in the views or the JS API. The seam is structure, not an extension point: apps cannot replace the loader ([ADR 0014](adr/0014-the-loader-seam-is-internal.md)); tests can.
 2. **The C++ core is the single owner of request semantics**: validation, cache keys, the cache-policy matrix, decode size. Adapters translate a `ResolvedRequest` and decide nothing.
 3. **Both platforms behave the same.** Where the loaders differ (cache tiers, progress cadence, placeholder lifetime, error codes), the difference is closed in the core or in the adapters, not left to JS.
 4. **One copy of shared logic.** The C++ in `cpp/` is compiled into both platforms from one source tree; nothing is ported or copied per platform.
 5. **No Swift/C++ interop.** Swift targets hold no C-family sources and never import C++; ObjC++ sits between them.
-6. **SwiftPM and CocoaPods build the same thing**: the same sources, flags, language modes and Nuke version.
+6. **SwiftPM and CocoaPods build the same thing**: the same sources, flags, language modes and Nuke version. Apps use CocoaPods; `Package.swift` builds the same native layers without an app, for the adapter tests and tvOS ([ADR 0015](adr/0015-cocoapods-only-for-apps.md)).
 7. **Every production dependency is pinned**, in one place (`scripts/native-versions.env`), and CI fails when a manifest disagrees.
 8. **Pre-releases are evaluated apart from production**, in their own CI jobs, and are never a production dependency.
 

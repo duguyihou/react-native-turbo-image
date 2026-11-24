@@ -1,6 +1,6 @@
 # 0006: CocoaPods gets Nuke as a vendored xcframework; CocoaPods stays the default
 
-Status: accepted
+Status: accepted. The SwiftPM opt-in is superseded by [0015](0015-cocoapods-only-for-apps.md); the vendored xcframeworks stand
 
 ## Context
 

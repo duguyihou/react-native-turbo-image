@@ -16,17 +16,15 @@
 // core's decision and is covered by the Android view test and the smoke
 // suite.
 //
-// Covered: upgrades (a view that outgrows its image loads it again at its
-// new size), source sets (`sources`) and image placeholders
-// (`placeholder.uri`), and that a resized prefetch asks the loader for
-// what a view with that `resize` does. TODO: hash placeholders, `recyclingKey` and Live Text.
+// Covered: upgrades, image placeholders and prefetch.
+// TODO: hash placeholders, `recyclingKey` and Live Text.
 
 #import <XCTest/XCTest.h>
 
 #import <React/RCTBridgeModule.h>
 #import <React/RCTComponentViewProtocol.h>
 #import <React/RCTUtils.h>
-#import <TurboImage/TIImageLoading.h>
+#import <TurboImage/TIImageLoaderRegistry+Testing.h>
 #import <react/renderer/components/TurboImageSpec/Props.h>
 
 using namespace facebook::react;
@@ -36,8 +34,6 @@ using namespace facebook::react;
 @interface NSObject (TIPrefetching)
 - (void)prefetch:(NSArray *)sources
      cachePolicy:(NSString *)cachePolicy
-     destination:(NSString *)destination
-          resize:(double)resize
          resolve:(RCTPromiseResolveBlock)resolve
           reject:(RCTPromiseRejectBlock)reject;
 @end
@@ -137,6 +133,10 @@ using namespace facebook::react;
   [_prefetches addObject:request];
   return [[TIFakeLoad alloc] initWithRequest:request completion:^(UIImage *, id, BOOL, NSError *) {}];
 }
+- (id<TIImageLoadTask>)imageSizeForRequest:(TIImageRequest *)request
+                                completion:(void (^)(CGSize, NSError *))completion {
+  return [[TIFakeLoad alloc] initWithRequest:request completion:^(UIImage *, id, BOOL, NSError *) {}];
+}
 - (void)removeCachedImageForRequest:(TIImageRequest *)request {}
 - (void)clearMemoryCache {}
 - (void)clearDiskCache {}
@@ -167,7 +167,7 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
   // when it is created and on every load.
   _previousLoader = TIImageLoaderRegistry.sharedLoader;
   _loader = [TIFakeLoader new];
-  TIImageLoaderRegistry.sharedLoader = _loader;
+  [TIImageLoaderRegistry setSharedLoaderForTesting:_loader];
   _view = [[NSClassFromString(@"TurboImageComponentView") alloc] initWithFrame:CGRectZero];
   XCTAssertNotNil(_view);
   _layout = EmptyLayoutMetrics;
@@ -175,7 +175,7 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
 }
 
 - (void)tearDown {
-  TIImageLoaderRegistry.sharedLoader = _previousLoader;
+  [TIImageLoaderRegistry setSharedLoaderForTesting:_previousLoader];
 }
 
 #pragma mark Upgrades
@@ -294,80 +294,6 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
   XCTAssertTrue(_loader.loads[1].cancelled);
 }
 
-#pragma mark Source sets
-
-/// Three sizes of one image, square, in pixels: half, once and four times a
-/// 100 pt view on this screen.
-- (void)setSourceSet {
-  const CGFloat px = 100 * _scale;
-  [self setProps:^(TurboImageViewProps &props) {
-    props.source.uri = "https://images.example.com/set/medium.jpg";
-    props.sources = {
-        {.uri = "https://images.example.com/set/small.jpg", .width = px / 2, .height = px / 2},
-        {.uri = "https://images.example.com/set/medium.jpg", .width = px, .height = px},
-        {.uri = "https://images.example.com/set/large.jpg", .width = 4 * px, .height = 4 * px},
-    };
-  }];
-}
-
-- (void)testASourceSetLoadsTheSmallestSizeTheViewDoesNotScaleUp {
-  [self resize:CGSizeMake(100, 100)];
-
-  [self setSourceSet];
-
-  XCTAssertEqual(_loader.loads.count, 1u);
-  XCTAssertEqualObjects(_loader.loads[0].request.url.lastPathComponent, @"medium.jpg");
-}
-
-- (void)testAViewThatGrowsPastItsSizeLoadsTheNextOne {
-  [self resize:CGSizeMake(100, 100)];
-  [self setSourceSet];
-  // Decoded smaller than the view: on its own that is the source at its own
-  // size, which no decode makes sharper. A larger candidate still does.
-  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(80, 80)]];
-
-  [self resize:CGSizeMake(200, 200)];
-
-  XCTAssertEqual(_loader.loads.count, 2u);
-  XCTAssertEqualObjects(_loader.loads[1].request.url.lastPathComponent, @"large.jpg");
-}
-
-- (void)testAFailedLargerSizeIsNotTriedAgain {
-  [self resize:CGSizeMake(100, 100)];
-  [self setSourceSet];
-  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
-  [self resize:CGSizeMake(200, 200)];
-
-  [_loader.loads[1] fail];
-  [self resize:CGSizeMake(300, 300)];
-
-  XCTAssertEqual(_loader.loads.count, 2u);
-}
-
-- (void)testAShrinkingViewKeepsItsLargerSize {
-  [self resize:CGSizeMake(200, 200)];
-  [self setSourceSet];
-  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(200, 200)]];
-
-  [self resize:CGSizeMake(50, 50)];
-  [self resize:CGSizeMake(100, 100)];
-
-  XCTAssertEqual(_loader.loads.count, 1u);
-}
-
-- (void)testAChangedSetLoadsAgain {
-  [self resize:CGSizeMake(100, 100)];
-  [self setSourceSet];
-  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
-
-  [self setProps:^(TurboImageViewProps &props) {
-    props.sources[1].uri = "https://images.example.com/set/medium-v2.jpg";
-  }];
-
-  XCTAssertEqual(_loader.loads.count, 2u);
-  XCTAssertEqualObjects(_loader.loads[1].request.url.lastPathComponent, @"medium-v2.jpg");
-}
-
 #pragma mark Image placeholders
 
 static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-thumb.jpg";
@@ -417,6 +343,24 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, [self pixels:CGSizeMake(100, 100)]));
 }
 
+// Only the placeholder changes, so no reload runs to re-apply it.
+- (void)testANewPlaceholderUriAloneReplacesThePlaceholder {
+  static NSString *const kOtherThumbURL = @"https://images.example.com/photos/harbour-thumb-2.jpg";
+  [self setSourceWithThumbnail];
+  TIFakeLoad *first = [self loadOf:kThumbURL];
+
+  [self setProps:^(TurboImageViewProps &props) {
+    props.placeholder.uri = std::string(kOtherThumbURL.UTF8String);
+  }];
+
+  XCTAssertTrue(first.cancelled, @"the old placeholder is no longer wanted");
+  TIFakeLoad *second = [self loadOf:kOtherThumbURL];
+  XCTAssertNotNil(second, @"the new placeholder loads");
+  XCTAssertEqual(_loader.loads.count, 3u, @"the image's own load is not restarted");
+  [second succeedWithPixels:CGSizeMake(12, 12)];
+  XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(12, 12)));
+}
+
 - (void)testAnImagePlaceholderUsesTheSourcesHeadersAndNoProcessing {
   [self resize:CGSizeMake(100, 100)];
   [self setProps:^(TurboImageViewProps &props) {
@@ -432,18 +376,13 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertNotEqualObjects([self loadOf:kURL].request.processorKey, @"");
 }
 
-#pragma mark Prefetching at a view's resize
+#pragma mark Prefetching
 
-/// `TurboImage.prefetch(…, { resize })` asks for what a view with that
-/// `resize` asks for, whatever the view's size or `resizeMode`: Nuke's
-/// memory key is built from these fields, so the view finds the prefetched
-/// image in memory.
-- (void)testAResizedPrefetchAsksForWhatTheViewDoes {
+/// A prefetch stores the original on disk, under the view's key.
+- (void)testAPrefetchStoresTheOriginalOnDiskUnderTheViewsKey {
   id module = [NSClassFromString(@"TurboImageModule") new];
   [module prefetch:@[ @{@"uri" : kURL} ]
        cachePolicy:@"default"
-       destination:@"memory"
-            resize:120
            resolve:^(id) {}
             reject:^(NSString *, NSString *, NSError *) {}];
   XCTAssertEqual(_loader.prefetches.count, 1u);
@@ -452,20 +391,15 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   [self resize:CGSizeMake(300, 80)];
   [self setProps:^(TurboImageViewProps &props) {
     props.source.uri = std::string(kURL.UTF8String);
-    props.resize = 120;
-    props.resizeMode = TurboImageViewResizeMode::Cover;
+    props.blur = 4;
   }];
   TIImageRequest *shown = _loader.loads[0].request;
 
   XCTAssertEqualObjects(prefetched.cacheKey, shown.cacheKey);
-  XCTAssertEqualObjects(prefetched.processorKey, shown.processorKey);
-  XCTAssertTrue(CGSizeEqualToSize(prefetched.decodeSize, shown.decodeSize));
-  XCTAssertEqual(prefetched.decodeFill, shown.decodeFill);
-  XCTAssertTrue(CGSizeEqualToSize(prefetched.vectorDecodeSize, shown.vectorDecodeSize));
-  XCTAssertEqual(prefetched.vectorDecodeFill, shown.vectorDecodeFill);
-  XCTAssertEqual(prefetched.displayScale, shown.displayScale);
-  XCTAssertTrue(prefetched.memoryCacheWrite);
-  XCTAssertEqual(prefetched.decodeSize.width, 120 * _scale);
+  XCTAssertTrue(prefetched.diskCacheWrite);
+  XCTAssertFalse(prefetched.memoryCacheWrite, @"nothing is decoded");
+  XCTAssertEqualObjects(prefetched.processorKey, @"");
+  XCTAssertTrue(CGSizeEqualToSize(prefetched.decodeSize, CGSizeZero));
 }
 
 #pragma mark contentPosition and own-size modes

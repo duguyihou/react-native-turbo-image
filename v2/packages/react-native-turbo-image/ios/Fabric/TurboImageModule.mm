@@ -6,7 +6,6 @@
 #import "TurboImageModule.h"
 
 #import <React/RCTInvalidating.h>
-#import <React/RCTUtils.h>
 #import <TurboImageSpec/TurboImageSpec.h>
 
 #include <turboimage/ImageRequest.h>
@@ -53,37 +52,24 @@ SourceFields sourceFields(id source) {
   return fields;
 }
 
-// Without `resize`: the original image, no processors and no downscaling,
-// because the module has no view to size a decode for. Prefetch then fills
-// the disk cache with the original bytes (which every view variant is
-// derived from) and, for 'memory', the memory cache with the full-size
-// image.
-//
-// With `resize`: what a view with that `resize` prop and no other
-// processing resolves, `allowDownscaling` on and the same screen scale, so
-// the decode bound and the memory key are that view's. A `resize` decode
-// does not depend on the view's size, so no view is needed.
+// The original image: the module has no view to size it for.
 turboimage::ImageRequest coreRequest(const SourceFields &fields,
-                                     turboimage::CachePolicy policy,
-                                     double resize = 0) {
-  const bool resized = resize > 0;
+                                     turboimage::CachePolicy policy) {
   return {
       .uri = fields.uri,
       .cacheKey = TIOptionalCacheKey(fields.cacheKey),
       .cachePolicy = policy,
-      .processing = {.resize = resized ? resize : 0},
-      // As the view passes it (TurboImageComponentView's request).
-      .pixelRatio = resized ? RCTScreenScale() : 1,
+      .processing = {},
+      .pixelRatio = 1,
       .headers = fields.headers,
-      .allowDownscaling = resized,
+      .allowDownscaling = false,
       .resizeMode = turboimage::ResizeMode::Contain,
   };
 }
 
-// `destination: 'disk'`: the same request with the memory write off, which
-// tells the adapter not to decode at all (`prefetchRequest:completion:`). A
-// request with no disk tier (`memoryOnly`, a local file) is kept as it is,
-// or the prefetch would store nothing.
+// A prefetch only downloads: the memory write off tells the adapter not to
+// decode. Without a disk tier (`memoryOnly`, a local file) it decodes, or
+// nothing would be stored.
 TIImageRequest *diskOnly(TIImageRequest *request) {
   if (!request.diskCacheWrite) {
     return request;
@@ -136,8 +122,6 @@ RCT_EXPORT_MODULE(TurboImageModule)
 
 - (void)prefetch:(NSArray *)sources
      cachePolicy:(NSString *)cachePolicy
-     destination:(NSString *)destination
-          resize:(double)resize
          resolve:(RCTPromiseResolveBlock)resolve
           reject:(RCTPromiseRejectBlock)reject {
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -147,7 +131,6 @@ RCT_EXPORT_MODULE(TurboImageModule)
   }
   const auto policy = turboimage::parseCachePolicy(cachePolicy.UTF8String ?: "")
                           .value_or(turboimage::CachePolicy::Default);
-  const BOOL toDiskOnly = [destination isEqualToString:@"disk"];
 
   __block NSUInteger pending = sources.count;
   __block BOOL allSucceeded = YES;
@@ -165,9 +148,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
 
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    // JS never sends `resize` with 'disk' (the types forbid it); were it
-    // sent, the disk copy is the original either way.
-    const auto built = TIMakeImageRequest(coreRequest(fields, policy, resize));
+    const auto built = TIMakeImageRequest(coreRequest(fields, policy));
     if (built.request == nil) {
       finishOne(NO);
       continue;
@@ -176,7 +157,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
     // nil if the module were torn down mid-prefetch.
     NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
     __block id<TIImageLoadTask> task = nil;
-    task = [loader prefetchRequest:toDiskOnly ? diskOnly(built.request) : built.request
+    task = [loader prefetchRequest:diskOnly(built.request)
                         completion:^(BOOL succeeded) {
                           [prefetches removeObject:task];
                           finishOne(succeeded);
@@ -217,10 +198,8 @@ RCT_EXPORT_MODULE(TurboImageModule)
            message, nil);
   };
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
-  if (![loader respondsToSelector:@selector(imageSizeForRequest:completion:)]) {
-    rejectWith(turboimage::LoadErrorCode::Unknown,
-               loader == nil ? @"No TurboImage loader adapter is linked"
-                             : @"This loader adapter does not report image sizes");
+  if (loader == nil) {
+    rejectWith(turboimage::LoadErrorCode::Unknown, @"No TurboImage loader adapter is linked");
     return;
   }
   const auto policy = turboimage::parseCachePolicy(cachePolicy.UTF8String ?: "")

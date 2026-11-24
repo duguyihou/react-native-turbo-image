@@ -39,11 +39,10 @@ else
   end
 end
 
-# CocoaPods path for TurboImage 2.0, kept during the SwiftPM migration.
-#
-# Behaviour must match Package.swift (RFC rule 6):
-#   * same source trees (cpp/, ios/LoaderAPI, ios/Nuke, ios/LiveText,
-#     ios/Fabric),
+# How apps install TurboImage on iOS. Package.swift (tests only) must
+# build the same thing (RFC rule 6):
+#   * same source trees (cpp/, ios/LoaderAPI, ios/Nuke, ios/LiveText), plus
+#     the Fabric view (ios/Fabric), which only this file builds,
 #   * same public headers (ios/LoaderAPI/include only; C++ stays private so
 #     the module stays importable from Swift),
 #   * same Nuke tag (scripts/native-versions.env), delivered as vendored

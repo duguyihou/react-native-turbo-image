@@ -162,33 +162,6 @@ struct ContentPosition {
 // `ViewLifecycle::startUpgrade`), so nothing flashes and JS hears nothing.
 [[nodiscard]] bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bool fill);
 
-// Source sets: one image offered at several sizes (JS `source` as an array of
-// `{ uri, width, height }`, expo-image's form). A view loads one candidate,
-// chosen for its size in pixels; the others are never fetched. `candidates`
-// are the candidates' own sizes in pixels, in the order JS gave them; a
-// size that is not positive (unknown) is never chosen over a known one.
-//
-// The rule: the smallest candidate that is at least as large as the view
-// draws it, by the decode-size rule (`cover` and `stretch` must cover the
-// view, `contain` must fit it), so no pixel is scaled up and none is fetched
-// for nothing. If none is that large, the largest. The largest also when the
-// view's size is unknown (not laid out with an area), when `center` draws
-// the image at its own size, and when `allowDownscaling` is off (a zoomable
-// view). Ties go to the earlier candidate. With no known size at all, the
-// first. Returns an index into `candidates`, 0 when it is empty.
-[[nodiscard]] std::size_t chooseSource(const std::vector<PixelSize>& candidates, PixelSize view,
-                                       ResizeMode resizeMode, bool allowDownscaling);
-
-// After a view showing `candidates[current]` grew to `now`: the candidate to
-// load instead, if `chooseSource` now picks a larger one. A view never
-// switches to a smaller candidate (it already has more pixels than it
-// needs). With no switch, the view may still need the same candidate decoded
-// larger (`needsLargerDecode`).
-[[nodiscard]] std::optional<std::size_t> largerSourceFor(const std::vector<PixelSize>& candidates,
-                                                         std::size_t current, PixelSize now,
-                                                         ResizeMode resizeMode,
-                                                         bool allowDownscaling);
-
 // What a loader is allowed to do with one cache tier. This maps 1:1 onto
 // Coil's `CachePolicy` and onto Nuke's `ImageRequest.Options` read/write
 // flags, which is why it is expressed as two booleans instead of a single

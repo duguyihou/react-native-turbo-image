@@ -12,13 +12,13 @@ For app developers. The reasons behind each change are in the [RFC](rfc/0001-tur
 | React Native | not pinned | **0.88 or newer** |
 | iOS | 13.0 | **16.0**, built with **Xcode 27 or newer** |
 | Android | the app's `minSdk` | `minSdk` **24**, **Kotlin 2.3 or newer** |
-| tvOS | listed in the podspec | **16.0**, with [react-native-tvos](https://github.com/react-native-tvos/react-native-tvos) 0.88 or newer |
+| tvOS (experimental) | listed in the podspec | **16.0**, with [react-native-tvos](https://github.com/react-native-tvos/react-native-tvos) 0.88 or newer |
 
 If your app is still on the Old Architecture, stay on 1.x until it has moved.
 
 An app on React Native older than 0.88 fails at `pod install` and at Gradle configuration with a message that names the version it found.
 
-On Apple TV, `enableLiveTextInteraction` does nothing: tvOS has no Live Text. Everything else is the iOS implementation. tvOS support is new: it has been built and run in a fresh react-native-tvos 0.88 app on the simulator, not yet on a device (see the compatibility matrix). Two things an Apple TV app may need, neither specific to TurboImage:
+On Apple TV, `enableLiveTextInteraction` does nothing: tvOS has no Live Text. Everything else is the iOS implementation. tvOS support is **experimental**: it compiles in CI, and it has been built and run in a fresh react-native-tvos 0.88 app on the simulator, not yet on a device (see the compatibility matrix). Two things an Apple TV app may need, neither specific to TurboImage:
 
 - **Installed with npm:** react-native-tvos 0.88's `@react-native-tvos/virtualized-lists` makes npm install upstream React Native beside the fork, and two React Natives in one bundle break native components (`View config getter callback for component ... must be a function`). Check with `npm ls react-native`, and fix it with an override in `package.json`:
 
@@ -65,13 +65,9 @@ cd ios && pod install
 - **Gifu and APNGKit are gone.** Animated images are played by Nuke. If your app depended on those pods only through TurboImage, they disappear from `Podfile.lock`.
 - **Nuke is vendored** as prebuilt `Nuke.xcframework` and `NukeUI.xcframework` inside the package (14.0.0), so there is nothing extra to add to the `Podfile`.
 
-### Optional: Swift Package Manager on iOS
+### Swift Package Manager is not supported
 
-CocoaPods is the default and the supported path. React Native 0.88's SwiftPM integration is a preview; TurboImage works with it, and CI builds it, but it is not what we recommend for production yet.
-
-```sh
-npx react-native spm add
-```
+Apps install TurboImage through CocoaPods. React Native 0.88's own SwiftPM integration is a preview that gives a library like this one no stable way to depend on React, so 2.0 does not ship a `Package.swift` for apps. An app converted with `npx react-native spm add` cannot use TurboImage 2.0 yet.
 
 ## 3. Change your code
 
@@ -111,9 +107,9 @@ When `source` changes, 2.0 keeps the previous image on screen until the new one 
 
 When the key changes together with the source, the view is blanked (or shows its placeholder) first. This is the same contract as expo-image's prop of that name.
 
-### `source` may be a number or a list of sizes
+### `source` may be a number
 
-`source` now also accepts a `require()`d asset, and an array of one image at several sizes (see below). Code that keeps sources around to pass to `TurboImage.prefetch` or `dispose`, or reads `.uri` off them, should type them as the exported `Source` (a single source) rather than `TurboImageProps['source']`, which now includes arrays, and narrow before reading `.uri`:
+`source` now also accepts a `require()`d asset. Code that reads `.uri` off a source should type it as the exported `Source` and narrow it first:
 
 ```ts
 import type { Source } from 'react-native-turbo-image';
@@ -123,46 +119,21 @@ const uri = typeof source === 'number' ? undefined : source.uri;
 
 ## New in 2.0, optional
 
-### One image at several sizes
+### Prefetching: to the disk only
 
-Give `source` the sizes your CDN serves, with each file's size in pixels, and the view loads the smallest one it does not have to scale up (expo-image's form):
+`TurboImage.prefetch` now only downloads, into the disk cache: no decode and no memory used. A view that shows the image later decodes it from the disk, at the view's size. 1.x also decoded each image into the memory cache at its own size, which no view showing it smaller ever reads: views decode at their own size, under their own memory entries, so a full-size decode only pushed other images out of the cache.
 
-```tsx
-<TurboImage
-  source={[
-    { uri: 'https://cdn.example.com/p/ada-320.jpg', width: 320, height: 213 },
-    { uri: 'https://cdn.example.com/p/ada-1280.jpg', width: 1280, height: 853 },
-  ]}
-  style={{ width: '100%', aspectRatio: 3 / 2 }}
-/>
-```
-
-- `cover` and `stretch` pick a size that covers the view, `contain` one that fits it. If none is large enough, the largest. With `resizeMode="center"`, `allowDownscaling={false}`, or before the view has a size, the largest.
-- A view that grows past its size later loads the next one up, silently, keeping the image on screen meanwhile (as for `allowDownscaling`). It never switches to a smaller one.
-- The first entry's `headers` are sent with every size; other entries' headers are ignored (a development warning says so). `onSuccess.source` is the URL that loaded.
-
-### Prefetching: disk by default, memory at a size
-
-`TurboImage.prefetch` now only downloads by default: no decode and no memory used. A view that shows the image later decodes it from the disk, at the view's size. 1.x also decoded each image into the memory cache at its own size, which no view showing it smaller ever reads: views decode at their own size, under their own memory entries, so a full-size decode only pushed other images out of the cache.
-
-The second argument is now an options object, with the cache policy inside it. 1.x's form, a policy string, still works. To have views find the image in memory, prefetch at their `resize`:
+The second argument is now an options object, with the cache policy inside it. 1.x's form, a policy string, still works:
 
 ```ts
-// For <TurboImage source={source} resize={120} />:
-TurboImage.prefetch(thumbnailSources, { resize: 120 });
+TurboImage.prefetch(sources);
 // 1.x's form, still accepted:
 TurboImage.prefetch(sources, 'urlCache');
 // The same with options:
-TurboImage.prefetch(sources, { cachePolicy: 'urlCache', resize: 120 });
-// For a full-screen viewer with allowDownscaling={false}:
-TurboImage.prefetch(nextPhotos, { resize: 'original' });
+TurboImage.prefetch(sources, { cachePolicy: 'urlCache' });
 ```
 
-`resize` decodes into memory at that width, the same as the views with that `resize` prop, so they decode nothing. It only serves views with exactly that `resize`, no other processing (`blur`, `tint`, `monochrome`) and `allowDownscaling` left on; other views still get the disk copy. A view without `resize` decodes at its laid-out size, which a prefetch cannot predict to the pixel, so it is not offered.
-
-`resize: 'original'` keeps 1.x's full-size decode. Only views that show the image at its own size use it: `allowDownscaling={false}`, `resizeMode="center"`, and `blur` without `resize`.
-
-Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the default loads into memory at full size, as 1.x did. If you replaced the loader, your adapter's `prefetch` / `prefetchRequest:completion:` sees the memory write turned off for a prefetch without `resize` and should store the bytes without decoding them; a `resize` prefetch reaches it as a view's request does.
+Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the image is loaded into memory at full size, as 1.x did.
 
 ### An image's size before rendering
 
@@ -172,7 +143,7 @@ Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, s
 const { width, height } = await TurboImage.getSize({ uri: photoUrl });
 ```
 
-It loads the image into the caches like `prefetch`, but reads the size from the file's header rather than decoding it, so the view that shows it next loads from the disk. An SVG reports its canvas at the screen's pixel ratio. It rejects with `onFailure`'s codes. If you replaced the loader (`TurboImageLoaders.set` on Android, `TIImageLoaderRegistry.sharedLoader` on iOS), `getSize` rejects with `unknown` until your adapter implements `imageSize` / `imageSizeForRequest:completion:`.
+It loads the image into the caches like `prefetch`, but reads the size from the file's header rather than decoding it, so the view that shows it next loads from the disk. An SVG reports its canvas at the screen's pixel ratio. It rejects with `onFailure`'s codes.
 
 ### Cache sizes
 
@@ -206,8 +177,6 @@ Point offsets (`{ top: 10 }`) are not supported yet. `resizeMode="scale-down"` d
 ```
 
 It loads with the source's headers, unprocessed, and without events of its own, and it is never shown over the loaded image. As with a blurhash, it is removed if the image fails, unless `showPlaceholderOnFailure` is set.
-
-If you replaced the Android loader with `TurboImageLoaders.set`, your adapter shows no image placeholders until it implements `ImageLoaderAdapter.loadPlaceholder` (the default reports none).
 
 ## 4. Behaviour that changed
 
@@ -254,7 +223,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 
 - `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`.
 - `TurboImage.prefetch` resolves `false` when any source fails. 1.x always resolved `true`.
-- `TurboImage.prefetch` only downloads unless asked to decode; see [Prefetching](#prefetching-disk-by-default-memory-at-a-size).
+- `TurboImage.prefetch` only downloads, into the disk cache; see [Prefetching](#prefetching-to-the-disk-only).
 - `TurboImage.dispose` now removes the image from memory and disk. It did nothing in 1.x.
 - On Android, `dispose` and `clearDiskCache` reject with code `disk` if the disk cache cannot be written to.
 - Scheme and host are lower-cased and the `#fragment` is dropped when a URL becomes a cache key, so `HTTPS://CDN.example.com/a.png#x` and `https://cdn.example.com/a.png` share one entry. An explicit `cacheKey` is used as written.

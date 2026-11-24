@@ -9,9 +9,8 @@
 //   * It exposes no loader types, so Nuke never leaks into TurboImage's
 //     public surface (RFC "avoid exposing Nuke types").
 //
-// Swapping Nuke for another loader means providing a different
-// `TIImageLoading` implementation and registering it with
-// `TIImageLoaderRegistry`; nothing else changes (RFC rule 1).
+// Internal (ADR 0014): it bridges the ObjC++ view and the Swift adapter,
+// and lets tests use a fake loader. Apps cannot replace it.
 //
 // Headers in this directory are the *only* public headers of the iOS
 // module. Keep them free of C++ so the module stays importable from Swift.
@@ -100,7 +99,7 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 
 /// Loads `request` into the caches without displaying it. `completion` is
 /// called once on the main thread (not at all after cancel). A request whose
-/// `memoryCacheWrite` is off (`destination: 'disk'`) is only downloaded:
+/// `memoryCacheWrite` is off (a prefetch) is only downloaded:
 /// adapters should store the bytes without decoding them.
 - (id<TIImageLoadTask>)prefetchRequest:(TIImageRequest *)request
                             completion:(void (^)(BOOL succeeded))completion;
@@ -125,16 +124,12 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 /// Main thread; must be cheap (no disk I/O).
 - (nullable UIImage *)memoryCachedImageForKey:(NSString *)cacheKey;
 
-@optional
 /// `TurboImage.getSize`: loads `request` into the caches like
 /// `prefetchRequest:`, then reports the image's own size in pixels with its
 /// orientation applied, or the error (in `TIImageLoadErrorDomain`) that
 /// stopped it. Adapters should read the size from the file's header rather
 /// than decode the image. `completion` is called once on the main thread
 /// (not at all after cancel).
-///
-/// Optional so that an adapter written before `getSize` still conforms;
-/// without it, `getSize` rejects with `unknown`.
 - (id<TIImageLoadTask>)imageSizeForRequest:(TIImageRequest *)request
                                 completion:(void (^)(CGSize size, NSError *_Nullable error))completion;
 @end
@@ -142,16 +137,14 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 /// Process-wide loader selection. Thread-safe.
 @interface TIImageLoaderRegistry : NSObject
 
-/// The loader every TurboImage view uses. Defaults to the bundled Nuke
-/// adapter, looked up at runtime (see the .m for why it is not linked
-/// directly). Returns nil only if no adapter is linked into the app.
-@property(class, atomic, strong, nullable) id<TIImageLoading> sharedLoader;
+/// The bundled Nuke adapter, found by name at run time (see the .m).
+/// nil only if no adapter is linked.
+@property(class, atomic, readonly, nullable) id<TIImageLoading> sharedLoader;
 
 /// `TurboImage.configureCache`: the cache sizes, in bytes, the default
 /// adapter is created with; 0 keeps the adapter's own default. An adapter
 /// reads them when it is created, so this only works before any loader
-/// exists: NO, and nothing changes, once `sharedLoader` has made or been
-/// given one.
+/// exists: NO, and nothing changes, once `sharedLoader` has made one.
 + (BOOL)configureCacheWithMaxDiskSize:(NSInteger)maxDiskSize maxMemoryCost:(NSInteger)maxMemoryCost;
 @property(class, atomic, readonly) NSInteger cacheMaxDiskSize;
 @property(class, atomic, readonly) NSInteger cacheMaxMemoryCost;

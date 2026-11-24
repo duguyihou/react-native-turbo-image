@@ -7,8 +7,7 @@
 # The podspec vendors ios/vendor/Nuke.xcframework, which is gitignored and
 # built by scripts/build-nuke-xcframework.sh. A tarball packed from a fresh
 # clone would therefore ship without it, and one packed after a Nuke bump
-# could ship the previous version's binary next to a Package.swift that pins
-# the new one (RFC rule 6: both iOS paths use the same Nuke).
+# could ship the old binary with sources that expect the new one (RFC rule 6).
 #
 # This checks; it does not build. Building needs Xcode and takes minutes,
 # which is the wrong thing to start from inside `npm pack`.

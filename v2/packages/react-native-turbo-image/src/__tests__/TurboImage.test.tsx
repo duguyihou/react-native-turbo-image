@@ -181,45 +181,6 @@ describe('contentPosition', () => {
   });
 });
 
-describe('source sets', () => {
-  const set = [
-    { uri: 'https://cdn.example.com/p/ada-320.jpg', width: 320, height: 213 },
-    { uri: 'https://cdn.example.com/p/ada-1280.jpg', width: 1280, height: 853, cacheKey: 'ada-l' },
-  ];
-
-  it('sends every size, and the first entry as the source that carries the headers', () => {
-    const props = nativeProps(
-      render({ source: [{ ...set[0], headers: { Authorization: 'Bearer t0ken' } }, set[1]] })
-    );
-    expect(props.source).toEqual({
-      uri: set[0].uri,
-      headers: [{ name: 'Authorization', value: 'Bearer t0ken' }],
-    });
-    expect(props.sources).toEqual([
-      { uri: set[0].uri, width: 320, height: 213 },
-      { uri: set[1].uri, cacheKey: 'ada-l', width: 1280, height: 853 },
-    ]);
-  });
-
-  it('treats one entry as a plain source and none as an empty one', () => {
-    const one = nativeProps(render({ source: [set[0]] }));
-    expect(one.source).toEqual({ uri: set[0].uri });
-    expect(one.sources).toBeUndefined();
-    expect(nativeProps(render({ source: [] })).source).toEqual({ uri: '' });
-  });
-
-  it('sends an unusable size as unknown (0)', () => {
-    const props = nativeProps(render({ source: [set[0], { ...set[1], width: Number.NaN }] }));
-    expect(props.sources[1].width).toBe(0);
-  });
-
-  it("warns in development that later entries' headers are not sent", () => {
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    render({ source: [set[0], { ...set[1], headers: { 'X-Size': 'l' } }] });
-    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/first entry's headers/));
-  });
-});
-
 describe('cachePolicy', () => {
   it.each(['default', 'memoryOnly', 'noCache', 'cacheOnly', 'urlCache'] as const)(
     'passes the 2.0 policy %s through',
@@ -578,34 +539,18 @@ describe('cache statics', () => {
     await TurboImage.prefetch([{ uri: AVATAR.uri, headers: { Accept: 'image/png' } }]);
     expect(module.prefetch).toHaveBeenCalledWith(
       [{ uri: AVATAR.uri, headers: [{ name: 'Accept', value: 'image/png' }] }],
-      'default',
-      'disk',
-      0
+      'default'
     );
   });
 
-  it('prefetch decodes into memory at a resize width', async () => {
-    await TurboImage.prefetch([AVATAR], { cachePolicy: 'urlCache', resize: 120 });
-    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache', 'memory', 120);
-  });
-
-  it('prefetch decodes into memory at full size for an original resize', async () => {
-    await TurboImage.prefetch([AVATAR], { resize: 'original' });
-    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'default', 'memory', 0);
-  });
-
-  it('prefetch only downloads for an unusable resize width', async () => {
-    await TurboImage.prefetch([AVATAR], { resize: Number.NaN });
-    await TurboImage.prefetch([AVATAR], { resize: -1 });
-    expect(module.prefetch.mock.calls.map((call) => call.slice(2))).toEqual([
-      ['disk', 0],
-      ['disk', 0],
-    ]);
+  it("prefetch passes an options object's policy", async () => {
+    await TurboImage.prefetch([AVATAR], { cachePolicy: 'urlCache' });
+    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache');
   });
 
   it("prefetch takes 1.x's policy string as its second argument", async () => {
     await TurboImage.prefetch([AVATAR], 'urlCache');
-    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache', 'disk', 0);
+    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache');
   });
 
   it('prefetch maps a legacy policy and passes a 2.0 policy through', async () => {
