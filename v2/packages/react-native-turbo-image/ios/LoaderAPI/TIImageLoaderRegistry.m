@@ -9,6 +9,33 @@ static NSString *const kDefaultLoaderClassName = @"TurboImageNukeLoader";
 @implementation TIImageLoaderRegistry
 
 static id<TIImageLoading> sSharedLoader;
+static NSInteger sCacheMaxDiskSize;
+static NSInteger sCacheMaxMemoryCost;
+
++ (BOOL)configureCacheWithMaxDiskSize:(NSInteger)maxDiskSize maxMemoryCost:(NSInteger)maxMemoryCost {
+  @synchronized(self) {
+    if (sSharedLoader != nil) {
+      return NO;
+    }
+    sCacheMaxDiskSize = MAX(maxDiskSize, 0);
+    sCacheMaxMemoryCost = MAX(maxMemoryCost, 0);
+    return YES;
+  }
+}
+
+// Read by the adapter's initializer, which `sharedLoader` calls inside its
+// @synchronized block; the lock is recursive.
++ (NSInteger)cacheMaxDiskSize {
+  @synchronized(self) {
+    return sCacheMaxDiskSize;
+  }
+}
+
++ (NSInteger)cacheMaxMemoryCost {
+  @synchronized(self) {
+    return sCacheMaxMemoryCost;
+  }
+}
 
 // The default adapter is resolved by class name instead of being referenced
 // directly. Referencing it would require this C-family target to import the

@@ -41,9 +41,9 @@ import java.util.concurrent.Executors
  *  * concurrent requests for the same cache key are de-duplicated, which
  *    matches Nuke's default task coalescing.
  */
-class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
+class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSizes()) : ImageLoaderAdapter {
   private val appContext = context.applicationContext
-  private val imageLoader: ImageLoader = buildImageLoader(appContext)
+  private val imageLoader: ImageLoader = buildImageLoader(appContext, cacheSizes)
 
   override fun load(
     target: ImageView,

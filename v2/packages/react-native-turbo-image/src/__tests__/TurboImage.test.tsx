@@ -38,6 +38,7 @@ jest.mock('../NativeTurboImageModule', () => ({
     clearMemoryCache: jest.fn(() => Promise.resolve()),
     clearDiskCache: jest.fn(() => Promise.resolve()),
     getSize: jest.fn(() => Promise.resolve({ width: 640, height: 480 })),
+    configureCache: jest.fn(() => true),
   },
 }));
 
@@ -569,6 +570,24 @@ describe('cache statics', () => {
       code: 'network',
     });
     expect(module.getSize).toHaveBeenLastCalledWith(AVATAR, 'cacheOnly');
+  });
+
+  it('configureCache sends whole bytes, and 0 for unset or unusable sizes', () => {
+    expect(TurboImage.configureCache({ maxDiskSize: 300 * 1024 * 1024 + 0.5 })).toBe(true);
+    TurboImage.configureCache({ maxMemoryCost: Number.NaN });
+    TurboImage.configureCache({ maxDiskSize: -1, maxMemoryCost: 64e6 });
+    expect(module.configureCache.mock.calls).toEqual([
+      [300 * 1024 * 1024, 0],
+      [0, 0],
+      [0, 64e6],
+    ]);
+  });
+
+  it('configureCache returns false and warns in development once the caches exist', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    module.configureCache.mockReturnValueOnce(false);
+    expect(TurboImage.configureCache({ maxDiskSize: 1 })).toBe(false);
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/caches already exist/));
   });
 
   it('dispose normalises sources', async () => {

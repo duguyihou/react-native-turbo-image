@@ -13,6 +13,7 @@ import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.readHeaders
 import com.turboimage.core.resolveSourceUri
+import com.turboimage.loader.CacheSizes
 import com.turboimage.loader.LoadHandle
 import com.turboimage.loader.TurboImageLoaders
 
@@ -116,6 +117,10 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       if (!done) prefetches.add(handle)
     }
   }
+
+  // Synchronous, on the JS thread: TurboImageLoaders is synchronised for it.
+  override fun configureCache(maxDiskSize: Double, maxMemoryCost: Double): Boolean =
+    TurboImageLoaders.configureCache(CacheSizes(maxDiskSize.toLong(), maxMemoryCost.toLong()))
 
   override fun dispose(sources: ReadableArray, promise: Promise) {
     UiThreadUtil.runOnUiThread {

@@ -145,6 +145,15 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 /// directly). Returns nil only if no adapter is linked into the app.
 @property(class, atomic, strong, nullable) id<TIImageLoading> sharedLoader;
 
+/// `TurboImage.configureCache`: the cache sizes, in bytes, the default
+/// adapter is created with; 0 keeps the adapter's own default. An adapter
+/// reads them when it is created, so this only works before any loader
+/// exists: NO, and nothing changes, once `sharedLoader` has made or been
+/// given one.
++ (BOOL)configureCacheWithMaxDiskSize:(NSInteger)maxDiskSize maxMemoryCost:(NSInteger)maxMemoryCost;
+@property(class, atomic, readonly) NSInteger cacheMaxDiskSize;
+@property(class, atomic, readonly) NSInteger cacheMaxMemoryCost;
+
 @end
 
 NS_ASSUME_NONNULL_END

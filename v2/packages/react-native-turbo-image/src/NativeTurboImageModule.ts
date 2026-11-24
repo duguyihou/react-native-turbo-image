@@ -29,6 +29,12 @@ export interface Spec extends TurboModule {
     source: CodegenTypes.UnsafeObject,
     cachePolicy: string
   ): Promise<CodegenTypes.UnsafeObject>;
+  // Sizes in bytes the caches are built with; 0 keeps the default. False,
+  // and nothing changes, once the loader exists (its caches are built on
+  // first use and cannot be resized). Synchronous, so it has taken effect
+  // before the caller's next line, ahead of any image the app renders.
+  // New in 2.0.
+  configureCache(maxDiskSize: CodegenTypes.Double, maxMemoryCost: CodegenTypes.Double): boolean;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('TurboImageModule');

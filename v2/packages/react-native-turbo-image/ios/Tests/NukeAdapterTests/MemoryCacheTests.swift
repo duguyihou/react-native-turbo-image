@@ -7,6 +7,7 @@
 // has seen so that `removeCachedImage` and the `memoryCacheKey` placeholder
 // can find them; these tests are what holds that index to its job.
 
+import Nuke
 import Testing
 import TurboImageLoaderAPI
 import UIKit
@@ -176,6 +177,30 @@ struct MemoryCacheTests {
     small.loader.removeCachedImage(for: requests[4])
     #expect(small.loader.memoryCachedImage(forKey: requests[4].cacheKey) == nil)
     #expect(small.loader.variantCount == 4)
+  }
+
+  // MARK: Sizes (`TurboImage.configureCache`)
+
+  /// The registry hands the sizes to the adapter it creates, and refuses
+  /// them once a loader exists. The suite never registers a loader, so the
+  /// registry starts empty; it is left as found.
+  @Test func configuredSizesReachTheAdapterOnlyBeforeALoaderExists() throws {
+    #expect(TIImageLoaderRegistry.configureCache(withMaxDiskSize: 50_000_000, maxMemoryCost: 4_000_000))
+    let configured = NukeImageLoader()
+    #expect(TIImageLoaderRegistry.configureCache(withMaxDiskSize: 0, maxMemoryCost: 0))
+
+    let memory = try #require(configured.pipeline.configuration.imageCache as? ImageCache)
+    #expect(memory.costLimit == 4_000_000)
+    // The disk size is the store every policy but urlCache uses; the HTTP
+    // cache keeps its own 150 MB.
+    let disk = try #require(configured.pipeline.configuration.dataCache as? DataCache)
+    #expect(disk.sizeLimit == 50_000_000)
+    #expect(configured.urlCache.diskCapacity == NukeImageLoader.diskCacheBytes)
+
+    TIImageLoaderRegistry.sharedLoader = configured
+    defer { TIImageLoaderRegistry.sharedLoader = nil }
+    #expect(TIImageLoaderRegistry.configureCache(withMaxDiskSize: 1, maxMemoryCost: 1) == false)
+    #expect(TIImageLoaderRegistry.cacheMaxMemoryCost == 0)
   }
 
   @Test func clearingTheMemoryCacheEvictsEverything() async throws {

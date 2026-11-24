@@ -215,6 +215,13 @@ RCT_EXPORT_MODULE(TurboImageModule)
   }
 }
 
+// Synchronous, on the JS thread, so it has taken effect before the app
+// renders its first image; the registry is thread-safe.
+- (NSNumber *)configureCache:(double)maxDiskSize maxMemoryCost:(double)maxMemoryCost {
+  return @([TIImageLoaderRegistry configureCacheWithMaxDiskSize:static_cast<NSInteger>(maxDiskSize)
+                                                  maxMemoryCost:static_cast<NSInteger>(maxMemoryCost)]);
+}
+
 - (void)dispose:(NSArray *)sources
         resolve:(RCTPromiseResolveBlock)resolve
          reject:(RCTPromiseRejectBlock)reject {

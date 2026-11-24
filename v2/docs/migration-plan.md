@@ -53,6 +53,7 @@ builds, and the CI matrix.
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
 | — (new in 2.0) `source` as an array of sizes | Core chooses (`chooseSource`); views load the chosen candidate as an ordinary request and switch to a larger one on growth | ✅ done (RFC §4.5c, "Source sets"). expo-image's form |
 | — (new in 2.0) `contentPosition`, `resizeMode="scale-down"` | Core computes the rectangle (`placeImage`); Android draws it as the image matrix, iOS as the image view's frame inside a clipping container | ✅ done (RFC §4.5d). expo-image's props, keywords and percentages; point offsets are a TODO |
+| — (new in 2.0) `TurboImage.configureCache` | Cache module; the sizes reach the adapter when it is created (`TIImageLoaderRegistry`, `TurboImageLoaders`) | ✅ done (RFC §4.4c). expo-image's names; synchronous, before the first load only |
 | — (new in 2.0) `TurboImage.getSize` | Cache module; adapters read the size from the header (`imageSizeForRequest:` / `imageSize`) | ✅ done (RFC §4.4c). React Native's `Image.getSize`, as a promise |
 | — (new in 2.0) `placeholder` as an image (`{ uri }`, `require()`) | Loaded through the adapter; the lifecycle treats it like a hash placeholder. Android seam: `loadPlaceholder` | ✅ done (RFC §4.5). expo-image's feature |
 

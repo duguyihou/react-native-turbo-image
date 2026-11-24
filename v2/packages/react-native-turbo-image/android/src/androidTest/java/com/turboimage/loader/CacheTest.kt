@@ -1,6 +1,7 @@
 package com.turboimage.loader
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.turboimage.core.CachePolicy
 import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.Processing
@@ -219,4 +220,22 @@ class CacheTest : AdapterTest() {
 
     assertNull(memoryCached(resolve(uri)))
   }
+
+  // MARK: Sizes (`TurboImage.configureCache`)
+
+  @Test
+  fun aConfiguredMemorySizeIsTheOneCoilIsBuiltWith() {
+    // Memory only: a second disk cache on the shared adapter's directory
+    // would clash with it.
+    val loader = buildImageLoader(context(), CacheSizes(maxMemoryCost = 4_000_000))
+    assertEquals(4_000_000L, loader.memoryCache?.maxSize)
+  }
+
+  @Test
+  fun sizesAreRefusedOnceTheAdapterExists() {
+    onMain { TurboImageLoaders.get(context()) }
+    assertFalse(onMain { TurboImageLoaders.configureCache(CacheSizes(maxDiskSize = 1)) })
+  }
+
+  private fun context() = InstrumentationRegistry.getInstrumentation().targetContext
 }

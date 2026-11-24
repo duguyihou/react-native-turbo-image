@@ -59,6 +59,10 @@ const URI_PROCESSED = photo('processed');
 // 3000×2000, far larger than any card: the downscaling scenarios' source.
 const URI_OVERSIZED = `${BASE}/large/oversized.jpg`;
 
+// Sized at startup, before any image mounts, as apps are told to. The
+// `configureCache` scenario reads the outcome.
+const cacheConfigured: boolean = TurboImage.configureCache({ maxDiskSize: 200 * 1024 * 1024 });
+
 // A card's image is as wide as the window minus the content padding and has
 // the 3:2 shape of every photo fixture, so a downscaled decode of a larger
 // 3:2 image is exactly the card's size in pixels (give or take rounding).
@@ -143,6 +147,7 @@ type Scenario = {
     | 'prefetch'
     | 'prefetchInvalid'
     | 'getSize'
+    | 'configureCache'
     | 'cookie'
     | 'dispose'
     | 'clearCaches'
@@ -277,6 +282,15 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'default',
     expect: 'load',
     kind: 'flatList',
+  },
+  {
+    id: 'configureCache',
+    title: 'configureCache works at startup and is refused once images exist',
+    source: { uri: photo('configure-cache') },
+    cachePolicy: 'default',
+    expect: 'load',
+    after: 'downscaled',
+    kind: 'configureCache',
   },
   {
     id: 'getSize',
@@ -1126,6 +1140,21 @@ const PrefetchProbe = (p: { scenario: Scenario; settle: Settle }) => (
 
 // getSize reports the full size, then a cacheOnly view proves it left the
 // image in the disk cache, as a prefetch does.
+// The startup call must have resolved, and a call after images exist must
+// be refused: the caches are built by then.
+function ConfigureCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settle }) {
+  useEffect(() => {
+    const later = TurboImage.configureCache({ maxDiskSize: 1 });
+    settle(
+      scenario.id,
+      cacheConfigured && !later,
+      'load',
+      `startup ${cacheConfigured}, later ${later}`
+    );
+  }, [scenario.id, settle]);
+  return <View style={styles.image} />;
+}
+
 const GetSizeProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView
     {...p}
@@ -1247,6 +1276,7 @@ const PROBES = {
   prefetch: PrefetchProbe,
   prefetchInvalid: PrefetchInvalidProbe,
   getSize: GetSizeProbe,
+  configureCache: ConfigureCacheProbe,
   dispose: DisposeProbe,
   cookie: CookieProbe,
   clearCaches: ClearCachesProbe,

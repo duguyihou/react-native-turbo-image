@@ -426,6 +426,14 @@ const styles = StyleSheet.create({
 
 type CacheSource = Source;
 
+/** `TurboImage.configureCache`'s sizes, in bytes; unset keeps the default. */
+export type CacheSizes = { maxDiskSize?: number; maxMemoryCost?: number };
+
+// A size native can use: whole bytes, or 0 for the default.
+function cacheBytes(bytes: number | undefined): number {
+  return bytes !== undefined && Number.isFinite(bytes) && bytes > 0 ? Math.floor(bytes) : 0;
+}
+
 /** What `TurboImage.getSize` resolves with, in pixels. */
 export type ImageSize = { width: number; height: number };
 
@@ -456,6 +464,35 @@ export const TurboImage = Object.assign(TurboImageComponent, {
    * ('invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown').
    * New in 2.0.
    */
+  /**
+   * Sizes the caches, in bytes (expo-image's names): `maxDiskSize` for the
+   * disk cache (default 150 MB), `maxMemoryCost` for decoded images in
+   * memory (default: a quarter of the app's memory on Android, Nuke's
+   * default on iOS, both scaled to the device; a fixed size that suits a
+   * large phone can strain a small one, so set it only when measured).
+   *
+   * Call it once at startup, before the first image renders and before any
+   * other TurboImage call (`prefetch`, `getSize` and the rest build the
+   * caches too). It is synchronous, so it has taken effect when it returns.
+   * The caches cannot be resized once built: it returns false then, and
+   * nothing changes.
+   *
+   * `maxDiskSize` sizes the store every policy but `urlCache` uses. On
+   * Android the `urlCache` policy's HTTP responses share it; on iOS they
+   * live in a store of their own, which keeps its 150 MB. New in 2.0.
+   */
+  configureCache: (sizes: CacheSizes): boolean => {
+    const applied = NativeTurboImageModule.configureCache(
+      cacheBytes(sizes.maxDiskSize),
+      cacheBytes(sizes.maxMemoryCost)
+    );
+    if (__DEV__ && !applied) {
+      console.warn(
+        'TurboImage.configureCache: the caches already exist, so the sizes were ignored. Call it at startup, before any image or other TurboImage call.'
+      );
+    }
+    return applied;
+  },
   getSize: (
     source: CacheSource,
     cachePolicy: TurboImageProps['cachePolicy'] = 'default'

@@ -32,7 +32,7 @@ import okio.Path.Companion.toOkioPath
 internal const val DISK_CACHE_BYTES = 150L * 1024 * 1024
 
 @OptIn(ExperimentalCoilApi::class)
-internal fun buildImageLoader(context: Context): ImageLoader {
+internal fun buildImageLoader(context: Context, cacheSizes: CacheSizes = CacheSizes()): ImageLoader {
   // Explicit client rather than RN's shared OkHttpClientProvider so that
   // TurboImage's network behaviour does not change with the host app's
   // interceptors.
@@ -82,11 +82,19 @@ internal fun buildImageLoader(context: Context): ImageLoader {
         )
       )
     }
-    .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.25).build() }
+    .memoryCache {
+      MemoryCache.Builder()
+        .apply {
+          if (cacheSizes.maxMemoryCost > 0) maxSizeBytes(cacheSizes.maxMemoryCost)
+          else maxSizePercent(context, 0.25)
+        }
+        .build()
+    }
     .diskCache {
       DiskCache.Builder()
         .directory(context.cacheDir.resolve("turboimage").toOkioPath())
-        .maxSizeBytes(DISK_CACHE_BYTES)
+        // Also holds the urlCache policy's HTTP responses (`httpDiskKey`).
+        .maxSizeBytes(if (cacheSizes.maxDiskSize > 0) cacheSizes.maxDiskSize else DISK_CACHE_BYTES)
         .build()
     }
     .build()

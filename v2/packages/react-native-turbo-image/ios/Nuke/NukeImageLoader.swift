@@ -61,7 +61,8 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   /// `urlCache` requests (`TIImageRequest.httpCache`): disk tier = `urlCache`.
   private let httpPipeline: ImagePipeline
   /// The HTTP cache behind `httpPipeline`. Kept to evict from and clear it.
-  private let urlCache: URLCache
+  /// Internal, not private, only so tests can read its capacity.
+  let urlCache: URLCache
 
   /// One memory entry of a cache key other than the plain original. Nuke's
   /// memory key is (imageID, thumbnail, processors), so each processed
@@ -117,11 +118,17 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // Not `ImageCache.shared`: TurboImage gets its own memory tier, so the
     // host app cannot evict or poison it. Both pipelines share it, because
     // the memory tier is one cache whatever the disk policy (core rule).
-    let imageCache = ImageCache()
+    // `TurboImage.configureCache`, read once: the caches are built here.
+    let maxMemoryCost = TIImageLoaderRegistry.cacheMaxMemoryCost
+    let diskBytes =
+      TIImageLoaderRegistry.cacheMaxDiskSize > 0
+      ? TIImageLoaderRegistry.cacheMaxDiskSize : Self.diskCacheBytes
+    let imageCache =
+      maxMemoryCost > 0 ? ImageCache(costLimit: maxMemoryCost) : ImageCache()
     // One for both pipelines too: a key names one image whatever the policy.
     let animations = AnimationSources()
     pipeline = Self.makePipeline(
-      .withDataCache(name: "com.turboimage.DataCache", sizeLimit: Self.diskCacheBytes),
+      .withDataCache(name: "com.turboimage.DataCache", sizeLimit: diskBytes),
       imageCache: imageCache, animations: animations)
 
     // `cachePolicy="urlCache"`: a second pipeline whose only disk tier is an
@@ -141,6 +148,10 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     let cachesDirectory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
     urlCache = URLCache(
       memoryCapacity: 0,
+      // Not `configureCache`'s size: that one sizes the store the other
+      // policies use (`DataCache`), the cache apps mean. This one keeps its
+      // 150 MB, and with it the largest response it stores (5%).
+      // TODO: an option of its own if apps need to size it.
       diskCapacity: Self.diskCacheBytes,
       directory: cachesDirectory?.appendingPathComponent("com.turboimage.URLCache", isDirectory: true))
     let sessionConfiguration = URLSessionConfiguration.default

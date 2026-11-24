@@ -151,6 +151,18 @@ const { width, height } = await TurboImage.getSize({ uri: photoUrl });
 
 It loads the image into the caches like `prefetch`, but reads the size from the file's header rather than decoding it, so the view that shows it next loads from the disk. An SVG reports its canvas at the screen's pixel ratio. It rejects with `onFailure`'s codes. If you replaced the loader (`TurboImageLoaders.set` on Android, `TIImageLoaderRegistry.sharedLoader` on iOS), `getSize` rejects with `unknown` until your adapter implements `imageSize` / `imageSizeForRequest:completion:`.
 
+### Cache sizes
+
+`TurboImage.configureCache` sizes the caches, in bytes, with expo-image's names. Call it once at startup, in your entry file, before the first image renders and before any other `TurboImage` call (`prefetch`, `getSize` and the rest build the caches too):
+
+```ts
+TurboImage.configureCache({ maxDiskSize: 300 * 1024 * 1024 });
+```
+
+- It is synchronous: it has taken effect when it returns. It returns `false`, and warns in development, if the caches already exist; they cannot be resized once built.
+- `maxDiskSize` (default 150 MB) sizes the disk cache every policy but `urlCache` uses. On Android the `urlCache` policy's HTTP responses share it; on iOS they live in a store of their own, which keeps its 150 MB.
+- `maxMemoryCost` sizes decoded images in memory. The default scales with the device (a quarter of the app's memory on Android, Nuke's default on iOS); a fixed size that suits a large phone can strain a small one, so set it only when you have measured.
+
 ### Positioning the image, and `scale-down`
 
 `contentPosition` places an image that does not fill its view exactly (expo-image's prop, CSS `object-position`): where a `cover` crop is taken from, or where `contain`, `center` and `scale-down` put the image in the free space. It takes keywords or percentages from an edge:
