@@ -267,6 +267,12 @@ jobs:
         run: bun run build:ios:release
       - name: On-simulator smoke test (Release)
         run: bash scripts/smoke-ios.sh
+      # The Fabric view's tests (apps/example/ios/TurboImageExampleTests),
+      # hosted by the Release app built above, so only the test bundle is
+      # built here.
+      - name: View tests (simulator)
+        env: { CONFIGURATION: Release }
+        run: bash scripts/test-ios-view.sh
       - name: Keep the smoke test's failure log
         if: failure()
         uses: actions/upload-artifact@v7

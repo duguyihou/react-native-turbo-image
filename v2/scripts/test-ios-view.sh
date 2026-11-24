@@ -10,6 +10,9 @@
 #
 # Needs `pod install` in apps/example/ios first.
 #
+# Env:   CONFIGURATION=Release tests against the app `build:ios:release`
+#        built, building only the test bundle (what CI does after its smoke
+#        run). Default: Debug.
 # Usage: scripts/test-ios-view.sh [simulator-udid]
 # Exit:  xcodebuild's; 1 when there is no simulator to run on.
 
@@ -33,5 +36,5 @@ cd "${example}"
 bun run codegen:ios
 xcodebuild test \
   -workspace ios/TurboImageExample.xcworkspace -scheme TurboImageExample \
-  -configuration Debug -destination "id=${udid}" -derivedDataPath ios/build \
+  -configuration "${CONFIGURATION:-Debug}" -destination "id=${udid}" -derivedDataPath ios/build \
   -only-testing:TurboImageExampleTests
