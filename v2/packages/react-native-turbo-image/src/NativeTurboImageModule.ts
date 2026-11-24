@@ -11,10 +11,13 @@ import type { CodegenTypes, TurboModule } from 'react-native';
 
 export interface Spec extends TurboModule {
   // Resolves true only if every source loaded (1.x resolved true even when
-  // some failed). Invalid sources count as failures.
+  // some failed). Invalid sources count as failures. `destination` is
+  // 'memory' or 'disk' (`PrefetchDestination`); 'disk' turns the memory
+  // write off, and adapters then download without decoding. New in 2.0.
   prefetch(
     sources: ReadonlyArray<CodegenTypes.UnsafeObject>,
-    cachePolicy: string
+    cachePolicy: string,
+    destination: string
   ): Promise<boolean>;
   // Evicts the sources from the memory and disk caches. (Declared in 1.x
   // but never implemented natively on either platform.)

@@ -426,6 +426,17 @@ const styles = StyleSheet.create({
 
 type CacheSource = Source;
 
+/**
+ * Where `TurboImage.prefetch` leaves an image. `'memory'` (the default, as
+ * in 1.x) also decodes it, at its own size, into the memory cache. `'disk'`
+ * only downloads it: no decode and no memory, so a view that shows it later
+ * decodes it from the disk, at the view's size. Prefer `'disk'` for images
+ * shown smaller than their files, such as list thumbnails: a full-size decode
+ * in memory is of no use to them. Under `memoryOnly`, and for a local file,
+ * there is no disk tier, so `'disk'` loads into memory as `'memory'` does.
+ */
+export type PrefetchDestination = 'memory' | 'disk';
+
 /** `TurboImage.configureCache`'s sizes, in bytes; unset keeps the default. */
 export type CacheSizes = { maxDiskSize?: number; maxMemoryCost?: number };
 
@@ -441,11 +452,13 @@ export type ImageSize = { width: number; height: number };
 export const TurboImage = Object.assign(TurboImageComponent, {
   prefetch: (
     sources: CacheSource[],
-    cachePolicy: TurboImageProps['cachePolicy'] = 'default'
+    cachePolicy: TurboImageProps['cachePolicy'] = 'default',
+    destination: PrefetchDestination = 'memory'
   ): Promise<boolean> =>
     NativeTurboImageModule.prefetch(
       sources.map(toNativeSource),
-      resolveCachePolicy(cachePolicy) ?? 'default'
+      resolveCachePolicy(cachePolicy) ?? 'default',
+      destination
     ),
   // `dispose` and `clearDiskCache` reject (code 'disk') if the disk cache
   // could not be written to. Android only: iOS stages the removal and has

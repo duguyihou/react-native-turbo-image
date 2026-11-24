@@ -161,6 +161,24 @@ struct LoadingTests {
     #expect(loaded.fromMemoryCache)
   }
 
+  /// `destination: 'disk'` (the module turns the memory write off): the
+  /// image is not decoded into memory. The fixtures are local files, so the
+  /// disk side is left to the Android tests, which have an HTTP server.
+  @Test func aDiskOnlyPrefetchKeepsNothingInMemory() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    #expect(await adapter.prefetch(adapter.request(for: file, cacheKey: key, memoryCacheWrite: false)))
+
+    let loaded = await adapter.load(adapter.request(for: file, cacheKey: key))
+
+    #expect(loaded.image != nil)
+    #expect(!loaded.fromMemoryCache)
+  }
+
+  @Test func aDiskOnlyPrefetchStillReportsAFailure() async {
+    #expect(await adapter.prefetch(adapter.request(for: Fixture.missing(), memoryCacheWrite: false)) == false)
+  }
+
   // MARK: Image size (`TurboImage.getSize`)
 
   @Test func theSizeIsTheImagesOwnInPixels() async throws {

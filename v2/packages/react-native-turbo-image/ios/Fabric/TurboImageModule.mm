@@ -69,6 +69,32 @@ turboimage::ImageRequest coreRequest(const SourceFields &fields, turboimage::Cac
   };
 }
 
+// `destination: 'disk'`: the same request with the memory write off, which
+// tells the adapter not to decode at all (`prefetchRequest:completion:`). A
+// request with no disk tier (`memoryOnly`, a local file) is kept as it is,
+// or the prefetch would store nothing.
+TIImageRequest *diskOnly(TIImageRequest *request) {
+  if (!request.diskCacheWrite) {
+    return request;
+  }
+  return [[TIImageRequest alloc] initWithURL:request.url
+                                    cacheKey:request.cacheKey
+                             memoryCacheRead:request.memoryCacheRead
+                            memoryCacheWrite:NO
+                               diskCacheRead:request.diskCacheRead
+                              diskCacheWrite:request.diskCacheWrite
+                                allowNetwork:request.allowNetwork
+                                processorKey:request.processorKey
+                                   processor:request.processor
+                                     headers:request.headers
+                                   httpCache:request.httpCache
+                                  decodeSize:request.decodeSize
+                                  decodeFill:request.decodeFill
+                            vectorDecodeSize:request.vectorDecodeSize
+                            vectorDecodeFill:request.vectorDecodeFill
+                                displayScale:request.displayScale];
+}
+
 }  // namespace
 
 @interface TurboImageModule () <NativeTurboImageModuleSpec, RCTInvalidating>
@@ -99,6 +125,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
 
 - (void)prefetch:(NSArray *)sources
      cachePolicy:(NSString *)cachePolicy
+     destination:(NSString *)destination
          resolve:(RCTPromiseResolveBlock)resolve
           reject:(RCTPromiseRejectBlock)reject {
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -108,6 +135,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
   }
   const auto policy = turboimage::parseCachePolicy(cachePolicy.UTF8String ?: "")
                           .value_or(turboimage::CachePolicy::Default);
+  const BOOL toDiskOnly = [destination isEqualToString:@"disk"];
 
   __block NSUInteger pending = sources.count;
   __block BOOL allSucceeded = YES;
@@ -134,7 +162,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
     // nil if the module were torn down mid-prefetch.
     NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
     __block id<TIImageLoadTask> task = nil;
-    task = [loader prefetchRequest:built.request
+    task = [loader prefetchRequest:toDiskOnly ? diskOnly(built.request) : built.request
                         completion:^(BOOL succeeded) {
                           [prefetches removeObject:task];
                           finishOne(succeeded);

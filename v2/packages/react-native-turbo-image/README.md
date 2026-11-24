@@ -52,6 +52,8 @@ Cache management:
 
 ```ts
 await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }]);
+// Download only, without decoding into memory (for thumbnails):
+await TurboImage.prefetch([{ uri: 'https://example.com/photo.jpg' }], 'default', 'disk');
 await TurboImage.dispose([{ uri: 'https://example.com/photo.jpg' }]);
 await TurboImage.clearMemoryCache();
 await TurboImage.clearDiskCache();

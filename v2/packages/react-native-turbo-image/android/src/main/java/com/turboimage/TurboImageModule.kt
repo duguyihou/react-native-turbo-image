@@ -44,7 +44,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
     return TurboImageCore.resolve(uri, cacheKey, policy, headers = readHeaders(source)) as? ResolvedRequest
   }
 
-  override fun prefetch(sources: ReadableArray, cachePolicy: String, promise: Promise) {
+  override fun prefetch(sources: ReadableArray, cachePolicy: String, destination: String, promise: Promise) {
     // The loader seam is main-thread only.
     UiThreadUtil.runOnUiThread {
       val loader = TurboImageLoaders.get(context)
@@ -60,7 +60,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
         if (--pending == 0) promise.resolve(allSucceeded)
       }
       for (i in 0 until sources.size()) {
-        val request = resolve(sources, i, policy)
+        val request = resolve(sources, i, policy)?.let { if (destination == "disk") diskOnly(it) else it }
         if (request == null) {
           finishOne(false)
           continue
@@ -81,6 +81,13 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       }
     }
   }
+
+  // `destination: 'disk'`: the memory write off, which tells the adapter not
+  // to decode at all (`ImageLoaderAdapter.prefetch`). A request with no disk
+  // tier (`memoryOnly`, a local file) keeps its memory write, or the
+  // prefetch would store nothing.
+  private fun diskOnly(request: ResolvedRequest): ResolvedRequest =
+    if (request.diskWrite) request.copy(memoryWrite = false) else request
 
   override fun getSize(source: ReadableMap, cachePolicy: String, promise: Promise) {
     UiThreadUtil.runOnUiThread {

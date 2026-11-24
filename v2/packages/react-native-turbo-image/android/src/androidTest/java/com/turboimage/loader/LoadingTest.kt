@@ -217,6 +217,29 @@ class LoadingTest : AdapterTest() {
     assertEquals(1, requestsReceived(uri))
   }
 
+  /**
+   * `destination: 'disk'` (the module turns the memory write off): the bytes
+   * reach the disk and no decoded bitmap is kept. Before, a prefetch decoded
+   * the full-size image under the key unprocessed views share, so a list
+   * thumbnail was then drawn from that bitmap.
+   */
+  @Test
+  fun aDiskOnlyPrefetchStoresTheBytesAndNoBitmap() {
+    val uri = photo()
+    val request = resolve(uri, allowDownscaling = false).copy(memoryWrite = false)
+    assertTrue(prefetch(request))
+
+    assertNull("nothing in memory", memoryCached(request))
+    assertTrue(isCached(uri))
+    assertEquals(1, requestsReceived(uri))
+  }
+
+  @Test
+  fun aDiskOnlyPrefetchStillReportsAFailure() {
+    val request = resolve("$BASE/no-such-route/${UUID.randomUUID()}.jpg", allowDownscaling = false)
+    assertFalse(prefetch(request.copy(memoryWrite = false)))
+  }
+
   // MARK: Headers
 
   @Test

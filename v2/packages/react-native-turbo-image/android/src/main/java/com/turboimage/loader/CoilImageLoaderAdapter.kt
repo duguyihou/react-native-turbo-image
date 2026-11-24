@@ -208,6 +208,12 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
     val coilRequest =
       request.toCoilRequest(appContext, view = null)
         .httpHeaders(request.networkHeaders().build())
+        .apply {
+          // Nothing will keep a decoded bitmap (`destination: 'disk'`), so
+          // read only the header, as `imageSize` does: the fetch still
+          // writes the disk cache, and no pixels are allocated.
+          if (!request.memoryWrite) decoderFactory(HeaderSizeDecoder.Factory())
+        }
         .listener(
           onSuccess = { _, _ -> if (!finished) { finished = true; onDone(true) } },
           onError = { _, _ -> if (!finished) { finished = true; onDone(false) } },

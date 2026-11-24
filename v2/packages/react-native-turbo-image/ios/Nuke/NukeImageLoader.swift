@@ -43,9 +43,9 @@ private final class NukeLoadTask: NSObject, TIImageLoadTask, @unchecked Sendable
   }
 }
 
-/// `imageSize`'s handle: cancelling the Swift Task cancels the awaited Nuke
-/// work and drops the result.
-private final class SizeTask: NSObject, TIImageLoadTask, @unchecked Sendable {
+/// The handle of `imageSize` and of a disk-only prefetch: cancelling the
+/// Swift Task cancels the awaited Nuke work and drops the result.
+private final class AsyncTask: NSObject, TIImageLoadTask, @unchecked Sendable {
   private let task: Task<Void, Never>
   init(task: Task<Void, Never>) { self.task = task }
   func cancel() { task.cancel() }
@@ -313,7 +313,7 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
         completionBox.value(.zero, Self.classify(error))
       }
     }
-    return SizeTask(task: task)
+    return AsyncTask(task: task)
   }
 
   /// The first frame's size in pixels from the header, turned by the EXIF
@@ -338,8 +338,20 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     var nukeRequest = Self.makeNukeRequest(from: request)
     // Prefetches yield to on-screen loads.
     nukeRequest.priority = .low
-    let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
     let completionBox = UncheckedSendable(completion)
+    // Nothing will keep a decoded image (`destination: 'disk'`): fetch the
+    // bytes through the same caches as a load, as `imageSize` does, and
+    // decode nothing.
+    guard request.memoryCacheWrite else {
+      let pipeline = pipeline(for: request)
+      let task = Task { @MainActor in
+        let succeeded = (try? await pipeline.data(for: nukeRequest)) != nil
+        guard !Task.isCancelled else { return }
+        completionBox.value(succeeded)
+      }
+      return AsyncTask(task: task)
+    }
+    let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
     let task = Task { @MainActor in
       let succeeded = (try? await imageTask.response) != nil
       guard !Task.isCancelled else { return }

@@ -538,8 +538,14 @@ describe('cache statics', () => {
     await TurboImage.prefetch([{ uri: AVATAR.uri, headers: { Accept: 'image/png' } }]);
     expect(module.prefetch).toHaveBeenCalledWith(
       [{ uri: AVATAR.uri, headers: [{ name: 'Accept', value: 'image/png' }] }],
-      'default'
+      'default',
+      'memory'
     );
+  });
+
+  it('prefetch passes a disk destination through', async () => {
+    await TurboImage.prefetch([AVATAR], 'urlCache', 'disk');
+    expect(module.prefetch).toHaveBeenCalledWith([AVATAR], 'urlCache', 'disk');
   });
 
   it('prefetch maps a legacy policy and passes a 2.0 policy through', async () => {

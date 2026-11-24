@@ -86,7 +86,11 @@ interface ImageLoaderAdapter {
     return LoadHandle {}
   }
 
-  /** Loads into the caches without a view; [onDone] once on the main thread. */
+  /**
+   * Loads into the caches without a view; [onDone] once on the main thread.
+   * A request whose `memoryWrite` is off (`destination: 'disk'`) is only
+   * downloaded: adapters should store the bytes without decoding them.
+   */
   fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
 
   /**

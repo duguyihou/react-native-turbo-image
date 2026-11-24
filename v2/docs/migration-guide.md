@@ -141,6 +141,16 @@ Give `source` the sizes your CDN serves, with each file's size in pixels, and th
 - A view that grows past its size later loads the next one up, silently, keeping the image on screen meanwhile (as for `allowDownscaling`). It never switches to a smaller one.
 - The first entry's `headers` are sent with every size; other entries' headers are ignored (a development warning says so). `onSuccess.source` is the URL that loaded.
 
+### Prefetching to the disk only
+
+`TurboImage.prefetch` takes a third argument, `destination`. The default, `'memory'`, works as in 1.x: it also decodes each image into the memory cache at its own size. `'disk'` only downloads, with no decode and no memory used:
+
+```ts
+TurboImage.prefetch(thumbnailSources, 'default', 'disk');
+```
+
+Use `'disk'` for images that will be shown smaller than their files, such as list thumbnails. A full-size decode in memory is no use to a view that decodes at its own size, and it pushes other images out of the cache. A view that shows the image later decodes it from the disk. Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so `'disk'` loads into memory as `'memory'` does. If you replaced the loader, your adapter's `prefetch` / `prefetchRequest:completion:` sees the memory write turned off and should store the bytes without decoding them.
+
 ### An image's size before rendering
 
 `TurboImage.getSize(source)` resolves the image's own size in pixels, with its EXIF orientation applied, like React Native's `Image.getSize`:

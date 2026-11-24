@@ -99,7 +99,9 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 // (`turboimage::ResolvedRequest`), so views and the module agree on keys.
 
 /// Loads `request` into the caches without displaying it. `completion` is
-/// called once on the main thread (not at all after cancel).
+/// called once on the main thread (not at all after cancel). A request whose
+/// `memoryCacheWrite` is off (`destination: 'disk'`) is only downloaded:
+/// adapters should store the bytes without decoding them.
 - (id<TIImageLoadTask>)prefetchRequest:(TIImageRequest *)request
                             completion:(void (^)(BOOL succeeded))completion;
 
