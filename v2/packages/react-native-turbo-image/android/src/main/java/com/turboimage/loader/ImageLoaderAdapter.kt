@@ -3,6 +3,7 @@ package com.turboimage.loader
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.widget.ImageView
+import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.ResolvedRequest
 
 /**
@@ -62,6 +63,26 @@ interface ImageLoaderAdapter {
    */
   fun loadPlaceholder(sizeOf: ImageView, request: ResolvedRequest, onDone: (Drawable?) -> Unit): LoadHandle {
     onDone(null)
+    return LoadHandle {}
+  }
+
+  /**
+   * `TurboImage.getSize`: loads [request] into the caches like [prefetch],
+   * then reports the image's own size in pixels with its orientation applied
+   * ([onSize]), or why it could not ([onError], a `turboimage::LoadErrorCode`
+   * value). Adapters should read the size from the file's header rather than
+   * decode the image. Exactly one callback, once, on the main thread, unless
+   * the handle is cancelled first.
+   *
+   * The default reports `unknown`: an adapter written before `getSize`
+   * keeps compiling, and `getSize` rejects with it.
+   */
+  fun imageSize(
+    request: ResolvedRequest,
+    onSize: (width: Int, height: Int) -> Unit,
+    onError: (code: Int, message: String) -> Unit,
+  ): LoadHandle {
+    onError(LoadErrorCode.UNKNOWN.nativeValue, "This loader adapter does not report image sizes")
     return LoadHandle {}
   }
 

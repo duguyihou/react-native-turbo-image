@@ -75,6 +75,15 @@ struct Adapter {
     }
   }
 
+  /// `imageSizeForRequest:`, as the cache module calls it.
+  func size(_ request: TIImageRequest) async -> (size: CGSize, error: NSError?) {
+    await withCheckedContinuation { continuation in
+      _ = loader.imageSize(for: request) { size, error in
+        continuation.resume(returning: (size, error as NSError?))
+      }
+    }
+  }
+
   func prefetch(_ request: TIImageRequest) async -> Bool {
     await withCheckedContinuation { continuation in
       _ = loader.prefetchRequest(request) { continuation.resume(returning: $0) }
@@ -145,6 +154,19 @@ enum Fixture {
   static func png() throws -> URL {
     let url = temporaryFile("png")
     try unwrap(picture(shade: 0.5).pngData()).write(to: url)
+    return url
+  }
+
+  /// A 40×30 JPEG whose EXIF orientation (6, a quarter turn) makes it
+  /// display as 30×40.
+  static func rotatedJpeg() throws -> URL {
+    let url = temporaryFile("jpg")
+    let destination = try unwrap(
+      CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil))
+    CGImageDestinationAddImage(
+      destination, try unwrap(picture(shade: 0.3).cgImage),
+      [kCGImagePropertyOrientation: 6] as CFDictionary)
+    guard CGImageDestinationFinalize(destination) else { throw Failure() }
     return url
   }
 

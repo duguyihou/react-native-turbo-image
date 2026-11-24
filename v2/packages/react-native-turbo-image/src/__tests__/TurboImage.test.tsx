@@ -37,6 +37,7 @@ jest.mock('../NativeTurboImageModule', () => ({
     dispose: jest.fn(() => Promise.resolve()),
     clearMemoryCache: jest.fn(() => Promise.resolve()),
     clearDiskCache: jest.fn(() => Promise.resolve()),
+    getSize: jest.fn(() => Promise.resolve({ width: 640, height: 480 })),
   },
 }));
 
@@ -520,6 +521,24 @@ describe('cache statics', () => {
   it('prefetch resolves with what native reports', async () => {
     module.prefetch.mockResolvedValueOnce(false);
     await expect(TurboImage.prefetch([AVATAR])).resolves.toBe(false);
+  });
+
+  it('getSize normalises the source, defaults the policy and resolves the size', async () => {
+    await expect(
+      TurboImage.getSize({ uri: AVATAR.uri, headers: { Authorization: 'Bearer t0ken' } })
+    ).resolves.toEqual({ width: 640, height: 480 });
+    expect(module.getSize).toHaveBeenCalledWith(
+      { uri: AVATAR.uri, headers: [{ name: 'Authorization', value: 'Bearer t0ken' }] },
+      'default'
+    );
+  });
+
+  it('getSize passes the rejection through', async () => {
+    module.getSize.mockRejectedValueOnce(Object.assign(new Error('404'), { code: 'network' }));
+    await expect(TurboImage.getSize(AVATAR, 'cacheOnly')).rejects.toMatchObject({
+      code: 'network',
+    });
+    expect(module.getSize).toHaveBeenLastCalledWith(AVATAR, 'cacheOnly');
   });
 
   it('dispose normalises sources', async () => {

@@ -21,6 +21,14 @@ export interface Spec extends TurboModule {
   dispose(sources: ReadonlyArray<CodegenTypes.UnsafeObject>): Promise<void>;
   clearMemoryCache(): Promise<void>;
   clearDiskCache(): Promise<void>;
+  // Resolves `{ width, height }`: the image's own size in pixels, with its
+  // orientation applied, read from the file's header after loading it into
+  // the caches (no full decode for bitmaps). Rejects with a
+  // `turboimage::LoadErrorCode` name as the code. New in 2.0.
+  getSize(
+    source: CodegenTypes.UnsafeObject,
+    cachePolicy: string
+  ): Promise<CodegenTypes.UnsafeObject>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('TurboImageModule');

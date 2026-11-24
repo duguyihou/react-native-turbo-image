@@ -14,6 +14,7 @@ import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.network.HttpException
 import coil3.network.httpHeaders
+import coil3.request.CachePolicy
 import coil3.request.Disposable
 import coil3.request.allowHardware
 import coil3.request.crossfade
@@ -156,6 +157,41 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
             if (!finished) {
               finished = true
               onDone(null)
+            }
+          },
+        )
+        .build()
+    val disposable = imageLoader.enqueue(coilRequest)
+    return LoadHandle {
+      finished = true
+      disposable.dispose()
+    }
+  }
+
+  override fun imageSize(
+    request: ResolvedRequest,
+    onSize: (width: Int, height: Int) -> Unit,
+    onError: (code: Int, message: String) -> Unit,
+  ): LoadHandle {
+    var finished = false
+    val coilRequest =
+      request.toCoilRequest(appContext, view = null)
+        .httpHeaders(request.networkHeaders().build())
+        .decoderFactory(HeaderSizeDecoder.Factory())
+        // The size-only result is not the image: never stored in memory. A
+        // full image already there is read (it has the same size).
+        .memoryCachePolicy(if (request.memoryRead) CachePolicy.READ_ONLY else CachePolicy.DISABLED)
+        .listener(
+          onSuccess = { _, result ->
+            if (!finished) {
+              finished = true
+              onSize(result.image.width, result.image.height)
+            }
+          },
+          onError = { _, result ->
+            if (!finished) {
+              finished = true
+              onError(classify(result.throwable, request), result.throwable.message ?: "Unknown error")
             }
           },
         )

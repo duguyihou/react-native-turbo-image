@@ -125,6 +125,8 @@ type Scenario = {
   expectSource?: string;
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
+  // For the getSize probe: what TurboImage.getSize must resolve with.
+  expectGetSize?: { width: number; height: number };
   // For the urlCache probe: the requests the server must have seen for the
   // source after its two loads, and how many of them were conditional.
   expectHits?: { count: number; conditional: number };
@@ -140,6 +142,7 @@ type Scenario = {
     | 'supersede'
     | 'prefetch'
     | 'prefetchInvalid'
+    | 'getSize'
     | 'cookie'
     | 'dispose'
     | 'clearCaches'
@@ -274,6 +277,15 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'default',
     expect: 'load',
     kind: 'flatList',
+  },
+  {
+    id: 'getSize',
+    title: 'TurboImage.getSize reports 3000×2000 and leaves the image cached',
+    source: { uri: `${BASE}/large/get-size.jpg` },
+    cachePolicy: 'cacheOnly',
+    expect: 'load',
+    expectGetSize: { width: 3000, height: 2000 },
+    kind: 'getSize',
   },
   {
     // The card is CARD_WIDTH_PX wide and 3:2. Only the declared sizes matter
@@ -1112,6 +1124,23 @@ const PrefetchProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView {...p} before={() => TurboImage.prefetch([p.scenario.source])} />
 );
 
+// getSize reports the full size, then a cacheOnly view proves it left the
+// image in the disk cache, as a prefetch does.
+const GetSizeProbe = (p: { scenario: Scenario; settle: Settle }) => (
+  <CacheThenView
+    {...p}
+    before={() =>
+      TurboImage.getSize(p.scenario.source).then(({ width, height }) => {
+        const expected = p.scenario.expectGetSize;
+        if (expected && (width !== expected.width || height !== expected.height)) {
+          throw new Error(`getSize gave ${width}×${height}`);
+        }
+        return true;
+      })
+    }
+  />
+);
+
 const CookieProbe = (p: { scenario: Scenario; settle: Settle }) => (
   <CacheThenView
     {...p}
@@ -1217,6 +1246,7 @@ function UrlCacheProbe({ scenario, settle }: { scenario: Scenario; settle: Settl
 const PROBES = {
   prefetch: PrefetchProbe,
   prefetchInvalid: PrefetchInvalidProbe,
+  getSize: GetSizeProbe,
   dispose: DisposeProbe,
   cookie: CookieProbe,
   clearCaches: ClearCachesProbe,

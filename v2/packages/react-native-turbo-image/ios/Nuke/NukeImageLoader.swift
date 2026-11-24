@@ -7,6 +7,7 @@
 // the registry looks up by name.
 
 import Foundation
+import ImageIO
 import Nuke
 import NukeUI
 import UIKit
@@ -40,6 +41,14 @@ private final class NukeLoadTask: NSObject, TIImageLoadTask, @unchecked Sendable
     task.cancel()
     progressTask?.cancel()
   }
+}
+
+/// `imageSize`'s handle: cancelling the Swift Task cancels the awaited Nuke
+/// work and drops the result.
+private final class SizeTask: NSObject, TIImageLoadTask, @unchecked Sendable {
+  private let task: Task<Void, Never>
+  init(task: Task<Void, Never>) { self.task = task }
+  func cancel() { task.cancel() }
 }
 
 @objc(TurboImageNukeLoader)
@@ -261,6 +270,55 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   }
 
   // MARK: - Cache management (TurboImageModule)
+
+  @objc(imageSizeForRequest:completion:)
+  public func imageSize(
+    for request: TIImageRequest,
+    completion: @escaping (CGSize, (any Error)?) -> Void
+  ) -> any TIImageLoadTask {
+    let nukeRequest = Self.makeNukeRequest(from: request)
+    let pipeline = pipeline(for: request)
+    let completionBox = UncheckedSendable(completion)
+    let task = Task { @MainActor in
+      do {
+        // The bytes, through the same caches as a load: a hit reads the disk,
+        // a miss downloads and stores the original.
+        let (data, _) = try await pipeline.data(for: nukeRequest)
+        let size: CGSize
+        if let header = Self.headerPixelSize(of: data) {
+          size = header
+        } else {
+          // Not a format ImageIO bounds (SVG): decode with the adapter's own
+          // decoders. A vector has no pixels; it reports its canvas at the
+          // screen's scale, the size it draws at, as Android does.
+          let image = try await pipeline.image(for: nukeRequest)
+          let scale = image.cgImage == nil ? UITraitCollection.current.displayScale : image.scale
+          size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        }
+        guard !Task.isCancelled else { return }
+        completionBox.value(size, nil)
+      } catch {
+        guard !Task.isCancelled else { return }
+        completionBox.value(.zero, Self.classify(error))
+      }
+    }
+    return SizeTask(task: task)
+  }
+
+  /// The first frame's size in pixels from the header, turned by the EXIF
+  /// orientation as a decode would; nil if ImageIO cannot read one.
+  static func headerPixelSize(of data: Data) -> CGSize? {
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+      let width = properties[kCGImagePropertyPixelWidth] as? Int,
+      let height = properties[kCGImagePropertyPixelHeight] as? Int,
+      width > 0, height > 0
+    else { return nil }
+    // Orientations 5-8 swap the axes (transposed, rotated a quarter turn).
+    let orientation = properties[kCGImagePropertyOrientation] as? UInt32 ?? 1
+    return orientation >= 5
+      ? CGSize(width: height, height: width) : CGSize(width: width, height: height)
+  }
 
   public func prefetchRequest(
     _ request: TIImageRequest,

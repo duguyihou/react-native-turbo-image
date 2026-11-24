@@ -350,6 +350,9 @@ const styles = StyleSheet.create({
 
 type CacheSource = Source;
 
+/** What `TurboImage.getSize` resolves with, in pixels. */
+export type ImageSize = { width: number; height: number };
+
 // 1.x exposed these as statics on the component; kept for compatibility.
 export const TurboImage = Object.assign(TurboImageComponent, {
   prefetch: (
@@ -367,6 +370,24 @@ export const TurboImage = Object.assign(TurboImageComponent, {
     NativeTurboImageModule.dispose(sources.map(toNativeSource)),
   clearMemoryCache: (): Promise<void> => NativeTurboImageModule.clearMemoryCache(),
   clearDiskCache: (): Promise<void> => NativeTurboImageModule.clearDiskCache(),
+  /**
+   * The image's own size in pixels, with its EXIF orientation applied, like
+   * React Native's `Image.getSize`: for laying out before rendering. Loads
+   * the image into the caches like `prefetch`, but reads the size from the
+   * file's header, so a 12 MP photo costs a download and a disk write, not a
+   * 48 MB decode. An SVG reports its canvas at this screen's pixel ratio,
+   * the size it draws at by default. Rejects with `onFailure`'s codes
+   * ('invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown').
+   * New in 2.0.
+   */
+  getSize: (
+    source: CacheSource,
+    cachePolicy: TurboImageProps['cachePolicy'] = 'default'
+  ): Promise<ImageSize> =>
+    NativeTurboImageModule.getSize(
+      toNativeSource(source),
+      resolveCachePolicy(cachePolicy) ?? 'default'
+    ) as Promise<ImageSize>,
 });
 
 export default TurboImage;

@@ -163,6 +163,58 @@ RCT_EXPORT_MODULE(TurboImageModule)
   }
 }
 
+- (void)getSize:(NSDictionary *)source
+    cachePolicy:(NSString *)cachePolicy
+        resolve:(RCTPromiseResolveBlock)resolve
+         reject:(RCTPromiseRejectBlock)reject {
+  // The rejection code is the failure's `turboimage::LoadErrorCode` name, as
+  // in `onFailure.code`.
+  auto rejectWith = ^(turboimage::LoadErrorCode code, NSString *message) {
+    const auto name = turboimage::loadErrorCodeName(code);
+    reject([[NSString alloc] initWithBytes:name.data() length:name.size() encoding:NSUTF8StringEncoding],
+           message, nil);
+  };
+  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+  if (![loader respondsToSelector:@selector(imageSizeForRequest:completion:)]) {
+    rejectWith(turboimage::LoadErrorCode::Unknown,
+               loader == nil ? @"No TurboImage loader adapter is linked"
+                             : @"This loader adapter does not report image sizes");
+    return;
+  }
+  const auto policy = turboimage::parseCachePolicy(cachePolicy.UTF8String ?: "")
+                          .value_or(turboimage::CachePolicy::Default);
+  const auto built = TIMakeImageRequest(coreRequest(sourceFields(source), policy));
+  if (built.request == nil) {
+    rejectWith(built.error, built.message);
+    return;
+  }
+  // Kept like a prefetch until it settles (see prefetch for the capture).
+  NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
+  __block id<TIImageLoadTask> task = nil;
+  __block BOOL done = NO;
+  task = [loader imageSizeForRequest:built.request
+                          completion:^(CGSize size, NSError *error) {
+                            done = YES;
+                            if (task != nil) {
+                              [prefetches removeObject:task];
+                            }
+                            if (error == nil) {
+                              resolve(@{@"width" : @(size.width), @"height" : @(size.height)});
+                              return;
+                            }
+                            // The seam promises TIImageLoadErrorDomain;
+                            // anything else is an adapter bug, reported as
+                            // unknown.
+                            const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
+                                                  ? static_cast<turboimage::LoadErrorCode>(error.code)
+                                                  : turboimage::LoadErrorCode::Unknown;
+                            rejectWith(code, error.localizedDescription);
+                          }];
+  if (!done) {
+    [prefetches addObject:task];
+  }
+}
+
 - (void)dispose:(NSArray *)sources
         resolve:(RCTPromiseResolveBlock)resolve
          reject:(RCTPromiseRejectBlock)reject {

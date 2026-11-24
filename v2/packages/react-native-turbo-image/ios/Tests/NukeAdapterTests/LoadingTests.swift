@@ -160,6 +160,38 @@ struct LoadingTests {
 
     #expect(loaded.fromMemoryCache)
   }
+
+  // MARK: Image size (`TurboImage.getSize`)
+
+  @Test func theSizeIsTheImagesOwnInPixels() async throws {
+    let result = await adapter.size(adapter.request(for: try Fixture.png()))
+
+    #expect(result.error == nil)
+    #expect(result.size == Fixture.size)
+  }
+
+  @Test func theSizeFollowsTheExifOrientation() async throws {
+    let result = await adapter.size(adapter.request(for: try Fixture.rotatedJpeg()))
+
+    #expect(result.size == CGSize(width: Fixture.size.height, height: Fixture.size.width))
+  }
+
+  /// An SVG has no pixels; it reports the size it draws at by default, its
+  /// canvas at the screen's scale, as Android does.
+  @Test func anSvgReportsItsCanvasAtTheScreensScale() async throws {
+    let result = await adapter.size(adapter.request(for: try Fixture.svg()))
+    let scale = UITraitCollection.current.displayScale
+
+    #expect(result.size == CGSize(width: 120 * scale, height: 80 * scale))
+  }
+
+  @Test func aSizeThatCannotBeReadFailsWithTheLoadsCode() async throws {
+    let missing = await adapter.size(adapter.request(for: Fixture.missing()))
+    let garbage = await adapter.size(adapter.request(for: try Fixture.notAnImage()))
+
+    #expect(missing.error?.domain == TIImageLoadErrorDomain)
+    #expect(garbage.error?.code == TIImageLoadError.Code.decode.rawValue)
+  }
 }
 
 /// A UIImage for a processor block to return. Immutable once made.

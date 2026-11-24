@@ -1,12 +1,18 @@
 package com.turboimage.loader
 
+import android.graphics.Bitmap
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.media.ExifInterface
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.turboimage.core.CachePolicy
 import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.Processing
 import com.turboimage.core.ResizeMode
+import com.turboimage.core.ResolvedRequest
+import java.io.File
+import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
@@ -99,7 +105,7 @@ class LoadingTest : AdapterTest() {
 
   @Test
   fun anHttpErrorIsANetworkError() {
-    val outcome = load(resolve("$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg"))
+    val outcome = load(resolve("$BASE/no-such-route/${UUID.randomUUID()}.jpg"))
 
     assertEquals(LoadErrorCode.NETWORK, outcome.error)
     assertNull(outcome.view.drawable)
@@ -137,7 +143,7 @@ class LoadingTest : AdapterTest() {
     val previous = ColorDrawable(0xff336699.toInt())
     onMain { view.setImageDrawable(previous) }
 
-    val outcome = loadInto(view, resolve("$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg"))
+    val outcome = loadInto(view, resolve("$BASE/no-such-route/${UUID.randomUUID()}.jpg"))
 
     assertEquals(LoadErrorCode.NETWORK, outcome.error)
     assertSame(previous, view.drawable)
@@ -199,7 +205,7 @@ class LoadingTest : AdapterTest() {
   @Test
   fun prefetchReportsWhetherTheImageLoaded() {
     assertTrue(prefetch(resolve(photo(), allowDownscaling = false)))
-    assertFalse(prefetch(resolve("$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg", allowDownscaling = false)))
+    assertFalse(prefetch(resolve("$BASE/no-such-route/${UUID.randomUUID()}.jpg", allowDownscaling = false)))
   }
 
   @Test
@@ -221,5 +227,59 @@ class LoadingTest : AdapterTest() {
 
     assertEquals(LoadErrorCode.NETWORK, refused.error)
     assertTrue(accepted.succeeded)
+  }
+
+  // MARK: Image size (`TurboImage.getSize`)
+
+  /** `imageSize`, as the cache module calls it: (width, height) or the error code. */
+  private fun sizeOf(request: ResolvedRequest): Pair<Pair<Int, Int>?, LoadErrorCode?> {
+    val done = CountDownLatch(1)
+    var size: Pair<Int, Int>? = null
+    var error: LoadErrorCode? = null
+    onMain {
+      adapter.imageSize(
+        request,
+        onSize = { width, height ->
+          size = width to height
+          done.countDown()
+        },
+        onError = { code, _ ->
+          error = LoadErrorCode.entries.first { it.nativeValue == code }
+          done.countDown()
+        },
+      )
+    }
+    assertTrue(done.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
+    return size to error
+  }
+
+  /** The module's request: the original, no view to size it for. */
+  private fun moduleRequest(uri: String) = resolve(uri, allowDownscaling = false)
+
+  @Test
+  fun theSizeIsTheImagesOwnInPixels() {
+    assertEquals(PHOTO_WIDTH to PHOTO_HEIGHT, sizeOf(moduleRequest(photo())).first)
+    assertEquals(3000 to 2000, sizeOf(moduleRequest(fixture("large/size.jpg"))).first)
+  }
+
+  @Test
+  fun theSizeFollowsTheExifOrientation() {
+    // 60x40 pixels, stored with orientation 6: shown 40x60.
+    val file = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "rotated-${UUID.randomUUID()}.jpg")
+    file.outputStream().use {
+      Bitmap.createBitmap(60, 40, Bitmap.Config.ARGB_8888)
+        .compress(Bitmap.CompressFormat.JPEG, 90, it)
+    }
+    ExifInterface(file.absolutePath).apply {
+      setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
+      saveAttributes()
+    }
+
+    assertEquals(40 to 60, sizeOf(moduleRequest("file://${file.absolutePath}")).first)
+  }
+
+  @Test
+  fun aBodyThatIsNotAnImageFailsAsADecodeError() {
+    assertEquals(LoadErrorCode.DECODE, sizeOf(moduleRequest(fixture("not-an-image/size"))).second)
   }
 }

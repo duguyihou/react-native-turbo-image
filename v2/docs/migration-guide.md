@@ -141,6 +141,16 @@ Give `source` the sizes your CDN serves, with each file's size in pixels, and th
 - A view that grows past its size later loads the next one up, silently, keeping the image on screen meanwhile (as for `allowDownscaling`). It never switches to a smaller one.
 - The first entry's `headers` are sent with every size; other entries' headers are ignored (a development warning says so). `onSuccess.source` is the URL that loaded.
 
+### An image's size before rendering
+
+`TurboImage.getSize(source)` resolves the image's own size in pixels, with its EXIF orientation applied, like React Native's `Image.getSize`:
+
+```ts
+const { width, height } = await TurboImage.getSize({ uri: photoUrl });
+```
+
+It loads the image into the caches like `prefetch`, but reads the size from the file's header rather than decoding it, so the view that shows it next loads from the disk. An SVG reports its canvas at the screen's pixel ratio. It rejects with `onFailure`'s codes. If you replaced the loader (`TurboImageLoaders.set` on Android, `TIImageLoaderRegistry.sharedLoader` on iOS), `getSize` rejects with `unknown` until your adapter implements `imageSize` / `imageSizeForRequest:completion:`.
+
 ### An image as the placeholder
 
 `placeholder` also takes an image, as `{ uri }` or `require('./thumb.jpg')`, typically a small thumbnail already in the cache from a list:

@@ -1,11 +1,14 @@
 package com.turboimage
 
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.bridge.UiThreadUtil
 import com.turboimage.core.CachePolicy
+import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import com.turboimage.core.readHeaders
@@ -31,7 +34,10 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   // `{ uri, cacheKey? }` from JS → core resolution. null for invalid input.
   private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
-    val source = sources.getMap(index) ?: return null
+    return resolve(sources.getMap(index) ?: return null, policy)
+  }
+
+  private fun resolve(source: ReadableMap, policy: CachePolicy): ResolvedRequest? {
     val uri = resolveSourceUri(context, if (source.hasKey("uri")) source.getString("uri").orEmpty() else "")
     val cacheKey = if (source.hasKey("cacheKey")) source.getString("cacheKey") else null
     return TurboImageCore.resolve(uri, cacheKey, policy, headers = readHeaders(source)) as? ResolvedRequest
@@ -72,6 +78,42 @@ class TurboImageModule(private val context: ReactApplicationContext) :
           }
         if (!done) prefetches.add(handle)
       }
+    }
+  }
+
+  override fun getSize(source: ReadableMap, cachePolicy: String, promise: Promise) {
+    UiThreadUtil.runOnUiThread {
+      val request = resolve(source, CachePolicy.fromJs(cachePolicy))
+      if (request == null) {
+        promise.reject(TurboImageCore.loadErrorCodeName(LoadErrorCode.INVALID_REQUEST.nativeValue), "Invalid request")
+        return@runOnUiThread
+      }
+      // Kept like a prefetch until it settles; `done` as there, for a
+      // callback that runs inside `imageSize()`.
+      var done = false
+      var handle: LoadHandle? = null
+      fun settled() {
+        done = true
+        handle?.let { prefetches.remove(it) }
+      }
+      handle =
+        TurboImageLoaders.get(context)
+          .imageSize(
+            request,
+            onSize = { width, height ->
+              settled()
+              promise.resolve(
+                Arguments.createMap().apply {
+                  putDouble("width", width.toDouble())
+                  putDouble("height", height.toDouble())
+                })
+            },
+            onError = { code, message ->
+              settled()
+              promise.reject(TurboImageCore.loadErrorCodeName(code), message)
+            },
+          )
+      if (!done) prefetches.add(handle)
     }
   }
 

@@ -122,6 +122,19 @@ typedef void (^TIImageLoadProgress)(int64_t completed, int64_t total);
 /// Synchronous memory-cache lookup, for the `memoryCacheKey` placeholder.
 /// Main thread; must be cheap (no disk I/O).
 - (nullable UIImage *)memoryCachedImageForKey:(NSString *)cacheKey;
+
+@optional
+/// `TurboImage.getSize`: loads `request` into the caches like
+/// `prefetchRequest:`, then reports the image's own size in pixels with its
+/// orientation applied, or the error (in `TIImageLoadErrorDomain`) that
+/// stopped it. Adapters should read the size from the file's header rather
+/// than decode the image. `completion` is called once on the main thread
+/// (not at all after cancel).
+///
+/// Optional so that an adapter written before `getSize` still conforms;
+/// without it, `getSize` rejects with `unknown`.
+- (id<TIImageLoadTask>)imageSizeForRequest:(TIImageRequest *)request
+                                completion:(void (^)(CGSize size, NSError *_Nullable error))completion;
 @end
 
 /// Process-wide loader selection. Thread-safe.
