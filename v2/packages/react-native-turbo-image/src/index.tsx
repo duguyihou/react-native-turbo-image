@@ -27,13 +27,20 @@ export type {
 } from './TurboImageViewNativeComponent';
 
 // 1.x type names, kept for compatibility. TODO: remove in 3.0.
+/** @deprecated Use `StartEvent`. Removed in 3.0. */
 export type Start = StartEvent;
+/** @deprecated Use `ProgressEvent`. Removed in 3.0. */
 export type Progress = ProgressEvent;
+/** @deprecated Use `SuccessEvent`. Removed in 3.0. */
 export type Success = SuccessEvent;
+/** @deprecated Use `FailureEvent`. Removed in 3.0. */
 export type Failure = FailureEvent;
+/** @deprecated Use `CompletionEvent`. Removed in 3.0. */
 export type Completion = CompletionEvent;
 export type ResizeMode = NonNullable<NativeProps['resizeMode']>;
+/** @deprecated `indicator` is deprecated. Removed in 3.0. */
 export type IndicatorStyle = NonNullable<Indicator['style']>;
+/** @deprecated `format` is ignored. Removed in 3.0. */
 export type Format = 'svg' | 'gif' | 'apng';
 
 // A record, [name, value] pairs, or a fetch `Headers`-like object.
@@ -183,19 +190,27 @@ export type TurboImageProps = Omit<
   // Also RN's numeric colour (0xRRGGBBAA), which Codegen's type omits.
   monochrome?: ColorValue | number;
   tint?: ColorValue | number;
-  // Clip to a circle/pill. Toggling it does not restart the load.
+  /**
+   * Clip to a circle/pill.
+   * @deprecated Use `style={{ borderRadius: 9999 }}`. Removed in 3.0.
+   */
   rounded?: boolean;
-  // A spinner while loading. Not shown when `placeholder` is set.
+  /**
+   * A spinner while loading. Not shown when `placeholder` is set.
+   * @deprecated Overlay an `<ActivityIndicator>` driven by `onStart` and
+   * `onCompletion`. Removed in 3.0.
+   */
   indicator?: Indicator;
-  /** @deprecated Ignored; the format is detected from the image bytes. */
+  /** @deprecated Ignored; the format is detected from the image bytes. Removed in 3.0. */
   format?: Format | string;
-  /** @deprecated Ignored (it had no effect in 1.x either). */
+  /** @deprecated Ignored (it had no effect in 1.x either). Removed in 3.0. */
   isProgressiveImageRenderingEnabled?: boolean;
 };
 
 /** What a `ref` on `<TurboImage>` receives: a native view, as for `<View>`. */
 export type TurboImageInstance = ComponentRef<typeof View>;
 
+/** @deprecated `indicator` is deprecated. Removed in 3.0. */
 export type Indicator = {
   style?: 'medium' | 'large';
   color?: ColorValue | number;
@@ -204,19 +219,52 @@ export type Indicator = {
 // Faster loads (cache hits) never show the spinner, which would just flicker.
 const INDICATOR_DELAY_MS = 150;
 
+// Each deprecation warns once per app run, in development only.
+const warned = new Set<string>();
+function warnDeprecated(name: string, advice: string) {
+  if (__DEV__ && !warned.has(name)) {
+    warned.add(name);
+    console.warn(`TurboImage: ${name} is deprecated and will be removed in 3.0; ${advice}.`);
+  }
+}
+
 // 1.x's 'dataCache' is 2.0's 'default' (RFC §4.2).
-let warnedDataCache = false;
 function resolveCachePolicy(policy: TurboImageProps['cachePolicy']): CachePolicy | undefined {
   if (policy !== 'dataCache') {
     return policy;
   }
-  if (__DEV__ && !warnedDataCache) {
-    warnedDataCache = true;
-    console.warn(
-      "TurboImage: cachePolicy 'dataCache' is deprecated; use 'default' (same behaviour)."
+  warnDeprecated("cachePolicy 'dataCache'", "use 'default' (same behaviour)");
+  return 'default';
+}
+
+function warnDeprecatedProps({
+  rounded,
+  indicator,
+  placeholder,
+  format,
+  isProgressiveImageRenderingEnabled,
+}: Pick<
+  TurboImageProps,
+  'rounded' | 'indicator' | 'placeholder' | 'format' | 'isProgressiveImageRenderingEnabled'
+>) {
+  if (rounded != null) {
+    warnDeprecated('`rounded`', 'use `style={{ borderRadius: 9999 }}`');
+  }
+  if (indicator != null) {
+    warnDeprecated(
+      '`indicator`',
+      'overlay an <ActivityIndicator> driven by onStart and onCompletion'
     );
   }
-  return 'default';
+  if (placeholder != null && typeof placeholder === 'object' && placeholder.memoryCacheKey) {
+    warnDeprecated('`placeholder.memoryCacheKey`', 'use `placeholder={{ uri }}`');
+  }
+  if (format != null) {
+    warnDeprecated('`format`', 'remove it: the format is detected from the image');
+  }
+  if (isProgressiveImageRenderingEnabled != null) {
+    warnDeprecated('`isProgressiveImageRenderingEnabled`', 'remove it: it has no effect');
+  }
 }
 
 function TurboImageComponent({
@@ -237,6 +285,15 @@ function TurboImageComponent({
   onCompletion,
   ...props
 }: TurboImageProps) {
+  if (__DEV__) {
+    warnDeprecatedProps({
+      rounded,
+      indicator,
+      placeholder,
+      format: _format,
+      isProgressiveImageRenderingEnabled: _progressive,
+    });
+  }
   // The spinner is plain React, driven by onStart/onCompletion (every start
   // gets exactly one completion). 1.x quirk: `indicator={{}}` means none.
   const showsIndicator =

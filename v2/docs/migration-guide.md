@@ -117,6 +117,23 @@ import type { Source } from 'react-native-turbo-image';
 const uri = typeof source === 'number' ? undefined : source.uri;
 ```
 
+### Deprecated props
+
+These still work throughout 2.x, log a warning once in development, and will
+be removed in 3.0:
+
+| 1.x prop | Replace with |
+|---|---|
+| `rounded` | `style={{ borderRadius: 9999 }}` (what `rounded` now does) |
+| `indicator` | Your own `<ActivityIndicator>` over the image, shown between `onStart` and `onCompletion`. `indicator` forces a container view around the image (see below) |
+| `placeholder={{ memoryCacheKey }}` | `placeholder={{ uri }}` with the other image's URI. It is also read from the memory cache, and from the disk when it is not there |
+| `format`, `isProgressiveImageRenderingEnabled` | Nothing: both are ignored in 2.0 |
+| `cachePolicy="dataCache"` | `cachePolicy="default"` (above) |
+
+The 1.x type names (`Start`, `Success`, `Failure`, `Progress`, `Completion`,
+`Format`, `Indicator`, `IndicatorStyle`) are marked `@deprecated` too. Use the
+`*Event` types.
+
 ## New in 2.0, optional
 
 ### Prefetching: to the disk only
@@ -266,4 +283,5 @@ Android uses `coil-svg` and has no such concern.
 - [ ] `onFailure` handlers branch on `code`
 - [ ] Zoomable or growing images set `allowDownscaling={false}`
 - [ ] `format` and `isProgressiveImageRenderingEnabled` removed
+- [ ] No development warnings about deprecated props (`rounded`, `indicator`, `placeholder.memoryCacheKey`)
 - [ ] You have decided whether SVG through CoreSVG is acceptable on iOS

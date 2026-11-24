@@ -18,8 +18,11 @@ export type NativePlaceholder = Readonly<{
   blurhash?: string;
   // Base64 of `thumbhash`'s rgbaToThumbHash output.
   thumbhash?: string;
-  // An image already in the *memory* cache: the URI or cacheKey it was
-  // loaded with.
+  /**
+   * An image already in the *memory* cache: the URI or cacheKey it was
+   * loaded with.
+   * @deprecated Use `uri`, which also finds it in the caches. Removed in 3.0.
+   */
   memoryCacheKey?: string;
   // Any image, e.g. a thumbnail. Loaded with the source's headers,
   // unprocessed, without events; never shown over the loaded image.
