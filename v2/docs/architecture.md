@@ -57,6 +57,23 @@ hands the request to `resolveRequest()` and gets a `ResolvedRequest`; it
 tells `ViewLifecycle` what happened and gets effects. An adapter never makes a policy decision. It
 translates a `ResolvedRequest` field by field.
 
+### What belongs in the core
+
+Each function in the core costs a JNI entry point, a Kotlin wrapper and,
+for an enum, values mirrored in Kotlin and Objective-C. So the core holds
+only:
+
+- **What a request means:** validation, cache keys, cache tiers, the decode
+  target.
+- **The view lifecycle:** what is on screen and which events JS sees.
+- **Pixel-exact algorithms:** processors and placeholder decoders, which
+  must give the same bytes on both platforms.
+
+Anything else stays in the views, even when both platforms need it. A new
+helper goes into the core only if both views would otherwise repeat more
+than a few lines of logic that must agree. The geometry helpers already
+there (`placeImage`, `needsLargerDecode`) stay.
+
 ## Rules
 
 The source comments cite these by number ("RFC rule 3").
