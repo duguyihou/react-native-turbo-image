@@ -52,6 +52,7 @@ builds, and the CI matrix.
 | — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
 | — (new in 2.0) `source` as an array of sizes | Core chooses (`chooseSource`); views load the chosen candidate as an ordinary request and switch to a larger one on growth | ✅ done (RFC §4.5c, "Source sets"). expo-image's form |
+| — (new in 2.0) `contentPosition`, `resizeMode="scale-down"` | Core computes the rectangle (`placeImage`); Android draws it as the image matrix, iOS as the image view's frame inside a clipping container | ✅ done (RFC §4.5d). expo-image's props, keywords and percentages; point offsets are a TODO |
 | — (new in 2.0) `TurboImage.getSize` | Cache module; adapters read the size from the header (`imageSizeForRequest:` / `imageSize`) | ✅ done (RFC §4.4c). React Native's `Image.getSize`, as a promise |
 | — (new in 2.0) `placeholder` as an image (`{ uri }`, `require()`) | Loaded through the adapter; the lifecycle treats it like a hash placeholder. Android seam: `loadPlaceholder` | ✅ done (RFC §4.5). expo-image's feature |
 
@@ -81,6 +82,7 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 - tvOS needs react-native-tvos 0.88 or newer and tvOS 16.0 (1.x listed tvOS 13 in the podspec). `enableLiveTextInteraction` is a no-op there.
 - `cachePolicy` `dataCache` is renamed `default` (with a shim during 2.x).
 - HTTP `Cache-Control` headers are ignored except under `cachePolicy="urlCache"`, which honours them on both platforms (1.x: iOS only). What `urlCache` stores on disk is not visible to `cacheOnly`, and the reverse.
+- iOS: `resizeMode="center"` draws a bitmap at its pixels over the screen scale, as Android does. It drew its pixels as points (the adapter decodes at scale 1), three times Android's size on a 3x screen. SVGs are unchanged.
 - Images are decoded no larger than their view by default, and `onSuccess` reports that decoded size, not the source's. A view whose layout grows reloads a sharper copy silently; a view zoomed by `transform` needs `allowDownscaling={false}`.
 - `onFailure` gains `code`. `onCompletion` can now report `state: 'cancelled'`.
 - When `source` (or a processor prop) changes, the previous image stays on screen until the new one has loaded; 1.x blanked the view. Lists that reuse views (FlashList) must pass a `recyclingKey`, such as the row's id, or a reused row briefly shows the previous row's image.

@@ -151,6 +151,17 @@ const { width, height } = await TurboImage.getSize({ uri: photoUrl });
 
 It loads the image into the caches like `prefetch`, but reads the size from the file's header rather than decoding it, so the view that shows it next loads from the disk. An SVG reports its canvas at the screen's pixel ratio. It rejects with `onFailure`'s codes. If you replaced the loader (`TurboImageLoaders.set` on Android, `TIImageLoaderRegistry.sharedLoader` on iOS), `getSize` rejects with `unknown` until your adapter implements `imageSize` / `imageSizeForRequest:completion:`.
 
+### Positioning the image, and `scale-down`
+
+`contentPosition` places an image that does not fill its view exactly (expo-image's prop, CSS `object-position`): where a `cover` crop is taken from, or where `contain`, `center` and `scale-down` put the image in the free space. It takes keywords or percentages from an edge:
+
+```tsx
+<TurboImage source={{ uri: portraitUrl }} resizeMode="cover" contentPosition="top" />
+<TurboImage source={{ uri: logoUrl }} resizeMode="contain" contentPosition={{ left: '0%', bottom: '10%' }} />
+```
+
+Point offsets (`{ top: 10 }`) are not supported yet. `resizeMode="scale-down"` draws the image at its own size when it fits and as `contain` when it does not.
+
 ### An image as the placeholder
 
 `placeholder` also takes an image, as `{ uri }` or `require('./thumb.jpg')`, typically a small thumbnail already in the cache from a list:
@@ -172,6 +183,7 @@ Nothing here needs a code change to compile, but each can change what your app d
 - **Images are decoded no larger than their view.** A 12 MP photo in a thumbnail costs the thumbnail's memory. `onSuccess` therefore reports the decoded size, not the source's.
 - A view whose layout grows after its image loaded (a rotation, a card that expands) gets a sharper copy once it has grown by half, with no events and no flash. A zoom by `transform` does not change the layout, so a zoomable image still shows the smaller decode scaled up: set `allowDownscaling={false}` for it.
 - Downscaling is not applied with `resizeMode="center"` or with `blur` without `resize`.
+- **iOS: `resizeMode="center"` draws a photo at the same size as Android.** It used to draw its pixels as points, so a 600 px image was 600 points wide on iOS and 600 px (228 dp on a 2.6x screen) on Android. Both now use the image's pixels over the screen scale. SVGs are unchanged: their canvas is already in points.
 
 ### Events
 

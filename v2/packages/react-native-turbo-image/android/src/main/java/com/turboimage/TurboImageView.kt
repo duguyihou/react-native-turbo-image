@@ -3,6 +3,8 @@ package com.turboimage
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.drawable.Drawable
 import android.util.Log
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
@@ -163,13 +165,96 @@ class TurboImageView(
         "cover" -> ScaleType.CENTER_CROP to ResizeMode.COVER
         "stretch" -> ScaleType.FIT_XY to ResizeMode.STRETCH
         "center" -> ScaleType.CENTER to ResizeMode.CENTER
+        "scale-down" -> ScaleType.CENTER_INSIDE to ResizeMode.SCALE_DOWN
         else -> ScaleType.FIT_CENTER to ResizeMode.CONTAIN // the default
       }
-    scaleType = scale
+    centredScaleType = scale
     // A request prop as well as a drawing one: `contain` needs fewer pixels
     // than `cover`, and `center` needs them all (the core's decode-size
     // rule), so an image decoded for one mode can be too small for another.
     request = request.copy(resizeMode = core)
+    updatePlacement()
+  }
+
+  // `contentPosition` as fractions of the free space (0.5 = centred).
+  var contentPositionX = 0.5
+    set(value) { if (field != value) { field = value; updatePlacement() } }
+  var contentPositionY = 0.5
+    set(value) { if (field != value) { field = value; updatePlacement() } }
+
+  // False while ImageView's constructor runs (see [updatePlacement]).
+  private var constructed = false
+
+  // The platform's scale type for the resize mode, which places the image
+  // centred. Used as is for a centred position; any other position needs
+  // the core's placement as a matrix ([updatePlacement]).
+  private var centredScaleType = ScaleType.FIT_CENTER
+
+  /**
+   * Places the image for the resize mode and `contentPosition`. Centred, the
+   * platform's own scale types do it, unchanged from before
+   * `contentPosition` existed. Otherwise (and stretch never needs it) the
+   * core's `placeImage` gives the rectangle, the same one iOS uses, applied
+   * as the image matrix. Runs again whenever the drawable, the view's size
+   * or the props change, since the rectangle depends on all three.
+   */
+  private fun updatePlacement() {
+    // ImageView's constructor sets a drawable and padding before this class's
+    // fields exist; nothing is shown yet, so there is nothing to place.
+    if (!constructed) return
+    val centred = contentPositionX == 0.5 && contentPositionY == 0.5
+    if (centred || request.resizeMode == ResizeMode.STRETCH) {
+      applyPlacement(centredScaleType, null)
+      return
+    }
+    // The content box: inside the padding (the border), where ImageView
+    // draws with a matrix.
+    val boxWidth = width - paddingLeft - paddingRight
+    val boxHeight = height - paddingTop - paddingBottom
+    val image = drawable
+    if (image == null || image.intrinsicWidth <= 0 || image.intrinsicHeight <= 0 || boxWidth <= 0 || boxHeight <= 0) {
+      applyPlacement(centredScaleType, null)
+      return
+    }
+    val (x, y, w, h) =
+      TurboImageCore.placeImage(
+          image.intrinsicWidth.toDouble(), image.intrinsicHeight.toDouble(),
+          boxWidth.toDouble(), boxHeight.toDouble(),
+          request.resizeMode, contentPositionX, contentPositionY)
+        .map { it.toFloat() }
+    applyPlacement(
+      ScaleType.MATRIX,
+      Matrix().apply {
+        setScale(w / image.intrinsicWidth, h / image.intrinsicHeight)
+        postTranslate(x, y)
+      })
+  }
+
+  /**
+   * Sets the scale type and, for MATRIX, the matrix, and makes ImageView
+   * apply them now. ImageView recomputes its drawing matrix only in
+   * `configureBounds`, which runs on a layout pass or when `setImageMatrix`
+   * gets a different matrix. `setScaleType` only requests a layout, and
+   * React Native lays a view out only when its frame changes, so a scale
+   * type changed after the first layout (an image arriving, a prop) was
+   * never applied: every contentPosition drew centred. Setting a different
+   * matrix and then the wanted one runs `configureBounds` with the new
+   * scale type, whatever it is (other scale types ignore the matrix).
+   */
+  private fun applyPlacement(type: ScaleType, matrix: Matrix?) {
+    if (scaleType != type) scaleType = type
+    imageMatrix = Matrix().apply { setTranslate(1f, 0f) }
+    imageMatrix = matrix ?: Matrix()
+  }
+
+  override fun setImageDrawable(drawable: Drawable?) {
+    super.setImageDrawable(drawable)
+    updatePlacement()
+  }
+
+  override fun setPadding(left: Int, top: Int, right: Int, bottom: Int) {
+    super.setPadding(left, top, right, bottom)
+    updatePlacement()
   }
 
 
@@ -206,6 +291,7 @@ class TurboImageView(
   // view only needs its own size.
   override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
     super.onSizeChanged(width, height, oldWidth, oldHeight)
+    updatePlacement()
     if (width > oldWidth || height > oldHeight) upgradeIfOutgrown()
   }
 
@@ -634,6 +720,12 @@ class TurboImageView(
   internal var eventSink: (name: String, payload: WritableMap.() -> Unit) -> Unit = { name, payload ->
     val event = TurboImageEvent(UIManagerHelper.getSurfaceId(this), id, name, Arguments.createMap().apply(payload))
     UIManagerHelper.getEventDispatcher(reactContext)?.dispatchEvent(event)
+  }
+
+  // Last in the class body, so that every field above is initialised first
+  // (Kotlin runs initialisers in the order they are written).
+  init {
+    constructed = true
   }
 
   private companion object {

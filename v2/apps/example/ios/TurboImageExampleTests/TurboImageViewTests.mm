@@ -417,6 +417,51 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertNotEqualObjects([self loadOf:kURL].request.processorKey, @"");
 }
 
+#pragma mark contentPosition and own-size modes
+
+- (nullable UIImageView *)imageView {
+  NSMutableArray<UIView *> *views = [_view.subviews mutableCopy];
+  while (views.count > 0) {
+    UIView *view = views.firstObject;
+    [views removeObjectAtIndex:0];
+    if ([view isKindOfClass:UIImageView.class]) {
+      return (UIImageView *)view;
+    }
+    [views addObjectsFromArray:view.subviews];
+  }
+  return nil;
+}
+
+- (void)testAPositionedCoverDrawsInTheCoresRectangle {
+  [self resize:CGSizeMake(200, 100)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.resizeMode = TurboImageViewResizeMode::Cover;
+    props.contentPositionY = 1;  // bottom
+  }];
+
+  // 50x50 covering 200x100: 200x200, its bottom 100 shown.
+  [_loader.loads[0] succeedWithPixels:CGSizeMake(50, 50)];
+
+  XCTAssertTrue(CGRectEqualToRect([self imageView].frame, CGRectMake(0, -100, 200, 200)));
+}
+
+- (void)testCenterDrawsABitmapAtItsPixelsOverTheScreenScale {
+  // The adapter decodes at scale 1. UIKit's center mode would draw 150 px as
+  // 150 points; Android draws it as 150 px, which is what this matches.
+  [self resize:CGSizeMake(200, 100)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.resizeMode = TurboImageViewResizeMode::Center;
+  }];
+
+  [_loader.loads[0] succeedWithPixels:CGSizeMake(150, 150)];
+
+  const CGFloat side = 150 / _scale;
+  XCTAssertTrue(CGRectEqualToRect([self imageView].frame,
+                                  CGRectMake((200 - side) / 2, (100 - side) / 2, side, side)));
+}
+
 #pragma mark Helpers
 
 /// A 100×100 pt view showing its image, decoded for that size.
@@ -461,11 +506,16 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   [_view finalizeUpdates:RNComponentViewUpdateMaskLayoutMetrics];
 }
 
+// The image view sits inside the content view's clipping container.
 - (nullable UIImage *)imageOnScreen {
-  for (UIView *subview in _view.subviews) {
-    if ([subview isKindOfClass:UIImageView.class]) {
-      return ((UIImageView *)subview).image;
+  NSMutableArray<UIView *> *views = [_view.subviews mutableCopy];
+  while (views.count > 0) {
+    UIView *view = views.firstObject;
+    [views removeObjectAtIndex:0];
+    if ([view isKindOfClass:UIImageView.class]) {
+      return ((UIImageView *)view).image;
     }
+    [views addObjectsFromArray:view.subviews];
   }
   return nil;
 }

@@ -156,9 +156,81 @@ export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 // TODO: remove in 3.0.
 export type LegacyCachePolicy = 'dataCache';
 
+// Where the image sits in its view when it does not fill it exactly
+// (expo-image's `contentPosition`, CSS `object-position`): a keyword or two
+// ('top', 'bottom right', 'left center', ...), or percentages from an edge
+// (`{ top: '20%' }`, `{ right: '10%', bottom: '0%' }`).
+// TODO: offsets in points (`{ top: 10 }`), which expo-image also takes.
+type PositionKeyword = 'center' | 'top' | 'bottom' | 'left' | 'right';
+type Percent = `${number}%`;
+export type ContentPosition =
+  | PositionKeyword
+  | `${PositionKeyword} ${PositionKeyword}`
+  | { top?: Percent; bottom?: Percent; left?: Percent; right?: Percent };
+
+const KEYWORD_FRACTIONS: Record<PositionKeyword, { x?: number; y?: number }> = {
+  center: {},
+  top: { y: 0 },
+  bottom: { y: 1 },
+  left: { x: 0 },
+  right: { x: 1 },
+};
+
+// A CSS percentage ('20%') as a fraction; anything else is not placed.
+function percentFraction(value: string | number | undefined): number | undefined {
+  if (typeof value === 'string' && /^-?\d+(\.\d+)?%$/.test(value)) {
+    return parseFloat(value) / 100;
+  }
+  if (__DEV__ && value !== undefined) {
+    console.warn(
+      'TurboImage: contentPosition takes percentages ("20%"); offsets are not supported yet'
+    );
+  }
+  return undefined;
+}
+
+// The native props: fractions of the free space, 0.5 = centred.
+function toContentPosition(position: ContentPosition | undefined): {
+  contentPositionX?: number;
+  contentPositionY?: number;
+} {
+  if (position == null) {
+    return {};
+  }
+  let x = 0.5;
+  let y = 0.5;
+  if (typeof position === 'string') {
+    for (const word of position.trim().split(/\s+/)) {
+      const fraction = KEYWORD_FRACTIONS[word as PositionKeyword];
+      if (fraction === undefined) {
+        if (__DEV__) console.warn(`TurboImage: unknown contentPosition keyword '${word}'`);
+        continue;
+      }
+      x = fraction.x ?? x;
+      y = fraction.y ?? y;
+    }
+  } else {
+    const left = percentFraction(position.left);
+    const right = percentFraction(position.right);
+    const top = percentFraction(position.top);
+    const bottom = percentFraction(position.bottom);
+    x = left ?? (right === undefined ? x : 1 - right);
+    y = top ?? (bottom === undefined ? y : 1 - bottom);
+  }
+  return { contentPositionX: x, contentPositionY: y };
+}
+
 export type TurboImageProps = Omit<
   NativeProps,
-  'cachePolicy' | 'monochrome' | 'tint' | 'source' | 'sources' | 'placeholder' | 'recyclingKey'
+  | 'cachePolicy'
+  | 'monochrome'
+  | 'tint'
+  | 'source'
+  | 'sources'
+  | 'placeholder'
+  | 'recyclingKey'
+  | 'contentPositionX'
+  | 'contentPositionY'
 > & {
   /**
    * The outermost native view: the image view itself, or the container
@@ -169,6 +241,8 @@ export type TurboImageProps = Omit<
   ref?: Ref<TurboImageInstance>;
   source: Source | ReadonlyArray<SizedSource>;
   placeholder?: PlaceholderSource;
+  // See `ContentPosition`. Applies to cover, contain, center and scale-down.
+  contentPosition?: ContentPosition;
   // See the native spec. `null` is accepted and means "no key", so code
   // written for expo-image (`string | null`) compiles unchanged.
   recyclingKey?: string | null;
@@ -239,6 +313,7 @@ function TurboImageComponent({
   style,
   source,
   placeholder,
+  contentPosition,
   // Accepted for 1.x compatibility and dropped; see the type's notes.
   format: _format,
   isProgressiveImageRenderingEnabled: _progressive,
@@ -303,6 +378,7 @@ function TurboImageComponent({
       // request fields by value before reloading.
       {...toNativeSources(source)}
       placeholder={toNativePlaceholder(placeholder)}
+      {...toContentPosition(contentPosition)}
       style={needsContainer ? StyleSheet.absoluteFill : imageStyle}
       cachePolicy={resolveCachePolicy(cachePolicy)}
       // Without an indicator the app's handlers go straight through.

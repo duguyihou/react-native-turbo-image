@@ -87,6 +87,14 @@ class TurboImageViewManager :
     view.setResizeMode(value)
   }
 
+  override fun setContentPositionX(view: TurboImageView, value: Double) {
+    view.contentPositionX = value
+  }
+
+  override fun setContentPositionY(view: TurboImageView, value: Double) {
+    view.contentPositionY = value
+  }
+
   override fun setResize(view: TurboImageView, value: Double) {
     view.request = view.request.copy(processing = view.request.processing.copy(resize = value))
   }

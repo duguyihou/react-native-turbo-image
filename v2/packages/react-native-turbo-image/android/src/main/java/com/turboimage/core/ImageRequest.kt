@@ -31,6 +31,7 @@ enum class ResizeMode(val nativeValue: Int) {
   COVER(1),
   STRETCH(2),
   CENTER(3),
+  SCALE_DOWN(4),
 }
 
 /** Mirrors `turboimage::LoadErrorCode`. */

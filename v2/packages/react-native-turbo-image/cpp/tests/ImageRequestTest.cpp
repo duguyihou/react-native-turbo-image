@@ -485,5 +485,68 @@ TEST(LargerSourceFor, OnlyWhenTheChoiceGrows) {
   EXPECT_EQ(largerSourceFor(kSet, 7, {600, 400}, ResizeMode::Contain, true), std::nullopt);
 }
 
+// placeImage: where a view draws its image.
+
+// A 200x100 box and a square image: the shapes differ, so every mode
+// leaves free space or overflow on one axis.
+constexpr PixelSize kBox{200, 100};
+constexpr ContentPosition kCentre{};
+constexpr ContentPosition kTopLeft{.x = 0, .y = 0};
+constexpr ContentPosition kBottomRight{.x = 1, .y = 1};
+
+TEST(PlaceImage, CoverOverflowsAndPositionChoosesTheCrop) {
+  // 50x50 scaled by 4 to cover: 200x200, 100 too tall.
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Cover, kCentre), (PlacedRect{0, -50, 200, 200}));
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Cover, kTopLeft), (PlacedRect{0, 0, 200, 200}));
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Cover, kBottomRight),
+            (PlacedRect{0, -100, 200, 200}));
+}
+
+TEST(PlaceImage, ContainLeavesSpaceThatPositionDistributes) {
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Contain, kCentre), (PlacedRect{50, 0, 100, 100}));
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Contain, kTopLeft), (PlacedRect{0, 0, 100, 100}));
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Contain, {.x = 0.25, .y = 0.5}),
+            (PlacedRect{25, 0, 100, 100}));
+}
+
+TEST(PlaceImage, CenterKeepsTheImagesOwnSize) {
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Center, kCentre), (PlacedRect{75, 25, 50, 50}));
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Center, kBottomRight),
+            (PlacedRect{150, 50, 50, 50}));
+  // Larger than the box: overflows, as UIViewContentModeCenter does.
+  EXPECT_EQ(placeImage({400, 400}, kBox, ResizeMode::Center, kCentre),
+            (PlacedRect{-100, -150, 400, 400}));
+}
+
+TEST(PlaceImage, ScaleDownIsCenterWhenItFitsAndContainWhenNot) {
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::ScaleDown, kCentre), (PlacedRect{75, 25, 50, 50}));
+  EXPECT_EQ(placeImage({400, 400}, kBox, ResizeMode::ScaleDown, kCentre),
+            (PlacedRect{50, 0, 100, 100}));
+  EXPECT_EQ(placeImage({400, 400}, kBox, ResizeMode::ScaleDown, kTopLeft),
+            (PlacedRect{0, 0, 100, 100}));
+}
+
+TEST(PlaceImage, StretchAndUnknownSizesFillTheBox) {
+  const PlacedRect whole{0, 0, 200, 100};
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Stretch, kTopLeft), whole);
+  EXPECT_EQ(placeImage({0, 0}, kBox, ResizeMode::Cover, kTopLeft), whole);
+  EXPECT_EQ(placeImage({std::nan(""), 5}, kBox, ResizeMode::Contain, kCentre), whole);
+}
+
+TEST(PlaceImage, PositionIsClampedAndNanCentres) {
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Contain, {.x = -3, .y = 9}),
+            placeImage({50, 50}, kBox, ResizeMode::Contain, {.x = 0, .y = 1}));
+  EXPECT_EQ(placeImage({50, 50}, kBox, ResizeMode::Contain, {.x = std::nan(""), .y = 0.5}),
+            placeImage({50, 50}, kBox, ResizeMode::Contain, kCentre));
+}
+
+TEST(ResolveDecodeSize, ScaleDownFitsLikeContain) {
+  // It never draws the image larger than contain would, so it needs no more.
+  const auto resolved = resolveRequest({.uri = "https://cdn.example.com/a.jpg",
+                                        .resizeMode = ResizeMode::ScaleDown});
+  ASSERT_TRUE(resolved.ok());
+  EXPECT_EQ(resolved.request->decode, (DecodeSize{.kind = DecodeSize::Kind::View, .width = 0, .fill = false}));
+}
+
 }  // namespace
 }  // namespace turboimage

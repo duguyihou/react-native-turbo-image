@@ -681,3 +681,24 @@ Java_com_turboimage_core_TurboImageCore_nativeLargerSourceFor(JNIEnv* env, jobje
     return larger ? static_cast<jint>(*larger) : -1;
   });
 }
+
+// (x, y, width, height); the box itself if the core throws.
+extern "C" JNIEXPORT jdoubleArray JNICALL
+Java_com_turboimage_core_TurboImageCore_nativePlaceImage(JNIEnv* env, jobject /* this */,
+                                                          jdouble imageWidth, jdouble imageHeight,
+                                                          jdouble boxWidth, jdouble boxHeight,
+                                                          jint resizeMode, jdouble positionX,
+                                                          jdouble positionY) {
+  return guarded(env, static_cast<jdoubleArray>(nullptr), [&]() -> jdoubleArray {
+    const auto placed = turboimage::placeImage(
+        {imageWidth, imageHeight}, {boxWidth, boxHeight},
+        static_cast<turboimage::ResizeMode>(resizeMode), {.x = positionX, .y = positionY});
+    const jdouble values[4] = {placed.x, placed.y, placed.width, placed.height};
+    jdoubleArray array = env->NewDoubleArray(4);
+    if (array == nullptr) {
+      throw JavaExceptionPending{};
+    }
+    env->SetDoubleArrayRegion(array, 0, 4, values);
+    return array;
+  });
+}

@@ -3,6 +3,7 @@ package com.turboimage
 import android.content.res.Resources
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.Matrix
 import android.view.View
 import android.widget.ImageView
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -320,6 +321,43 @@ class TurboImageViewTest {
     assertEquals(listOf("Authorization" to "Bearer t0ken"), thumb.headers)
     assertEquals("", thumb.processorKey)
     assertTrue(loader.loads.single().request.processorKey.isNotEmpty())
+  }
+
+  // MARK: contentPosition
+
+  /** The matrix ImageView draws with, as (scaleX, scaleY, translateX, translateY). */
+  private fun drawMatrix(): List<Float> {
+    val values = FloatArray(9)
+    view.imageMatrix.getValues(values)
+    return listOf(values[Matrix.MSCALE_X], values[Matrix.MSCALE_Y], values[Matrix.MTRANS_X], values[Matrix.MTRANS_Y])
+  }
+
+  @Test
+  fun aPositionedCoverDrawsInTheCoresRectangle() = onMain {
+    resize(200, 100)
+    view.setResizeMode("cover")
+    view.contentPositionY = 1.0 // bottom
+    view.request = view.request.copy(uri = URL)
+    view.onTransactionEnd()
+
+    // 50x50 covering 200x100: scaled 4x to 200x200, its bottom 100 shown.
+    loader.loads.single().succeed(50, 50)
+
+    assertEquals(ImageView.ScaleType.MATRIX, view.scaleType)
+    assertEquals(listOf(4f, 4f, 0f, -100f), drawMatrix())
+  }
+
+  @Test
+  fun aCentredPositionKeepsThePlatformsScaleType() = onMain {
+    resize(200, 100)
+    view.setResizeMode("cover")
+    view.contentPositionY = 1.0
+    view.contentPositionY = 0.5
+    view.request = view.request.copy(uri = URL)
+    view.onTransactionEnd()
+    loader.loads.single().succeed(50, 50)
+
+    assertEquals(ImageView.ScaleType.CENTER_CROP, view.scaleType)
   }
 
   // MARK: Replacing the adapter

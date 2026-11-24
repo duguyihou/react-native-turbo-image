@@ -110,8 +110,19 @@ export interface NativeProps extends ViewProps {
     'default'
   >;
   // 'contain' is 1.x's default (React Native's <Image> defaults to 'cover');
-  // kept for compatibility, see docs/migration-plan.md.
-  resizeMode?: CodegenTypes.WithDefault<'cover' | 'contain' | 'stretch' | 'center', 'contain'>;
+  // kept for compatibility, see docs/migration-plan.md. 'scale-down' (new
+  // in 2.0, expo-image's contentFit): 'center' when the image fits, else
+  // 'contain'.
+  resizeMode?: CodegenTypes.WithDefault<
+    'cover' | 'contain' | 'stretch' | 'center' | 'scale-down',
+    'contain'
+  >;
+  // Where the image sits in the view when it overflows (cover) or leaves
+  // space (contain, center, scale-down): fractions of that space, 0 = left /
+  // top, 0.5 = centred, 1 = right / bottom (`turboimage::ContentPosition`).
+  // JS turns expo-image's `contentPosition` into these. New in 2.0.
+  contentPositionX?: CodegenTypes.WithDefault<CodegenTypes.Double, 0.5>;
+  contentPositionY?: CodegenTypes.WithDefault<CodegenTypes.Double, 0.5>;
   // Identifies what this view is showing, for lists that reuse views
   // (FlashList). When a request prop changes, the image already on screen
   // stays until the new one has loaded, unless this key changed with it:

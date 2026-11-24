@@ -246,6 +246,32 @@ object TurboImageCore {
     allowDownscaling: Boolean,
   ): Int
 
+  /**
+   * `turboimage::placeImage`: the rectangle (x, y, width, height) an image of
+   * [imageWidth]×[imageHeight] is drawn in, inside a box of
+   * [boxWidth]×[boxHeight] with its origin at 0,0.
+   */
+  fun placeImage(
+    imageWidth: Double,
+    imageHeight: Double,
+    boxWidth: Double,
+    boxHeight: Double,
+    resizeMode: ResizeMode,
+    positionX: Double,
+    positionY: Double,
+  ): DoubleArray =
+    nativePlaceImage(imageWidth, imageHeight, boxWidth, boxHeight, resizeMode.nativeValue, positionX, positionY)
+
+  private external fun nativePlaceImage(
+    imageWidth: Double,
+    imageHeight: Double,
+    boxWidth: Double,
+    boxHeight: Double,
+    resizeMode: Int,
+    positionX: Double,
+    positionY: Double,
+  ): DoubleArray
+
   /** `turboimage::needsLargerDecode`; sizes in pixels. */
   @JvmName("nativeNeedsLargerDecode")
   internal external fun nativeNeedsLargerDecode(

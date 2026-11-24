@@ -54,14 +54,17 @@ enum class CachePolicy : std::int32_t {
   UrlCache = 4,
 };
 
-// The JS `resizeMode`. The core needs it for one decision only: how large an
-// image the view needs decoded (`DecodeSize`). Drawing stays with the views.
-// Pinned ABI, like `CachePolicy`.
+// The JS `resizeMode`. The core uses it for how large an image the view
+// needs decoded (`DecodeSize`), and for where a view draws it when the
+// platform's own modes cannot (`placeImage`). Pinned ABI, like `CachePolicy`.
 enum class ResizeMode : std::int32_t {
   Contain = 0,
   Cover = 1,
   Stretch = 2,
   Center = 3,
+  // Like `center` when the image fits, like `contain` when it does not
+  // (CSS `object-fit: scale-down`, expo-image's `contentFit`). New in 2.0.
+  ScaleDown = 4,
 };
 
 // How large the loader should decode the image. Decoding a 12 MP photo for a
@@ -99,6 +102,40 @@ struct PixelSize {
   double width = 0;
   double height = 0;
 };
+
+// Where a view draws its image: the rectangle the whole image is scaled
+// into, in the same units as the box, which it may overflow (cover) or not
+// fill (contain, center, scale-down). The view clips to the box.
+struct PlacedRect {
+  double x = 0;
+  double y = 0;
+  double width = 0;
+  double height = 0;
+  friend bool operator==(const PlacedRect&, const PlacedRect&) = default;
+};
+
+// `contentPosition` as fractions of the free space (CSS `object-position`
+// in percent): 0 puts the image at the box's left / top edge, 0.5 centres
+// it, 1 at the right / bottom edge. Values outside [0, 1] are clamped.
+struct ContentPosition {
+  double x = 0.5;
+  double y = 0.5;
+  friend bool operator==(const ContentPosition&, const ContentPosition&) = default;
+};
+
+// The rectangle `image` (its own size) is drawn in, inside `box` (the view's
+// content box, origin at 0,0), for `resizeMode` and `position`:
+//   cover      scaled to cover the box, the overflow cut by `position`
+//   contain    scaled to fit inside it, the free space split by `position`
+//   stretch    the box exactly (`position` does not apply)
+//   center     at its own size, placed by `position`
+//   scale-down at its own size if it fits, else as contain
+// Views use their platform's modes when `position` is centred and the mode
+// has one (every mode but scale-down on iOS), and this otherwise, so both
+// platforms place the image the same way. An unknown size (not positive)
+// gives the box.
+[[nodiscard]] PlacedRect placeImage(PixelSize image, PixelSize box, ResizeMode resizeMode,
+                                    ContentPosition position);
 
 // Whether a view should load its image again at its current size, because it
 // has grown past the size the image was decoded for (`DecodeSize::Kind::View`

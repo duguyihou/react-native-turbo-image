@@ -150,6 +150,36 @@ describe('source', () => {
   });
 });
 
+function position(contentPosition: TurboImageProps['contentPosition']) {
+  const props = nativeProps(render({ contentPosition }));
+  return [props.contentPositionX, props.contentPositionY];
+}
+
+describe('contentPosition', () => {
+  it('sends nothing when unset, so native keeps its centred default', () => {
+    expect(position(undefined)).toEqual([undefined, undefined]);
+  });
+
+  it('turns keywords into fractions, in either order', () => {
+    expect(position('top')).toEqual([0.5, 0]);
+    expect(position('bottom right')).toEqual([1, 1]);
+    expect(position('left top')).toEqual([0, 0]);
+    expect(position('center')).toEqual([0.5, 0.5]);
+  });
+
+  it('turns percentages from an edge into fractions', () => {
+    expect(position({ top: '20%' })).toEqual([0.5, 0.2]);
+    expect(position({ right: '10%', bottom: '0%' })).toEqual([0.9, 1]);
+  });
+
+  it('warns in development about what it cannot place', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(position('middle' as never)).toEqual([0.5, 0.5]);
+    expect(position({ top: 10 } as never)).toEqual([0.5, 0.5]);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('source sets', () => {
   const set = [
     { uri: 'https://cdn.example.com/p/ada-320.jpg', width: 320, height: 213 },

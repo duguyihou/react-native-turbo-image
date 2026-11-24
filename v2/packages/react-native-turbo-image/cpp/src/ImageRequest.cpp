@@ -93,9 +93,11 @@ DecodeSize resolveDecodeSize(const ImageRequest& request,
   if (processing.blurRadius > 0 || request.resizeMode == ResizeMode::Center) {
     return original;
   }
+  // Contain and scale-down fit inside the view; cover and stretch cover it.
   return {.kind = DecodeSize::Kind::View,
           .width = 0,
-          .fill = request.resizeMode != ResizeMode::Contain};
+          .fill = request.resizeMode == ResizeMode::Cover ||
+                  request.resizeMode == ResizeMode::Stretch};
 }
 
 }  // namespace
@@ -301,6 +303,40 @@ std::optional<std::size_t> largestSource(const std::vector<PixelSize>& candidate
 }
 
 }  // namespace
+
+PlacedRect placeImage(PixelSize image, PixelSize box, ResizeMode resizeMode,
+                      ContentPosition position) {
+  const PlacedRect whole{.x = 0, .y = 0, .width = box.width, .height = box.height};
+  if (!isKnown(image) || !isKnown(box) || resizeMode == ResizeMode::Stretch) {
+    return whole;
+  }
+  const double fit = std::min(box.width / image.width, box.height / image.height);
+  double scale = 1;
+  switch (resizeMode) {
+    case ResizeMode::Cover:
+      scale = std::max(box.width / image.width, box.height / image.height);
+      break;
+    case ResizeMode::Contain:
+      scale = fit;
+      break;
+    case ResizeMode::ScaleDown:
+      scale = std::min(1.0, fit);
+      break;
+    case ResizeMode::Center:
+    case ResizeMode::Stretch:
+      break;
+  }
+  const double width = image.width * scale;
+  const double height = image.height * scale;
+  // NaN clamps to the centre, not to an edge.
+  const auto fraction = [](double value) {
+    return std::isfinite(value) ? std::clamp(value, 0.0, 1.0) : 0.5;
+  };
+  return {.x = (box.width - width) * fraction(position.x),
+          .y = (box.height - height) * fraction(position.y),
+          .width = width,
+          .height = height};
+}
 
 std::size_t chooseSource(const std::vector<PixelSize>& candidates, PixelSize view,
                          ResizeMode resizeMode, bool allowDownscaling) {

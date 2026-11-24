@@ -74,6 +74,8 @@ turboimage::ResizeMode toCoreResizeMode(TurboImageViewResizeMode mode) {
       return turboimage::ResizeMode::Stretch;
     case TurboImageViewResizeMode::Center:
       return turboimage::ResizeMode::Center;
+    case TurboImageViewResizeMode::ScaleDown:
+      return turboimage::ResizeMode::ScaleDown;
   }
 }
 
@@ -87,6 +89,9 @@ UIViewContentMode toContentMode(TurboImageViewResizeMode mode) {
       return UIViewContentModeScaleToFill;
     case TurboImageViewResizeMode::Center:
       return UIViewContentModeCenter;
+    case TurboImageViewResizeMode::ScaleDown:
+      // No UIKit mode: placeImage computes it. Fit until there is an image.
+      return UIViewContentModeScaleAspectFit;
   }
 }
 
@@ -202,11 +207,31 @@ struct TIStepEffects {
   void (^deliverFailure)(void) = nil;
 };
 
+// The view's content view: it clips to the content box (inside the border
+// and padding) and holds the image view, which `placeImage` may make larger
+// than the box (cover) or smaller (contain) and move off centre
+// (`contentPosition`). UIKit's content modes cannot combine a scale with an
+// edge, so the image view's frame does it. Its layoutSubviews asks the view
+// to place the image again whenever the box changes.
+@interface TIImageContainer : UIView
+@property(nonatomic, copy, nullable) void (^onLayout)(void);
+@end
+
+@implementation TIImageContainer
+- (void)layoutSubviews {
+  [super layoutSubviews];
+  if (_onLayout != nil) {
+    _onLayout();
+  }
+}
+@end
+
 @interface TurboImageComponentView () <RCTTurboImageViewViewProtocol>
 @end
 
 @implementation TurboImageComponentView {
   UIImageView *_imageView;
+  TIImageContainer *_container;
   // Every decision about what the view shows and which load events JS sees
   // is the core's (the same code the Android view runs). This view says what
   // happened and carries out the effects it gets back; see perform:step:.
@@ -265,12 +290,19 @@ struct TIStepEffects {
     // own (TIImageLoading.h). A plain one if no adapter is linked: such a
     // view only ever reports that, and shows placeholders.
     _imageView = [TIImageLoaderRegistry.sharedLoader makeImageView] ?: [UIImageView new];
-    _imageView.frame = self.bounds;
     _imageView.clipsToBounds = YES;
     // The spec default (`contain`, 1.x's default), read from the default
     // props so the two cannot drift apart.
     _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);
-    self.contentView = _imageView;
+    _container = [[TIImageContainer alloc] initWithFrame:self.bounds];
+    _container.clipsToBounds = YES;
+    _imageView.frame = _container.bounds;
+    [_container addSubview:_imageView];
+    __weak __typeof(self) weakSelf = self;
+    _container.onLayout = ^{
+      [weakSelf placeImage];
+    };
+    self.contentView = _container;
   }
   return self;
 }
@@ -310,9 +342,8 @@ struct TIStepEffects {
     // Applied in finalizeUpdates, once `_props` holds the new value.
     _needsLiveTextUpdate = YES;
   }
-  if (oldViewProps.resizeMode != newViewProps.resizeMode) {
-    _imageView.contentMode = toContentMode(newViewProps.resizeMode);
-  }
+  // resizeMode and contentPosition are applied in finalizeUpdates, by
+  // placeImage, once `_props` holds them.
 
   [super updateProps:props oldProps:oldProps];
 }
@@ -321,6 +352,7 @@ struct TIStepEffects {
 // changes several request props starts exactly one load.
 - (void)finalizeUpdates:(RNComponentViewUpdateMask)updateMask {
   [super finalizeUpdates:updateMask];
+  [self placeImage];
   if (_propsChanged) {
     _propsChanged = NO;
     // A new load whenever the request differs from the one on screen, and for
@@ -444,6 +476,7 @@ struct TIStepEffects {
         break;
       case Kind::ClearImage:
         _imageView.image = nil;
+        [self placeImage];
         break;
       case Kind::EmitCancelled:
         [self emitCompletion:@"cancelled"];
@@ -742,6 +775,7 @@ struct TIStepEffects {
         strongSelf->_task = nil;
         // No fade: the same picture, only sharper, replaces itself.
         [loader displayImage:image animation:animation inImageView:strongSelf->_imageView];
+        [strongSelf placeImage];
         [strongSelf updateLiveText];
         // Records the new image and asks again, in case the view kept
         // growing meanwhile.
@@ -773,6 +807,7 @@ struct TIStepEffects {
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   if (!fade || props.fadeDuration <= 0) {
     [loader displayImage:image animation:animation inImageView:_imageView];
+    [self placeImage];
     return;
   }
   [UIView transitionWithView:_imageView
@@ -781,6 +816,8 @@ struct TIStepEffects {
                              UIViewAnimationOptionAllowUserInteraction
                   animations:^{
                     [loader displayImage:image animation:animation inImageView:self->_imageView];
+                    // Inside the transition, so its end state has the new frame.
+                    [self placeImage];
                   }
                   completion:nil];
 }
@@ -791,6 +828,48 @@ struct TIStepEffects {
 // The core says which keys the prop may name (an explicit cacheKey as
 // written, or a URI's canonical form); the first hit wins, and a miss clears
 // the view.
+// Places the image view in the content box for resizeMode and
+// contentPosition. Cover and contain centred: UIKit's content mode, with the
+// image view filling the box, as before contentPosition existed. Otherwise
+// the core's placeImage gives the rectangle, the same one Android draws
+// into. Called whenever the image, the props or the box change, since the
+// rectangle depends on all three.
+//
+// Center and scale-down always go through placeImage, because they draw the
+// image at its own size and UIKit takes that from `UIImage.size`, in points
+// at the image's scale. The adapter decodes at scale 1, so a 600 px image
+// was 600 points wide under UIKit's center mode, three times its size on
+// Android, where a bitmap's own size is its pixels at the screen's density.
+// Both now use pixels over the screen scale; a vector (no CGImage) keeps
+// its canvas, which is already in points.
+- (void)placeImage {
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  const CGRect box = _container.bounds;
+  const BOOL centred = props.contentPositionX == 0.5 && props.contentPositionY == 0.5;
+  const BOOL ownSize = props.resizeMode == TurboImageViewResizeMode::Center ||
+                       props.resizeMode == TurboImageViewResizeMode::ScaleDown;
+  UIImage *image = _imageView.image;
+  const BOOL computed = (!centred || ownSize) &&
+                        props.resizeMode != TurboImageViewResizeMode::Stretch && image != nil &&
+                        image.size.width > 0 && image.size.height > 0;
+  if (!computed) {
+    _imageView.contentMode = toContentMode(props.resizeMode);
+    _imageView.frame = box;
+    return;
+  }
+  const CGFloat screenScale = RCTScreenScale();
+  const CGSize points = image.CGImage == nil
+                            ? image.size
+                            : CGSizeMake(image.size.width * image.scale / screenScale,
+                                         image.size.height * image.scale / screenScale);
+  const auto placed = turboimage::placeImage(
+      {points.width, points.height}, {box.size.width, box.size.height},
+      toCoreResizeMode(props.resizeMode),
+      {.x = props.contentPositionX, .y = props.contentPositionY});
+  _imageView.contentMode = UIViewContentModeScaleToFill;
+  _imageView.frame = CGRectMake(placed.x, placed.y, placed.width, placed.height);
+}
+
 - (void)showCachedPlaceholder {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -802,6 +881,7 @@ struct TIStepEffects {
     }
   }
   _imageView.image = cached;
+  [self placeImage];
 }
 
 // Decodes the placeholder off the main thread with the shared C++ core and
@@ -836,6 +916,7 @@ struct TIStepEffects {
         return;
       }
       strongSelf->_imageView.image = placeholder;
+      [strongSelf placeImage];
     });
   });
 }
@@ -875,6 +956,7 @@ struct TIStepEffects {
             strongSelf->_lifecycle.placeholderDecoded(generation, [strongSelf lifecycleProps])) {
           // A still, even of an animated image: it is only a stand-in.
           strongSelf->_imageView.image = image;
+          [strongSelf placeImage];
         }
       }];
   // Already finished if the completion ran inside the call (a memory hit):
@@ -907,6 +989,7 @@ struct TIStepEffects {
   // Back to the spec default, like the image above: the next updateProps
   // compares this view's props with the defaults (see `_recycled`).
   _imageView.contentMode = toContentMode(defaultViewProps()->resizeMode);
+  _imageView.frame = _container.bounds;
   // `_props` is deliberately left alone. It belongs to the base class, which
   // diffs the next life's props against it; replacing it with the defaults
   // made a recycled view keep the previous life's accessibilityLabel,
