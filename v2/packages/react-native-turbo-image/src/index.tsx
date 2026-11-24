@@ -98,9 +98,9 @@ export type TurboImageProps = Omit<
 > & {
   /**
    * The outermost native view: the image view itself, or the container
-   * around it when `rounded` or `indicator` needs one (always the container
-   * in 1.x). Either way it is the view that has `style`, so measuring it
-   * gives the image's frame.
+   * around it when `indicator` needs one (always the container in 1.x).
+   * Either way it is the view that has `style`, so measuring it gives the
+   * image's frame.
    */
   ref?: Ref<TurboImageInstance>;
   source: Source;
@@ -112,7 +112,8 @@ export type TurboImageProps = Omit<
   // processing handles both, Codegen's ColorValue just doesn't spell it.
   monochrome?: ColorValue | number;
   tint?: ColorValue | number;
-  // 1.x prop: clip the image to a circle/pill.
+  // 1.x prop: clip the image to a circle/pill. The image view clips to it
+  // itself; toggling it does not remount the view or restart the load.
   rounded?: boolean;
   // 1.x prop: an activity spinner while the image loads. Not shown when a
   // `placeholder` is given (1.x Android's rule; on 1.x iOS whichever prop
@@ -221,7 +222,11 @@ function TurboImageComponent({
     }
   }
 
-  const needsContainer = rounded || showsIndicator;
+  // Only the spinner needs a container: it is a second view over the image.
+  // `rounded` is a style on the image view, which clips to its own
+  // `borderRadius` on both platforms.
+  const needsContainer = showsIndicator;
+  const imageStyle = [styles.image, style, rounded && styles.rounded];
   const image = (
     <TurboImageView
       {...(props as Omit<NativeProps, 'cachePolicy' | 'source' | 'recyclingKey'>)}
@@ -231,7 +236,7 @@ function TurboImageComponent({
       // A new object each render is fine: both native views compare the
       // request fields by value before reloading.
       source={toNativeSource(source)}
-      style={needsContainer ? StyleSheet.absoluteFill : [styles.image, style]}
+      style={needsContainer ? StyleSheet.absoluteFill : imageStyle}
       cachePolicy={resolveCachePolicy(cachePolicy)}
       // Without an indicator the app's handlers go straight through.
       onStart={showsIndicator ? handleStart : onStart}
@@ -241,15 +246,15 @@ function TurboImageComponent({
   if (!needsContainer) {
     return image;
   }
-  // The same approach as 1.x: clip in a container. The native image view
-  // clips to a `borderRadius` in its own style on both platforms now, so
-  // `rounded` no longer needs the container for that; it is kept because
-  // dropping it would move `ref`, `testID` and the accessibility props to
-  // another view, a breaking change of its own.
-  // TODO: give `rounded` to the image view as a style and keep the container
-  // for the indicator only.
+  // As in 1.x, the container takes `style`, `ref` and the rounding (so the
+  // spinner is clipped with the image), and `testID` and the accessibility
+  // props stay on the image view, which fills the container.
+  //
   // The container must not come and go with the spinner: that would remount
-  // the native view and restart the load.
+  // the native view and restart the load. It does come and go with the
+  // `indicator` prop itself, which remounts the image.
+  // TODO: draw the spinner natively if toggling `indicator` on a mounted
+  // image turns out to matter.
   return (
     <View ref={ref} style={[style, rounded && styles.rounded]}>
       {image}

@@ -153,11 +153,11 @@ Nothing here needs a code change to compile, but each can change what your app d
 
 ### `rounded`, `indicator` and `ref`
 
-1.x always wrapped the image in a container view. 2.0 adds the container only when `rounded` or `indicator` needs it.
+1.x always wrapped the image in a container view. 2.0 adds one only for `indicator`, whose spinner is a second view over the image. `rounded` is a style on the image view, which clips itself.
 
 - `ref` is the outermost view either way (the one that has `style`), so measuring works as before.
 - `testID`, accessibility props and `onLayout` go to the image view, as in 1.x. With a container that is the inner view.
-- Switching `rounded` or `indicator` on or off for a mounted image adds or removes the container, which remounts the image view and restarts its load. If you toggle either at runtime, keep it constant and change the style instead.
+- Switching `indicator` on or off for a mounted image adds or removes the container, which remounts the image view and restarts its load. If you toggle it at runtime, keep it set instead. Toggling `rounded` does not remount.
 
 ### Caching and the network
 

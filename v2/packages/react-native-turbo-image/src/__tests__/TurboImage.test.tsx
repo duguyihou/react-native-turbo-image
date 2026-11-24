@@ -251,11 +251,33 @@ describe('layout', () => {
     expect(StyleSheet.flatten(nativeProps(renderer).style)).toMatchObject({ overflow: 'visible' });
   });
 
-  it('rounded: the style moves to a clipping container and the image fills it', () => {
-    const renderer = render({ style, rounded: true });
+  it('rounded: the image view clips itself, with no container', () => {
+    const renderer = render({ style: { ...style, borderRadius: 8 }, rounded: true });
+    // After the app's style, as in 1.x: `rounded` wins over its radius.
+    expect(StyleSheet.flatten(nativeProps(renderer).style)).toEqual({
+      ...style,
+      overflow: 'hidden',
+      borderRadius: 9999,
+    });
+    expect(renderer.root.findAllByType(View)).toHaveLength(0);
+  });
+
+  it('rounded: toggling it keeps the same native view mounted', () => {
+    // A remount would restart the load.
+    const renderer = render({ style });
+    act(() => {
+      renderer.update(<TurboImage source={AVATAR} style={style} rounded />);
+    });
+    act(() => {
+      renderer.update(<TurboImage source={AVATAR} style={style} rounded={false} />);
+    });
+    expect(mockNativeView.mounts).toBe(1);
+  });
+
+  it('rounded with an indicator: the container clips, so the spinner is clipped too', () => {
+    const renderer = render({ style, rounded: true, indicator: { style: 'medium' } });
     expect(nativeProps(renderer).style).toBe(StyleSheet.absoluteFill);
-    const container = renderer.root.findByType(View);
-    expect(StyleSheet.flatten(container.props.style)).toEqual({
+    expect(StyleSheet.flatten(renderer.root.findByType(View).props.style)).toEqual({
       ...style,
       overflow: 'hidden',
       borderRadius: 9999,
@@ -282,25 +304,30 @@ function refOf(props: Partial<TurboImageProps>) {
 }
 
 describe('ref', () => {
-  it('is the native image view when there is no container', () => {
-    expect(refOf({})?.hostType).toBe('TurboImageView');
-  });
-
-  const withContainer: Array<[string, Partial<TurboImageProps>]> = [
+  it.each([
+    ['no container', {}],
     ['rounded', { rounded: true }],
-    ['indicator', { indicator: { style: 'medium' } }],
-  ];
-  it.each(withContainer)('is the container when %s adds one, as in 1.x', (_name, props) => {
+  ] as Array<[string, Partial<TurboImageProps>]>)(
+    'is the native image view with %s',
+    (_name, props) => {
+      expect(refOf(props)?.hostType).toBe('TurboImageView');
+    }
+  );
+
+  it('is the container when the indicator adds one, as in 1.x', () => {
     // React Native's Jest preset mocks <View>, so the container's instance
     // is that mock's and not a node from createNodeMock. What matters is
     // that there is one, and that it is not the image view.
-    const instance = refOf(props);
+    const instance = refOf({ indicator: { style: 'medium' } });
     expect(instance).not.toBeNull();
     expect(instance?.hostType).not.toBe('TurboImageView');
   });
 
   it('does not also reach the image view inside a container', () => {
-    const renderer = render({ rounded: true, ref: createRef<TurboImageInstance>() });
+    const renderer = render({
+      indicator: { style: 'medium' },
+      ref: createRef<TurboImageInstance>(),
+    });
     expect(nativeProps(renderer).ref).toBeUndefined();
   });
 });

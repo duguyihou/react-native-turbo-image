@@ -30,7 +30,7 @@ The short version. Start here; the detail is elsewhere:
 
 | Part | Where | What it owns |
 |---|---|---|
-| JS component | `src/index.tsx` | 1.x prop compatibility, `require()` sources, header normalisation, the `rounded` container and the `indicator` spinner. No loading logic. |
+| JS component | `src/index.tsx` | 1.x prop compatibility, `require()` sources, header normalisation, `rounded` as a style, and the `indicator` spinner and its container. No loading logic. |
 | Codegen specs | `src/TurboImageViewNativeComponent.ts`, `src/NativeTurboImageModule.ts` | The contract between JS and the two native views and modules. |
 | Core | `cpp/` | Every decision that must be the same on both platforms. See below. |
 | Views | `ios/Fabric/TurboImageComponentView.mm`, `android/…/TurboImageView.kt` | Props in, events out, the image on screen. They carry out what the core decides. |

@@ -39,7 +39,7 @@ builds, and the CI matrix.
 | `cacheKey` | ✅ done | |
 | `onStart`/`onProgress`/`onSuccess`/`onFailure`/`onCompletion` | Codegen events + seam callbacks | ✅ done, with 1.x names and payloads, plus `onFailure.code` and `onCompletion {state:'cancelled'}` (RFC §4.4a) |
 | `placeholder` (blurhash/thumbhash/memoryCacheKey) | Decoders in **core C++** | ✅ done. Blurhash and thumbhash are byte-exact vs. the references; `memoryCacheKey` is a memory lookup via the seam |
-| `resize`, `blur`, `monochrome`, `tint` processors | **Core C++** pixel ops; adapters attach one opaque step keyed by the core's `processorKey` | ✅ done (RFC §4.5a). Variants are separate memory entries over one disk original; `dispose` evicts all of them. 1.x's `borderRadius` processor never existed, and `rounded`'s circle crop is replaced by the clipping container |
+| `resize`, `blur`, `monochrome`, `tint` processors | **Core C++** pixel ops; adapters attach one opaque step keyed by the core's `processorKey` | ✅ done (RFC §4.5a). Variants are separate memory entries over one disk original; `dispose` evicts all of them. 1.x's `borderRadius` processor never existed, and `rounded`'s circle crop is replaced by clipping the view to a `borderRadius` |
 | `enableLiveTextInteraction` (iOS) | iOS-only prop; Swift target `TurboImageLiveText` behind the ObjC `TILiveTextInteraction` seam | ✅ done (RFC §4.4b). One interaction per view (1.x stacked one per load); toggling off detaches at once. Visual Look Up needs iOS 17 |
 | `indicator` (activity spinner while loading) | JS: `<ActivityIndicator>` over the native view, driven by `onStart`/`onCompletion` | ✅ done (RFC §4.4b). No native code. Appears only after 150 ms, so cache hits never flash it. Hidden when a `placeholder` is given (1.x Android's rule) |
 | `allowHardware` (Android) | Android-only native prop; a display option on the loader seam, not part of the request | ✅ done. Checked once by log: `HARDWARE` by default, `ARGB_8888` with `allowHardware={false}` |
@@ -86,9 +86,9 @@ The complete list, kept as the record of what changed. [`migration-guide.md`](mi
 - Passing more than one placeholder kind throws only in development builds; in release builds native picks one. 1.x threw in every build.
 - `showPlaceholderOnFailure` without a `placeholder` is a no-op. 1.x threw.
 - `isProgressiveImageRenderingEnabled` is ignored (it had no effect in 1.x either).
-- `ref` gives the image view itself unless `rounded` or `indicator` is set, in which case it gives the container around it. 1.x always gave the container. Both are the view that carries `style`, so measuring is unaffected.
-- Other `View` props (`testID`, accessibility props, `onLayout`) go to the image view, as in 1.x. With `rounded` or `indicator` that is the view inside the container.
-- Switching `rounded` or `indicator` on or off for a mounted image adds or removes the container, which remounts the image view and restarts its load. 1.x always had the container.
+- `ref` gives the image view itself unless `indicator` is set, in which case it gives the container around it. 1.x always gave the container. Both are the view that carries `style`, so measuring is unaffected.
+- Other `View` props (`testID`, accessibility props, `onLayout`) go to the image view, as in 1.x. With `indicator` that is the view inside the container.
+- Switching `indicator` on or off for a mounted image adds or removes the container, which remounts the image view and restarts its load. 1.x always had the container. (`rounded` is a style on the image view and toggles without a remount.)
 - `indicator` appears only for loads that take longer than 150 ms, and is never shown together with a `placeholder` (1.x iOS showed whichever prop was set last).
 - `source` may be a `require()` number. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first.
 - Local sources (`file://`, `content://`, `android.resource://`) are never copied into the disk cache, and `cacheOnly` does not block them.
