@@ -84,6 +84,8 @@ export interface NativeProps extends ViewProps {
   // revalidated, `no-store` is never stored), separate from the disk cache
   // the other policies share. So a 'cacheOnly' load does not see what a
   // 'urlCache' load stored on disk. The memory cache is shared by all.
+  // On iOS a response over 7.5 MB (5% of the 150 MB URLCache) is never
+  // stored, so such an image is fetched again on every memory miss.
   cachePolicy?: CodegenTypes.WithDefault<
     'default' | 'memoryOnly' | 'noCache' | 'cacheOnly' | 'urlCache',
     'default'

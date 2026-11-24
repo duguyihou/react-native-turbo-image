@@ -133,6 +133,51 @@ struct MemoryCacheTests {
     #expect(await adapter.load(kept).fromMemoryCache)
   }
 
+  // MARK: The index stays bounded
+
+  /// A sizes-only variant of a fresh key, `n` pixels wide: each call is a
+  /// new entry in the index.
+  private func variant(_ n: Int, of file: URL, on adapter: Adapter) -> TIImageRequest {
+    adapter.request(for: file, decodeSize: CGSize(width: n, height: n))
+  }
+
+  /// Nuke's LRU evicts entries the index cannot see go. Past its threshold
+  /// the index drops them, so it does not grow with every image a long
+  /// list has ever shown.
+  @Test func variantsNukeHasEvictedAreSweptFromTheIndex() async throws {
+    let file = try Fixture.png()
+    let small = Adapter(loader: NukeImageLoader(minimumSweepThreshold: 4))
+    for n in 1...4 {
+      _ = await small.load(variant(n, of: file, on: small))
+    }
+    #expect(small.loader.variantCount == 4)
+
+    // As memory pressure or the LRU would: behind the index's back.
+    small.loader.pipeline.cache.removeAll(caches: .memory)
+    _ = await small.load(variant(5, of: file, on: small))
+
+    #expect(small.loader.variantCount == 1)
+  }
+
+  /// A sweep keeps every variant still in memory, so eviction and the
+  /// placeholder lookup keep finding them. That includes one whose load was
+  /// still running when the sweep ran (its entry was not written yet).
+  @Test func variantsStillInMemorySurviveASweep() async throws {
+    let file = try Fixture.png()
+    let small = Adapter(loader: NukeImageLoader(minimumSweepThreshold: 4))
+    let requests = (1...5).map { variant($0 * 2, of: file, on: small) }
+    for request in requests {
+      _ = await small.load(request)
+    }
+
+    #expect(small.loader.variantCount == 5)
+    // Still found by key, and still evicted by `dispose`.
+    #expect(small.loader.memoryCachedImage(forKey: requests[4].cacheKey) != nil)
+    small.loader.removeCachedImage(for: requests[4])
+    #expect(small.loader.memoryCachedImage(forKey: requests[4].cacheKey) == nil)
+    #expect(small.loader.variantCount == 4)
+  }
+
   @Test func clearingTheMemoryCacheEvictsEverything() async throws {
     let request = adapter.request(for: try Fixture.png(), decodeSize: bound)
     _ = await adapter.load(request)

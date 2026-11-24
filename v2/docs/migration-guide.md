@@ -96,7 +96,7 @@ Only three things need an edit in a typical app.
 | `cacheOnly` | read | read | **never** |
 | `urlCache` | read, write | the HTTP cache, obeying `Cache-Control` | yes |
 
-`urlCache` is the only policy that honours `Cache-Control`, `ETag` and `no-store`, and in 2.0 it does so on Android too (1.x: iOS only). It keeps its own disk store, so a `cacheOnly` load does not see what a `urlCache` load stored on disk, and the reverse.
+`urlCache` is the only policy that honours `Cache-Control`, `ETag` and `no-store`, and in 2.0 it does so on Android too (1.x: iOS only). It keeps its own disk store, so a `cacheOnly` load does not see what a `urlCache` load stored on disk, and the reverse. On iOS that store is a 150 MB `URLCache`, which does not keep a response larger than 5% of its size (7.5 MB): such an image is downloaded again whenever it is not in memory. Android has no such limit.
 
 ### Lists that reuse views need `recyclingKey`
 

@@ -46,7 +46,9 @@ private final class NukeLoadTask: NSObject, TIImageLoadTask, @unchecked Sendable
 public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendable {
   // `ImagePipeline` is Sendable.
   /// Every policy but `urlCache`: disk tier = `DataCache`, keyed by `cacheKey`.
-  private let pipeline: ImagePipeline
+  /// Internal, not private, only so tests can evict from the memory cache
+  /// without going through this adapter.
+  let pipeline: ImagePipeline
   /// `urlCache` requests (`TIImageRequest.httpCache`): disk tier = `urlCache`.
   private let httpPipeline: ImagePipeline
   /// The HTTP cache behind `httpPipeline`. Kept to evict from and clear it.
@@ -67,16 +69,34 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   // memory cache cannot be enumerated. Coil can match on the key string
   // instead, so Android needs no such index. Written from `load` (main) and
   // read from the cache module (any thread), hence the lock.
-  // TODO: bound this. It grows by one small value per distinct (processing,
-  // decode size, vector size) of a key and is only reset by dispose and
-  // clearMemoryCache.
+  //
+  // Bounded by sweeping: once it holds more than `sweepThreshold` variants,
+  // those whose memory entry Nuke has evicted are dropped (see
+  // `rememberLocked`). A dropped variant needs no eviction and cannot serve
+  // a placeholder, so nothing that reads the index notices.
   private let variantsLock = NSLock()
   private var variants: [String: Set<Variant>] = [:]
+  /// How many variants `variants` holds, across keys. Read by tests.
+  private(set) var variantCount = 0
+  /// Sweep once `variantCount` passes this. Reset to twice what survives a
+  /// sweep, so the sweeps' cost (one memory-cache lookup per variant) is
+  /// amortized O(1) per load, and the index stays within about twice the
+  /// variants still in memory, or this floor.
+  private var sweepThreshold: Int
+  private let minimumSweepThreshold: Int
 
   /// Disk tier size. Must equal `DISK_CACHE_BYTES` in the Android adapter (CoilLoaderSetup.kt).
   static let diskCacheBytes = 150 * 1024 * 1024
 
-  @objc public override init() {
+  @objc public override convenience init() {
+    self.init(minimumSweepThreshold: 512)
+  }
+
+  /// `minimumSweepThreshold`: the variants the index holds before its first
+  /// sweep. Lowered by tests only, to reach a sweep in a few loads.
+  init(minimumSweepThreshold: Int) {
+    self.minimumSweepThreshold = minimumSweepThreshold
+    sweepThreshold = minimumSweepThreshold
     // Explicit configuration rather than `ImagePipeline.shared`, so the host
     // app's own use of Nuke cannot change TurboImage's cache behaviour (and
     // vice versa). Cross-platform cache contract (RFC rule 3, mirrored in
@@ -152,9 +172,14 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     // Read back from the Nuke request, so the index holds exactly what Nuke
     // keys the entry by.
     let processorID = nukeRequest.processors.first?.identifier ?? ""
-    if !processorID.isEmpty || nukeRequest.thumbnail != nil {
-      let variant = Variant(processorID: processorID, thumbnail: nukeRequest.thumbnail)
-      variantsLock.withLock { _ = variants[request.cacheKey, default: []].insert(variant) }
+    let variant =
+      !processorID.isEmpty || nukeRequest.thumbnail != nil
+      ? Variant(processorID: processorID, thumbnail: nukeRequest.thumbnail) : nil
+    let cacheKey = request.cacheKey
+    if let variant {
+      // Before the load, so a `dispose` that runs while it does still finds
+      // the entry the load is about to write.
+      remember(variant, of: cacheKey)
     }
     let imageTask = pipeline(for: request).imageTask(with: nukeRequest)
 
@@ -184,6 +209,9 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
         // Dropping results after cancellation is part of the
         // request-lifecycle contract: a recycled view must never receive
         // the image for its previous source.
+        // Again now that Nuke has stored the image: a sweep that ran during
+        // the load found no entry yet and dropped the variant.
+        if let variant { self.remember(variant, of: cacheKey) }
         guard !Task.isCancelled else { return }
         let animation = response.container.animation.map {
           PlayableAnimation(source: $0, fitsView: nukeRequest.thumbnail != nil)
@@ -251,6 +279,26 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     return NukeLoadTask(imageTask: imageTask, task: task, progressTask: nil)
   }
 
+  private func remember(_ variant: Variant, of cacheKey: String) {
+    variantsLock.withLock { rememberLocked(variant, of: cacheKey) }
+  }
+
+  private func rememberLocked(_ variant: Variant, of cacheKey: String) {
+    if variants[cacheKey, default: []].insert(variant).inserted {
+      variantCount += 1
+    }
+    guard variantCount > sweepThreshold else { return }
+    let cache = pipeline.cache
+    for (key, seen) in variants {
+      let live = seen.filter {
+        cache.containsCachedImage(for: Self.request(for: $0, of: key), caches: .memory)
+      }
+      variants[key] = live.isEmpty ? nil : live
+    }
+    variantCount = variants.values.reduce(0) { $0 + $1.count }
+    sweepThreshold = max(minimumSweepThreshold, 2 * variantCount)
+  }
+
   public func removeCachedImage(for request: TIImageRequest) {
     let cacheKey = request.cacheKey
     let original = Self.keyOnlyRequest(cacheKey)
@@ -260,7 +308,12 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     pipeline.cache.removeCachedData(for: original)
     // Variants live in memory only (originals-only disk policy). The memory
     // cache is shared, so one pipeline's view of it reaches every entry.
-    let seen = variantsLock.withLock { variants.removeValue(forKey: cacheKey) } ?? []
+    let seen =
+      variantsLock.withLock {
+        let removed = variants.removeValue(forKey: cacheKey) ?? []
+        variantCount -= removed.count
+        return removed
+      }
     for variant in seen {
       pipeline.cache.removeCachedImage(for: Self.request(for: variant, of: cacheKey), caches: .memory)
     }
@@ -271,7 +324,10 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
 
   public func clearMemoryCache() {
     pipeline.cache.removeAll(caches: .memory)
-    variantsLock.withLock { variants.removeAll() }
+    variantsLock.withLock {
+      variants.removeAll()
+      variantCount = 0
+    }
   }
 
   public func clearDiskCache() {

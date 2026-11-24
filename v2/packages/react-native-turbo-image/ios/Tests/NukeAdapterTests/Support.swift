@@ -43,7 +43,11 @@ struct Loaded: @unchecked Sendable {
 
 @MainActor
 struct Adapter {
-  let loader = NukeImageLoader()
+  let loader: NukeImageLoader
+
+  init(loader: NukeImageLoader = NukeImageLoader()) {
+    self.loader = loader
+  }
 
   func load(_ request: TIImageRequest) async -> Loaded {
     await loadTogether([request])[0]
