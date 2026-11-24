@@ -127,6 +127,10 @@ class TurboImageViewManager :
     view.progressEnabled = value
   }
 
+  override fun setLoadEventMask(view: TurboImageView, value: Int) {
+    view.loadEventMask = value
+  }
+
   // Fabric sends the view's content insets here (border widths plus the
   // `padding` style) and the base class drops them. As ImageView padding
   // they put the image in the same box as on iOS, where the base view lays

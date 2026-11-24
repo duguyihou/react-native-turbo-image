@@ -232,6 +232,7 @@ export type TurboImageProps = Omit<
   | 'contentPositionX'
   | 'contentPositionY'
   | 'progressEnabled'
+  | 'loadEventMask'
 > & {
   /**
    * The outermost native view: the image view itself, or the container
@@ -382,6 +383,12 @@ function TurboImageComponent({
       style={needsContainer ? StyleSheet.absoluteFill : imageStyle}
       cachePolicy={resolveCachePolicy(cachePolicy)}
       progressEnabled={props.onProgress != null}
+      loadEventMask={loadEventMask(
+        showsIndicator || onStart != null,
+        props.onSuccess != null,
+        props.onFailure != null,
+        showsIndicator || onCompletion != null
+      )}
       // Without an indicator the app's handlers go straight through.
       onStart={showsIndicator ? handleStart : onStart}
       onCompletion={showsIndicator ? handleCompletion : onCompletion}
@@ -424,6 +431,12 @@ const styles = StyleSheet.create({
   image: { overflow: 'hidden' },
   rounded: { overflow: 'hidden', borderRadius: 9999 },
 });
+
+// `loadEventMask`: a bit per event that has a handler, in the order the
+// codegen spec lists them (onStart, onSuccess, onFailure, onCompletion).
+function loadEventMask(...handled: [boolean, boolean, boolean, boolean]): number {
+  return handled.reduce((mask, on, bit) => (on ? mask | (1 << bit) : mask), 0);
+}
 
 type CacheSource = Source;
 

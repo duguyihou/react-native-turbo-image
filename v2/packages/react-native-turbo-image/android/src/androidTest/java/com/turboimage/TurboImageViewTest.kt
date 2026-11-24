@@ -42,7 +42,8 @@ import org.junit.runner.RunWith
  * Covered: upgrades (a view that outgrows its image loads it again at its new
  * size, silently), source sets ([TurboImageView.candidates]), image
  * placeholders ([TurboImageView.placeholderUri]) and replacing the adapter
- * through [TurboImageLoaders]. TODO: hash placeholders, `recyclingKey` and
+ * through [TurboImageLoaders]. Load events are gated by `loadEventMask`
+ * (all on unless a test sets it). TODO: hash placeholders, `recyclingKey` and
  * progress through the fake.
  */
 @RunWith(AndroidJUnit4::class)
@@ -321,6 +322,41 @@ class TurboImageViewTest {
     assertEquals(listOf("Authorization" to "Bearer t0ken"), thumb.headers)
     assertEquals("", thumb.processorKey)
     assertTrue(loader.loads.single().request.processorKey.isNotEmpty())
+  }
+
+  // MARK: Load events
+
+  @Test
+  fun aViewWithNoHandlersSendsNoLoadEvents() = onMain {
+    view.loadEventMask = 0
+    resize(300, 200)
+    setSource(URL)
+    loader.loads.single().succeed(300, 200)
+
+    assertEquals(emptyList<String>(), eventNames())
+  }
+
+  @Test
+  fun onlyTheHandledEventsAreSent() = onMain {
+    view.loadEventMask = 4 or 8 // onFailure, onCompletion
+    resize(300, 200)
+    setSource(URL)
+    loader.loads.single().fail()
+
+    assertEquals(listOf("topFailure", "topCompletion"), eventNames())
+  }
+
+  /** The mask is read as each event is sent, as JS looks up its handler. */
+  @Test
+  fun aHandlerAddedMidLoadHearsTheRestOfIt() = onMain {
+    view.loadEventMask = 0
+    resize(300, 200)
+    setSource(URL)
+
+    view.loadEventMask = 8 // onCompletion
+    loader.loads.single().succeed(300, 200)
+
+    assertEquals(listOf("topCompletion"), eventNames())
   }
 
   // MARK: contentPosition

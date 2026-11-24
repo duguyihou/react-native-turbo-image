@@ -1015,7 +1015,25 @@ struct TIStepEffects {
   return std::static_pointer_cast<const TurboImageViewEventEmitter>(_eventEmitter);
 }
 
+// `loadEventMask`'s bits (TurboImageViewNativeComponent.ts): the events JS
+// has a handler for. The others are not built or sent; JS would drop them.
+// Read now, not when the load started, as JS looks for its handler on
+// arrival. `onProgress` is gated by `progressEnabled` instead.
+typedef NS_OPTIONS(int, TILoadEvent) {
+  TILoadEventStart = 1 << 0,
+  TILoadEventSuccess = 1 << 1,
+  TILoadEventFailure = 1 << 2,
+  TILoadEventCompletion = 1 << 3,
+};
+
+- (BOOL)handles:(TILoadEvent)event {
+  return (std::static_pointer_cast<const TurboImageViewProps>(_props)->loadEventMask & event) != 0;
+}
+
 - (void)emitStart {
+  if (![self handles:TILoadEventStart]) {
+    return;
+  }
   if (auto emitter = [self emitter]) {
     emitter->onStart({.state = "running"});
   }
@@ -1029,6 +1047,9 @@ struct TIStepEffects {
 }
 
 - (void)emitSuccess:(CGSize)size source:(NSString *)source {
+  if (![self handles:TILoadEventSuccess]) {
+    return;
+  }
   if (auto emitter = [self emitter]) {
     emitter->onSuccess({.width = size.width,
                         .height = size.height,
@@ -1037,6 +1058,9 @@ struct TIStepEffects {
 }
 
 - (void)emitFailure:(turboimage::LoadErrorCode)code message:(NSString *)message {
+  if (![self handles:TILoadEventFailure]) {
+    return;
+  }
   if (auto emitter = [self emitter]) {
     emitter->onFailure({
         .code = std::string(turboimage::loadErrorCodeName(code)),
@@ -1046,6 +1070,9 @@ struct TIStepEffects {
 }
 
 - (void)emitCompletion:(NSString *)state {
+  if (![self handles:TILoadEventCompletion]) {
+    return;
+  }
   if (auto emitter = [self emitter]) {
     emitter->onCompletion({.state = std::string(state.UTF8String)});
   }

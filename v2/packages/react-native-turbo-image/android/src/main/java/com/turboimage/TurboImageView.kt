@@ -143,6 +143,15 @@ class TurboImageView(
    */
   var progressEnabled = false
 
+  /**
+   * `loadEventMask` (TurboImageViewNativeComponent.ts): which of `onStart`,
+   * `onSuccess`, `onFailure` and `onCompletion` JS has a handler for; [emit]
+   * builds and sends only those. Read when each event is emitted, as JS
+   * looks for its handler on arrival. All on until a prop says otherwise,
+   * the spec's default.
+   */
+  var loadEventMask = ALL_LOAD_EVENTS
+
   init {
     // Matches the spec default (`contain`, 1.x's default).
     scaleType = ScaleType.FIT_CENTER
@@ -725,7 +734,12 @@ class TurboImageView(
 
   private fun emitCompletion(state: String) = emit("topCompletion") { putString("state", state) }
 
-  private fun emit(name: String, payload: WritableMap.() -> Unit) = eventSink(name, payload)
+  private fun emit(name: String, payload: WritableMap.() -> Unit) {
+    // `topProgress` has no bit: `progressEnabled` decides it, at load start.
+    val bit = LOAD_EVENT_BITS[name]
+    if (bit != null && loadEventMask and bit == 0) return
+    eventSink(name, payload)
+  }
 
   /**
    * Where events go: React Native's event dispatcher. Replaced only by the
@@ -752,6 +766,10 @@ class TurboImageView(
       Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "TurboImagePlaceholder").apply { isDaemon = true }
       }
+
+    // `loadEventMask`'s bits, in the spec's order.
+    val LOAD_EVENT_BITS = mapOf("topStart" to 1, "topSuccess" to 2, "topFailure" to 4, "topCompletion" to 8)
+    const val ALL_LOAD_EVENTS = 15
   }
 
   // One event class for all five events; they differ only in name and

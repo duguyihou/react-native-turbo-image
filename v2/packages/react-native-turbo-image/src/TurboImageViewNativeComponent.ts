@@ -176,6 +176,14 @@ export interface NativeProps extends ViewProps {
   // per load reaching JS for nothing. Read when a load starts, so a handler
   // attached mid-load hears from the next one. Not a public prop.
   progressEnabled?: CodegenTypes.WithDefault<boolean, false>;
+  // Set by <TurboImage>: which of `onStart` (1), `onSuccess` (2),
+  // `onFailure` (4) and `onCompletion` (8) have a handler. The views build
+  // and send only those; JS would drop the others on arrival anyway. Read
+  // when each event is emitted, which is when JS would look for the handler,
+  // so what JS hears is unchanged. The core still runs every load's events;
+  // only the sending is skipped. All on by default, for the component used
+  // without <TurboImage>. Not a public prop.
+  loadEventMask?: CodegenTypes.WithDefault<CodegenTypes.Int32, 15>;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
   onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;
   onSuccess?: CodegenTypes.DirectEventHandler<SuccessEvent>;

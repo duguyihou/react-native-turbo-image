@@ -273,6 +273,32 @@ describe('progressEnabled', () => {
   });
 });
 
+// A handler that does nothing, for tests about which handlers exist.
+const noop = () => {};
+
+describe('loadEventMask', () => {
+  // The native views send only the events that have a handler.
+  it('is 0 without handlers', () => {
+    expect(nativeProps(render()).loadEventMask).toBe(0);
+  });
+
+  it("has one bit per handler, in the spec's order", () => {
+    expect(nativeProps(render({ onStart: noop })).loadEventMask).toBe(1);
+    expect(nativeProps(render({ onSuccess: noop })).loadEventMask).toBe(2);
+    expect(nativeProps(render({ onFailure: noop })).loadEventMask).toBe(4);
+    expect(nativeProps(render({ onCompletion: noop })).loadEventMask).toBe(8);
+    expect(nativeProps(render({ onSuccess: noop, onFailure: noop })).loadEventMask).toBe(6);
+  });
+
+  it('includes start and completion for the indicator', () => {
+    expect(nativeProps(render({ indicator: { style: 'medium' } })).loadEventMask).toBe(9);
+  });
+
+  it('does not count onProgress, which progressEnabled gates', () => {
+    expect(nativeProps(render({ onProgress: noop })).loadEventMask).toBe(0);
+  });
+});
+
 describe('allowDownscaling', () => {
   it('is left unset by default, so the native default (true) applies', () => {
     expect(nativeProps(render())).not.toHaveProperty('allowDownscaling');
