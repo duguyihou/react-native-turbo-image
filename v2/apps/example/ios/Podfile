@@ -25,6 +25,16 @@ target 'TurboImageExample' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # The Fabric view's tests (TurboImageExampleTests/), hosted by the app:
+  # they drive the real TurboImageComponentView, which only builds with
+  # React Native around it. Headers only: the bundle links against the app
+  # (BUNDLE_LOADER). `:complete` would link a second copy of every pod into
+  # it, and the test would register its fake loader in its own copy of
+  # TIImageLoaderRegistry while the app's view read the other one.
+  target 'TurboImageExampleTests' do
+    inherit! :search_paths
+  end
+
   post_install do |installer|
     react_native_post_install(
       installer,

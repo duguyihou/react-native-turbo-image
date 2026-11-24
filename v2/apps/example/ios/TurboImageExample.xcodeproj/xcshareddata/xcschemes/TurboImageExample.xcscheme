@@ -32,7 +32,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "00E356ED1AD99517003FC87E"
+               BlueprintIdentifier = "FB1EBA2E28148DBFFA39F84F"
                BuildableName = "TurboImageExampleTests.xctest"
                BlueprintName = "TurboImageExampleTests"
                ReferencedContainer = "container:TurboImageExample.xcodeproj">
