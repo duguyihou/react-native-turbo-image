@@ -123,6 +123,10 @@ class TurboImageViewManager :
   // interaction, and 1.x ignored the prop there too.
   override fun setEnableLiveTextInteraction(view: TurboImageView, value: Boolean) = Unit
 
+  override fun setProgressEnabled(view: TurboImageView, value: Boolean) {
+    view.progressEnabled = value
+  }
+
   // Fabric sends the view's content insets here (border widths plus the
   // `padding` style) and the base class drops them. As ImageView padding
   // they put the image in the same box as on iOS, where the base view lays

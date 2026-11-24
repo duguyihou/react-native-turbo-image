@@ -42,8 +42,15 @@ interface ImageLoaderAdapter {
    * @property allowHardware false forces a software bitmap, for callers that
    *   read pixels or draw to a software canvas (e.g. shared-element
    *   transitions). Android-only; iOS has no equivalent distinction.
+   * @property reportProgress false when nothing listens for progress (no
+   *   `onProgress` in JS, or an upgrade): adapters should not track it, and
+   *   need not call [Listener.onProgress]. iOS passes a nil progress block.
    */
-  data class DisplayOptions(val fadeMillis: Int = 300, val allowHardware: Boolean = true)
+  data class DisplayOptions(
+    val fadeMillis: Int = 300,
+    val allowHardware: Boolean = true,
+    val reportProgress: Boolean = true,
+  )
 
   fun load(target: ImageView, request: ResolvedRequest, options: DisplayOptions, listener: Listener): LoadHandle
 

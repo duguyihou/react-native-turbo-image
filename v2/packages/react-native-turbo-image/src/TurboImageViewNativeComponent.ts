@@ -170,6 +170,12 @@ export interface NativeProps extends ViewProps {
   // iOS only (ignored on Android and tvOS, as in 1.x): select text, scan codes
   // and look up subjects in the loaded image with VisionKit.
   enableLiveTextInteraction?: CodegenTypes.WithDefault<boolean, false>;
+  // Set by <TurboImage> when `onProgress` has a handler. Off, the views ask
+  // the loader for no progress at all: no byte counting on the network
+  // thread, no main-thread hops, and none of the ~100 `onProgress` events
+  // per load reaching JS for nothing. Read when a load starts, so a handler
+  // attached mid-load hears from the next one. Not a public prop.
+  progressEnabled?: CodegenTypes.WithDefault<boolean, false>;
   onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
   onProgress?: CodegenTypes.DirectEventHandler<ProgressEvent>;
   onSuccess?: CodegenTypes.DirectEventHandler<SuccessEvent>;

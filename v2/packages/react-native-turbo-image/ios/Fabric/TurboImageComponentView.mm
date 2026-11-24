@@ -536,13 +536,20 @@ struct TIStepEffects {
   // back, so it cannot touch this view. The blocks only pass on what
   // happened; what it means for the view is the lifecycle's to say.
   __weak __typeof(self) weakSelf = self;
-  id<TIImageLoadTask> task = [TIImageLoaderRegistry.sharedLoader loadImageWithRequest:request
-      progress:^(int64_t completed, int64_t total) {
-        __typeof(self) strongSelf = weakSelf;
-        if (strongSelf != nil && strongSelf->_lifecycle.isInFlight(token)) {
-          [strongSelf loadDidProgress:completed total:total];
-        }
+  // No `onProgress` handler in JS: no block, so the loader tracks no
+  // progress (Nuke: no progress task per load) and no events are sent.
+  const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  TIImageLoadProgress progress = nil;
+  if (props.progressEnabled) {
+    progress = ^(int64_t completed, int64_t total) {
+      __typeof(self) strongSelf = weakSelf;
+      if (strongSelf != nil && strongSelf->_lifecycle.isInFlight(token)) {
+        [strongSelf loadDidProgress:completed total:total];
       }
+    };
+  }
+  id<TIImageLoadTask> task = [TIImageLoaderRegistry.sharedLoader loadImageWithRequest:request
+      progress:progress
       completion:^(UIImage *image, id animation, BOOL fromMemoryCache, NSError *error) {
         __typeof(self) strongSelf = weakSelf;
         if (strongSelf == nil) {

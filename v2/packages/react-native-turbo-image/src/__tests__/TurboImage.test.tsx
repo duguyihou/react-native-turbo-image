@@ -259,6 +259,20 @@ describe('cachePolicy', () => {
   });
 });
 
+describe('progressEnabled', () => {
+  // Off, the native views ask the loader for no progress at all.
+  it('is false without an onProgress handler', () => {
+    expect(nativeProps(render()).progressEnabled).toBe(false);
+  });
+
+  it('is true with one, and the handler still reaches the native view', () => {
+    const onProgress = jest.fn<NonNullable<TurboImageProps['onProgress']>>();
+    const props = nativeProps(render({ onProgress }));
+    expect(props.progressEnabled).toBe(true);
+    expect(props.onProgress).toBe(onProgress);
+  });
+});
+
 describe('allowDownscaling', () => {
   it('is left unset by default, so the native default (true) applies', () => {
     expect(nativeProps(render())).not.toHaveProperty('allowDownscaling');

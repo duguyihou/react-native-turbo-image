@@ -231,6 +231,7 @@ export type TurboImageProps = Omit<
   | 'recyclingKey'
   | 'contentPositionX'
   | 'contentPositionY'
+  | 'progressEnabled'
 > & {
   /**
    * The outermost native view: the image view itself, or the container
@@ -380,6 +381,7 @@ function TurboImageComponent({
       {...toContentPosition(contentPosition)}
       style={needsContainer ? StyleSheet.absoluteFill : imageStyle}
       cachePolicy={resolveCachePolicy(cachePolicy)}
+      progressEnabled={props.onProgress != null}
       // Without an indicator the app's handlers go straight through.
       onStart={showsIndicator ? handleStart : onStart}
       onCompletion={showsIndicator ? handleCompletion : onCompletion}

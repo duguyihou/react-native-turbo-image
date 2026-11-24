@@ -55,8 +55,11 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
     // after success/failure/cancel. Progress arrives on OkHttp threads and is
     // posted to main, where this flag is checked.
     var finished = false
+    // Null when nothing listens for progress: no listener registered, no
+    // token header, so OkHttp counts no bytes and nothing is posted to main.
     val token =
-      ProgressInterceptor.register { completed, total ->
+      if (!options.reportProgress) null
+      else ProgressInterceptor.register { completed, total ->
         // Asynchronous, because Coil's own callbacks are: Dispatchers.Main
         // posts asynchronous messages, which pass the sync barrier the view
         // system holds from scheduling a traversal until it runs (up to a
@@ -70,7 +73,7 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
       }
     fun finish() {
       finished = true
-      ProgressInterceptor.unregister(token)
+      token?.let(ProgressInterceptor::unregister)
     }
 
     // Coil keeps a view's last request, finished or not, and enqueues it
@@ -98,7 +101,9 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
     val coilRequest =
       request.toCoilRequest(target.context, target)
         .httpHeaders(
-          request.networkHeaders().set(ProgressInterceptor.TOKEN_HEADER, token.toString()).build()
+          request.networkHeaders()
+            .apply { if (token != null) set(ProgressInterceptor.TOKEN_HEADER, token.toString()) }
+            .build()
         )
         .target(KeepCurrentImageTarget(target))
         // Coil's crossfade already skips memory-cache hits (the seam rule)

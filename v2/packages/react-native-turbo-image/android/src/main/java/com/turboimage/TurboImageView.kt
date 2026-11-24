@@ -137,6 +137,12 @@ class TurboImageView(
   /** 1.x prop: false decodes to a software bitmap. Changing it reloads. */
   var allowHardware = true
 
+  /**
+   * Whether JS has an `onProgress` handler. Read when a load starts (it
+   * never reloads), so a handler attached mid-load hears from the next one.
+   */
+  var progressEnabled = false
+
   init {
     // Matches the spec default (`contain`, 1.x's default).
     scaleType = ScaleType.FIT_CENTER
@@ -488,7 +494,11 @@ class TurboImageView(
       loader.load(
         this as ImageView,
         request,
-        ImageLoaderAdapter.DisplayOptions(fadeMillis = fadeDuration, allowHardware = allowHardware),
+        ImageLoaderAdapter.DisplayOptions(
+          fadeMillis = fadeDuration,
+          allowHardware = allowHardware,
+          reportProgress = progressEnabled,
+        ),
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) {
             if (!lifecycle.isInFlight(token)) return
@@ -577,7 +587,7 @@ class TurboImageView(
         this as ImageView,
         upgradeRequest,
         // No fade: the same picture, only sharper, replaces itself.
-        ImageLoaderAdapter.DisplayOptions(fadeMillis = 0, allowHardware = allowHardware),
+        ImageLoaderAdapter.DisplayOptions(fadeMillis = 0, allowHardware = allowHardware, reportProgress = false),
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) = Unit
 
