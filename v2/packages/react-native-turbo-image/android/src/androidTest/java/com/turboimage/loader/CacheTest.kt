@@ -2,10 +2,14 @@ package com.turboimage.loader
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import coil3.decode.DataSource
 import coil3.memory.MemoryCache
+import coil3.request.SuccessResult
 import com.turboimage.core.CachePolicy
 import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.Processing
+import com.turboimage.core.ResizeMode
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -192,6 +196,41 @@ class CacheTest : AdapterTest() {
     assertNotNull("memory is a separate call", memoryCached(resolve(uri)))
     clearMemoryCache()
     assertFalse(isCached(uri))
+  }
+
+  // MARK: Original-size entries
+
+  /**
+   * Coil never accepts a "sampled" bitmap, which an SVG drawing is, for an
+   * original-size request, unless the key records that size. Without it,
+   * an SVG under `center` was drawn again from the disk on every load.
+   */
+  @Test
+  fun anOriginalSizeSvgIsServedFromMemory() {
+    val context = InstrumentationRegistry.getInstrumentation().targetContext
+    val request = resolve(fixture("logo.svg"), resizeMode = ResizeMode.CENTER)
+    val sources =
+      (1..2).map {
+        val result = runBlocking { adapter.imageLoader.execute(request.toCoilRequest(context, view = null).build()) }
+        (result as SuccessResult).dataSource
+      }
+
+    assertEquals(listOf(DataSource.NETWORK, DataSource.MEMORY_CACHE), sources)
+  }
+
+  /**
+   * An original-size entry (here a `'memory'` prefetch) is not handed to a
+   * view-sized load: the thumbnail gets its own small decode, from the disk.
+   */
+  @Test
+  fun aViewIsNotGivenAPrefetchedFullSizeBitmap() {
+    val uri = photo()
+    assertTrue(prefetch(resolve(uri, allowDownscaling = false)))
+
+    val thumbnail = load(resolve(uri))
+
+    assertEquals(VIEW_WIDTH to VIEW_HEIGHT, thumbnail.width to thumbnail.height)
+    assertEquals("from the disk", 1, requestsReceived(uri))
   }
 
   // MARK: The `memoryCacheKey` placeholder

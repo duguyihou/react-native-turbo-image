@@ -297,11 +297,11 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
     // The unprocessed image only, like Nuke's (imageID, no processors) key:
     // a blurred variant must not stand in as another view's placeholder.
     val memoryCache = imageLoader.memoryCache ?: return null
-    // Every request sets `memoryCacheKey`, so Coil keys an unprocessed entry
-    // `Key(cacheKey)` with no size extra: one lookup finds it. The scan
+    // Every request sets `memoryCacheKey`, so Coil keys a view-sized
+    // unprocessed entry `Key(cacheKey)`: one lookup finds it. The scan
     // copies and filters every key in the cache, on the main thread, for
-    // each candidate key a view tries, so it is only the fallback for an
-    // entry keyed with other extras.
+    // each candidate key a view tries, so it is only the fallback, for an
+    // original-size entry (`COIL_SIZE_EXTRA`).
     memoryCache[MemoryCache.Key(cacheKey)]?.let { return it.image.asDrawable(resources) }
     val key = memoryKeysFor(cacheKey).firstOrNull { TRANSFORMATIONS_EXTRA !in it.extras } ?: return null
     return memoryCache[key]?.image?.asDrawable(resources)

@@ -41,6 +41,35 @@ internal fun ResolvedRequest.toCoilRequest(context: Context, view: View?): Image
   ImageRequest.Builder(context)
     .data(url)
     .memoryCacheKey(cacheKey)
+    .apply {
+      // An explicit `memoryCacheKey` carries no size, so Coil judges an entry
+      // by its pixels alone. That shared one entry between original-size and
+      // view-sized loads of a key: after an original-size load (a `'memory'`
+      // prefetch, `center`, `allowDownscaling={false}`) thumbnails were drawn
+      // from the full-size bitmap. And an SVG is a "sampled" bitmap, which
+      // Coil never accepts for `Size.ORIGINAL`, so original-size SVGs were
+      // drawn again from the disk on every load. With Coil's own size extra,
+      // original-size entries are separate and matched exactly, as Nuke's
+      // keys (no `thumbnail`) are on iOS.
+      //
+      //
+      // Under `allowDownscaling={false}` an SVG is drawn at `vectorDecode`
+      // (the view's size, or `resize`'s width), not at the original. A
+      // processed one puts that size in the key, as iOS's `processorID`
+      // does, or views of different sizes would share one processed drawing
+      // (the smoke suite's `svgFullSizeTintedSmaller`). Before the view has a
+      // size there is none to put in, so such a request keeps the plain key
+      // and is drawn again, as before. Known trade-off: an *unprocessed*
+      // opt-out SVG keeps the shared key, so two views of it at different
+      // sizes share the first one's drawing; on iOS it stays a vector.
+      if (decode == ResolvedRequest.DecodeSize.Original) {
+        val vectorKey = if (processorKey.isEmpty() || vectorDecode == decode) "" else vectorKey(vectorDecode, view)
+        if (vectorKey != null) {
+          memoryCacheKeyExtra(COIL_SIZE_EXTRA, Size.ORIGINAL.toString())
+          if (vectorKey.isNotEmpty()) memoryCacheKeyExtra(VECTOR_SIZE_EXTRA, vectorKey)
+        }
+      }
+    }
     .diskCacheKey(diskKey())
     .memoryCachePolicy(tierPolicy(memoryRead, memoryWrite))
     .diskCachePolicy(tierPolicy(diskRead, diskWrite))
@@ -60,6 +89,32 @@ internal fun ResolvedRequest.toCoilRequest(context: Context, view: View?): Image
         transformations(CoreProcessingTransformation(processorKey))
       }
     }
+
+/**
+ * The memory-key extra under which Coil records the size an entry was
+ * resolved for, and which `MemoryCacheService.isCacheValueValidForSize`
+ * compares with a request's size before anything else. Coil's own name,
+ * internal to it (3.6.3); `CacheTest.anOriginalSizeSvgIsServedFromMemory`
+ * fails if it changes.
+ */
+internal const val COIL_SIZE_EXTRA = "coil#size"
+
+/** The size a processed vector is drawn at, when that is not the decode's. */
+private const val VECTOR_SIZE_EXTRA = "turboimage#vector"
+
+/**
+ * [vector] as a key part, in whole pixels like iOS's `processorID`; null when
+ * it is the view's size and the view has none yet.
+ */
+private fun vectorKey(vector: ResolvedRequest.DecodeSize, view: View?): String? =
+  when (vector) {
+    ResolvedRequest.DecodeSize.Original -> ""
+    is ResolvedRequest.DecodeSize.Width -> "w=${vector.pixels}"
+    is ResolvedRequest.DecodeSize.View ->
+      view?.takeIf { it.width > 0 && it.height > 0 }?.let {
+        "${it.width}x${it.height}" + if (vector.fill) ",fill" else ""
+      }
+  }
 
 /**
  * The core's decode target as Coil sizing. Coil samples while decoding
