@@ -22,6 +22,19 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<!-- Deep links such as turboimageexample://performance?count=1000 (App.tsx).
+	     Scripts pass the same link as `-launchURL`, which needs no confirmation. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>org.reactjs.native.example.TurboImageExample</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>turboimageexample</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>

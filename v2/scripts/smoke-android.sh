@@ -37,7 +37,10 @@ start_fixture_server
 "${adb}" uninstall "${package}" > /dev/null 2>&1 || true
 "${adb}" install "${apk}" > /dev/null
 "${adb}" logcat -c
-"${adb}" shell am start -n "${package}/.MainActivity" > /dev/null
+# The app opens on its Home screen; this link opens the smoke test instead
+# (the intent filter in AndroidManifest.xml, read by App.tsx).
+"${adb}" shell am start -a android.intent.action.VIEW \
+  -d "turboimageexample://smoke" -n "${package}/.MainActivity" > /dev/null
 
 # Saves the device log and free space on failure, since the next run's
 # `logcat -c` erases it (low /data makes Android evict app caches).

@@ -18,7 +18,8 @@
     "check:versions": "bash scripts/check-native-versions.sh",
     "vendor:nuke": "bash scripts/build-nuke-xcframework.sh",
     "example:android": "bun run --filter turbo-image-example build:android",
-    "example:ios": "bun run --filter turbo-image-example build:ios"
+    "example:ios": "bun run --filter turbo-image-example build:ios",
+    "fixtures": "bash scripts/serve-fixtures.sh"
   },
   "devDependencies": {
     "oxfmt": "0.79.0",

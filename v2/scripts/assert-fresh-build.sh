@@ -31,7 +31,9 @@ _fresh_build_sources() {
     "${v2_root}/packages/react-native-turbo-image/cpp/include" \
     "${v2_root}/packages/react-native-turbo-image/cpp/src" \
     "${v2_root}/packages/react-native-turbo-image/${platform_sources}" \
+    "${v2_root}/apps/example/index.js" \
     "${v2_root}/apps/example/App.tsx" \
+    "${v2_root}/apps/example/src" \
     -path '*/vendor' -prune -o -path '*/__tests__' -prune -o \
     -type f "$@"
 }

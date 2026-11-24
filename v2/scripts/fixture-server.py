@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Local HTTP server for the smoke test (apps/example/App.tsx).
+"""Local HTTP server for the example app: its smoke test
+(apps/example/src/smoke/SmokeTest.tsx) and its demo screens.
 
 Serves the committed fixtures (apps/example/fixtures/) with header-dependent
 responses, chosen Cache-Control, throttled bodies, and per-path request
@@ -22,12 +23,18 @@ Routes (<name> is free, so each scenario gets its own URL and cache entry):
   /cache/fresh/<name>.jpg      Cache-Control: max-age=3600
   /cache/nostore/<name>.jpg    Cache-Control: no-store
   /cache/revalidate/<name>.jpg Cache-Control: no-cache + ETag (304 when matched)
-  /__hits?path=<path>          JSON {"count", "conditional"} for that path
+  /__hits?path=<path>          JSON {"count", "conditional", "aborted"} for that path
+  /__hits?prefix=<prefix>      the same, summed over every path under prefix
   /__ping                      200, for the smoke scripts' readiness check
 
-Loopback only; Android reaches it through `adb reverse`.
+`aborted` counts responses the client closed mid-body (a cancelled load).
+Only slow bodies are still being written when that happens, so it is
+meaningful for /slow/ paths only.
 
-Usage: python3 scripts/fixture-server.py [--port 8765] [--log <file>]
+Loopback by default; Android reaches it through `adb reverse`. `--host
+0.0.0.0` serves the LAN too, for a physical iPhone.
+
+Usage: python3 scripts/fixture-server.py [--port 8765] [--host 127.0.0.1] [--log <file>]
 """
 
 import argparse
@@ -71,7 +78,10 @@ CACHE_HEADERS = {
 NOT_AN_IMAGE = b"<!doctype html><title>Not found</title><p>This page is not an image.</p>\n"
 
 hits_lock = threading.Lock()
-hits = {}  # path -> {"count": requests seen, "conditional": of those, with If-None-Match}
+# path -> {"count": requests seen, "conditional": of those, with If-None-Match,
+#          "aborted": of those, closed by the client before the body was sent}
+hits = {}
+EMPTY_HITS = {"count": 0, "conditional": 0, "aborted": 0}
 log_file = None
 
 
@@ -91,14 +101,22 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/__ping":
             return self.reply(200, b"ok", "text/plain")
         if path == "/__hits":
-            wanted = parse_qs(url.query).get("path", [""])[0]
+            query = parse_qs(url.query)
+            counts = dict(EMPTY_HITS)
             with hits_lock:
-                counts = dict(hits.get(wanted, {"count": 0, "conditional": 0}))
+                if "prefix" in query:
+                    prefix = query["prefix"][0]
+                    matching = [v for k, v in hits.items() if k.startswith(prefix)]
+                else:
+                    matching = [hits.get(query.get("path", [""])[0], EMPTY_HITS)]
+                for entry in matching:
+                    for key in counts:
+                        counts[key] += entry[key]
             return self.reply(200, json.dumps(counts).encode(), "application/json")
 
         validator = self.headers.get("If-None-Match")
         with hits_lock:
-            entry = hits.setdefault(path, {"count": 0, "conditional": 0})
+            entry = hits.setdefault(path, dict(EMPTY_HITS))
             entry["count"] += 1
             entry["conditional"] += validator is not None
 
@@ -153,6 +171,8 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             # A cancelled load closed the connection; expected, not an error.
             self.close_connection = True
+            with hits_lock:
+                hits[urlsplit(self.path).path]["aborted"] += 1
 
     def log_message(self, fmt, *args):
         if log_file is None:
@@ -167,12 +187,13 @@ def main():
     global log_file
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--log", type=pathlib.Path)
     args = parser.parse_args()
     if args.log:
         args.log.parent.mkdir(parents=True, exist_ok=True)
         log_file = args.log.open("w")
-    ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()
+    ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
 
 
 if __name__ == "__main__":

@@ -23,6 +23,17 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!--
+          turboimageexample://smoke opens the smoke test (scripts/smoke-android.sh);
+          turboimageexample://performance?count=1000 a benchmark run. App.tsx
+          reads the link with Linking.getInitialURL().
+        -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="turboimageexample" />
+        </intent-filter>
       </activity>
     </application>
 </manifest>

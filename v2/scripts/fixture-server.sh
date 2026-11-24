@@ -7,7 +7,7 @@
 #        fixture_server_log  its request log (empty with the pid)
 # The caller kills ${fixture_server_pid} in its EXIT trap.
 
-# Must match BASE in apps/example/App.tsx.
+# Must match BASE in apps/example/src/fixtures.ts.
 fixture_server_port=8765
 fixture_server_pid=""
 fixture_server_log=""

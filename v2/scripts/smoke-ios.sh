@@ -50,7 +50,10 @@ xcrun simctl spawn "${udid}" log stream --style compact \
   --predicate 'eventMessage CONTAINS "TURBOIMAGE_SMOKE"' > "${log_file}" 2>&1 &
 log_pid=$!
 
-xcrun simctl launch "${udid}" "${bundle_id}" > /dev/null
+# The app opens on its Home screen; this launch argument opens the smoke test
+# instead (App.tsx reads it through RN's Settings, i.e. NSUserDefaults).
+# Not `simctl openurl`: iOS asks "Open in …?" first, which no one answers.
+xcrun simctl launch "${udid}" "${bundle_id}" -launchURL "turboimageexample://smoke" > /dev/null
 
 line=""
 for ((elapsed = 0; elapsed < timeout_s; elapsed += 2)); do
