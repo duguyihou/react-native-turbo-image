@@ -2,6 +2,7 @@ package com.turboimage.loader
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import coil3.memory.MemoryCache
 import com.turboimage.core.CachePolicy
 import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.Processing
@@ -202,6 +203,21 @@ class CacheTest : AdapterTest() {
 
     assertNotNull(memoryCached(resolve(uri)))
     assertNull(memoryCached(resolve(photo())))
+  }
+
+  /**
+   * What `memoryCachedDrawable`'s one-lookup path relies on: with an
+   * explicit `memoryCacheKey`, Coil keys an unprocessed entry by the cache
+   * key alone, whatever size it was decoded at. Were that to change (a Coil
+   * upgrade), lookups would silently fall back to scanning every key.
+   */
+  @Test
+  fun anUnprocessedEntryIsKeyedByTheCacheKeyAlone() {
+    val request = resolve(photo())
+    load(request)
+
+    val keys = onMain { adapter.imageLoader.memoryCache!!.keys }
+    assertTrue(MemoryCache.Key(request.cacheKey) in keys)
   }
 
   /** A blurred or tinted variant must not stand in for the image. */

@@ -12,6 +12,7 @@ import android.util.Log
 import android.widget.ImageView
 import coil3.ImageLoader
 import coil3.asDrawable
+import coil3.memory.MemoryCache
 import coil3.network.HttpException
 import coil3.network.httpHeaders
 import coil3.request.CachePolicy
@@ -43,7 +44,8 @@ import java.util.concurrent.Executors
  */
 class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSizes()) : ImageLoaderAdapter {
   private val appContext = context.applicationContext
-  private val imageLoader: ImageLoader = buildImageLoader(appContext, cacheSizes)
+  // Internal for the instrumented tests, which check how Coil keys entries.
+  internal val imageLoader: ImageLoader = buildImageLoader(appContext, cacheSizes)
 
   override fun load(
     target: ImageView,
@@ -294,8 +296,15 @@ class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes = CacheSiz
   override fun memoryCachedDrawable(cacheKey: String, resources: Resources): Drawable? {
     // The unprocessed image only, like Nuke's (imageID, no processors) key:
     // a blurred variant must not stand in as another view's placeholder.
+    val memoryCache = imageLoader.memoryCache ?: return null
+    // Every request sets `memoryCacheKey`, so Coil keys an unprocessed entry
+    // `Key(cacheKey)` with no size extra: one lookup finds it. The scan
+    // copies and filters every key in the cache, on the main thread, for
+    // each candidate key a view tries, so it is only the fallback for an
+    // entry keyed with other extras.
+    memoryCache[MemoryCache.Key(cacheKey)]?.let { return it.image.asDrawable(resources) }
     val key = memoryKeysFor(cacheKey).firstOrNull { TRANSFORMATIONS_EXTRA !in it.extras } ?: return null
-    return imageLoader.memoryCache?.get(key)?.image?.asDrawable(resources)
+    return memoryCache[key]?.image?.asDrawable(resources)
   }
 
   /**
