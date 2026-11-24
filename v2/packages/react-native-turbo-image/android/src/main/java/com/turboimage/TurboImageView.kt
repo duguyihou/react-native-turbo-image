@@ -464,7 +464,16 @@ class TurboImageView(
 
   private fun emitCompletion(state: String) = emit("topCompletion") { putString("state", state) }
 
-  private fun emit(name: String, payload: WritableMap.() -> Unit) {
+  private fun emit(name: String, payload: WritableMap.() -> Unit) = eventSink(name, payload)
+
+  /**
+   * Where events go: React Native's event dispatcher. Replaced only by the
+   * instrumented view tests (src/androidTest), which run without a React
+   * instance, so there is no dispatcher to reach (`UIManagerHelper` casts the
+   * context to an interface only React Native's own bridgeless context
+   * implements) and no native map to build the payload in.
+   */
+  internal var eventSink: (name: String, payload: WritableMap.() -> Unit) -> Unit = { name, payload ->
     val event = TurboImageEvent(UIManagerHelper.getSurfaceId(this), id, name, Arguments.createMap().apply(payload))
     UIManagerHelper.getEventDispatcher(reactContext)?.dispatchEvent(event)
   }
