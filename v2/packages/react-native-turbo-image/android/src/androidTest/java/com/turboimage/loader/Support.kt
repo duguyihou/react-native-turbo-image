@@ -48,6 +48,8 @@ data class Outcome(
   /** The decoded size, or null if the load failed or never completed. */
   val width: Int? = null,
   val height: Int? = null,
+  /** Whether the loaded image is animated. */
+  val animated: Boolean = false,
   /** A `LoadErrorCode`, or null if the load succeeded or never completed. */
   val error: LoadErrorCode? = null,
   val message: String? = null,
@@ -156,8 +158,8 @@ internal abstract class AdapterTest {
         else result.copy(progress = result.progress + (completed to total))
     }
 
-    override fun onSuccess(width: Int, height: Int) {
-      result = result.copy(width = width, height = height, completed = true)
+    override fun onSuccess(width: Int, height: Int, animated: Boolean) {
+      result = result.copy(width = width, height = height, animated = animated, completed = true)
       done.countDown()
     }
 

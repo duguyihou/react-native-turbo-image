@@ -68,6 +68,16 @@ class TurboImageViewTest {
     assertEquals("JS hears nothing", emptyList<String>(), eventNames())
   }
 
+  // An upgrade would restart the animation; iOS skips them too.
+  @Test
+  fun anAnimatedImageIsNeverLoadedAgain() = onMain {
+    showLoadedImage(animated = true)
+
+    resize(900, 600)
+
+    assertEquals(1, loader.loads.size)
+  }
+
   @Test
   fun growingByHalfOrLessKeepsTheImage() = onMain {
     showLoadedImage()
@@ -150,7 +160,7 @@ class TurboImageViewTest {
 
     // A callback after cancel (a seam violation) must be ignored.
     events.clear()
-    upgrade.listener.onSuccess(600, 400)
+    upgrade.listener.onSuccess(600, 400, false)
     assertEquals(emptyList<String>(), eventNames())
   }
 
@@ -294,11 +304,12 @@ class TurboImageViewTest {
     request: ImageRequest = ImageRequest(uri = URL),
     decodedWidth: Int = 300,
     decodedHeight: Int = 200,
+    animated: Boolean = false,
   ) {
     resize(300, 200)
     view.request = request
     view.onTransactionEnd()
-    loader.loads.single().succeed(decodedWidth, decodedHeight)
+    loader.loads.single().succeed(decodedWidth, decodedHeight, animated)
     assertEquals(listOf("topStart", "topSuccess", "topCompletion"), eventNames())
     events.clear()
   }
@@ -350,10 +361,10 @@ private class FakeLoader : ImageLoaderAdapter {
   ) {
     var cancelled = false
 
-    fun succeed(width: Int, height: Int) {
+    fun succeed(width: Int, height: Int, animated: Boolean = false) {
       check(!cancelled) { "a cancelled load cannot succeed" }
       target.setImageDrawable(SizedDrawable(width, height))
-      listener.onSuccess(width, height)
+      listener.onSuccess(width, height, animated)
     }
 
     fun fail() {

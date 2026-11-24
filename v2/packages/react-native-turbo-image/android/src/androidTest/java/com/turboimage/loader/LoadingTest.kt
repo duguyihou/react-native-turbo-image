@@ -43,6 +43,17 @@ internal class LoadingTest : AdapterTest() {
   }
 
   /** `loadPlaceholder` returns a view-sized image; the view decides whether to show it. */
+  /** The view skips upgrades for animated images, so the adapter must say which they are. */
+  @Test
+  fun animatedImagesAreReportedAsAnimated() {
+    for (path in listOf("anim.gif", "anim.png", "anim.webp")) {
+      val outcome = load(resolve(fixture(path)))
+      assertTrue(path, outcome.succeeded)
+      assertTrue(path, outcome.animated)
+    }
+    assertFalse("a still", load(resolve(photo())).animated)
+  }
+
   @Test
   fun aPlaceholderLoadReturnsTheImageWithoutPaintingTheView() {
     val view = addView()

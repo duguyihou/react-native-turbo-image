@@ -367,14 +367,14 @@ class TurboImageView internal constructor(
             emitProgress(completed, total)
           }
 
-          override fun onSuccess(width: Int, height: Int) =
+          override fun onSuccess(width: Int, height: Int, animated: Boolean) =
             perform(
               lifecycle.loadSucceeded(token),
               object : StepEffects() {
                 override fun deliverSuccess() {
                   cancelPlaceholderLoad()
                   deliverSuccess(width, height, request.url)
-                  remember(request, width, height, sizeAtStart)
+                  remember(request, width, height, animated, sizeAtStart)
                 }
               })
 
@@ -391,9 +391,12 @@ class TurboImageView internal constructor(
   }
 
   /** Records a view-sized image, then checks whether the view already outgrew it. */
-  private fun remember(request: ResolvedRequest, width: Int, height: Int, sizeAtStart: Pair<Int, Int>) {
+  private fun remember(
+    request: ResolvedRequest, width: Int, height: Int, animated: Boolean, sizeAtStart: Pair<Int, Int>,
+  ) {
     val decode = request.decode as? ResolvedRequest.DecodeSize.View
-    if (decode == null) {
+    // Never upgrade an animation: the reload would restart it (as on iOS).
+    if (decode == null || animated) {
       upgradable = null
       return
     }
@@ -412,7 +415,6 @@ class TurboImageView internal constructor(
   /**
    * Silently reloads at the view's size if the view outgrew the image; on
    * failure the shown image stays.
-   * TODO: animated images restart on upgrade; skip them if that matters.
    */
   private fun upgradeIfOutgrown() {
     val shown = upgradable ?: return
@@ -436,7 +438,7 @@ class TurboImageView internal constructor(
         object : ImageLoaderAdapter.Listener {
           override fun onProgress(completed: Long, total: Long) = Unit
 
-          override fun onSuccess(width: Int, height: Int) {
+          override fun onSuccess(width: Int, height: Int, animated: Boolean) {
             // Coil has painted it; false only if already cancelled.
             if (!lifecycle.upgradeSucceeded(token)) return
             handle = null

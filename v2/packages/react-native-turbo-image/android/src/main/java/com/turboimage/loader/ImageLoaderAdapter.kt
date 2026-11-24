@@ -82,7 +82,8 @@ internal interface ImageLoaderAdapter {
     /** Bytes received / expected; `total` <= 0 when unknown. */
     fun onProgress(completed: Long, total: Long)
 
-    fun onSuccess(width: Int, height: Int)
+    /** `animated`: the image plays (GIF, APNG, animated WebP). */
+    fun onSuccess(width: Int, height: Int, animated: Boolean)
 
     /**
      * @param code a `turboimage::LoadErrorCode` value.

@@ -31,9 +31,9 @@ extension point is a five-year compatibility commitment.
 | S8 | P2 | Defer (**done**, 2026-11-25) | tvOS: label experimental, invest nothing further | S |
 | S9 | P2 | Fixed | iOS: re-apply the placeholder when only `placeholder.uri` changes | S |
 | S10 | P2 | Fixed | JNI `static_assert` for `ResizeMode::ScaleDown` | S |
-| S11 | P2 | Verify | Duplicate `Nuke` module when the app also links Nuke | S |
+| S11 | P2 | Verify (**skipped**, 2026-11-25: unlikely, and 1.x vendored Nuke the same way; kept as a known risk) | Duplicate `Nuke` module when the app also links Nuke | S |
 | S12 | P3 | Measure, then keep or remove | `loadEventMask` | S |
-| S13 | P3 | Simplify | Android: skip animated images in upgrades, as iOS does | S |
+| S13 | P3 | Simplify (**done**, 2026-11-25) | Android: skip animated images in upgrades, as iOS does | S |
 | S14 | P3 | Document | A written scope rule for the C++ core | S |
 | S15 | P3 | Deprecate in 2.x, remove in 3.0 | `rounded`, `indicator`, `dataCache`, `format`, `isProgressiveImageRenderingEnabled`, `placeholder.memoryCacheKey` | S |
 

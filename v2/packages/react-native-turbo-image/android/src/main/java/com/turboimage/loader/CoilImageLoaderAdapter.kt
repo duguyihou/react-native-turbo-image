@@ -2,6 +2,7 @@ package com.turboimage.loader
 
 import android.content.Context
 import android.content.res.Resources
+import android.graphics.drawable.Animatable
 import android.graphics.ImageDecoder
 import android.os.Build
 import android.graphics.drawable.Drawable
@@ -10,6 +11,8 @@ import android.os.Looper
 import android.os.Message
 import android.util.Log
 import android.widget.ImageView
+import coil3.BitmapImage
+import coil3.Image
 import coil3.ImageLoader
 import coil3.asDrawable
 import coil3.memory.MemoryCache
@@ -85,7 +88,7 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
         .listener(
           onSuccess = { _, result ->
             complete()
-            listener.onSuccess(result.image.width, result.image.height)
+            listener.onSuccess(result.image.width, result.image.height, isAnimated(result.image, target))
           },
           onError = { _, result ->
             complete()
@@ -269,6 +272,10 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
       error is IOException -> LoadErrorCode.NETWORK.nativeValue
       else -> LoadErrorCode.DECODE.nativeValue
     }
+
+  // A still is a BitmapImage; animated formats decode to an Animatable drawable.
+  private fun isAnimated(image: Image, view: ImageView): Boolean =
+    image !is BitmapImage && image.asDrawable(view.resources) is Animatable
 
   companion object {
     private const val LOG_TAG = "TurboImage"

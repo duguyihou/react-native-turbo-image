@@ -46,7 +46,8 @@ a load of its own kind:
 - Not upgraded: requests whose decode does not follow the view
   (`allowDownscaling={false}`, `resize`, `center`, `blur`); on iOS,
   animated images (Nuke's player sizes its frames itself) and SVG (drawn
-  sharp at any size). On Android an upgraded animation restarts.
+  sharp at any size). On Android an upgraded animation restarted, so
+  animated images are not upgraded there either (amended 2026-11-25).
 
 More: RFC §4.5c ("A view that grows gets a sharper copy");
 `cpp/include/turboimage/ImageRequest.h` (`needsLargerDecode`);
