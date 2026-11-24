@@ -134,6 +134,39 @@ class CoilImageLoaderAdapter(context: Context) : ImageLoaderAdapter {
     }
   }
 
+  override fun loadPlaceholder(
+    sizeOf: ImageView,
+    request: ResolvedRequest,
+    onDone: (Drawable?) -> Unit,
+  ): LoadHandle {
+    var finished = false
+    val coilRequest =
+      request.toCoilRequest(sizeOf.context, sizeOf)
+        .httpHeaders(request.networkHeaders().build())
+        // A callback target, not the view: the view shows the result only if
+        // its lifecycle still wants this placeholder.
+        .target(
+          onSuccess = { image ->
+            if (!finished) {
+              finished = true
+              onDone(image.asDrawable(sizeOf.resources))
+            }
+          },
+          onError = {
+            if (!finished) {
+              finished = true
+              onDone(null)
+            }
+          },
+        )
+        .build()
+    val disposable = imageLoader.enqueue(coilRequest)
+    return LoadHandle {
+      finished = true
+      disposable.dispose()
+    }
+  }
+
   override fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle {
     var finished = false
     val coilRequest =

@@ -1,11 +1,14 @@
 package com.turboimage.loader
 
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.turboimage.core.CachePolicy
 import com.turboimage.core.LoadErrorCode
 import com.turboimage.core.Processing
 import com.turboimage.core.ResizeMode
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -32,6 +35,31 @@ class LoadingTest : AdapterTest() {
     assertTrue(outcome.succeeded)
     assertEquals(VIEW_WIDTH to VIEW_HEIGHT, outcome.width to outcome.height)
     assertNotNull(outcome.view.drawable)
+  }
+
+  /**
+   * `loadPlaceholder`: the image comes back sized for the view, and the
+   * adapter leaves the view alone, because the view decides whether a
+   * placeholder may still be shown.
+   */
+  @Test
+  fun aPlaceholderLoadReturnsTheImageWithoutPaintingTheView() {
+    val view = addView()
+    val done = CountDownLatch(1)
+    var drawable: Drawable? = null
+    onMain {
+      adapter.loadPlaceholder(view, resolve(photo())) {
+        drawable = it
+        done.countDown()
+      }
+    }
+    assertTrue(done.await(TIMEOUT_SECONDS, TimeUnit.SECONDS))
+
+    onMain {
+      assertNotNull(drawable)
+      assertEquals(VIEW_WIDTH to VIEW_HEIGHT, drawable!!.intrinsicWidth to drawable!!.intrinsicHeight)
+      assertNull("the view is the caller's", view.drawable)
+    }
   }
 
   @Test

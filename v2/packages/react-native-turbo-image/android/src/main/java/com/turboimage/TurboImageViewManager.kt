@@ -1,5 +1,6 @@
 package com.turboimage
 
+import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.module.annotations.ReactModule
 import com.facebook.react.uimanager.SimpleViewManager
@@ -42,11 +43,28 @@ class TurboImageViewManager :
       )
   }
 
+  override fun setSources(view: TurboImageView, value: ReadableArray?) {
+    view.candidates =
+      (0 until (value?.size() ?: 0)).mapNotNull { i ->
+        val entry = value?.getMap(i) ?: return@mapNotNull null
+        TurboImageView.SourceCandidate(
+          uri = entry.getString("uri")?.let { resolveSourceUri(view.context, it) }.orEmpty(),
+          cacheKey = if (entry.hasKey("cacheKey")) entry.getString("cacheKey") else null,
+          width = if (entry.hasKey("width")) entry.getDouble("width") else 0.0,
+          height = if (entry.hasKey("height")) entry.getDouble("height") else 0.0,
+        )
+      }
+  }
+
   override fun setPlaceholder(view: TurboImageView, value: ReadableMap?) {
     view.blurhash = if (value?.hasKey("blurhash") == true) value.getString("blurhash") else null
     view.thumbhash = if (value?.hasKey("thumbhash") == true) value.getString("thumbhash") else null
     view.memoryCacheKey =
       if (value?.hasKey("memoryCacheKey") == true) value.getString("memoryCacheKey") else null
+    // Resolved like a source: a `require()` asset is a bare resource name in
+    // release builds.
+    view.placeholderUri =
+      if (value?.hasKey("uri") == true) value.getString("uri")?.let { resolveSourceUri(view.context, it) } else null
   }
 
   override fun setRecyclingKey(view: TurboImageView, value: String?) {

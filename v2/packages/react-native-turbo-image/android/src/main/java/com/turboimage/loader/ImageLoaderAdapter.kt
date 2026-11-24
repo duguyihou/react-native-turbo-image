@@ -49,6 +49,22 @@ interface ImageLoaderAdapter {
   // Cache management, backing TurboImageModule. Requests are resolved by the
   // core, like a view's, so views and the module agree on every key.
 
+  /**
+   * Loads an image placeholder (`placeholder.uri`): like [load], through the
+   * same caches and sized for [sizeOf] as [load] sizes for its target, but
+   * the adapter never touches the view. The view decides whether the result
+   * may still be shown, because the image it stands in for may have got
+   * there first. [onDone] fires once on the main thread, with null when the
+   * load failed, unless the handle is cancelled first.
+   *
+   * The default supports no image placeholders: an adapter written before
+   * them keeps compiling, and such views show none.
+   */
+  fun loadPlaceholder(sizeOf: ImageView, request: ResolvedRequest, onDone: (Drawable?) -> Unit): LoadHandle {
+    onDone(null)
+    return LoadHandle {}
+  }
+
   /** Loads into the caches without a view; [onDone] once on the main thread. */
   fun prefetch(request: ResolvedRequest, onDone: (Boolean) -> Unit): LoadHandle
 

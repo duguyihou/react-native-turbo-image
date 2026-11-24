@@ -11,6 +11,7 @@ import com.facebook.react.bridge.JavaOnlyMap
 import com.facebook.react.uimanager.ThemedReactContext
 import com.turboimage.core.ImageRequest
 import com.turboimage.core.LoadErrorCode
+import com.turboimage.core.Processing
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.loader.ImageLoaderAdapter
 import com.turboimage.loader.LoadHandle
@@ -37,8 +38,10 @@ import org.junit.runner.RunWith
  * Fabric's layout does. Everything runs on the main thread, as in an app.
  *
  * Covered: upgrades (a view that outgrows its image loads it again at its new
- * size, silently) and replacing the adapter through [TurboImageLoaders].
- * TODO: placeholders, `recyclingKey` and progress through the fake.
+ * size, silently), source sets ([TurboImageView.candidates]), image
+ * placeholders ([TurboImageView.placeholderUri]) and replacing the adapter
+ * through [TurboImageLoaders]. TODO: hash placeholders, `recyclingKey` and
+ * progress through the fake.
  */
 @RunWith(AndroidJUnit4::class)
 class TurboImageViewTest {
@@ -177,6 +180,137 @@ class TurboImageViewTest {
     assertEquals(emptyList<String>(), eventNames())
   }
 
+  // MARK: Source sets
+
+  /** Three sizes of one square image, in pixels: half, once and four times a 300 px view. */
+  private fun setSourceSet() {
+    view.candidates =
+      listOf(
+        TurboImageView.SourceCandidate("https://images.example.com/set/small.jpg", null, 150.0, 150.0),
+        TurboImageView.SourceCandidate("https://images.example.com/set/medium.jpg", null, 300.0, 300.0),
+        TurboImageView.SourceCandidate("https://images.example.com/set/large.jpg", null, 1200.0, 1200.0),
+      )
+    view.request = view.request.copy(uri = "https://images.example.com/set/medium.jpg")
+    view.onTransactionEnd()
+  }
+
+  private fun fileOf(load: FakeLoader.Load) = load.request.url.substringAfterLast('/')
+
+  @Test
+  fun aSourceSetLoadsTheSmallestSizeTheViewDoesNotScaleUp() = onMain {
+    resize(300, 300)
+
+    setSourceSet()
+
+    assertEquals("medium.jpg", fileOf(loader.loads.single()))
+  }
+
+  @Test
+  fun aSetGivenBeforeLayoutChoosesOnceTheViewHasASize() {
+    // Fabric sets a new view's props before it lays the view out, in the
+    // same turn of the main loop.
+    onMain {
+      setSourceSet()
+      assertEquals("onStart at once, as for any load", listOf("topStart"), eventNames())
+      assertEquals("nothing chosen without a size", 0, loader.loads.size)
+      resize(300, 300)
+    }
+    instrumentation.waitForIdleSync()
+
+    onMain { assertEquals("medium.jpg", fileOf(loader.loads.single())) }
+  }
+
+  @Test
+  fun aViewThatGrowsPastItsSizeLoadsTheNextOne() = onMain {
+    resize(300, 300)
+    setSourceSet()
+    // Smaller than the view: on its own that is the source at its own size,
+    // which no decode makes sharper. A larger candidate still does.
+    loader.loads[0].succeed(240, 240)
+    events.clear()
+
+    resize(600, 600)
+
+    assertEquals(2, loader.loads.size)
+    assertEquals("large.jpg", fileOf(loader.loads[1]))
+    assertEquals("JS hears nothing", emptyList<String>(), eventNames())
+  }
+
+  @Test
+  fun aFailedLargerSizeIsNotTriedAgain() = onMain {
+    resize(300, 300)
+    setSourceSet()
+    loader.loads[0].succeed(300, 300)
+    resize(600, 600)
+
+    loader.loads[1].fail()
+    resize(900, 900)
+
+    assertEquals(2, loader.loads.size)
+  }
+
+  @Test
+  fun aChangedSetLoadsAgain() = onMain {
+    resize(300, 300)
+    setSourceSet()
+    loader.loads[0].succeed(300, 300)
+
+    view.candidates = view.candidates.toMutableList().also { it[1] = it[1].copy(uri = "https://images.example.com/set/medium-v2.jpg") }
+    view.onTransactionEnd()
+
+    assertEquals("medium-v2.jpg", fileOf(loader.loads[1]))
+  }
+
+  // MARK: Image placeholders
+
+  private fun setSourceWithThumbnail() {
+    resize(300, 200)
+    view.placeholderUri = THUMB_URL
+    view.request = ImageRequest(uri = URL)
+    view.onTransactionEnd()
+  }
+
+  @Test
+  fun anImagePlaceholderShowsWhileTheImageLoads() = onMain {
+    setSourceWithThumbnail()
+    val thumb = loader.placeholderLoads.single()
+    assertEquals(THUMB_URL, thumb.request.url)
+
+    thumb.deliver(SizedDrawable(30, 20))
+
+    assertEquals(30, view.drawable.intrinsicWidth)
+    loader.loads.single().succeed(300, 200)
+    assertEquals(300, view.drawable.intrinsicWidth)
+    assertEquals("no events of its own", listOf("topStart", "topSuccess", "topCompletion"), eventNames())
+  }
+
+  @Test
+  fun aPlaceholderThatArrivesLateIsNotShownOverTheImage() = onMain {
+    setSourceWithThumbnail()
+    val thumb = loader.placeholderLoads.single()
+    loader.loads.single().succeed(300, 200)
+
+    assertTrue("no longer needed", thumb.cancelled)
+    // The seam forbids a callback after cancel; if one came, it must not win.
+    thumb.deliver(SizedDrawable(30, 20))
+
+    assertEquals(300, view.drawable.intrinsicWidth)
+  }
+
+  @Test
+  fun anImagePlaceholderUsesTheSourcesHeadersAndNoProcessing() = onMain {
+    resize(300, 200)
+    view.placeholderUri = THUMB_URL
+    view.request =
+      ImageRequest(uri = URL, headers = listOf("Authorization" to "Bearer t0ken"), processing = Processing(blur = 8.0))
+    view.onTransactionEnd()
+
+    val thumb = loader.placeholderLoads.single().request
+    assertEquals(listOf("Authorization" to "Bearer t0ken"), thumb.headers)
+    assertEquals("", thumb.processorKey)
+    assertTrue(loader.loads.single().request.processorKey.isNotEmpty())
+  }
+
   // MARK: Replacing the adapter
 
   @Test
@@ -236,6 +370,7 @@ class TurboImageViewTest {
   private companion object {
     // Never fetched: the fake loader serves every request.
     const val URL = "https://images.example.com/photos/harbour.jpg"
+    const val THUMB_URL = "https://images.example.com/photos/harbour-thumb.jpg"
   }
 }
 
@@ -266,6 +401,22 @@ private class FakeLoader : ImageLoaderAdapter {
   }
 
   val loads = mutableListOf<Load>()
+
+  /** One placeholder load; [deliver] answers it as the adapter would. */
+  class PlaceholderLoad(val request: ResolvedRequest, private val onDone: (Drawable?) -> Unit) {
+    var cancelled = false
+
+    /** Ignores [cancelled] on purpose: tests use it to play a misbehaving adapter too. */
+    fun deliver(drawable: Drawable?) = onDone(drawable)
+  }
+
+  val placeholderLoads = mutableListOf<PlaceholderLoad>()
+
+  override fun loadPlaceholder(sizeOf: ImageView, request: ResolvedRequest, onDone: (Drawable?) -> Unit): LoadHandle {
+    val load = PlaceholderLoad(request, onDone)
+    placeholderLoads += load
+    return LoadHandle { load.cancelled = true }
+  }
 
   override fun load(
     target: ImageView,

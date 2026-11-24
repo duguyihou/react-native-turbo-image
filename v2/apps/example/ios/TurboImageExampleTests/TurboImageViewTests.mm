@@ -17,7 +17,8 @@
 // suite.
 //
 // Covered: upgrades (a view that outgrows its image loads it again at its
-// new size). TODO: placeholders, `recyclingKey` and Live Text.
+// new size), source sets (`sources`) and image placeholders
+// (`placeholder.uri`). TODO: hash placeholders, `recyclingKey` and Live Text.
 
 #import <XCTest/XCTest.h>
 
@@ -67,6 +68,14 @@ using namespace facebook::react;
         [context fillRect:CGRectMake(0, 0, pixels.width, pixels.height)];
       }];
   _completion(image, animation, NO, nil);
+}
+
+/// What a loader that ignored a cancel would do. The seam forbids it; the
+/// view must still not show what arrives.
+- (void)deliverDespiteCancelWithPixels:(CGSize)pixels {
+  _cancelled = NO;
+  [self succeedWithPixels:pixels];
+  _cancelled = YES;
 }
 
 - (void)fail {
@@ -268,6 +277,144 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
   [_view prepareForRecycle];
 
   XCTAssertTrue(_loader.loads[1].cancelled);
+}
+
+#pragma mark Source sets
+
+/// Three sizes of one image, square, in pixels: half, once and four times a
+/// 100 pt view on this screen.
+- (void)setSourceSet {
+  const CGFloat px = 100 * _scale;
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = "https://images.example.com/set/medium.jpg";
+    props.sources = {
+        {.uri = "https://images.example.com/set/small.jpg", .width = px / 2, .height = px / 2},
+        {.uri = "https://images.example.com/set/medium.jpg", .width = px, .height = px},
+        {.uri = "https://images.example.com/set/large.jpg", .width = 4 * px, .height = 4 * px},
+    };
+  }];
+}
+
+- (void)testASourceSetLoadsTheSmallestSizeTheViewDoesNotScaleUp {
+  [self resize:CGSizeMake(100, 100)];
+
+  [self setSourceSet];
+
+  XCTAssertEqual(_loader.loads.count, 1u);
+  XCTAssertEqualObjects(_loader.loads[0].request.url.lastPathComponent, @"medium.jpg");
+}
+
+- (void)testAViewThatGrowsPastItsSizeLoadsTheNextOne {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSourceSet];
+  // Decoded smaller than the view: on its own that is the source at its own
+  // size, which no decode makes sharper. A larger candidate still does.
+  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(80, 80)]];
+
+  [self resize:CGSizeMake(200, 200)];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+  XCTAssertEqualObjects(_loader.loads[1].request.url.lastPathComponent, @"large.jpg");
+}
+
+- (void)testAFailedLargerSizeIsNotTriedAgain {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSourceSet];
+  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+  [self resize:CGSizeMake(200, 200)];
+
+  [_loader.loads[1] fail];
+  [self resize:CGSizeMake(300, 300)];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+}
+
+- (void)testAShrinkingViewKeepsItsLargerSize {
+  [self resize:CGSizeMake(200, 200)];
+  [self setSourceSet];
+  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(200, 200)]];
+
+  [self resize:CGSizeMake(50, 50)];
+  [self resize:CGSizeMake(100, 100)];
+
+  XCTAssertEqual(_loader.loads.count, 1u);
+}
+
+- (void)testAChangedSetLoadsAgain {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSourceSet];
+  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+
+  [self setProps:^(TurboImageViewProps &props) {
+    props.sources[1].uri = "https://images.example.com/set/medium-v2.jpg";
+  }];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+  XCTAssertEqualObjects(_loader.loads[1].request.url.lastPathComponent, @"medium-v2.jpg");
+}
+
+#pragma mark Image placeholders
+
+static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-thumb.jpg";
+
+/// A 100 pt view loading `kURL` with `kThumbURL` as its placeholder.
+- (void)setSourceWithThumbnail {
+  [self resize:CGSizeMake(100, 100)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.placeholder.uri = std::string(kThumbURL.UTF8String);
+  }];
+}
+
+- (nullable TIFakeLoad *)loadOf:(NSString *)url {
+  for (TIFakeLoad *load in _loader.loads) {
+    if ([load.request.url.absoluteString isEqualToString:url]) {
+      return load;
+    }
+  }
+  return nil;
+}
+
+- (void)testAnImagePlaceholderShowsWhileTheImageLoads {
+  [self setSourceWithThumbnail];
+  TIFakeLoad *thumb = [self loadOf:kThumbURL];
+  XCTAssertNotNil(thumb, @"the placeholder loads beside the image");
+  XCTAssertNotNil([self loadOf:kURL]);
+
+  [thumb succeedWithPixels:CGSizeMake(10, 10)];
+
+  XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(10, 10)));
+
+  [[self loadOf:kURL] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+
+  XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, [self pixels:CGSizeMake(100, 100)]));
+}
+
+- (void)testAPlaceholderThatArrivesLateIsNotShownOverTheImage {
+  [self setSourceWithThumbnail];
+  TIFakeLoad *thumb = [self loadOf:kThumbURL];
+  [[self loadOf:kURL] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+
+  // The image cancelled it; a loader that called back anyway must not win.
+  XCTAssertTrue(thumb.cancelled, @"no longer needed");
+  [thumb deliverDespiteCancelWithPixels:CGSizeMake(10, 10)];
+
+  XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, [self pixels:CGSizeMake(100, 100)]));
+}
+
+- (void)testAnImagePlaceholderUsesTheSourcesHeadersAndNoProcessing {
+  [self resize:CGSizeMake(100, 100)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.source.headers = {{.name = "Authorization", .value = "Bearer t0ken"}};
+    props.blur = 8;
+    props.placeholder.uri = std::string(kThumbURL.UTF8String);
+  }];
+
+  TIImageRequest *thumb = [self loadOf:kThumbURL].request;
+  XCTAssertEqualObjects(thumb.headers, (@[ @[ @"Authorization", @"Bearer t0ken" ] ]));
+  XCTAssertEqualObjects(thumb.processorKey, @"");
+  XCTAssertNotEqualObjects([self loadOf:kURL].request.processorKey, @"");
 }
 
 #pragma mark Helpers

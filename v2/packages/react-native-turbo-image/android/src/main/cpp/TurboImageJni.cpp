@@ -634,3 +634,50 @@ Java_com_turboimage_core_TurboImageCore_nativeLifecycleDrop(JNIEnv* env, jobject
     }));
   });
 }
+
+namespace {
+
+// A source set's sizes, flattened as (width, height) pairs in a jdoubleArray.
+std::vector<turboimage::PixelSize> toPixelSizes(JNIEnv* env, jdoubleArray flat) {
+  const jsize length = env->GetArrayLength(flat);
+  std::vector<jdouble> values(static_cast<std::size_t>(length));
+  env->GetDoubleArrayRegion(flat, 0, length, values.data());
+  std::vector<turboimage::PixelSize> sizes;
+  sizes.reserve(values.size() / 2);
+  for (std::size_t i = 0; i + 1 < values.size(); i += 2) {
+    sizes.push_back({values[i], values[i + 1]});
+  }
+  return sizes;
+}
+
+}  // namespace
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeChooseSource(JNIEnv* env, jobject /* this */,
+                                                            jdoubleArray sizes, jdouble viewWidth,
+                                                            jdouble viewHeight, jint resizeMode,
+                                                            jboolean allowDownscaling) {
+  return guarded(env, static_cast<jint>(0), [&]() -> jint {
+    return static_cast<jint>(turboimage::chooseSource(
+        toPixelSizes(env, sizes), {viewWidth, viewHeight},
+        static_cast<turboimage::ResizeMode>(resizeMode), allowDownscaling == JNI_TRUE));
+  });
+}
+
+// -1 when no larger source applies.
+extern "C" JNIEXPORT jint JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLargerSourceFor(JNIEnv* env, jobject /* this */,
+                                                               jdoubleArray sizes, jint current,
+                                                               jdouble nowWidth, jdouble nowHeight,
+                                                               jint resizeMode,
+                                                               jboolean allowDownscaling) {
+  return guarded(env, static_cast<jint>(-1), [&]() -> jint {
+    if (current < 0) {
+      return -1;
+    }
+    const auto larger = turboimage::largerSourceFor(
+        toPixelSizes(env, sizes), static_cast<std::size_t>(current), {nowWidth, nowHeight},
+        static_cast<turboimage::ResizeMode>(resizeMode), allowDownscaling == JNI_TRUE);
+    return larger ? static_cast<jint>(*larger) : -1;
+  });
+}

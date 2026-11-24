@@ -113,6 +113,36 @@ std::vector<turboimage::Header> toHeaders(const TurboImageViewSourceStruct &sour
   return headers;
 }
 
+// One entry of a source set (`sources`), as the view compares and loads it.
+struct TICandidate {
+  std::string uri;
+  std::string cacheKey;
+  turboimage::PixelSize size;
+  bool operator==(const TICandidate &other) const {
+    return uri == other.uri && cacheKey == other.cacheKey && size.width == other.size.width &&
+           size.height == other.size.height;
+  }
+};
+
+std::vector<TICandidate> toCandidates(const TurboImageViewProps &props) {
+  std::vector<TICandidate> candidates;
+  candidates.reserve(props.sources.size());
+  for (const auto &source : props.sources) {
+    candidates.push_back(
+        {.uri = source.uri, .cacheKey = source.cacheKey, .size = {source.width, source.height}});
+  }
+  return candidates;
+}
+
+std::vector<turboimage::PixelSize> sizesOf(const std::vector<TICandidate> &candidates) {
+  std::vector<turboimage::PixelSize> sizes;
+  sizes.reserve(candidates.size());
+  for (const auto &candidate : candidates) {
+    sizes.push_back(candidate.size);
+  }
+  return sizes;
+}
+
 turboimage::ProcessingOptions toProcessing(const TurboImageViewProps &props) {
   return {
       .resize = props.resize,
@@ -211,6 +241,16 @@ struct TIStepEffects {
   TIImageRequest *_upgradable;
   turboimage::PixelSize _upgradableDecoded;
   turboimage::PixelSize _upgradableLoadedFor;
+  // A source set (`sources`): the candidates the current load chose from,
+  // compared with the props like `_loadedRequest`, and the index of the one
+  // on screen, which an upgrade may replace with a larger one. Empty for a
+  // single `source`.
+  std::vector<TICandidate> _loadedCandidates;
+  std::size_t _upgradableCandidate;
+  // The placeholder's own load, for a placeholder given as an image
+  // (`placeholder.uri`). Never reported to JS; cancelled when a newer
+  // placeholder, the image itself or a recycle makes it moot.
+  id<TIImageLoadTask> _placeholderTask;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -289,8 +329,12 @@ struct TIStepEffects {
     // the core's request, not a list of props kept here, means a field added
     // to it can never be forgotten on one platform.
     auto request = [self coreRequest];
-    if (!_loadedRequest.has_value() || *_loadedRequest != request) {
+    auto candidates =
+        toCandidates(*std::static_pointer_cast<const TurboImageViewProps>(_props));
+    if (!_loadedRequest.has_value() || *_loadedRequest != request ||
+        _loadedCandidates != candidates) {
       _loadedRequest = std::move(request);
+      _loadedCandidates = std::move(candidates);
       // A reload may clear the view, so the placeholder must be (re)applied.
       _needsPlaceholder = YES;
       [self reload];
@@ -338,7 +382,10 @@ struct TIStepEffects {
   // app passes several anyway, as it always has.
   const auto kind = !props.placeholder.memoryCacheKey.empty()
                         ? turboimage::PlaceholderKind::MemoryCacheKey
-                        : !props.placeholder.blurhash.empty() || !props.placeholder.thumbhash.empty()
+                        // An image placeholder arrives later, like a decoded
+                        // hash, and the lifecycle treats it the same way.
+                        : !props.placeholder.blurhash.empty() || !props.placeholder.thumbhash.empty() ||
+                                  !props.placeholder.uri.empty()
                               ? turboimage::PlaceholderKind::Hash
                               : turboimage::PlaceholderKind::None;
   return {.placeholder = kind, .showPlaceholderOnFailure = props.showPlaceholderOnFailure};
@@ -357,7 +404,8 @@ struct TIStepEffects {
   _lastProgressTotal = -1;
 
   // Requests that cannot be started fail before onStart: no load ever began.
-  TIRequestResult built = [self makeRequest:*_loadedRequest];
+  const std::size_t candidate = [self candidateForViewSize];
+  TIRequestResult built = [self makeRequest:[self requestForCandidate:candidate]];
   if (built.request != nil && TIImageLoaderRegistry.sharedLoader == nil) {
     built = {.request = nil,
              .error = turboimage::LoadErrorCode::Unknown,
@@ -367,7 +415,7 @@ struct TIStepEffects {
   if (built.request != nil) {
     TIImageRequest *request = built.request;
     step.startLoad = ^(int64_t token) {
-      [self startLoad:request token:token];
+      [self startLoad:request candidate:candidate token:token];
     };
   } else {
     const auto code = built.error;
@@ -445,7 +493,7 @@ struct TIStepEffects {
 
 #pragma mark - Loading
 
-- (void)startLoad:(TIImageRequest *)request token:(int64_t)token {
+- (void)startLoad:(TIImageRequest *)request candidate:(std::size_t)candidate token:(int64_t)token {
   NSString *source = request.url.absoluteString;
 
   [self emitStart];
@@ -475,7 +523,11 @@ struct TIStepEffects {
                              animation:animation
                        fromMemoryCache:fromMemoryCache
                                 source:source];
-            [strongSelf rememberImage:image animation:animation request:request];
+            [strongSelf cancelPlaceholderLoad];
+            [strongSelf rememberImage:image
+                            animation:animation
+                              request:request
+                            candidate:candidate];
           };
           [strongSelf perform:strongSelf->_lifecycle.loadSucceeded(token) step:step];
         } else {
@@ -504,6 +556,34 @@ struct TIStepEffects {
   const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
                                           self.bounds.size.height * pixelRatio);
   return TIMakeImageRequest(request, viewPixelSize);
+}
+
+// The view's size in pixels, which bounds the decode and picks a source.
+- (turboimage::PixelSize)viewPixelSize {
+  const CGFloat pixelRatio = RCTScreenScale();
+  return {self.bounds.size.width * pixelRatio, self.bounds.size.height * pixelRatio};
+}
+
+// Which of a source set's candidates this view should load now
+// (`turboimage::chooseSource`); 0 for a single source.
+- (std::size_t)candidateForViewSize {
+  if (_loadedCandidates.empty() || !_loadedRequest.has_value()) {
+    return 0;
+  }
+  return turboimage::chooseSource(sizesOf(_loadedCandidates), [self viewPixelSize],
+                                  _loadedRequest->resizeMode, _loadedRequest->allowDownscaling);
+}
+
+// The loaded request with a source set's candidate in place of `source`.
+// Everything else (headers, policy, processing) is the request's.
+- (turboimage::ImageRequest)requestForCandidate:(std::size_t)candidate {
+  turboimage::ImageRequest request = *_loadedRequest;
+  if (candidate < _loadedCandidates.size()) {
+    const auto &chosen = _loadedCandidates[candidate];
+    request.uri = chosen.uri;
+    request.cacheKey = TIOptionalCacheKey(chosen.cacheKey);
+  }
+  return request;
 }
 
 // The current props as the core's request: everything they say about which
@@ -578,13 +658,17 @@ struct TIStepEffects {
 // (SVG): it has no pixels (`CGImage` is nil) and is drawn sharp at any size.
 // Not for a request whose decode does not follow the view: `decodeSize`
 // with no height is a `resize` width, and zero is the original size.
-- (void)rememberImage:(UIImage *)image animation:(nullable id)animation request:(TIImageRequest *)request {
+- (void)rememberImage:(UIImage *)image
+            animation:(nullable id)animation
+              request:(TIImageRequest *)request
+            candidate:(std::size_t)candidate {
   const CGSize bound = request.decodeSize;
   if (animation != nil || image.CGImage == nil || bound.width <= 0 || bound.height <= 0) {
     _upgradable = nil;
     return;
   }
   _upgradable = request;
+  _upgradableCandidate = candidate;
   const CGFloat scale = image.scale > 0 ? image.scale : 1;
   _upgradableDecoded = {image.size.width * scale, image.size.height * scale};
   _upgradableLoadedFor = {bound.width, bound.height};
@@ -599,15 +683,25 @@ struct TIStepEffects {
   if (_upgradable == nil || !_loadedRequest.has_value()) {
     return;
   }
-  const CGFloat pixelRatio = RCTScreenScale();
-  const turboimage::PixelSize now{self.bounds.size.width * pixelRatio,
-                                  self.bounds.size.height * pixelRatio};
-  if (!turboimage::needsLargerDecode(_upgradableDecoded, _upgradableLoadedFor, now,
-                                     _upgradable.decodeFill)) {
+  const turboimage::PixelSize now = [self viewPixelSize];
+  // A source set may have a larger candidate for the new size; otherwise the
+  // same candidate may need decoding larger.
+  std::size_t candidate = _upgradableCandidate;
+  const auto larger =
+      _loadedCandidates.empty()
+          ? std::nullopt
+          : turboimage::largerSourceFor(sizesOf(_loadedCandidates), _upgradableCandidate, now,
+                                        _loadedRequest->resizeMode,
+                                        _loadedRequest->allowDownscaling);
+  const BOOL switching = larger.has_value();
+  if (larger) {
+    candidate = *larger;
+  } else if (!turboimage::needsLargerDecode(_upgradableDecoded, _upgradableLoadedFor, now,
+                                            _upgradable.decodeFill)) {
     return;
   }
-  // The same request at the view's current size, through the same factory.
-  TIRequestResult built = [self makeRequest:*_loadedRequest];
+  // The request at the view's current size, through the same factory.
+  TIRequestResult built = [self makeRequest:[self requestForCandidate:candidate]];
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
   if (built.request == nil || loader == nil) {
     return;
@@ -633,8 +727,13 @@ struct TIStepEffects {
           strongSelf->_task = nil;
           // Not again for this image: recorded as loaded for the size it
           // failed at, the rule takes the image for the source at its own
-          // size. A new source, or a reload, starts over.
+          // size. A larger candidate that failed is not tried on every later
+          // growth step either: no more upgrades. A new source, or a reload,
+          // starts over.
           strongSelf->_upgradableLoadedFor = now;
+          if (switching) {
+            strongSelf->_upgradable = nil;
+          }
           return;
         }
         if (!strongSelf->_lifecycle.upgradeSucceeded(token)) {
@@ -646,7 +745,7 @@ struct TIStepEffects {
         [strongSelf updateLiveText];
         // Records the new image and asks again, in case the view kept
         // growing meanwhile.
-        [strongSelf rememberImage:image animation:animation request:request];
+        [strongSelf rememberImage:image animation:animation request:request candidate:candidate];
       }];
   // Already finished if the completion ran inside the call above.
   if (_lifecycle.isUpgrading(token)) {
@@ -710,6 +809,10 @@ struct TIStepEffects {
 // which the lifecycle answers by the decode's generation.
 - (void)decodePlaceholder:(int64_t)generation {
   const auto &props = *std::static_pointer_cast<const TurboImageViewProps>(_props);
+  if (!props.placeholder.uri.empty()) {
+    [self loadPlaceholder:props.placeholder.uri generation:generation];
+    return;
+  }
   // Copied into the block: props may change before the decode runs.
   const std::string blurhash = props.placeholder.blurhash;
   const std::string thumbhash = props.placeholder.thumbhash;
@@ -737,14 +840,65 @@ struct TIStepEffects {
   });
 }
 
+// An image placeholder: loaded like a source (from the caches when it is
+// there), at the view's size, with the source's headers, unprocessed and
+// without events, then shown unless the image or a newer placeholder got
+// there first, which the lifecycle answers by generation as for a decode.
+- (void)loadPlaceholder:(const std::string &)uri generation:(int64_t)generation {
+  [self cancelPlaceholderLoad];
+  id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
+  if (loader == nil || !_loadedRequest.has_value()) {
+    return;
+  }
+  turboimage::ImageRequest request = *_loadedRequest;
+  request.uri = uri;
+  request.cacheKey = std::nullopt;
+  request.cachePolicy = turboimage::CachePolicy::Default;
+  request.processing = {};
+  request.allowDownscaling = true;
+  TIRequestResult built = [self makeRequest:request];
+  if (built.request == nil) {
+    return;  // an unusable placeholder URI shows no placeholder
+  }
+  __weak __typeof(self) weakSelf = self;
+  __block BOOL finished = NO;
+  id<TIImageLoadTask> task = [loader loadImageWithRequest:built.request
+      progress:nil
+      completion:^(UIImage *image, id /* animation */, BOOL /* fromMemoryCache */, NSError *) {
+        finished = YES;
+        __typeof(self) strongSelf = weakSelf;
+        if (strongSelf == nil) {
+          return;
+        }
+        strongSelf->_placeholderTask = nil;
+        if (image != nil &&
+            strongSelf->_lifecycle.placeholderDecoded(generation, [strongSelf lifecycleProps])) {
+          // A still, even of an animated image: it is only a stand-in.
+          strongSelf->_imageView.image = image;
+        }
+      }];
+  // Already finished if the completion ran inside the call (a memory hit):
+  // nothing is left to cancel.
+  if (!finished) {
+    _placeholderTask = task;
+  }
+}
+
+- (void)cancelPlaceholderLoad {
+  [_placeholderTask cancel];
+  _placeholderTask = nil;
+}
+
 - (void)prepareForRecycle {
   [super prepareForRecycle];
+  [self cancelPlaceholderLoad];
   // Stops the load and any decode and clears the image, with no event: the
   // component that was listening is gone.
   [self perform:_lifecycle.recycle() step:TIStepEffects{}];
   _upgradable = nil;
   _propsChanged = NO;
   _loadedRequest.reset();
+  _loadedCandidates.clear();
   _needsPlaceholder = NO;
   _needsLiveTextUpdate = NO;
   [_liveText detach];

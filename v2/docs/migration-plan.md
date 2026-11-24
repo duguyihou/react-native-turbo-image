@@ -51,6 +51,8 @@ builds, and the CI matrix.
 | `headers` | Core-validated seam field | ✅ done (RFC §4.1). Per-source, as in 1.x; not part of the cache key or the coalescing identity; CR/LF/NUL and non-token names are rejected (`invalidRequest`). Cookies: iOS shares React Native's (`HTTPCookieStorage`), Android sends none, both as in 1.x. An app-wide hook for default headers is a TODO |
 | — (new in 2.0) `recyclingKey` | View-level prop on both platforms; not part of the request | ✅ done (RFC §4.4d). The previous image now stays up while a new source loads; a changed key blanks the view first. The smoke suite passes with it, but nothing yet checks what is on screen during the second load |
 | — (new in 2.0) `allowDownscaling` | Core decides the decode target; adapters downsample while decoding | ✅ done (RFC §4.5c). On by default: images are decoded no larger than the view (or the `resize` width). The disk keeps the original |
+| — (new in 2.0) `source` as an array of sizes | Core chooses (`chooseSource`); views load the chosen candidate as an ordinary request and switch to a larger one on growth | ✅ done (RFC §4.5c, "Source sets"). expo-image's form |
+| — (new in 2.0) `placeholder` as an image (`{ uri }`, `require()`) | Loaded through the adapter; the lifecycle treats it like a hash placeholder. Android seam: `loadPlaceholder` | ✅ done (RFC §4.5). expo-image's feature |
 
 **Phase 2 status: every 1.x prop, event, static method and exported type has a 2.0 home.** The 1.x type names (`Start`, `Success`, `ResizeMode`, …) are exported as aliases. The last hardening item before Phase 3, SVG at "full size", is done (RFC §4.5c): an SVG's own size is read as points/dp, and `allowDownscaling={false}` no longer shrinks one to it.
 

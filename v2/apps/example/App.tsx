@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { TurboImage } from 'react-native-turbo-image';
-import type { TurboImageProps } from 'react-native-turbo-image';
+import type { SizedSource, Source, TurboImageProps } from 'react-native-turbo-image';
 
 // Every remote fixture comes from scripts/fixture-server.py, which the smoke
 // scripts start on the host. The iOS simulator shares the host's loopback;
@@ -93,7 +93,11 @@ type Settle = (id: string, ok: boolean, outcome: string, detail: string) => void
 type Scenario = {
   id: string;
   title: string;
-  source: TurboImageProps['source'];
+  // A single source: the cache-module probes pass it to prefetch/dispose,
+  // which take no source sets.
+  source: Source;
+  // Passed instead of `source` when set: one image at several sizes.
+  sourceSet?: SizedSource[];
   cachePolicy: NonNullable<TurboImageProps['cachePolicy']>;
   // Failing scenarios carry a placeholder. With showPlaceholderOnFailure it
   // must stay visible after the failure, without it the view must be blank
@@ -116,6 +120,9 @@ type Scenario = {
   // For expected loads: the onSuccess size, within a couple of pixels (the
   // two platforms' decoders round a downscaled size differently).
   expectSizeNear?: { width: number; height: number };
+  // For expected loads: the URL onSuccess reports (which candidate of a
+  // source set loaded).
+  expectSource?: string;
   // For expected failures: the cross-platform `onFailure.code`.
   expectCode?: string;
   // For the urlCache probe: the requests the server must have seen for the
@@ -267,6 +274,37 @@ const SCENARIOS: Scenario[] = [
     cachePolicy: 'default',
     expect: 'load',
     kind: 'flatList',
+  },
+  {
+    // The card is CARD_WIDTH_PX wide and 3:2. Only the declared sizes matter
+    // to the choice (the fixture server sends the same photo for each): the
+    // smallest that covers the card is the middle one.
+    id: 'sourceSet',
+    title: 'a source set loads the smallest size that covers the card',
+    source: { uri: photo('set-fit') },
+    sourceSet: [
+      { uri: photo('set-small'), width: CARD_WIDTH_PX / 4, height: CARD_WIDTH_PX / 6 },
+      {
+        uri: photo('set-fit'),
+        width: Math.ceil(CARD_WIDTH_PX * 1.1),
+        height: Math.ceil((CARD_WIDTH_PX * 1.1 * 2) / 3),
+      },
+      { uri: photo('set-huge'), width: CARD_WIDTH_PX * 4, height: (CARD_WIDTH_PX * 8) / 3 },
+    ],
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSource: photo('set-fit'),
+  },
+  {
+    // The placeholder's own load is silent: the card sees one start, one
+    // success and one completion, for the image.
+    id: 'imagePlaceholder',
+    title: 'an image placeholder ({ uri }) while a slow image loads',
+    source: { uri: `${BASE}/slow/photo/image-placeholder.jpg` },
+    placeholder: { uri: photo('placeholder-thumb') },
+    cachePolicy: 'default',
+    expect: 'load',
+    expectSource: `${BASE}/slow/photo/image-placeholder.jpg`,
   },
   {
     id: 'legacyDataCache',
@@ -673,8 +711,7 @@ const SCENARIOS: Scenario[] = [
 ];
 
 // The probes that track a source by URI only ever get URI sources.
-const uriOf = (source: TurboImageProps['source']) =>
-  typeof source === 'number' ? `asset:${source}` : source.uri;
+const uriOf = (source: Source) => (typeof source === 'number' ? `asset:${source}` : source.uri);
 
 // Fail rather than hang if a callback never arrives (e.g. a lost event).
 const TIMEOUT_MS = 45_000;
@@ -1001,7 +1038,7 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
     <TurboImage
       testID={`image-${scenario.id}`}
       style={scenario.halfWidth ? styles.halfImage : styles.image}
-      source={scenario.source}
+      source={scenario.sourceSet ?? scenario.source}
       placeholder={scenario.placeholder}
       showPlaceholderOnFailure={scenario.showPlaceholderOnFailure}
       rounded={scenario.rounded}
@@ -1013,17 +1050,20 @@ function PlainImage({ scenario, settle }: { scenario: Scenario; settle: Settle }
       {...scenario.processing}
       resizeMode="cover"
       onSuccess={(e) => {
-        const { width, height } = e.nativeEvent;
+        const { width, height, source } = e.nativeEvent;
         const near = scenario.expectSizeNear;
         const sizeOk =
           (scenario.expectSize === undefined ||
             (width === scenario.expectSize.width && height === scenario.expectSize.height)) &&
           (near === undefined ||
             (Math.abs(width - near.width) <= 2 && Math.abs(height - near.height) <= 2));
-        const detail = near && !sizeOk ? ` (expected ≈${near.width}×${near.height})` : '';
+        const sourceOk = scenario.expectSource === undefined || source === scenario.expectSource;
+        const detail =
+          (near && !sizeOk ? ` (expected ≈${near.width}×${near.height})` : '') +
+          (sourceOk ? '' : ` from ${source} (expected ${scenario.expectSource})`);
         settle(
           scenario.id,
-          scenario.expect === 'load' && sizeOk,
+          scenario.expect === 'load' && sizeOk && sourceOk,
           'load',
           `${width}×${height}${detail}`
         );

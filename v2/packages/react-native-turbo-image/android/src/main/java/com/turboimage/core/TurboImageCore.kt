@@ -203,6 +203,49 @@ object TurboImageCore {
   @JvmName("nativeLifecycleUpgradeFailed")
   internal external fun nativeLifecycleUpgradeFailed(state: LongArray, token: Long)
 
+  /**
+   * `turboimage::chooseSource`: the index of the candidate a view of
+   * [viewWidth]×[viewHeight] pixels loads. [sizes] are the candidates'
+   * sizes in pixels, flattened as (width, height) pairs.
+   */
+  fun chooseSource(
+    sizes: DoubleArray,
+    viewWidth: Int,
+    viewHeight: Int,
+    resizeMode: ResizeMode,
+    allowDownscaling: Boolean,
+  ): Int = nativeChooseSource(sizes, viewWidth.toDouble(), viewHeight.toDouble(), resizeMode.nativeValue, allowDownscaling)
+
+  /** `turboimage::largerSourceFor`, or null when no larger candidate applies. */
+  fun largerSourceFor(
+    sizes: DoubleArray,
+    current: Int,
+    nowWidth: Int,
+    nowHeight: Int,
+    resizeMode: ResizeMode,
+    allowDownscaling: Boolean,
+  ): Int? =
+    nativeLargerSourceFor(
+      sizes, current, nowWidth.toDouble(), nowHeight.toDouble(), resizeMode.nativeValue, allowDownscaling)
+      .takeIf { it >= 0 }
+
+  private external fun nativeChooseSource(
+    sizes: DoubleArray,
+    viewWidth: Double,
+    viewHeight: Double,
+    resizeMode: Int,
+    allowDownscaling: Boolean,
+  ): Int
+
+  private external fun nativeLargerSourceFor(
+    sizes: DoubleArray,
+    current: Int,
+    nowWidth: Double,
+    nowHeight: Double,
+    resizeMode: Int,
+    allowDownscaling: Boolean,
+  ): Int
+
   /** `turboimage::needsLargerDecode`; sizes in pixels. */
   @JvmName("nativeNeedsLargerDecode")
   internal external fun nativeNeedsLargerDecode(

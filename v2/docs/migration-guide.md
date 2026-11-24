@@ -111,13 +111,47 @@ When `source` changes, 2.0 keeps the previous image on screen until the new one 
 
 When the key changes together with the source, the view is blanked (or shows its placeholder) first. This is the same contract as expo-image's prop of that name.
 
-### `source` may be a number
+### `source` may be a number or a list of sizes
 
-`source` now also accepts a `require()`d asset. TypeScript code that reads `.uri` off `TurboImageProps['source']` must narrow it first:
+`source` now also accepts a `require()`d asset, and an array of one image at several sizes (see below). Code that keeps sources around to pass to `TurboImage.prefetch` or `dispose`, or reads `.uri` off them, should type them as the exported `Source` (a single source) rather than `TurboImageProps['source']`, which now includes arrays, and narrow before reading `.uri`:
 
 ```ts
+import type { Source } from 'react-native-turbo-image';
+
 const uri = typeof source === 'number' ? undefined : source.uri;
 ```
+
+## New in 2.0, optional
+
+### One image at several sizes
+
+Give `source` the sizes your CDN serves, with each file's size in pixels, and the view loads the smallest one it does not have to scale up (expo-image's form):
+
+```tsx
+<TurboImage
+  source={[
+    { uri: 'https://cdn.example.com/p/ada-320.jpg', width: 320, height: 213 },
+    { uri: 'https://cdn.example.com/p/ada-1280.jpg', width: 1280, height: 853 },
+  ]}
+  style={{ width: '100%', aspectRatio: 3 / 2 }}
+/>
+```
+
+- `cover` and `stretch` pick a size that covers the view, `contain` one that fits it. If none is large enough, the largest. With `resizeMode="center"`, `allowDownscaling={false}`, or before the view has a size, the largest.
+- A view that grows past its size later loads the next one up, silently, keeping the image on screen meanwhile (as for `allowDownscaling`). It never switches to a smaller one.
+- The first entry's `headers` are sent with every size; other entries' headers are ignored (a development warning says so). `onSuccess.source` is the URL that loaded.
+
+### An image as the placeholder
+
+`placeholder` also takes an image, as `{ uri }` or `require('./thumb.jpg')`, typically a small thumbnail already in the cache from a list:
+
+```tsx
+<TurboImage source={{ uri: fullUrl }} placeholder={{ uri: thumbnailUrl }} />
+```
+
+It loads with the source's headers, unprocessed, and without events of its own, and it is never shown over the loaded image. As with a blurhash, it is removed if the image fails, unless `showPlaceholderOnFailure` is set.
+
+If you replaced the Android loader with `TurboImageLoaders.set`, your adapter shows no image placeholders until it implements `ImageLoaderAdapter.loadPlaceholder` (the default reports none).
 
 ## 4. Behaviour that changed
 

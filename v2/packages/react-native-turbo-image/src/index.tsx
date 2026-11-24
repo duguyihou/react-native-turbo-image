@@ -9,8 +9,10 @@ import type {
   CompletionEvent,
   FailureEvent,
   NativeHeader,
+  NativePlaceholder,
   NativeProps,
   NativeSource,
+  NativeSourceCandidate,
   ProgressEvent,
   StartEvent,
   SuccessEvent,
@@ -50,6 +52,16 @@ export type RemoteSource = Omit<NativeSource, 'headers'> & { headers?: HeadersIn
 // `android.resource://`.
 export type Source = RemoteSource | number;
 
+// One size of an image offered at several: `source={[thumb, screen, full]}`
+// (expo-image's form). `width` and `height` are this file's size in pixels.
+// The view loads the smallest that it does not have to scale up, and a larger
+// one if it grows. Headers come from the first entry and apply to all.
+export type SizedSource = RemoteSource & { width: number; height: number };
+
+// What `placeholder` takes: a blurhash, a thumbhash, a memory-cache key, or
+// any image as `{ uri }` or `require('./thumb.png')` (new in 2.0).
+export type PlaceholderSource = NativePlaceholder | number;
+
 function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | undefined {
   if (headers == null) {
     return undefined;
@@ -69,6 +81,58 @@ function toNativeHeaders(headers: HeadersInput | undefined): NativeHeader[] | un
     }
   }
   return out;
+}
+
+// A source set becomes `sources` plus a `source` that carries its headers.
+// One entry is just a source; none is an empty one, which the core rejects
+// (`invalidRequest`), as it does an empty `uri`.
+function toNativeSources(source: Source | ReadonlyArray<SizedSource>): {
+  source: NativeSource;
+  sources?: NativeSourceCandidate[];
+} {
+  if (!Array.isArray(source)) {
+    return { source: toNativeSource(source as Source) };
+  }
+  const set = source as ReadonlyArray<SizedSource>;
+  // The sizes go to `sources` only; `source` is the plain source.
+  const plain = (entry: SizedSource | undefined): RemoteSource => {
+    if (entry === undefined) {
+      return { uri: '' };
+    }
+    const { width: _width, height: _height, ...rest } = entry;
+    return rest;
+  };
+  if (set.length <= 1) {
+    return { source: toNativeSource(plain(set[0])) };
+  }
+  if (__DEV__ && set.slice(1).some((entry) => entry.headers != null)) {
+    console.warn(
+      "TurboImage: in a source array only the first entry's headers are sent, with every size."
+    );
+  }
+  return {
+    source: toNativeSource(plain(set[0])),
+    sources: set.map(({ uri, cacheKey, width, height }) => {
+      const candidate: { -readonly [K in keyof NativeSourceCandidate]: NativeSourceCandidate[K] } =
+        {
+          uri,
+          width: Number.isFinite(width) ? width : 0,
+          height: Number.isFinite(height) ? height : 0,
+        };
+      if (cacheKey !== undefined) {
+        candidate.cacheKey = cacheKey;
+      }
+      return candidate;
+    }),
+  };
+}
+
+function toNativePlaceholder(placeholder: PlaceholderSource | undefined) {
+  if (typeof placeholder === 'number') {
+    // A bundled asset, resolved as for `source`.
+    return { uri: Image.resolveAssetSource(placeholder)?.uri ?? '' };
+  }
+  return placeholder;
 }
 
 function toNativeSource(source: Source): NativeSource {
@@ -94,7 +158,7 @@ export type LegacyCachePolicy = 'dataCache';
 
 export type TurboImageProps = Omit<
   NativeProps,
-  'cachePolicy' | 'monochrome' | 'tint' | 'source' | 'recyclingKey'
+  'cachePolicy' | 'monochrome' | 'tint' | 'source' | 'sources' | 'placeholder' | 'recyclingKey'
 > & {
   /**
    * The outermost native view: the image view itself, or the container
@@ -103,7 +167,8 @@ export type TurboImageProps = Omit<
    * image's frame.
    */
   ref?: Ref<TurboImageInstance>;
-  source: Source;
+  source: Source | ReadonlyArray<SizedSource>;
+  placeholder?: PlaceholderSource;
   // See the native spec. `null` is accepted and means "no key", so code
   // written for expo-image (`string | null`) compiles unchanged.
   recyclingKey?: string | null;
@@ -173,6 +238,7 @@ function TurboImageComponent({
   rounded,
   style,
   source,
+  placeholder,
   // Accepted for 1.x compatibility and dropped; see the type's notes.
   format: _format,
   isProgressiveImageRenderingEnabled: _progressive,
@@ -189,7 +255,7 @@ function TurboImageComponent({
   //
   // 1.x quirk kept: an empty object (`indicator={{}}`) means no indicator.
   const showsIndicator =
-    indicator != null && Object.keys(indicator).length > 0 && !props.placeholder;
+    indicator != null && Object.keys(indicator).length > 0 && placeholder == null;
   const [spinning, setSpinning] = useState(false);
   const spinTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(spinTimer.current), []);
@@ -213,11 +279,11 @@ function TurboImageComponent({
   // without a placeholder. That combination is harmless (there is nothing to
   // keep), so 2.0 accepts it. Both are listed under "Breaking changes" in
   // docs/migration-plan.md.
-  if (__DEV__ && props.placeholder) {
-    const kinds = Object.values(props.placeholder).filter(Boolean).length;
+  if (__DEV__ && placeholder != null && typeof placeholder === 'object') {
+    const kinds = Object.values(placeholder).filter(Boolean).length;
     if (kinds > 1) {
       throw new Error(
-        'TurboImage: choose only one placeholder (blurhash, thumbhash or memoryCacheKey)'
+        'TurboImage: choose only one placeholder (blurhash, thumbhash, memoryCacheKey or uri)'
       );
     }
   }
@@ -229,13 +295,14 @@ function TurboImageComponent({
   const imageStyle = [styles.image, style, rounded && styles.rounded];
   const image = (
     <TurboImageView
-      {...(props as Omit<NativeProps, 'cachePolicy' | 'source' | 'recyclingKey'>)}
+      {...(props as Omit<NativeProps, 'cachePolicy' | 'source' | 'placeholder' | 'recyclingKey'>)}
       ref={needsContainer ? undefined : ref}
       // Codegen strings cannot be null.
       recyclingKey={recyclingKey ?? undefined}
       // A new object each render is fine: both native views compare the
       // request fields by value before reloading.
-      source={toNativeSource(source)}
+      {...toNativeSources(source)}
+      placeholder={toNativePlaceholder(placeholder)}
       style={needsContainer ? StyleSheet.absoluteFill : imageStyle}
       cachePolicy={resolveCachePolicy(cachePolicy)}
       // Without an indicator the app's handlers go straight through.

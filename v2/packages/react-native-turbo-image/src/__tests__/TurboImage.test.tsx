@@ -149,6 +149,45 @@ describe('source', () => {
   });
 });
 
+describe('source sets', () => {
+  const set = [
+    { uri: 'https://cdn.example.com/p/ada-320.jpg', width: 320, height: 213 },
+    { uri: 'https://cdn.example.com/p/ada-1280.jpg', width: 1280, height: 853, cacheKey: 'ada-l' },
+  ];
+
+  it('sends every size, and the first entry as the source that carries the headers', () => {
+    const props = nativeProps(
+      render({ source: [{ ...set[0], headers: { Authorization: 'Bearer t0ken' } }, set[1]] })
+    );
+    expect(props.source).toEqual({
+      uri: set[0].uri,
+      headers: [{ name: 'Authorization', value: 'Bearer t0ken' }],
+    });
+    expect(props.sources).toEqual([
+      { uri: set[0].uri, width: 320, height: 213 },
+      { uri: set[1].uri, cacheKey: 'ada-l', width: 1280, height: 853 },
+    ]);
+  });
+
+  it('treats one entry as a plain source and none as an empty one', () => {
+    const one = nativeProps(render({ source: [set[0]] }));
+    expect(one.source).toEqual({ uri: set[0].uri });
+    expect(one.sources).toBeUndefined();
+    expect(nativeProps(render({ source: [] })).source).toEqual({ uri: '' });
+  });
+
+  it('sends an unusable size as unknown (0)', () => {
+    const props = nativeProps(render({ source: [set[0], { ...set[1], width: Number.NaN }] }));
+    expect(props.sources[1].width).toBe(0);
+  });
+
+  it("warns in development that later entries' headers are not sent", () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    render({ source: [set[0], { ...set[1], headers: { 'X-Size': 'l' } }] });
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/first entry's headers/));
+  });
+});
+
 describe('cachePolicy', () => {
   it.each(['default', 'memoryOnly', 'noCache', 'cacheOnly', 'urlCache'] as const)(
     'passes the 2.0 policy %s through',
@@ -229,6 +268,27 @@ describe('placeholder', () => {
   it('accepts a single placeholder', () => {
     const placeholder = { thumbhash: '4AcKPJpwd3dwd3eHh3eAgAj3iA==' };
     expect(nativeProps(render({ placeholder })).placeholder).toEqual(placeholder);
+  });
+
+  it('accepts an image as { uri }', () => {
+    const placeholder = { uri: 'https://cdn.example.com/p/ada-32.jpg' };
+    expect(nativeProps(render({ placeholder })).placeholder).toEqual(placeholder);
+  });
+
+  it("resolves a require()'d image like a source", () => {
+    jest
+      .spyOn(Image, 'resolveAssetSource')
+      .mockReturnValue({ uri: 'file:///app/assets/grey@3x.png', width: 8, height: 8, scale: 3 });
+    expect(nativeProps(render({ placeholder: 12 })).placeholder).toEqual({
+      uri: 'file:///app/assets/grey@3x.png',
+    });
+  });
+
+  it('counts an image as a placeholder kind of its own', () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {}); // React logs the throw
+    expect(() =>
+      render({ placeholder: { uri: 'https://cdn.example.com/p/ada-32.jpg', thumbhash: '4AcK' } })
+    ).toThrow(/choose only one placeholder/);
   });
 });
 

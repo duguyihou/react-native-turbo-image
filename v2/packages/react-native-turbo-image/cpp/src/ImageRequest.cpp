@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 
 namespace turboimage {
 
@@ -276,6 +277,71 @@ bool needsLargerDecode(PixelSize decoded, PixelSize loadedFor, PixelSize now, bo
   const double upscale = fill ? std::max(horizontal, vertical) : std::min(horizontal, vertical);
   constexpr double kUpgradeRatio = 1.5;
   return upscale > kUpgradeRatio;
+}
+
+namespace {
+
+bool isKnown(PixelSize size) {
+  // false for NaN too.
+  return size.width > 0 && size.height > 0 && std::isfinite(size.width) &&
+         std::isfinite(size.height);
+}
+
+double area(PixelSize size) { return size.width * size.height; }
+
+// The first known candidate of the largest area, or nullopt if none is known.
+std::optional<std::size_t> largestSource(const std::vector<PixelSize>& candidates) {
+  std::optional<std::size_t> best;
+  for (std::size_t i = 0; i < candidates.size(); ++i) {
+    if (isKnown(candidates[i]) && (!best || area(candidates[i]) > area(candidates[*best]))) {
+      best = i;
+    }
+  }
+  return best;
+}
+
+}  // namespace
+
+std::size_t chooseSource(const std::vector<PixelSize>& candidates, PixelSize view,
+                         ResizeMode resizeMode, bool allowDownscaling) {
+  const auto largest = largestSource(candidates);
+  if (!largest) {
+    return 0;
+  }
+  if (!allowDownscaling || resizeMode == ResizeMode::Center || !isKnown(view)) {
+    return *largest;
+  }
+  // How much the view scales a candidate, by the decode-size rule: fill
+  // takes the larger of the two scales, fit the smaller. At most 1: the
+  // candidate has every pixel the view draws.
+  const bool fill = resizeMode == ResizeMode::Cover || resizeMode == ResizeMode::Stretch;
+  std::optional<std::size_t> best;
+  for (std::size_t i = 0; i < candidates.size(); ++i) {
+    const PixelSize candidate = candidates[i];
+    if (!isKnown(candidate)) {
+      continue;
+    }
+    const double horizontal = view.width / candidate.width;
+    const double vertical = view.height / candidate.height;
+    const double scale = fill ? std::max(horizontal, vertical) : std::min(horizontal, vertical);
+    if (scale <= 1 && (!best || area(candidate) < area(candidates[*best]))) {
+      best = i;
+    }
+  }
+  return best.value_or(*largest);
+}
+
+std::optional<std::size_t> largerSourceFor(const std::vector<PixelSize>& candidates,
+                                           std::size_t current, PixelSize now,
+                                           ResizeMode resizeMode, bool allowDownscaling) {
+  if (current >= candidates.size()) {
+    return std::nullopt;
+  }
+  const std::size_t next = chooseSource(candidates, now, resizeMode, allowDownscaling);
+  const bool larger = isKnown(candidates[next]) &&
+                      (!isKnown(candidates[current]) ||
+                       area(candidates[next]) > area(candidates[current]));
+  return larger ? std::optional<std::size_t>(next) : std::nullopt;
 }
 
 }  // namespace turboimage

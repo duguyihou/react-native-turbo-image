@@ -424,5 +424,66 @@ TEST(NeedsLargerDecode, UnknownSizesNeverReload) {
   EXPECT_FALSE(needsLargerDecode(nan, {300, 200}, {900, 600}, false));
 }
 
+// chooseSource / largerSourceFor: one image offered at several sizes.
+
+// A typical set: thumbnail, screen-sized and full-sized, 3:2.
+const std::vector<PixelSize> kSet{{300, 200}, {1200, 800}, {3000, 2000}};
+
+TEST(ChooseSource, TheSmallestThatTheViewDoesNotScaleUp) {
+  EXPECT_EQ(chooseSource(kSet, {300, 200}, ResizeMode::Contain, true), 0u);
+  // Contain is bound by the side that fits first: 301x200 draws a 3:2
+  // image 300x200, so the thumbnail is still enough; 301x201 is not.
+  EXPECT_EQ(chooseSource(kSet, {301, 200}, ResizeMode::Contain, true), 0u);
+  EXPECT_EQ(chooseSource(kSet, {301, 201}, ResizeMode::Contain, true), 1u);
+  EXPECT_EQ(chooseSource(kSet, {1200, 800}, ResizeMode::Contain, true), 1u);
+  EXPECT_EQ(chooseSource(kSet, {2000, 1000}, ResizeMode::Contain, true), 2u);
+}
+
+TEST(ChooseSource, OrderDoesNotMatterButTiesGoFirst) {
+  const std::vector<PixelSize> shuffled{{3000, 2000}, {300, 200}, {1200, 800}};
+  EXPECT_EQ(chooseSource(shuffled, {600, 400}, ResizeMode::Contain, true), 2u);
+  const std::vector<PixelSize> twins{{900, 600}, {900, 600}};
+  EXPECT_EQ(chooseSource(twins, {600, 400}, ResizeMode::Contain, true), 0u);
+}
+
+TEST(ChooseSource, CoverNeedsTheViewCoveredContainOnlyFitted) {
+  // A tall 300x900 view: fitting a 3:2 image takes 300 wide, covering it
+  // takes 900 tall, so 1350 wide.
+  EXPECT_EQ(chooseSource(kSet, {300, 900}, ResizeMode::Contain, true), 0u);
+  EXPECT_EQ(chooseSource(kSet, {300, 900}, ResizeMode::Cover, true), 2u);
+  EXPECT_EQ(chooseSource(kSet, {300, 900}, ResizeMode::Stretch, true), 2u);
+}
+
+TEST(ChooseSource, TheLargestWhenNoneIsLargeEnough) {
+  EXPECT_EQ(chooseSource(kSet, {6000, 4000}, ResizeMode::Contain, true), 2u);
+}
+
+TEST(ChooseSource, TheLargestWhenTheViewNeedsItsOwnSizeOrIsUnknown) {
+  EXPECT_EQ(chooseSource(kSet, {300, 200}, ResizeMode::Center, true), 2u);
+  EXPECT_EQ(chooseSource(kSet, {300, 200}, ResizeMode::Contain, false), 2u);
+  EXPECT_EQ(chooseSource(kSet, {0, 0}, ResizeMode::Contain, true), 2u);
+  EXPECT_EQ(chooseSource(kSet, {std::nan(""), 200}, ResizeMode::Contain, true), 2u);
+}
+
+TEST(ChooseSource, CandidatesOfUnknownSizeAreNeverPreferred) {
+  const std::vector<PixelSize> partial{{0, 0}, {1200, 800}, {std::nan(""), 5}};
+  EXPECT_EQ(chooseSource(partial, {300, 200}, ResizeMode::Contain, true), 1u);
+  EXPECT_EQ(chooseSource(std::vector<PixelSize>{{0, 0}, {0, 0}}, {300, 200},
+                         ResizeMode::Contain, true),
+            0u);
+  EXPECT_EQ(chooseSource({}, {300, 200}, ResizeMode::Contain, true), 0u);
+}
+
+TEST(LargerSourceFor, OnlyWhenTheChoiceGrows) {
+  // Showing the thumbnail in a view that grew to 600x400: the next size up.
+  EXPECT_EQ(largerSourceFor(kSet, 0, {600, 400}, ResizeMode::Contain, true), 1u);
+  // Still within the thumbnail: no switch.
+  EXPECT_EQ(largerSourceFor(kSet, 0, {300, 200}, ResizeMode::Contain, true), std::nullopt);
+  // Never down: the full size stays when the view shrinks.
+  EXPECT_EQ(largerSourceFor(kSet, 2, {300, 200}, ResizeMode::Contain, true), std::nullopt);
+  // Out of range (props changed under it): nothing.
+  EXPECT_EQ(largerSourceFor(kSet, 7, {600, 400}, ResizeMode::Contain, true), std::nullopt);
+}
+
 }  // namespace
 }  // namespace turboimage
