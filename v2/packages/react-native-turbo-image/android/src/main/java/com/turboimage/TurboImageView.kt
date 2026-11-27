@@ -9,7 +9,9 @@ import android.util.Log
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.LifecycleEventListener
 import com.facebook.react.bridge.WritableMap
+import com.facebook.react.common.LifecycleState
 import com.facebook.react.uimanager.BackgroundStyleApplicator
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
@@ -115,12 +117,36 @@ class TurboImageView internal constructor(
   /** Which load events JS has handlers for; [emit] sends only those. */
   var loadEventMask = ALL_LOAD_EVENTS
 
+  // Trips to the background, counted by this view. A load that fails with
+  // `network` after one was likely cut off by it, so it retries at once
+  // (see `ViewLifecycle::retry`); any other network failure waits for the
+  // next return to the foreground.
+  private var backgroundTrips = 0L
+  private var inForeground = reactContext.lifecycleState == LifecycleState.RESUMED
+  // RN calls `onHostResume` at once if the host is already resumed: harmless,
+  // since nothing has failed yet.
+  private val hostListener =
+    object : LifecycleEventListener {
+      override fun onHostResume() {
+        inForeground = true
+        retryFailedLoad()
+      }
+
+      override fun onHostPause() {
+        inForeground = false
+        backgroundTrips++
+      }
+
+      override fun onHostDestroy() = Unit
+    }
+
   init {
     // The spec default, `contain`.
     scaleType = ScaleType.FIT_CENTER
     // `cover` overflows the bounds, and Fabric parents don't clip children,
     // so clip here (like `clipsToBounds` on iOS).
     cropToPadding = true
+    reactContext.addLifecycleEventListener(hostListener)
   }
 
   // Clips everything drawn to inside the border and its rounded corners.
@@ -237,6 +263,7 @@ class TurboImageView internal constructor(
 
   /** The view is gone for good ([TurboImageViewManager.onDropViewInstance]). */
   fun drop() {
+    reactContext.removeLifecycleEventListener(hostListener)
     upgradable = null
     cancelPlaceholderLoad()
     perform(lifecycle.drop())
@@ -286,6 +313,23 @@ class TurboImageView internal constructor(
                 LoadErrorCode.INVALID_REQUEST.nativeValue,
                 "Invalid request (core error ${result.errorCode})")
           }
+      },
+    )
+  }
+
+  /**
+   * The failed load again, if the core allows it (a network failure, nothing
+   * since). Uses the request that failed, not props mid-transaction.
+   */
+  private fun retryFailedLoad() {
+    if (!lifecycle.mayRetry()) return
+    val result = loadedFor?.let { resolve(it.request) } as? ResolvedRequest ?: return
+    progressThrottle = ProgressThrottle()
+    lastProgressTotal = -1L
+    perform(
+      lifecycle.retry(placeholderKind(), showPlaceholderOnFailure),
+      object : StepEffects() {
+        override fun startLoad(token: Long) = startLoad(result, token)
       },
     )
   }
@@ -348,6 +392,7 @@ class TurboImageView internal constructor(
     emitStart()
     // The decode size if already laid out; otherwise the adapter waits for layout.
     val sizeAtStart = width to height
+    val tripsAtStart = backgroundTrips
 
     // The lifecycle also guards by token, so a stale callback does nothing.
     val thisHandle =
@@ -378,12 +423,16 @@ class TurboImageView internal constructor(
                 }
               })
 
-          override fun onError(code: Int, message: String) =
+          override fun onError(code: Int, message: String) {
             perform(
-              lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure),
+              lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure, code),
               object : StepEffects() {
                 override fun deliverFailure() = emitFailure(code, message)
               })
+            // Cut off by a trip to the background and back: retry now. Still
+            // in the background: `onHostResume` retries.
+            if (backgroundTrips != tripsAtStart && inForeground) retryFailedLoad()
+          }
         },
       )
     // A memory hit finishes inside `load()`; then there's nothing to keep.

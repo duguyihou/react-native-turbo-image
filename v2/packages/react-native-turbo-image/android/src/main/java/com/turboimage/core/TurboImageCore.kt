@@ -152,6 +152,14 @@ object TurboImageCore {
     token: Long,
     placeholder: Int,
     showPlaceholderOnFailure: Boolean,
+    code: Int,
+  ): LongArray
+
+  @JvmName("nativeLifecycleRetry")
+  internal external fun nativeLifecycleRetry(
+    state: LongArray,
+    placeholder: Int,
+    showPlaceholderOnFailure: Boolean,
   ): LongArray
 
   @JvmName("nativeLifecycleApplyPlaceholder")

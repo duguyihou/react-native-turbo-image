@@ -25,3 +25,4 @@ old one superseded.
 | [0013](0013-silent-upgrade-when-a-view-outgrows-its-image.md) | A view that outgrows its image reloads it silently |
 | [0014](0014-the-loader-seam-is-internal.md) | The loader seam is internal; apps cannot replace the loader |
 | [0015](0015-cocoapods-only-for-apps.md) | Apps integrate through CocoaPods only; Package.swift is for tests |
+| [0016](0016-retry-network-failures-on-foreground.md) | A network failure is retried when the app returns to the foreground |

@@ -29,8 +29,8 @@ class ViewLifecycle {
     }
   }
 
-  // showing, inFlight, lastToken, placeholderGeneration, upgrading.
-  private val state = LongArray(5)
+  // showing, inFlight, lastToken, placeholderGeneration, upgrading, retryable.
+  private val state = LongArray(6)
 
   fun reload(
     recyclingKeyChanged: Boolean,
@@ -47,8 +47,23 @@ class ViewLifecycle {
 
   fun loadSucceeded(token: Long): List<Effect> = effects(TurboImageCore.nativeLifecycleLoadSucceeded(state, token))
 
-  fun loadFailed(token: Long, placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
-    effects(TurboImageCore.nativeLifecycleLoadFailed(state, token, placeholder.nativeValue, showPlaceholderOnFailure))
+  /** [code] is a [LoadErrorCode] value; only `NETWORK` failures may be retried. */
+  fun loadFailed(
+    token: Long,
+    placeholder: PlaceholderKind,
+    showPlaceholderOnFailure: Boolean,
+    code: Int,
+  ): List<Effect> =
+    effects(
+      TurboImageCore.nativeLifecycleLoadFailed(
+        state, token, placeholder.nativeValue, showPlaceholderOnFailure, code))
+
+  /** Whether [retry] would start a load; a plain read, for the many views that won't. */
+  fun mayRetry(): Boolean = state[5] != 0L
+
+  /** The failed load again, as a new load with events; empty if it may not retry. */
+  fun retry(placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
+    effects(TurboImageCore.nativeLifecycleRetry(state, placeholder.nativeValue, showPlaceholderOnFailure))
 
   fun applyPlaceholder(placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
     effects(TurboImageCore.nativeLifecycleApplyPlaceholder(state, placeholder.nativeValue, showPlaceholderOnFailure))

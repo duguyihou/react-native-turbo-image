@@ -63,9 +63,9 @@ TI_ASSERT_ABI(turboimage::LifecycleEffect::Kind::DecodePlaceholder, 9);
 // State crosses as a LongArray(3); a new field would not round-trip.
 static_assert(sizeof(turboimage::ProgressThrottle) == 3 * sizeof(jlong),
               "ProgressThrottle no longer fits the LongArray(3) Kotlin keeps it in");
-// Likewise the view lifecycle, a LongArray(5).
-static_assert(sizeof(turboimage::ViewLifecycle) == 5 * sizeof(jlong),
-              "ViewLifecycle no longer fits the LongArray(5) Kotlin keeps it in");
+// Likewise the view lifecycle, a LongArray(6).
+static_assert(sizeof(turboimage::ViewLifecycle) == 6 * sizeof(jlong),
+              "ViewLifecycle no longer fits the LongArray(6) Kotlin keeps it in");
 
 // A Java exception is already pending; unwind to `guarded` without more JNI calls.
 struct JavaExceptionPending {};
@@ -404,12 +404,12 @@ Java_com_turboimage_core_TurboImageCore_nativeCoreVersion(JNIEnv* env, jobject /
 // ---------------------------------------------------------------------------
 // View lifecycle (turboimage/ViewLifecycle.h).
 //
-// State lives in a Kotlin LongArray(5): read, step, write back. Effects
+// State lives in a Kotlin LongArray(6): read, step, write back. Effects
 // return as (kind, value) pairs, in order.
 
 namespace {
 
-constexpr jsize kLifecycleFields = 5;
+constexpr jsize kLifecycleFields = 6;
 
 // Runs `step` on the lifecycle held in `state` and stores the result.
 template <typename Step>
@@ -422,12 +422,14 @@ auto withLifecycle(JNIEnv* env, jlongArray state, Step&& step) {
   lifecycle.lastToken = fields[2];
   lifecycle.placeholderGeneration = fields[3];
   lifecycle.upgrading = fields[4];
+  lifecycle.retryable = fields[5];
   auto result = step(lifecycle);
   fields[0] = lifecycle.showing;
   fields[1] = lifecycle.inFlight;
   fields[2] = lifecycle.lastToken;
   fields[3] = lifecycle.placeholderGeneration;
   fields[4] = lifecycle.upgrading;
+  fields[5] = lifecycle.retryable;
   env->SetLongArrayRegion(state, 0, kLifecycleFields, fields);
   return result;
 }
@@ -493,10 +495,22 @@ Java_com_turboimage_core_TurboImageCore_nativeLifecycleLoadSucceeded(JNIEnv* env
 extern "C" JNIEXPORT jlongArray JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeLifecycleLoadFailed(
     JNIEnv* env, jobject /* this */, jlongArray state, jlong token, jint placeholder,
-    jboolean showPlaceholderOnFailure) {
+    jboolean showPlaceholderOnFailure, jint code) {
   return guarded(env, static_cast<jlongArray>(nullptr), [&]() -> jlongArray {
     return toEffects(env, withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
-      return lifecycle.loadFailed(token, toLifecycleProps(placeholder, showPlaceholderOnFailure));
+      return lifecycle.loadFailed(token, toLifecycleProps(placeholder, showPlaceholderOnFailure),
+                                  static_cast<turboimage::LoadErrorCode>(code));
+    }));
+  });
+}
+
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLifecycleRetry(JNIEnv* env, jobject /* this */,
+                                                              jlongArray state, jint placeholder,
+                                                              jboolean showPlaceholderOnFailure) {
+  return guarded(env, static_cast<jlongArray>(nullptr), [&]() -> jlongArray {
+    return toEffects(env, withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
+      return lifecycle.retry(toLifecycleProps(placeholder, showPlaceholderOnFailure));
     }));
   });
 }

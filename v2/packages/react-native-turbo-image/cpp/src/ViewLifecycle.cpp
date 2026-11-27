@@ -67,6 +67,8 @@ void ViewLifecycle::fail(const LifecycleProps& props, LifecycleEffects& effects)
 LifecycleEffects ViewLifecycle::reload(bool recyclingKeyChanged, bool imageOnScreen,
                                        bool requestValid, const LifecycleProps& props) {
   LifecycleEffects effects;
+  // A new request: the old failure is moot, and an invalid one never heals.
+  retryable = 0;
   // Cancel any upgrade silently; JS never heard of it.
   if (upgrading != 0) {
     upgrading = 0;
@@ -108,14 +110,38 @@ LifecycleEffects ViewLifecycle::loadSucceeded(std::int64_t token) {
   return {{.kind = Kind::DeliverSuccess}, {.kind = Kind::EmitCompleted}};
 }
 
-LifecycleEffects ViewLifecycle::loadFailed(std::int64_t token, const LifecycleProps& props) {
+LifecycleEffects ViewLifecycle::loadFailed(std::int64_t token, const LifecycleProps& props,
+                                           LoadErrorCode code) {
   if (!isInFlight(token)) {
     return {};
   }
   inFlight = 0;
+  // Only the network can recover by itself. `NotCached` (`cacheOnly`) and
+  // `Decode` would fail the same way; `Unknown` might loop.
+  retryable = code == LoadErrorCode::Network ? 1 : 0;
   LifecycleEffects effects{{.kind = Kind::DeliverFailure}};
   fail(props, effects);
   effects.push_back({.kind = Kind::EmitCompleted});
+  return effects;
+}
+
+LifecycleEffects ViewLifecycle::retry(const LifecycleProps& props) {
+  // `inFlight` and `upgrading` are 0 whenever the view shows a failure; the
+  // checks keep a misuse from starting a second load.
+  if (retryable == 0 || showingState() != Showing::Failed || inFlight != 0 || upgrading != 0) {
+    return {};
+  }
+  retryable = 0;
+  // Loading again, as after a reload of a view with no image: the view is
+  // blank or shows the kept placeholder, so nothing needs clearing.
+  showing = toField(Showing::NoImage);
+  LifecycleEffects effects;
+  if (!props.showPlaceholderOnFailure) {
+    // The failure removed the placeholder; bring it back while retrying.
+    effects = applyPlaceholder(props);
+  }
+  inFlight = ++lastToken;
+  effects.push_back({.kind = Kind::StartLoad, .value = inFlight});
   return effects;
 }
 
@@ -150,6 +176,7 @@ LifecycleEffects ViewLifecycle::recycle() {
   }
   effects.push_back({.kind = Kind::ClearImage});
   showing = toField(Showing::NoImage);
+  retryable = 0;
   ++placeholderGeneration;  // drop any decode still in flight
   return effects;
 }
@@ -161,6 +188,8 @@ LifecycleEffects ViewLifecycle::drop() {
     upgrading = 0;
     effects.push_back({.kind = Kind::CancelLoad});
   }
+  // The view is gone; nothing may start on it again.
+  retryable = 0;
   ++placeholderGeneration;  // drop any decode still in flight
   return effects;
 }

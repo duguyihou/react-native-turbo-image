@@ -18,6 +18,9 @@ constexpr LifecycleProps kHash{.placeholder = PlaceholderKind::Hash};
 constexpr LifecycleProps kHashKeptOnFailure{.placeholder = PlaceholderKind::Hash,
                                             .showPlaceholderOnFailure = true};
 
+constexpr auto kDecode = LoadErrorCode::Decode;
+constexpr auto kNetwork = LoadErrorCode::Network;
+
 LifecycleEffects effects(std::initializer_list<LifecycleEffect> list) {
   return list;
 }
@@ -52,7 +55,7 @@ TEST(ViewLifecycle, ACallbackIsHeardOnce) {
   (void)lifecycle.reload(false, false, true, kNoPlaceholder);
   (void)lifecycle.loadSucceeded(1);
   EXPECT_TRUE(lifecycle.loadSucceeded(1).empty());
-  EXPECT_TRUE(lifecycle.loadFailed(1, kNoPlaceholder).empty());
+  EXPECT_TRUE(lifecycle.loadFailed(1, kNoPlaceholder, kDecode).empty());
   EXPECT_EQ(lifecycle.showingState(), Showing::LoadedImage);
 }
 
@@ -66,7 +69,7 @@ TEST(ViewLifecycle, ASupersededLoadIsCancelledForJsAndIgnoredAfterwards) {
                      {.kind = Kind::StartLoad, .value = 2}}));
   // A late callback from the cancelled load must not touch the view.
   EXPECT_TRUE(lifecycle.loadSucceeded(1).empty());
-  EXPECT_TRUE(lifecycle.loadFailed(1, kNoPlaceholder).empty());
+  EXPECT_TRUE(lifecycle.loadFailed(1, kNoPlaceholder, kDecode).empty());
   EXPECT_TRUE(lifecycle.isInFlight(2));
   EXPECT_EQ(lifecycle.showingState(), Showing::NoImage);
 }
@@ -105,7 +108,7 @@ TEST(ViewLifecycle, NothingIsKeptWhenTheViewHasNoImage) {
 TEST(ViewLifecycle, AFailedViewOrAPlaceholderIsNeverKept) {
   ViewLifecycle failed;
   (void)failed.reload(false, false, true, kHashKeptOnFailure);
-  (void)failed.loadFailed(1, kHashKeptOnFailure);
+  (void)failed.loadFailed(1, kHashKeptOnFailure, kDecode);
   // `imageOnScreen` is true: the placeholder kept on failure is up.
   (void)failed.reload(false, true, true, kHashKeptOnFailure);
   EXPECT_EQ(failed.showingState(), Showing::NoImage);
@@ -129,7 +132,7 @@ TEST(ViewLifecycle, FailureRemovesThePlaceholderByDefault) {
   ASSERT_EQ(decode.size(), 1U);
   ASSERT_EQ(decode[0].kind, Kind::DecodePlaceholder);
 
-  EXPECT_EQ(lifecycle.loadFailed(1, kHash),
+  EXPECT_EQ(lifecycle.loadFailed(1, kHash, kDecode),
             effects({{.kind = Kind::DeliverFailure},
                      {.kind = Kind::ClearImage},
                      {.kind = Kind::EmitCompleted}}));
@@ -142,7 +145,7 @@ TEST(ViewLifecycle, FailureKeepsThePlaceholderWhenAsked) {
   ViewLifecycle lifecycle;
   (void)lifecycle.reload(false, false, true, kHashKeptOnFailure);
   const auto decode = lifecycle.applyPlaceholder(kHashKeptOnFailure);
-  EXPECT_EQ(lifecycle.loadFailed(1, kHashKeptOnFailure),
+  EXPECT_EQ(lifecycle.loadFailed(1, kHashKeptOnFailure, kDecode),
             effects({{.kind = Kind::DeliverFailure}, {.kind = Kind::EmitCompleted}}));
   EXPECT_TRUE(lifecycle.placeholderDecoded(decode[0].value, kHashKeptOnFailure));
 }
@@ -150,7 +153,7 @@ TEST(ViewLifecycle, FailureKeepsThePlaceholderWhenAsked) {
 TEST(ViewLifecycle, FailureSwapsAKeptPreviousImageForThePlaceholder) {
   auto lifecycle = loaded();
   (void)lifecycle.reload(false, true, true, kHashKeptOnFailure);
-  const auto failed = lifecycle.loadFailed(2, kHashKeptOnFailure);
+  const auto failed = lifecycle.loadFailed(2, kHashKeptOnFailure, kDecode);
   ASSERT_EQ(failed.size(), 4U);
   EXPECT_EQ(failed[0].kind, Kind::DeliverFailure);
   EXPECT_EQ(failed[1].kind, Kind::ClearImage);
@@ -222,7 +225,7 @@ TEST(ViewLifecycle, AnUpgradeStartsOnlyOverALoadedImage) {
 
   ViewLifecycle failed;
   (void)failed.reload(false, false, true, kNoPlaceholder);
-  (void)failed.loadFailed(failed.inFlight, kNoPlaceholder);
+  (void)failed.loadFailed(failed.inFlight, kNoPlaceholder, kDecode);
   EXPECT_EQ(failed.startUpgrade(), 0);  // nothing to sharpen
 
   auto lifecycle = loaded();
@@ -267,6 +270,79 @@ TEST(ViewLifecycle, RecycleAndDropCancelAnUpgrade) {
 }
 
 // ---------------------------------------------------------------------------
+// Retry after a network failure.
+
+// A load that failed with `code`; returns the failed lifecycle.
+ViewLifecycle failedWith(LoadErrorCode code, const LifecycleProps& props) {
+  ViewLifecycle lifecycle;
+  (void)lifecycle.reload(false, false, true, props);
+  (void)lifecycle.applyPlaceholder(props);
+  (void)lifecycle.loadFailed(lifecycle.inFlight, props, code);
+  return lifecycle;
+}
+
+TEST(ViewLifecycleRetry, ANetworkFailureRetriesAsANewLoad) {
+  auto lifecycle = failedWith(kNetwork, kNoPlaceholder);
+  EXPECT_EQ(lifecycle.retry(kNoPlaceholder),
+            effects({{.kind = Kind::ClearImage}, {.kind = Kind::StartLoad, .value = 2}}));
+  EXPECT_TRUE(lifecycle.isInFlight(2));
+  EXPECT_EQ(lifecycle.showingState(), Showing::NoImage);
+  EXPECT_EQ(lifecycle.loadSucceeded(2),
+            effects({{.kind = Kind::DeliverSuccess}, {.kind = Kind::EmitCompleted}}));
+}
+
+TEST(ViewLifecycleRetry, OtherFailuresAreNotRetried) {
+  for (const auto code : {LoadErrorCode::Decode, LoadErrorCode::NotCached,
+                          LoadErrorCode::Unknown, LoadErrorCode::InvalidRequest}) {
+    auto lifecycle = failedWith(code, kNoPlaceholder);
+    EXPECT_TRUE(lifecycle.retry(kNoPlaceholder).empty()) << static_cast<int>(code);
+  }
+}
+
+TEST(ViewLifecycleRetry, AnInvalidRequestIsNotRetried) {
+  ViewLifecycle lifecycle;
+  (void)lifecycle.reload(false, false, false, kNoPlaceholder);
+  EXPECT_TRUE(lifecycle.retry(kNoPlaceholder).empty());
+}
+
+TEST(ViewLifecycleRetry, EachFailureIsRetriedOnce) {
+  auto lifecycle = failedWith(kNetwork, kNoPlaceholder);
+  ASSERT_FALSE(lifecycle.retry(kNoPlaceholder).empty());
+  EXPECT_TRUE(lifecycle.retry(kNoPlaceholder).empty()) << "a load is already in flight";
+  (void)lifecycle.loadFailed(lifecycle.inFlight, kNoPlaceholder, kNetwork);
+  // The retry's own failure may be retried later, by a later call.
+  EXPECT_FALSE(lifecycle.retry(kNoPlaceholder).empty());
+}
+
+TEST(ViewLifecycleRetry, ARetryBringsBackTheRemovedPlaceholder) {
+  auto lifecycle = failedWith(kNetwork, kHash);
+  const auto retried = lifecycle.retry(kHash);
+  ASSERT_EQ(retried.size(), 2U);
+  EXPECT_EQ(retried[0].kind, Kind::DecodePlaceholder);
+  EXPECT_EQ(retried[1].kind, Kind::StartLoad);
+  EXPECT_TRUE(lifecycle.placeholderDecoded(retried[0].value, kHash));
+}
+
+TEST(ViewLifecycleRetry, AKeptPlaceholderStaysUpWhileRetrying) {
+  auto lifecycle = failedWith(kNetwork, kHashKeptOnFailure);
+  EXPECT_EQ(lifecycle.retry(kHashKeptOnFailure),
+            effects({{.kind = Kind::StartLoad, .value = 2}}));
+}
+
+TEST(ViewLifecycleRetry, AReloadRecycleOrDropForgetsTheFailure) {
+  auto reloaded = failedWith(kNetwork, kNoPlaceholder);
+  (void)reloaded.reload(false, false, false, kNoPlaceholder);
+  EXPECT_TRUE(reloaded.retry(kNoPlaceholder).empty());
+
+  auto recycled = failedWith(kNetwork, kNoPlaceholder);
+  (void)recycled.recycle();
+  EXPECT_TRUE(recycled.retry(kNoPlaceholder).empty());
+
+  auto dropped = failedWith(kNetwork, kNoPlaceholder);
+  (void)dropped.drop();
+  EXPECT_TRUE(dropped.retry(kNoPlaceholder).empty());
+}
+
 // Every order of events, to a bounded depth.
 //
 // Drives a simulated view through every step sequence up to `kDepth`,
@@ -388,6 +464,10 @@ struct SimulatedView {
     if (showing == Showing::Failed && !props.showPlaceholderOnFailure && screen != Screen::Blank) {
       return "FailedViewIsEmpty";
     }
+    if (lifecycle.retryable != 0 &&
+        (showing != Showing::Failed || lifecycle.inFlight != 0 || lifecycle.upgrading != 0)) {
+      return "RetryOnlyFromAFailure";
+    }
     return {};
   }
 };
@@ -431,10 +511,18 @@ void explore(const SimulatedView& view, int depth, std::string& path, std::strin
       v.awaitingCallback.erase(token);
       v.perform(v.lifecycle.loadSucceeded(token), token, false);
     });
-    step("fails#" + std::to_string(token), [&](SimulatedView& v) {
-      v.awaitingCallback.erase(token);
-      v.perform(v.lifecycle.loadFailed(token, v.props), token, false);
-    });
+    for (const auto code : {kDecode, kNetwork}) {
+      step(std::string(code == kNetwork ? "failsNetwork#" : "fails#") + std::to_string(token),
+           [&](SimulatedView& v) {
+             v.awaitingCallback.erase(token);
+             v.perform(v.lifecycle.loadFailed(token, v.props, code), token, false);
+           });
+    }
+  }
+  // Foregrounding, or a failure that spanned a trip to the background.
+  for (const bool inside : {false, true}) {
+    step(std::string("retry") + (inside ? "(completesInside)" : ""),
+         [&](SimulatedView& v) { v.perform(v.lifecycle.retry(v.props), 0, inside); });
   }
   for (const bool inside : {false, true}) {
     step(std::string("upgrade") + (inside ? "(completesInside)" : ""),

@@ -203,6 +203,12 @@ struct TIStepEffects {
   turboimage::PixelSize _upgradableLoadedFor;
   // Load for `placeholder.uri`. Never reported to JS; cancelled when moot.
   id<TIImageLoadTask> _placeholderTask;
+  // Trips to the background, counted by this view. A load that fails with
+  // `network` after one was likely cut off by it (iOS drops connections and
+  // reports it on return), so it retries at once (`ViewLifecycle::retry`);
+  // any other network failure waits for the next return to the foreground.
+  NSUInteger _backgroundTrips;
+  BOOL _inBackground;
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider {
@@ -227,8 +233,54 @@ struct TIStepEffects {
       [weakSelf placeImage];
     };
     self.contentView = _container;
+
+    // UIApplication-level, so scene-based apps get them too. Removed on
+    // dealloc by NSNotificationCenter itself; a recycled view keeps them and
+    // has nothing to retry.
+    NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
+    [center addObserver:self
+               selector:@selector(appDidEnterBackground)
+                   name:UIApplicationDidEnterBackgroundNotification
+                 object:nil];
+    [center addObserver:self
+               selector:@selector(appWillEnterForeground)
+                   name:UIApplicationWillEnterForegroundNotification
+                 object:nil];
   }
   return self;
+}
+
+#pragma mark - Retry
+
+- (void)appDidEnterBackground {
+  _inBackground = YES;
+  ++_backgroundTrips;
+}
+
+- (void)appWillEnterForeground {
+  _inBackground = NO;
+  [self retryFailedLoad];
+}
+
+// The failed load again, if the core allows it (a network failure, nothing
+// since), as a new load with its own events.
+- (void)retryFailedLoad {
+  if (_lifecycle.retryable == 0 || !_loadedRequest.has_value() ||
+      TIImageLoaderRegistry.sharedLoader == nil) {
+    return;
+  }
+  TIRequestResult built = [self makeRequest:*_loadedRequest];
+  if (built.request == nil) {
+    return;
+  }
+  _progressThrottle = turboimage::ProgressThrottle{};
+  _lastProgressTotal = -1;
+  TIImageRequest *request = built.request;
+  TIStepEffects step;
+  step.startLoad = ^(int64_t token) {
+    [self startLoad:request token:token];
+  };
+  [self perform:_lifecycle.retry([self lifecycleProps]) step:step];
 }
 
 - (void)updateProps:(const Props::Shared &)props oldProps:(const Props::Shared &)oldProps {
@@ -424,6 +476,7 @@ struct TIStepEffects {
 
 - (void)startLoad:(TIImageRequest *)request token:(int64_t)token {
   NSString *source = request.url.absoluteString;
+  const NSUInteger tripsAtStart = _backgroundTrips;
 
   [self emitStart];
 
@@ -463,8 +516,14 @@ struct TIStepEffects {
           step.deliverFailure = ^{
             [strongSelf deliverFailure:error];
           };
-          [strongSelf perform:strongSelf->_lifecycle.loadFailed(token, [strongSelf lifecycleProps])
+          [strongSelf perform:strongSelf->_lifecycle.loadFailed(token, [strongSelf lifecycleProps],
+                                                                [strongSelf coreErrorCode:error])
                          step:step];
+          // Cut off by a trip to the background and back: retry now. Still
+          // in the background: `appWillEnterForeground` retries.
+          if (strongSelf->_backgroundTrips != tripsAtStart && !strongSelf->_inBackground) {
+            [strongSelf retryFailedLoad];
+          }
         }
       }];
   // A memory hit may have completed synchronously; keep the task only if not.
@@ -617,12 +676,16 @@ struct TIStepEffects {
   }
 }
 
+// Other domains are adapter bugs: unknown.
+- (turboimage::LoadErrorCode)coreErrorCode:(NSError *)error {
+  return [error.domain isEqualToString:TIImageLoadErrorDomain]
+             ? static_cast<turboimage::LoadErrorCode>(error.code)
+             : turboimage::LoadErrorCode::Unknown;
+}
+
 - (void)deliverFailure:(NSError *)error {
-  // Other domains are adapter bugs: unknown.
-  const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
-                        ? static_cast<turboimage::LoadErrorCode>(error.code)
-                        : turboimage::LoadErrorCode::Unknown;
-  [self emitFailure:code message:error.localizedDescription ?: @"Unknown error"];
+  [self emitFailure:[self coreErrorCode:error]
+            message:error.localizedDescription ?: @"Unknown error"];
 }
 
 // Cross-fades from whatever is shown; memory hits appear instantly (like

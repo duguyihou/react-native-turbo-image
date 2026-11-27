@@ -4,7 +4,7 @@
 // It decides, it does not act: each step returns the effects the view must
 // carry out, in order. The view owns all platform objects.
 //
-// Plain value type, main thread only. Five int64s so Android can keep it
+// Plain value type, main thread only. Six int64s so Android can keep it
 // in a LongArray across JNI.
 //
 // Re-entrancy: a memory-cache hit may call back inside `StartLoad`. That is
@@ -14,6 +14,8 @@
 
 #include <cstdint>
 #include <vector>
+
+#include "turboimage/ImageRequest.h"
 
 namespace turboimage {
 
@@ -98,6 +100,9 @@ struct ViewLifecycle {
   std::int64_t placeholderGeneration = 0;
   // Token of the upgrade in flight, or 0. Never set with `inFlight`.
   std::int64_t upgrading = 0;
+  // 1 while the failed load may be retried (see `retry`), else 0. Only set
+  // with `showing == Failed`.
+  std::int64_t retryable = 0;
 
   [[nodiscard]] Showing showingState() const { return static_cast<Showing>(showing); }
 
@@ -113,9 +118,21 @@ struct ViewLifecycle {
   // to keep the adapter's handle (not if the load already finished).
   [[nodiscard]] bool isInFlight(std::int64_t token) const { return token != 0 && inFlight == token; }
 
-  // Adapter callbacks. Empty for a stale token.
+  // Adapter callbacks. Empty for a stale token. A `Network` failure may be
+  // retried (`retry`); others would fail the same way again.
+  [[nodiscard]] LifecycleEffects loadFailed(std::int64_t token, const LifecycleProps& props,
+                                            LoadErrorCode code);
   [[nodiscard]] LifecycleEffects loadSucceeded(std::int64_t token);
-  [[nodiscard]] LifecycleEffects loadFailed(std::int64_t token, const LifecycleProps& props);
+
+  // Retry: the same request again after a network failure, as a new load
+  // with its own events (onStart ... onCompletion), so JS sees it recover.
+  // Views call it when the app returns to the foreground, and right after a
+  // failure of a load that began before a trip to the background (iOS drops
+  // its connections there and reports it only on return). At most once per
+  // failure: a retry that fails again waits for the next call. Empty unless
+  // the view shows a retryable failure with nothing in flight. Reapplies the
+  // placeholder the failure removed; `StartLoad` is last, as in `reload`.
+  [[nodiscard]] LifecycleEffects retry(const LifecycleProps& props);
 
   // Upgrade: reload the same request at the view's larger size
   // (`needsLargerDecode`). Silent: no JS events, and a failure keeps the

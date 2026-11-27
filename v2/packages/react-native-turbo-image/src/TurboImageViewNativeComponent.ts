@@ -32,6 +32,9 @@ export type NativePlaceholder = Readonly<{
 // Event payloads keep 1.x's names. Per load:
 //   onStart → onProgress* → (onSuccess | onFailure) → onCompletion
 // A superseded load ends with onCompletion {state:'cancelled'} only.
+// After a 'network' failure the view retries once, as a new load with its
+// own onStart ... onCompletion: when the app returns to the foreground, or at
+// once if the load was cut off by a trip to the background.
 export type StartEvent = Readonly<{
   state: string; // 'running'
 }>;

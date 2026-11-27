@@ -37,13 +37,16 @@ class TurboImageViewTest {
   private val instrumentation = InstrumentationRegistry.getInstrumentation()
   private lateinit var loader: FakeLoader
   private lateinit var view: TurboImageView
+  // Drives the host lifecycle the view listens to (pause = background).
+  private lateinit var host: BridgeReactContext
   private val events = mutableListOf<Pair<String, JavaOnlyMap>>()
 
   @Before
   fun makeView() = onMain {
     val context = instrumentation.targetContext
     loader = FakeLoader()
-    view = TurboImageView(ThemedReactContext(BridgeReactContext(context), context, null, -1), loader)
+    host = BridgeReactContext(context)
+    view = TurboImageView(ThemedReactContext(host, context, null, -1), loader)
     view.eventSink = { name, payload -> events += name to JavaOnlyMap().apply(payload) }
   }
 
@@ -297,6 +300,79 @@ class TurboImageViewTest {
     assertEquals(ImageView.ScaleType.CENTER_CROP, view.scaleType)
   }
 
+  // MARK: Retry after a network failure
+
+  @Test
+  fun aNetworkFailureRetriesWhenTheAppReturnsWithFreshEvents() = onMain {
+    resize(300, 200)
+    setSource(URL)
+    loader.loads[0].fail()
+    events.clear()
+
+    host.onHostPause()
+    assertEquals("nothing retries in the background", 1, loader.loads.size)
+    host.onHostResume(null)
+
+    assertEquals(2, loader.loads.size)
+    assertEquals(loader.loads[0].request, loader.loads[1].request)
+    loader.loads[1].succeed(300, 200)
+    assertEquals(listOf("topStart", "topSuccess", "topCompletion"), eventNames())
+  }
+
+  @Test
+  fun otherFailuresAreNotRetried() = onMain {
+    resize(300, 200)
+    setSource(URL)
+    loader.loads[0].fail(LoadErrorCode.DECODE)
+
+    host.onHostPause()
+    host.onHostResume(null)
+
+    assertEquals(1, loader.loads.size)
+  }
+
+  // iOS reports a dropped connection only after the app is back; Android may too.
+  @Test
+  fun aLoadCutOffByTheBackgroundRetriesAsSoonAsItFails() = onMain {
+    resize(300, 200)
+    setSource(URL)
+    host.onHostPause()
+    host.onHostResume(null)
+
+    loader.loads[0].fail()
+
+    assertEquals(2, loader.loads.size)
+  }
+
+  @Test
+  fun aFailedRetryWaitsForTheNextReturn() = onMain {
+    resize(300, 200)
+    setSource(URL)
+    loader.loads[0].fail()
+    host.onHostPause()
+    host.onHostResume(null)
+
+    loader.loads[1].fail()
+    assertEquals("no retry loop", 2, loader.loads.size)
+
+    host.onHostPause()
+    host.onHostResume(null)
+    assertEquals(3, loader.loads.size)
+  }
+
+  @Test
+  fun aDroppedViewNeverRetries() = onMain {
+    resize(300, 200)
+    setSource(URL)
+    loader.loads[0].fail()
+    view.drop()
+
+    host.onHostPause()
+    host.onHostResume(null)
+
+    assertEquals(1, loader.loads.size)
+  }
+
   // MARK: Helpers
 
   /** A 300×200 view showing [request]'s image, with that load's events cleared. */
@@ -367,9 +443,9 @@ private class FakeLoader : ImageLoaderAdapter {
       listener.onSuccess(width, height, animated)
     }
 
-    fun fail() {
+    fun fail(code: LoadErrorCode = LoadErrorCode.NETWORK) {
       check(!cancelled) { "a cancelled load cannot fail" }
-      listener.onError(LoadErrorCode.NETWORK.nativeValue, "fake network failure")
+      listener.onError(code.nativeValue, "fake ${code.name.lowercase()} failure")
     }
   }
 

@@ -71,9 +71,12 @@ using namespace facebook::react;
 }
 
 - (void)fail {
+  [self failWithCode:TIImageLoadErrorNetwork];
+}
+
+- (void)failWithCode:(TIImageLoadErrorCode)code {
   NSAssert(!_cancelled, @"a cancelled load cannot fail");
-  _completion(nil, nil, NO,
-              [NSError errorWithDomain:TIImageLoadErrorDomain code:TIImageLoadErrorNetwork userInfo:nil]);
+  _completion(nil, nil, NO, [NSError errorWithDomain:TIImageLoadErrorDomain code:code userInfo:nil]);
 }
 
 @end
@@ -425,7 +428,98 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
                                   CGRectMake((200 - side) / 2, (100 - side) / 2, side, side)));
 }
 
+#pragma mark Retry after a network failure
+
+- (void)testANetworkFailureRetriesWhenTheAppReturns {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] fail];
+
+  [self enterBackground];
+  XCTAssertEqual(_loader.loads.count, 1u, @"nothing retries in the background");
+  [self enterForeground];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+  XCTAssertEqualObjects(_loader.loads[1].request.url, _loader.loads[0].request.url);
+  [_loader.loads[1] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+  XCTAssertNotNil([self imageOnScreen]);
+}
+
+- (void)testOtherFailuresAreNotRetried {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] failWithCode:TIImageLoadErrorDecode];
+
+  [self enterBackground];
+  [self enterForeground];
+
+  XCTAssertEqual(_loader.loads.count, 1u);
+}
+
+- (void)testALoadCutOffByTheBackgroundRetriesAsSoonAsItFails {
+  // iOS reports the dropped connection only after the app is back.
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [self enterBackground];
+  [self enterForeground];
+  XCTAssertEqual(_loader.loads.count, 1u, @"still in flight: nothing to retry");
+
+  [_loader.loads[0] fail];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+}
+
+- (void)testALoadThatFailsInTheBackgroundWaitsForTheForeground {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [self enterBackground];
+  [_loader.loads[0] fail];
+  XCTAssertEqual(_loader.loads.count, 1u);
+
+  [self enterForeground];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+}
+
+- (void)testAFailedRetryWaitsForTheNextReturn {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] fail];
+  [self enterBackground];
+  [self enterForeground];
+
+  [_loader.loads[1] fail];
+  XCTAssertEqual(_loader.loads.count, 2u, @"no retry loop");
+
+  [self enterBackground];
+  [self enterForeground];
+  XCTAssertEqual(_loader.loads.count, 3u);
+}
+
+- (void)testANewSourceForgetsTheFailure {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] fail];
+  [self setSource:kThumbURL];
+  [_loader.loads[1] failWithCode:TIImageLoadErrorDecode];
+
+  [self enterBackground];
+  [self enterForeground];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+}
+
 #pragma mark Helpers
+
+- (void)enterBackground {
+  [NSNotificationCenter.defaultCenter postNotificationName:UIApplicationDidEnterBackgroundNotification
+                                                    object:nil];
+}
+
+- (void)enterForeground {
+  [NSNotificationCenter.defaultCenter postNotificationName:UIApplicationWillEnterForegroundNotification
+                                                    object:nil];
+}
 
 /// A 100×100 pt view showing its image, decoded for that size.
 - (void)showLoadedImage {
