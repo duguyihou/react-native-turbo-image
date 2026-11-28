@@ -418,7 +418,8 @@ type CacheSource = Source;
 
 /**
  * `TurboImage.prefetch` options. Prefetch downloads to disk only; with no
- * disk tier (`memoryOnly`, a local file) it decodes at full size.
+ * disk tier (`memoryOnly`, a local file) it decodes at full size, an entry
+ * only views with `allowDownscaling={false}` read.
  */
 export type PrefetchOptions = {
   /** As the `cachePolicy` prop; `'default'` when unset. */

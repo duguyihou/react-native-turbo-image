@@ -80,7 +80,7 @@ Only three things need an edit in a typical app.
 + <TurboImage source={{ uri }} cachePolicy="default" />
 ```
 
-`dataCache` still works throughout 2.x and logs a warning in development. It will be removed in 3.0. `default` is also what you get with no `cachePolicy` at all.
+`dataCache` still works throughout 2.x as a prop value and logs a warning in development. It will be removed in 3.0. The exported `CachePolicy` type now names 2.0's five policies and no longer includes `'dataCache'`, so a 1.x variable typed `CachePolicy` that holds it needs `CachePolicy | LegacyCachePolicy` (or `TurboImageProps['cachePolicy']`). `default` is also what you get with no `cachePolicy` at all.
 
 2.0 has five policies, the same on both platforms:
 
@@ -150,7 +150,7 @@ TurboImage.prefetch(sources, 'urlCache');
 TurboImage.prefetch(sources, { cachePolicy: 'urlCache' });
 ```
 
-Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the image is loaded into memory at full size, as 1.x did.
+Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the image is loaded into memory at full size, as 1.x did. Only a view with `allowDownscaling={false}` uses that entry: a view that decodes for its own size (the default) keeps its own smaller copy and is never handed the full-size bitmap, so it loads the image again. Prefetch with a disk tier for those views.
 
 ### An image's size before rendering
 
