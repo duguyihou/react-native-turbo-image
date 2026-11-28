@@ -479,6 +479,20 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertEqual(_loader.loads.count, 2u);
 }
 
+- (void)testALoadStartedInTheBackgroundRetriesWhenCutOffAfterTheReturn {
+  // The app keeps running for a few seconds after it leaves the screen, so
+  // a source can arrive then; the suspension that follows cuts its load.
+  [self resize:CGSizeMake(100, 100)];
+  [self enterBackground];
+  [self setSource:kURL];
+  [self enterForeground];
+  XCTAssertEqual(_loader.loads.count, 1u, @"still in flight: nothing to retry");
+
+  [_loader.loads[0] fail];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+}
+
 - (void)testALoadThatFailsInTheBackgroundWaitsForTheForeground {
   [self resize:CGSizeMake(100, 100)];
   [self setSource:kURL];

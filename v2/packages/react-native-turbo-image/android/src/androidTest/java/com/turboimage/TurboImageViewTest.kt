@@ -344,6 +344,21 @@ class TurboImageViewTest {
     assertEquals(2, loader.loads.size)
   }
 
+  // The app keeps running briefly after it is paused, so a source can arrive
+  // then; the suspension that follows cuts its load.
+  @Test
+  fun aLoadStartedInTheBackgroundRetriesWhenCutOffAfterTheReturn() = onMain {
+    resize(300, 200)
+    host.onHostPause()
+    setSource(URL)
+    host.onHostResume(null)
+    assertEquals("still in flight: nothing to retry", 1, loader.loads.size)
+
+    loader.loads[0].fail()
+
+    assertEquals(2, loader.loads.size)
+  }
+
   @Test
   fun aFailedRetryWaitsForTheNextReturn() = onMain {
     resize(300, 200)
