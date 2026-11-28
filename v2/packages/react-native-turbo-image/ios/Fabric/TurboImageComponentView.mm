@@ -852,6 +852,9 @@ struct TIStepEffects {
 - (void)prepareForRecycle {
   [super prepareForRecycle];
   [self cancelPlaceholderLoad];
+  // A fade still running would dissolve from this row's snapshot over the
+  // next row's image.
+  [_imageView.layer removeAllAnimations];
   // Stops everything and clears the image, without events.
   [self perform:_lifecycle.recycle() step:TIStepEffects{}];
   _upgradable = nil;
