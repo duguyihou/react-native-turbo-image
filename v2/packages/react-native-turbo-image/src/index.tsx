@@ -1,30 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentRef, Ref } from 'react';
 import { ActivityIndicator, Image, StyleSheet, View } from 'react-native';
-import type { ColorValue } from 'react-native';
+import type { CodegenTypes, ColorValue } from 'react-native';
 
 import NativeTurboImageModule from './NativeTurboImageModule';
 import TurboImageView from './TurboImageViewNativeComponent';
 import type {
-  CompletionEvent,
-  FailureEvent,
+  FailureEvent as NativeFailureEvent,
   NativeHeader,
   NativePlaceholder,
   NativeProps,
   NativeSource,
   ProgressEvent,
-  StartEvent,
   SuccessEvent,
 } from './TurboImageViewNativeComponent';
 
 export type {
-  CompletionEvent,
-  FailureEvent,
   NativePlaceholder as Placeholder,
   ProgressEvent,
-  StartEvent,
   SuccessEvent,
 } from './TurboImageViewNativeComponent';
+
+// The values native sends. Codegen types them as plain strings, so they are
+// narrowed here, where they reach the app.
+/** `onFailure`'s `code` (and `getSize`'s rejection): `turboimage::LoadErrorCode` names. */
+export type LoadErrorCode =
+  | 'invalidRequest'
+  | 'notCached'
+  | 'network'
+  | 'http'
+  | 'decode'
+  | 'unknown';
+export type StartEvent = Readonly<{ state: 'running' }>;
+export type FailureEvent = Readonly<Omit<NativeFailureEvent, 'code'> & { code: LoadErrorCode }>;
+export type CompletionEvent = Readonly<{ state: 'completed' | 'cancelled' }>;
 
 // 1.x type names, kept for compatibility. TODO: remove in 3.0.
 /** @deprecated Use `StartEvent`. Removed in 3.0. */
@@ -182,7 +191,13 @@ export type TurboImageProps = Omit<
   | 'contentPositionY'
   | 'progressEnabled'
   | 'loadEventMask'
+  | 'onStart'
+  | 'onFailure'
+  | 'onCompletion'
 > & {
+  onStart?: CodegenTypes.DirectEventHandler<StartEvent>;
+  onFailure?: CodegenTypes.DirectEventHandler<FailureEvent>;
+  onCompletion?: CodegenTypes.DirectEventHandler<CompletionEvent>;
   /** The outermost native view (the one with `style`), so measuring it gives the image's frame. */
   ref?: Ref<TurboImageInstance>;
   source: Source;
@@ -310,12 +325,12 @@ function TurboImageComponent({
   const spinTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(spinTimer.current), []);
 
-  const handleStart: NativeProps['onStart'] = (event) => {
+  const handleStart: TurboImageProps['onStart'] = (event) => {
     clearTimeout(spinTimer.current);
     spinTimer.current = setTimeout(() => setSpinning(true), INDICATOR_DELAY_MS);
     return onStart?.(event);
   };
-  const handleCompletion: NativeProps['onCompletion'] = (event) => {
+  const handleCompletion: TurboImageProps['onCompletion'] = (event) => {
     clearTimeout(spinTimer.current);
     setSpinning(false);
     return onCompletion?.(event);
@@ -356,8 +371,11 @@ function TurboImageComponent({
         props.onFailure != null,
         wantsIndicator || onCompletion != null
       )}
-      onStart={wantsIndicator ? handleStart : onStart}
-      onCompletion={wantsIndicator ? handleCompletion : onCompletion}
+      // Native sends only the values the narrowed payload types name.
+      onStart={(wantsIndicator ? handleStart : onStart) as NativeProps['onStart']}
+      onCompletion={
+        (wantsIndicator ? handleCompletion : onCompletion) as NativeProps['onCompletion']
+      }
     />
   );
   if (!needsContainer) {
