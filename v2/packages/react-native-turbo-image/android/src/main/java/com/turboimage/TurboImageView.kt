@@ -392,7 +392,10 @@ class TurboImageView internal constructor(
     emitStart()
     // The decode size if already laid out; otherwise the adapter waits for layout.
     val sizeAtStart = width to height
-    val tripsAtStart = backgroundTrips
+    // A load started in the background (the app runs briefly after a pause)
+    // has not yet survived the trip it started in, so it counts as starting
+    // before it: a failure after the return then retries at once.
+    val tripsAtStart = backgroundTrips - if (inForeground) 0 else 1
 
     // The lifecycle also guards by token, so a stale callback does nothing.
     val thisHandle =

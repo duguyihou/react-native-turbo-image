@@ -476,7 +476,10 @@ struct TIStepEffects {
 
 - (void)startLoad:(TIImageRequest *)request token:(int64_t)token {
   NSString *source = request.url.absoluteString;
-  const NSUInteger tripsAtStart = _backgroundTrips;
+  // A load started in the background (the app runs briefly after leaving
+  // the screen) has not yet survived the trip it started in, so it counts
+  // as starting before it: a failure after the return then retries at once.
+  const NSUInteger tripsAtStart = _backgroundTrips - (_inBackground ? 1 : 0);
 
   [self emitStart];
 
