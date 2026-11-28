@@ -238,8 +238,13 @@ ProcessingSpec resolveProcessing(const ProcessingOptions& options,
     spec.blurRadius = static_cast<int>(std::clamp(
         std::round(options.blur), 0.0, static_cast<double>(kMaxBlurRadius)));
   }
-  spec.monochrome = options.monochrome;
-  spec.tint = options.tint;
+  // A fully transparent colour changes no pixel; dropping it keeps
+  // "same pixels, same spec", so it gets no variant or cache entry.
+  const auto visible = [](std::optional<std::uint32_t> argb) {
+    return argb.has_value() && (*argb >> 24) != 0 ? argb : std::nullopt;
+  };
+  spec.monochrome = visible(options.monochrome);
+  spec.tint = visible(options.tint);
   return spec;
 }
 
