@@ -2,6 +2,9 @@ package com.turboimage.loader
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.drawable.Animatable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.DrawableWrapper
 import android.view.View
 import android.widget.ImageView
 import coil3.Extras
@@ -22,6 +25,7 @@ import coil3.size.Size
 import coil3.size.SizeResolver
 import coil3.target.ImageViewTarget
 import coil3.transform.Transformation
+import coil3.transition.CrossfadeDrawable
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import kotlin.coroutines.resume
@@ -144,6 +148,38 @@ internal class KeepCurrentImageTarget(view: ImageView) : ImageViewTarget(view) {
   override fun onStart(placeholder: Image?) = Unit
 
   override fun onError(error: Image?) = Unit
+
+  // Every image Coil shows, faded or not, is set through here.
+  override var drawable: Drawable?
+    get() = super.drawable
+    set(value) {
+      super.drawable = if (value is CrossfadeDrawable) SizedAsItsEnd(value) else value
+    }
+}
+
+/**
+ * A cross-fade that reports the size of the image it fades to.
+ *
+ * `CrossfadeDrawable` fixes its intrinsic size when it is built, at the
+ * larger of the two images in each dimension, and stays the view's drawable
+ * after the fade. The view places a drawable by its intrinsic size, so a
+ * landscape image fading in over a portrait one was drawn in a square box
+ * (too small under `contain`, zoomed under `cover`), stayed so, and the next
+ * fade inherited the box. Sized as its end, the new image is placed exactly;
+ * the old one is fitted or cropped into that box (Coil's `scale`) for the
+ * length of the fade only.
+ */
+private class SizedAsItsEnd(private val crossfade: CrossfadeDrawable) : DrawableWrapper(crossfade), Animatable {
+  override fun getIntrinsicWidth() = crossfade.end?.intrinsicWidth ?: -1
+
+  override fun getIntrinsicHeight() = crossfade.end?.intrinsicHeight ?: -1
+
+  // Coil starts the fade (and an animated end) through `Animatable`.
+  override fun start() = crossfade.start()
+
+  override fun stop() = crossfade.stop()
+
+  override fun isRunning() = crossfade.isRunning
 }
 
 /**
