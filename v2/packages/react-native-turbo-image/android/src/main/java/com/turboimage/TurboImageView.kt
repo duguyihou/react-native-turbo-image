@@ -147,6 +147,10 @@ class TurboImageView internal constructor(
       override fun onHostDestroy() = Unit
     }
 
+  // Offline in the foreground, then back online. In the background the
+  // return to the foreground retries instead, so nothing loads unseen.
+  private val networkListener = { if (inForeground) retryFailedLoad() }
+
   init {
     // The spec default, `contain`.
     scaleType = ScaleType.FIT_CENTER
@@ -154,6 +158,7 @@ class TurboImageView internal constructor(
     // so clip here (like `clipsToBounds` on iOS).
     cropToPadding = true
     reactContext.addLifecycleEventListener(hostListener)
+    NetworkReturns.add(reactContext, networkListener)
   }
 
   // Clips everything drawn to inside the border and its rounded corners.
@@ -276,6 +281,7 @@ class TurboImageView internal constructor(
   /** The view is gone for good ([TurboImageViewManager.onDropViewInstance]). */
   fun drop() {
     reactContext.removeLifecycleEventListener(hostListener)
+    NetworkReturns.remove(networkListener)
     upgradable = null
     cancelPlaceholderLoad()
     perform(lifecycle.drop())

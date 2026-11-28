@@ -59,6 +59,8 @@ Pod::Spec.new do |s|
     "ios/LiveText/**/*.swift",
     "ios/Fabric/**/*.{h,mm}",
   ]
+  # Network: the path monitor that retries a load failed offline.
+  s.frameworks = "Network"
   # Live Text; tvOS has no VisionKit.
   s.ios.frameworks = "VisionKit"
   s.public_header_files = "ios/LoaderAPI/include/*.h"

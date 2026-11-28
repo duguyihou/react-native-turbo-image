@@ -5,6 +5,7 @@
 
 #import "TurboImageComponentView.h"
 
+#import <Network/Network.h>
 #import <React/RCTLog.h>
 #import <React/RCTUtils.h>
 #import <react/renderer/components/TurboImageSpec/ComponentDescriptors.h>
@@ -142,6 +143,36 @@ UIImage *imageFromRgba(const turboimage::RgbaImage &rgba) {
   return image;
 }
 
+// Posted on the main queue when the device regains a usable network path
+// after losing it, so a view that failed offline in the foreground retries
+// without waiting for a trip to the background. The view tests post it.
+NSNotificationName const TINetworkDidReturnNotification = @"TurboImageNetworkDidReturn";
+
+// One monitor for the process, started by the first view and never stopped
+// (it costs one path subscription).
+void startNetworkMonitor() {
+  static nw_path_monitor_t monitor;
+  static dispatch_once_t once;
+  dispatch_once(&once, ^{
+    monitor = nw_path_monitor_create();
+    nw_path_monitor_set_queue(monitor, dispatch_get_main_queue());
+    // The first update reports the current path; only a later change from
+    // unusable to usable is a return.
+    __block BOOL known = NO;
+    __block BOOL usable = NO;
+    nw_path_monitor_set_update_handler(monitor, ^(nw_path_t path) {
+      const BOOL now = nw_path_get_status(path) == nw_path_status_satisfied;
+      if (known && now && !usable) {
+        [NSNotificationCenter.defaultCenter postNotificationName:TINetworkDidReturnNotification
+                                                          object:nil];
+      }
+      known = YES;
+      usable = now;
+    });
+    nw_path_monitor_start(monitor);
+  });
+}
+
 }  // namespace
 
 // Step-specific effects, as blocks closing over what the step knows. A nil
@@ -257,6 +288,11 @@ struct TIStepEffects {
                selector:@selector(appWillEnterForeground)
                    name:UIApplicationWillEnterForegroundNotification
                  object:nil];
+    [center addObserver:self
+               selector:@selector(networkDidReturn)
+                   name:TINetworkDidReturnNotification
+                 object:nil];
+    startNetworkMonitor();
   }
   return self;
 }
@@ -271,6 +307,14 @@ struct TIStepEffects {
 - (void)appWillEnterForeground {
   _inBackground = NO;
   [self retryFailedLoad];
+}
+
+// Offline in the foreground, then back online. In the background the
+// return to the foreground retries instead, so nothing loads unseen.
+- (void)networkDidReturn {
+  if (!_inBackground) {
+    [self retryFailedLoad];
+  }
 }
 
 // The failed load again, if the core allows it (a network failure, nothing

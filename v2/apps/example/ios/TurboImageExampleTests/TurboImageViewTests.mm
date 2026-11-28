@@ -563,6 +563,32 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertNotNil([self imageOnScreen]);
 }
 
+- (void)testANetworkFailureRetriesWhenTheNetworkReturns {
+  // Offline in the foreground: no trip to the background is coming.
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] fail];
+
+  [self networkReturns];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+  [_loader.loads[1] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+  XCTAssertNotNil([self imageOnScreen]);
+}
+
+- (void)testTheNetworkReturningInTheBackgroundLeavesTheRetryToTheForeground {
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] fail];
+  [self enterBackground];
+
+  [self networkReturns];
+  XCTAssertEqual(_loader.loads.count, 1u, @"nothing loads in the background");
+  [self enterForeground];
+
+  XCTAssertEqual(_loader.loads.count, 2u);
+}
+
 - (void)testOtherFailuresAreNotRetried {
   [self resize:CGSizeMake(100, 100)];
   [self setSource:kURL];
@@ -660,6 +686,11 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
 - (void)enterBackground {
   [NSNotificationCenter.defaultCenter postNotificationName:UIApplicationDidEnterBackgroundNotification
                                                     object:nil];
+}
+
+/// What the view's network monitor posts when a lost path comes back.
+- (void)networkReturns {
+  [NSNotificationCenter.defaultCenter postNotificationName:@"TurboImageNetworkDidReturn" object:nil];
 }
 
 - (void)enterForeground {

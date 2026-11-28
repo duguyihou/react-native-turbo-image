@@ -23,6 +23,7 @@ import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +52,11 @@ class TurboImageViewTest {
     view = TurboImageView(ThemedReactContext(host, context, null, -1), loader)
     view.eventSink = { name, payload -> events += name to JavaOnlyMap().apply(payload) }
   }
+
+  // Unregisters the view's process-wide listeners (`NetworkReturns`), as
+  // Fabric's `onDropViewInstance` does; safe after a test's own drop.
+  @After
+  fun dropView() = onMain { view.drop() }
 
   // MARK: Upgrades
 
@@ -383,6 +389,44 @@ class TurboImageViewTest {
     host.onHostResume(null)
 
     assertEquals(1, loader.loads.size)
+  }
+
+  /** Offline in the foreground: no trip to the background is coming. */
+  @Test
+  fun aNetworkFailureRetriesWhenTheNetworkReturns() = onMain {
+    // The test host starts unresumed; an app on screen is resumed.
+    host.onHostResume(null)
+    resize(300, 200)
+    setSource(URL)
+    loader.loads[0].fail()
+
+    NetworkReturns.networkReturned()
+
+    assertEquals(2, loader.loads.size)
+  }
+
+  @Test
+  fun theNetworkReturningInTheBackgroundLeavesTheRetryToTheForeground() = onMain {
+    resize(300, 200)
+    setSource(URL)
+    loader.loads[0].fail()
+    host.onHostPause()
+
+    NetworkReturns.networkReturned()
+    assertEquals("nothing loads in the background", 1, loader.loads.size)
+    host.onHostResume(null)
+
+    assertEquals(2, loader.loads.size)
+  }
+
+  /** The listener set is process-wide, so a view left in it would leak. */
+  @Test
+  fun aDroppedViewStopsListeningForTheNetwork() = onMain {
+    val listening = NetworkReturns.listenerCount
+
+    view.drop()
+
+    assertEquals(listening - 1, NetworkReturns.listenerCount)
   }
 
   @Test

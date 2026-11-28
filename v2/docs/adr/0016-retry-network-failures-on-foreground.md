@@ -38,25 +38,34 @@ Options considered:
   `onStart` … `onCompletion`, so JS sees the view recover. It brings back the
   placeholder the failure removed. Each failure is retried at most once per
   call: a retry that fails again waits for the next call.
-- **The views call it at two moments:**
+- **The views call it at three moments:**
   - when the app returns to the foreground (iOS
     `UIApplicationWillEnterForegroundNotification`, Android `onHostResume`);
   - right after a network failure of a load that began before a trip to the
     background, if the app is in the foreground again. This is the common
     case: iOS delivers the dropped connection after the app resumes, so
-    waiting for the next foreground would miss it.
+    waiting for the next foreground would miss it;
+  - when the network comes back after being lost, if the app is in the
+    foreground (added 2026-11-28). iOS watches the path with one
+    `nw_path_monitor` for the process. Android registers one default-network
+    callback, only if the app holds `ACCESS_NETWORK_STATE`: the library does
+    not declare it, so that every app is not given a permission for this.
+    Without it, Android retries on the return to the foreground only.
 
-  Each view counts its own trips to the background, so there is no global
-  state.
+  Each view counts its own trips to the background. The network watchers
+  are the only process-wide state, one subscription each.
 
 ## Consequences
 
 - An app with an error UI driven by `onFailure` shows it briefly, then sees
   `onStart` and the retry's result.
 - A view that failed while the app was in the foreground (offline) retries
-  on the next return, not when connectivity comes back. Watching
-  reachability is a possible follow-up.
-  TODO: retry on reachability changes too, if apps ask.
+  when the network comes back, except on Android without
+  `ACCESS_NETWORK_STATE`, where it waits for the next return to the
+  foreground. The platforms differ there on purpose (the permission is the
+  app's choice).
+- Only a return after a loss counts: the first path update, and a switch
+  from one network to another, retry nothing.
 - `ViewLifecycle` has a sixth field, so the Android `LongArray` grows to 6.
 - The lifecycle's exhaustive C++ test takes about 17 s instead of 7.5 s,
   and the TLA+ model has a `Retry` step and a `RetryOnlyAfterAFailure` rule.
