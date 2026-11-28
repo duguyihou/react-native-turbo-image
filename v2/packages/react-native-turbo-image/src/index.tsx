@@ -296,8 +296,9 @@ function TurboImageComponent({
   }
   // The spinner is plain React, driven by onStart/onCompletion (every start
   // gets exactly one completion). 1.x quirk: `indicator={{}}` means none.
-  const showsIndicator =
-    indicator != null && Object.keys(indicator).length > 0 && placeholder == null;
+  const wantsIndicator = indicator != null && Object.keys(indicator).length > 0;
+  // Never over a placeholder, which already shows that something is coming.
+  const showsIndicator = wantsIndicator && placeholder == null;
   const [spinning, setSpinning] = useState(false);
   const spinTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(spinTimer.current), []);
@@ -324,8 +325,10 @@ function TurboImageComponent({
     }
   }
 
-  // Only the spinner needs a container (a second view over the image).
-  const needsContainer = showsIndicator;
+  // Only the spinner needs a container (a second view over the image). It
+  // follows `indicator` alone: a placeholder that comes or goes must not
+  // remount the image view, which would restart its load.
+  const needsContainer = wantsIndicator;
   const imageStyle = [styles.image, style, rounded && styles.rounded];
   const image = (
     <TurboImageView
