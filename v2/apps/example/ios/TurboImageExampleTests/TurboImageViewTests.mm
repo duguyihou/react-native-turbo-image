@@ -169,6 +169,11 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
 }
 
 - (void)tearDown {
+  // Reset the view as Fabric does on reuse, so a failure it was left with
+  // is forgotten: it still observes app-state notifications, and would
+  // otherwise retry through the next test's fake loader.
+  [_view prepareForRecycle];
+  _view = nil;
   [TIImageLoaderRegistry setSharedLoaderForTesting:_previousLoader];
 }
 
@@ -275,6 +280,19 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
 
   XCTAssertTrue(upgrade.cancelled);
   XCTAssertEqual(_loader.loads.count, 3u, @"the new source's load");
+}
+
+- (void)testRecyclingTheViewStopsAFadeInProgress {
+  // Reused within the fade, the view must not keep dissolving from the
+  // previous row's snapshot over its next image.
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:kURL];
+  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(100, 100)]];
+  XCTAssertGreaterThan([self imageView].layer.animationKeys.count, 0u, @"the image fades in");
+
+  [_view prepareForRecycle];
+
+  XCTAssertEqual([self imageView].layer.animationKeys.count, 0u);
 }
 
 - (void)testRecyclingTheViewCancelsAnUpgrade {
@@ -385,6 +403,23 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertEqual(_loader.loads.count, loadsBefore + 1, @"only the placeholder loads again");
   [_loader.loads.lastObject succeedWithPixels:CGSizeMake(10, 10)];
   XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(10, 10)));
+}
+
+- (void)testAnImagePlaceholderOnAnotherOriginGetsNoHeaders {
+  // The source's credentials must not reach another origin. A port makes
+  // one here, since the fake loader records only `kTestHost`'s loads.
+  static NSString *const kOtherOriginThumbURL = @"https://images.example.com:8443/photos/harbour-thumb.jpg";
+  [self resize:CGSizeMake(100, 100)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.source.headers = {{.name = "Authorization", .value = "Bearer t0ken"}};
+    props.placeholder.uri = std::string(kOtherOriginThumbURL.UTF8String);
+  }];
+
+  TIFakeLoad *thumb = [self loadOf:kOtherOriginThumbURL];
+  XCTAssertNotNil(thumb);
+  XCTAssertEqual(thumb.request.headers.count, 0u);
+  XCTAssertEqual([self loadOf:kURL].request.headers.count, 1u, @"the source keeps its headers");
 }
 
 - (void)testAnImagePlaceholderUsesTheSourcesHeadersAndNoProcessing {

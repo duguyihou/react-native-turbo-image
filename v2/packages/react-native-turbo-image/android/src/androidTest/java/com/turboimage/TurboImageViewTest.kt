@@ -245,6 +245,18 @@ class TurboImageViewTest {
     assertEquals("the image's own load is not restarted", 1, loader.loads.size)
   }
 
+  // The source's credentials must not reach a third-party host.
+  @Test
+  fun anImagePlaceholderOnAnotherHostGetsNoHeaders() = onMain {
+    resize(300, 200)
+    view.placeholderUri = "https://thumbs.cdn-vendor.com/harbour.jpg"
+    view.request = ImageRequest(uri = URL, headers = listOf("Authorization" to "Bearer t0ken"))
+    view.onTransactionEnd()
+
+    assertEquals(emptyList<Pair<String, String>>(), loader.placeholderLoads.single().request.headers)
+    assertEquals("the source keeps its headers", 1, loader.loads.single().request.headers.size)
+  }
+
   @Test
   fun anImagePlaceholderUsesTheSourcesHeadersAndNoProcessing() = onMain {
     resize(300, 200)
