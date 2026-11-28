@@ -1,6 +1,7 @@
 // Adapter loads: decode size and seam error codes. The core is not involved,
 // so a failure here points at the adapter.
 
+import Nuke
 import Testing
 import TurboImageLoaderAPI
 import UIKit
@@ -11,6 +12,30 @@ import UIKit
 @Suite(.serialized)
 struct LoadingTests {
   let adapter = Adapter()
+
+  // MARK: Error codes (`classify`, in step with Android's)
+
+  @Test func anErrorStatusIsAnHttpError() {
+    let error = NukeImageLoader.classify(
+      ImagePipeline.Error.dataLoadingFailed(error: DataLoader.Error.statusCodeUnacceptable(404)))
+
+    #expect(error.code == TIImageLoadError.Code.http.rawValue)
+  }
+
+  /// A gateway timeout may pass, as a dropped connection may.
+  @Test func aGatewayTimeoutIsANetworkError() {
+    let error = NukeImageLoader.classify(
+      ImagePipeline.Error.dataLoadingFailed(error: DataLoader.Error.statusCodeUnacceptable(504)))
+
+    #expect(error.code == TIImageLoadError.Code.network.rawValue)
+  }
+
+  @Test func aDroppedConnectionIsANetworkError() {
+    let error = NukeImageLoader.classify(
+      ImagePipeline.Error.dataLoadingFailed(error: URLError(.networkConnectionLost)))
+
+    #expect(error.code == TIImageLoadError.Code.network.rawValue)
+  }
 
   // MARK: Decode size (`TIImageRequest.decodeSize`)
 

@@ -274,7 +274,7 @@ internal class CacheTest : AdapterTest() {
   @Test
   fun aFailedLoadCachesNothing() {
     val uri = "$BASE/no-such-route/${java.util.UUID.randomUUID()}.jpg"
-    assertEquals(LoadErrorCode.NETWORK, load(resolve(uri)).error)
+    assertEquals(LoadErrorCode.HTTP, load(resolve(uri)).error)
 
     assertNull(memoryCached(resolve(uri)))
   }

@@ -397,7 +397,8 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
   }
 
   /// Nuke errors to `LoadErrorCode`. Keep in step with Android's `classify`.
-  private static func classify(_ error: any Error) -> NSError {
+  /// Internal, not private, so the adapter tests can map Nuke's errors.
+  static func classify(_ error: any Error) -> NSError {
     // Narrowed here: do/catch doesn't infer typed throws yet.
     guard let error = error as? ImagePipeline.Error else {
       return NSError(

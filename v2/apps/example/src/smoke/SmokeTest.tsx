@@ -229,7 +229,7 @@ const SCENARIOS: Scenario[] = [
     source: { uri: `${BASE}/missing/reattach-${RUN}.jpg` },
     cachePolicy: 'default',
     expect: 'error',
-    expectCode: 'network',
+    expectCode: 'http',
     expectHits: { count: 1, conditional: 0 },
     kind: 'reattach',
   },
@@ -458,7 +458,7 @@ const SCENARIOS: Scenario[] = [
     source: { uri: `${BASE}/accept/png`, headers: [['Accept', 'application/json']] },
     cachePolicy: 'noCache',
     expect: 'error',
-    expectCode: 'network',
+    expectCode: 'http',
     // Sequential: concurrent loads of one URL are coalesced, ignoring headers
     // (RFC §4.1).
     after: 'headersSent',
@@ -586,7 +586,7 @@ const SCENARIOS: Scenario[] = [
     source: { uri: `${BASE}/cookie/photo/session.jpg` },
     cachePolicy: 'noCache',
     ...(Platform.OS === 'android'
-      ? { expect: 'error' as const, expectCode: 'network' }
+      ? { expect: 'error' as const, expectCode: 'http' }
       : { expect: 'load' as const }),
     kind: 'cookie',
   },

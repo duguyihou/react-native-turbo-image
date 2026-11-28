@@ -128,6 +128,9 @@ class Handler(BaseHTTPRequestHandler):
             if accepts_png(self.headers.get("Accept")):
                 return self.reply(200, *EXACT["/text.png"])
             return self.reply(406, b"", "text/plain")
+        if path.startswith("/status/"):
+            # /status/<code>/<anything>: an empty reply with that status.
+            return self.reply(int(path.split("/")[2]), b"", "text/plain")
         if path.startswith("/ua/"):
             if self.headers.get("User-Agent", "").startswith("okhttp/"):
                 return self.reply(403, b"", "text/plain")

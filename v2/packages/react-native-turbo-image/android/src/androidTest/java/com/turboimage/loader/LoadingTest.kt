@@ -110,11 +110,19 @@ internal class LoadingTest : AdapterTest() {
   // MARK: Failures
 
   @Test
-  fun anHttpErrorIsANetworkError() {
+  fun anErrorStatusIsAnHttpError() {
     val outcome = load(resolve("$BASE/no-such-route/${UUID.randomUUID()}.jpg"))
 
-    assertEquals(LoadErrorCode.NETWORK, outcome.error)
+    assertEquals(LoadErrorCode.HTTP, outcome.error)
     assertNull(outcome.view.drawable)
+  }
+
+  /** A gateway timeout may pass, as a dropped connection may. */
+  @Test
+  fun aGatewayTimeoutIsANetworkError() {
+    val outcome = load(resolve("$BASE/status/504/${UUID.randomUUID()}.jpg"))
+
+    assertEquals(LoadErrorCode.NETWORK, outcome.error)
   }
 
   /**
@@ -147,7 +155,7 @@ internal class LoadingTest : AdapterTest() {
 
     val outcome = loadInto(view, resolve("$BASE/no-such-route/${UUID.randomUUID()}.jpg"))
 
-    assertEquals(LoadErrorCode.NETWORK, outcome.error)
+    assertEquals(LoadErrorCode.HTTP, outcome.error)
     assertSame(previous, view.drawable)
   }
 
@@ -241,7 +249,7 @@ internal class LoadingTest : AdapterTest() {
     val refused = load(resolve(fixture("accept/png"), headers = listOf("Accept" to "image/jpeg")))
     val accepted = load(resolve(fixture("accept/png"), headers = listOf("Accept" to "image/png")))
 
-    assertEquals(LoadErrorCode.NETWORK, refused.error)
+    assertEquals(LoadErrorCode.HTTP, refused.error)
     assertTrue(accepted.succeeded)
   }
 
