@@ -296,8 +296,10 @@ function TurboImageComponent({
   }
   // The spinner is plain React, driven by onStart/onCompletion (every start
   // gets exactly one completion). 1.x quirk: `indicator={{}}` means none.
+  // `spinning` tracks the load whenever `indicator` is set, so a placeholder
+  // that comes or goes mid-load leaves it right; the placeholder only hides
+  // the spinner, since it already shows that something is coming.
   const wantsIndicator = indicator != null && Object.keys(indicator).length > 0;
-  // Never over a placeholder, which already shows that something is coming.
   const showsIndicator = wantsIndicator && placeholder == null;
   const [spinning, setSpinning] = useState(false);
   const spinTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -344,13 +346,13 @@ function TurboImageComponent({
       cachePolicy={resolveCachePolicy(cachePolicy)}
       progressEnabled={props.onProgress != null}
       loadEventMask={loadEventMask(
-        showsIndicator || onStart != null,
+        wantsIndicator || onStart != null,
         props.onSuccess != null,
         props.onFailure != null,
-        showsIndicator || onCompletion != null
+        wantsIndicator || onCompletion != null
       )}
-      onStart={showsIndicator ? handleStart : onStart}
-      onCompletion={showsIndicator ? handleCompletion : onCompletion}
+      onStart={wantsIndicator ? handleStart : onStart}
+      onCompletion={wantsIndicator ? handleCompletion : onCompletion}
     />
   );
   if (!needsContainer) {
