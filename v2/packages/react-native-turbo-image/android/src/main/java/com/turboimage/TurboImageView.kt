@@ -565,15 +565,18 @@ class TurboImageView internal constructor(
   }
 
   /**
-   * Loads an image placeholder like the source (headers, view size) but
-   * unprocessed and without events; shown unless something newer got there first.
+   * Loads an image placeholder like the source (view size; headers only on
+   * the source's origin) but unprocessed and without events; shown unless
+   * something newer got there first.
    */
   private fun loadPlaceholder(uri: String, generation: Long) {
     cancelPlaceholderLoad()
+    // The source's headers often carry credentials; another origin never gets them.
+    val headers = if (TurboImageCore.sameOrigin(request.uri, uri)) request.headers else emptyList()
     val placeholder =
       resolve(
         request.copy(
-          uri = uri, cacheKey = null, cachePolicy = CachePolicy.DEFAULT,
+          uri = uri, headers = headers, cacheKey = null, cachePolicy = CachePolicy.DEFAULT,
           processing = Processing(), allowDownscaling = true))
         as? ResolvedRequest ?: return // an unusable URI shows no placeholder
     var finished = false

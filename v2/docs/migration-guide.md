@@ -193,7 +193,7 @@ Point offsets (`{ top: 10 }`) are not supported yet. `resizeMode="scale-down"` d
 <TurboImage source={{ uri: fullUrl }} placeholder={{ uri: thumbnailUrl }} />
 ```
 
-It loads with the source's headers, unprocessed, and without events of its own, and it is never shown over the loaded image. As with a blurhash, it is removed if the image fails, unless `showPlaceholderOnFailure` is set.
+It loads with the source's headers when it is on the same origin as the source (scheme, host and port), and without them otherwise, so credentials never reach another host. It loads unprocessed and without events of its own, and it is never shown over the loaded image. As with a blurhash, it is removed if the image fails, unless `showPlaceholderOnFailure` is set.
 
 ## 4. Behaviour that changed
 

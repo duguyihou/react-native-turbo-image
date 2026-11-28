@@ -798,8 +798,8 @@ struct TIStepEffects {
   });
 }
 
-// `placeholder.uri`: loaded like the source (headers, view size) but
-// unprocessed and silent; shown only if still current.
+// `placeholder.uri`: loaded like the source (view size; headers only on the
+// source's origin) but unprocessed and silent; shown only if still current.
 - (void)loadPlaceholder:(const std::string &)uri generation:(int64_t)generation {
   [self cancelPlaceholderLoad];
   id<TIImageLoading> loader = TIImageLoaderRegistry.sharedLoader;
@@ -807,6 +807,10 @@ struct TIStepEffects {
     return;
   }
   turboimage::ImageRequest request = *_loadedRequest;
+  // The source's headers often carry credentials; another origin never gets them.
+  if (!turboimage::sameOrigin(request.uri, uri)) {
+    request.headers.clear();
+  }
   request.uri = uri;
   request.cacheKey = std::nullopt;
   request.cachePolicy = turboimage::CachePolicy::Default;
