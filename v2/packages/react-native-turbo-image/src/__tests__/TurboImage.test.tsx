@@ -528,7 +528,7 @@ describe('indicator', () => {
     expect(mockNativeView.mounts).toBe(1);
   });
 
-  it('never spins over a placeholder, and leaves the handlers untouched', () => {
+  it("never spins over a placeholder, and still calls the app's handlers", () => {
     const onStart = jest.fn<OnStart>();
     const onCompletion = jest.fn<OnCompletion>();
     const renderer = render({
@@ -537,11 +537,33 @@ describe('indicator', () => {
       onStart,
       onCompletion,
     });
-    expect(nativeProps(renderer).onStart).toBe(onStart);
-    expect(nativeProps(renderer).onCompletion).toBe(onCompletion);
 
     fire(renderer, 'onStart', startEvent);
     advance(1000);
+    expect(spinners(renderer)).toHaveLength(0);
+    fire(renderer, 'onCompletion', completionEvent);
+    expect(onStart).toHaveBeenCalledWith(startEvent);
+    expect(onCompletion).toHaveBeenCalledWith(completionEvent);
+  });
+
+  it('stops a spinner whose load completed while a placeholder hid it', () => {
+    // The load ends while the placeholder is set; when the placeholder goes,
+    // the same view (no remount, no new load) must not spin again.
+    const placeholder = { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' };
+    const renderer = render({ indicator });
+    fire(renderer, 'onStart', startEvent);
+    advance(150);
+    act(() => {
+      renderer.update(
+        <TurboImage source={AVATAR} indicator={indicator} placeholder={placeholder} />
+      );
+    });
+    expect(nativeProps(renderer).loadEventMask & 8).toBe(8); // completion still sent
+    fire(renderer, 'onCompletion', completionEvent);
+    act(() => {
+      renderer.update(<TurboImage source={AVATAR} indicator={indicator} />);
+    });
+
     expect(spinners(renderer)).toHaveLength(0);
   });
 
