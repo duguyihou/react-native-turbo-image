@@ -84,7 +84,7 @@ downsample at decode, so no such gap is expected there.
 | Size | `getSize` reads the header only | `loadAsync` → an ImageRef with width and height (decodes) | TurboImage, for size checks |
 | Recycling | `recyclingKey`; keeps the old image until the new one loads unless the key changed | `recyclingKey` | equal |
 | Load lifecycle | `onStart` → `onProgress` → `onSuccess`/`onFailure` → `onCompletion`, exactly one completion per start, `cancelled` for superseded loads; events with no handler aren't sent | `onLoadStart`, `onProgress`, `onLoad`, `onError` (suppressed on cancel), `onDisplay`; iOS reloads on every prop update and size change | TurboImage: a contract an app can rely on |
-| Error handling | stable `code` on both platforms: `invalidRequest`, `notCached`, `network`, `decode`, `unknown` | an error message string | TurboImage |
+| Error handling | stable `code` on both platforms: `invalidRequest`, `notCached`, `network`, `http`, `decode`, `unknown` | an error message string | TurboImage |
 | Accessibility | React Native's view accessibility props | the same, plus `alt` and `accessibilityElementsHidden` (iOS) | roughly equal; expo-image has `alt` |
 | Live Text | iOS | iOS | equal |
 | Platforms | iOS, Android, tvOS (simulator-tested); New Architecture only | iOS, Android, **web** | expo-image |
