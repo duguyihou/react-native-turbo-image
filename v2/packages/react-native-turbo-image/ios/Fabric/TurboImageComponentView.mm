@@ -528,7 +528,7 @@ struct TIStepEffects {
             [strongSelf deliverFailure:error];
           };
           [strongSelf perform:strongSelf->_lifecycle.loadFailed(token, [strongSelf lifecycleProps],
-                                                                [strongSelf coreErrorCode:error])
+                                                                TICoreErrorCode(error))
                          step:step];
           // Cut off by a trip to the background and back: retry now. Still
           // in the background: `appWillEnterForeground` retries.
@@ -687,15 +687,9 @@ struct TIStepEffects {
   }
 }
 
-// Other domains are adapter bugs: unknown.
-- (turboimage::LoadErrorCode)coreErrorCode:(NSError *)error {
-  return [error.domain isEqualToString:TIImageLoadErrorDomain]
-             ? static_cast<turboimage::LoadErrorCode>(error.code)
-             : turboimage::LoadErrorCode::Unknown;
-}
 
 - (void)deliverFailure:(NSError *)error {
-  [self emitFailure:[self coreErrorCode:error]
+  [self emitFailure:TICoreErrorCode(error)
             message:error.localizedDescription ?: @"Unknown error"];
 }
 

@@ -31,3 +31,7 @@ TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &request,
 std::optional<std::string> TIOptionalCacheKey(const std::string &cacheKey);
 
 NSString *_Nonnull TIStringFromStd(const std::string &s);
+
+// An adapter's error as the core's code; another domain is an adapter bug,
+// so `Unknown`.
+turboimage::LoadErrorCode TICoreErrorCode(NSError *_Nonnull error);

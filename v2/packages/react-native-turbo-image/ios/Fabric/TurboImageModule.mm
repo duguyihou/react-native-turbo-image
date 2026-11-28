@@ -213,11 +213,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
                               resolve(@{@"width" : @(size.width), @"height" : @(size.height)});
                               return;
                             }
-                            // Other domains are adapter bugs: unknown.
-                            const auto code = [error.domain isEqualToString:TIImageLoadErrorDomain]
-                                                  ? static_cast<turboimage::LoadErrorCode>(error.code)
-                                                  : turboimage::LoadErrorCode::Unknown;
-                            rejectWith(code, error.localizedDescription);
+                            rejectWith(TICoreErrorCode(error), error.localizedDescription);
                           }];
   if (!done) {
     [prefetches addObject:task];

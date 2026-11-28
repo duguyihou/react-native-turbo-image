@@ -1,5 +1,7 @@
 #import "TIRequestFactory.h"
 
+#import "TIImageLoading.h"
+
 #include <cmath>
 #include <exception>
 #include <memory>
@@ -91,6 +93,12 @@ UIImage *TIProcessImage(UIImage *image, const std::string &key) {
 NSString *TIStringFromStd(const std::string &s) {
   return [[NSString alloc] initWithBytes:s.data() length:s.size() encoding:NSUTF8StringEncoding]
              ?: @"";
+}
+
+turboimage::LoadErrorCode TICoreErrorCode(NSError *error) {
+  return [error.domain isEqualToString:TIImageLoadErrorDomain]
+             ? static_cast<turboimage::LoadErrorCode>(error.code)
+             : turboimage::LoadErrorCode::Unknown;
 }
 
 std::optional<std::string> TIOptionalCacheKey(const std::string &cacheKey) {
