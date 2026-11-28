@@ -235,6 +235,11 @@ struct TIStepEffects {
     };
     self.contentView = _container;
 
+    // A view made while the app is already in the background (data that
+    // arrived after the user left) is in the background from the start, so
+    // a load it starts then counts as possibly cut by this trip. Nil in an
+    // app extension, which reads as active.
+    _inBackground = RCTSharedApplication().applicationState == UIApplicationStateBackground;
     // UIApplication-level, so scene-based apps get them too. Removed on
     // dealloc by NSNotificationCenter itself; a recycled view keeps them and
     // has nothing to retry.
