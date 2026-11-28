@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Test APK only: cleartext for the localhost fixture server, and a window
+    for the image views under test.
+  -->
+  <application android:usesCleartextTraffic="true">
+    <activity
+        android:name="com.turboimage.loader.TestActivity"
+        android:exported="false" />
+  </application>
+</manifest>

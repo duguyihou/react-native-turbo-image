@@ -1,5 +1,5 @@
 {
-  "exclude": ["v2"],
+  "exclude": ["node_modules", "v2", "tmp"],
   "compilerOptions": {
     "rootDir": ".",
     "paths": {

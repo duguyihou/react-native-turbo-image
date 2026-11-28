@@ -1,0 +1,8 @@
+ios/vendor/
+.build/
+.swiftpm/
+Package.resolved
+build/
+android/build/
+android/.cxx/
+lib/

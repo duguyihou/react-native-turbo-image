@@ -1,0 +1,6 @@
+# actionlint only knows the runner labels that existed when it was released.
+# `xcode-27` is GitHub's hosted Xcode 27 image (preview), used by the iOS jobs
+# in v2-ci.yml; listing it here stops actionlint reporting it as unknown.
+self-hosted-runner:
+  labels:
+    - xcode-27

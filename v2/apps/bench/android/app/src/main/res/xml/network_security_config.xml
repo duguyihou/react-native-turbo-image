@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext HTTP to the development host only. The smoke test's fixtures come
+  from scripts/fixture-server.py on the host (http://localhost:8765 through
+  `adb reverse`), and release builds otherwise forbid cleartext. 10.0.2.2 is
+  the emulator's name for the host, which Metro uses in debug builds.
+
+  With this file present, the manifest's `usesCleartextTraffic` placeholder
+  is ignored (API 24+), so every other host is HTTPS-only in debug builds
+  too.
+-->
+<network-security-config>
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="false">localhost</domain>
+    <domain includeSubdomains="false">10.0.2.2</domain>
+  </domain-config>
+</network-security-config>

@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <!--
+  Retries a load that failed offline when the network comes back
+  (NetworkReturns.kt, ADR 0016). A normal permission: granted at install,
+  never prompted. expo-image declares it too, for Glide's same retry.
+  -->
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+</manifest>

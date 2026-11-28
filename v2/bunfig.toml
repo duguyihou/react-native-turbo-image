@@ -1,0 +1,5 @@
+[install]
+# RN tooling assumes a flat node_modules; Bun 1.3 defaults to isolated.
+linker = "hoisted"
+# Exact versions, for reproducible installs.
+exact = true
