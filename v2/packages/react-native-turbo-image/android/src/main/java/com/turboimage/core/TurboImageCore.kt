@@ -47,6 +47,7 @@ object TurboImageCore {
     headers: List<Pair<String, String>> = emptyList(),
     allowDownscaling: Boolean = false,
     resizeMode: ResizeMode = ResizeMode.CONTAIN,
+    prefetch: Boolean = false,
   ): ResolveResult =
     nativeResolve(
       uri,
@@ -60,15 +61,23 @@ object TurboImageCore {
       headers.flatMap { (name, value) -> listOf(name, value) }.toTypedArray(),
       allowDownscaling,
       resizeMode.nativeValue,
+      // `turboimage::RequestPurpose`: Display = 0, Prefetch = 1.
+      if (prefetch) 1 else 0,
     )
 
-  /** Resolves a source for the cache module, at original size. */
+  /**
+   * Resolves a source for the cache module, at original size. With [prefetch]
+   * the core turns memory writes off where a disk tier keeps the bytes, so a
+   * prefetch only downloads.
+   */
   fun resolveForCache(
     uri: String,
     cacheKey: String?,
     cachePolicy: CachePolicy,
     headers: List<Pair<String, String>>,
-  ): ResolveResult = resolve(uri, cacheKey, cachePolicy, headers = headers, allowDownscaling = false)
+    prefetch: Boolean = false,
+  ): ResolveResult =
+    resolve(uri, cacheKey, cachePolicy, headers = headers, allowDownscaling = false, prefetch = prefetch)
 
   // ARGB widened without sign extension; -1 means unset.
   private fun Int?.toNativeColor(): Long = this?.toLong()?.and(0xffffffffL) ?: -1L
@@ -123,6 +132,7 @@ object TurboImageCore {
     headers: Array<String>,
     allowDownscaling: Boolean,
     resizeMode: Int,
+    purpose: Int,
   ): ResolveResult
 
   private external fun nativeProcess(input: Bitmap, processorKey: String): Bitmap?

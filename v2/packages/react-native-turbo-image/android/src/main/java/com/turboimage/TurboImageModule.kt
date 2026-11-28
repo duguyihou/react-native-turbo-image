@@ -30,13 +30,13 @@ class TurboImageModule(private val context: ReactApplicationContext) :
   override fun getName() = NAME
 
   // null for invalid input.
-  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy): ResolvedRequest? {
+  private fun resolve(sources: ReadableArray, index: Int, policy: CachePolicy, prefetch: Boolean = false): ResolvedRequest? {
     if (sources.getType(index) != ReadableType.Map) return null
-    return resolve(sources.getMap(index) ?: return null, policy)
+    return resolve(sources.getMap(index) ?: return null, policy, prefetch)
   }
 
   // See `TurboImageCore.resolveForCache`.
-  private fun resolve(source: ReadableMap, policy: CachePolicy): ResolvedRequest? {
+  private fun resolve(source: ReadableMap, policy: CachePolicy, prefetch: Boolean = false): ResolvedRequest? {
     val uri = resolveSourceUri(context, if (source.hasKey("uri")) source.getString("uri").orEmpty() else "")
     val cacheKey = if (source.hasKey("cacheKey")) source.getString("cacheKey") else null
     return TurboImageCore.resolveForCache(
@@ -44,6 +44,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       cacheKey,
       policy,
       readHeaders(source),
+      prefetch,
     ) as? ResolvedRequest
   }
 
@@ -67,7 +68,7 @@ class TurboImageModule(private val context: ReactApplicationContext) :
         if (--pending == 0) promise.resolve(allSucceeded)
       }
       for (i in 0 until sources.size()) {
-        val request = resolve(sources, i, policy)?.let(::diskOnly)
+        val request = resolve(sources, i, policy, prefetch = true)
         if (request == null) {
           finishOne(false)
           continue
@@ -86,11 +87,6 @@ class TurboImageModule(private val context: ReactApplicationContext) :
       }
     }
   }
-
-  // Prefetch downloads only (no decode), unless there is no disk tier, in
-  // which case it must decode to store anything.
-  private fun diskOnly(request: ResolvedRequest): ResolvedRequest =
-    if (request.diskWrite) request.copy(memoryWrite = false) else request
 
   override fun getSize(source: ReadableMap, cachePolicy: String, promise: Promise) {
     UiThreadUtil.runOnUiThread {

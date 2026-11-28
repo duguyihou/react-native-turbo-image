@@ -24,8 +24,9 @@ struct TIRequestResult {
 // Resolves `request` with the core and converts it for the seam.
 // `viewPixelSize` bounds the decode when the core asks for it; zero (no
 // layout yet, or the cache module) decodes the original.
-TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &request,
-                                   CGSize viewPixelSize = CGSizeZero);
+TIRequestResult TIMakeImageRequest(
+    const turboimage::ImageRequest &request, CGSize viewPixelSize = CGSizeZero,
+    turboimage::RequestPurpose purpose = turboimage::RequestPurpose::Display);
 
 // JS sends an absent `cacheKey` as an empty string.
 std::optional<std::string> TIOptionalCacheKey(const std::string &cacheKey);

@@ -238,6 +238,18 @@ internal class CacheTest : AdapterTest() {
     assertEquals(ResolvedRequest.DecodeSize.Original, prefetched.decode)
   }
 
+  /** The core turns a prefetch's memory writes off, so it decodes nothing, but not under `memoryOnly`. */
+  @Test
+  fun aPrefetchWritesMemoryOnlyWithoutADiskTier() {
+    val uri = photo()
+    fun prefetch(policy: CachePolicy) =
+      TurboImageCore.resolveForCache(uri, null, policy, emptyList(), prefetch = true) as ResolvedRequest
+
+    assertFalse(prefetch(CachePolicy.DEFAULT).memoryWrite)
+    assertTrue(prefetch(CachePolicy.DEFAULT).diskWrite)
+    assertTrue(prefetch(CachePolicy.MEMORY_ONLY).memoryWrite)
+  }
+
   // MARK: The `memoryCacheKey` placeholder
 
   @Test

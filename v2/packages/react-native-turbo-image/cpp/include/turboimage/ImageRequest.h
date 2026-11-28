@@ -224,8 +224,19 @@ enum class LoadErrorCode : std::int32_t {
 // empty for an empty key.
 [[nodiscard]] std::vector<std::string> memoryCacheKeyCandidates(std::string_view key);
 
+// Who the resolved request is for. Pinned ABI (crosses JNI as an int).
+enum class RequestPurpose : std::int32_t {
+  // A view: load, decode and show.
+  Display = 0,
+  // `TurboImage.prefetch`: store the bytes and decode nothing, unless only
+  // memory would keep them.
+  Prefetch = 1,
+};
+
 // Validates JS props and turns them into adapter instructions.
-[[nodiscard]] ResolveResult resolveRequest(const ImageRequest& request);
+[[nodiscard]] ResolveResult resolveRequest(
+    const ImageRequest& request,
+    RequestPurpose purpose = RequestPurpose::Display);
 
 // Core version string, shown in the example app to prove the C++ is linked.
 [[nodiscard]] std::string_view coreVersion();

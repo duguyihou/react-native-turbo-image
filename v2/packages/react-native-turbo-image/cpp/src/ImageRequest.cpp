@@ -179,7 +179,8 @@ std::vector<std::string> memoryCacheKeyCandidates(std::string_view key) {
   return candidates;
 }
 
-ResolveResult resolveRequest(const ImageRequest& request) {
+ResolveResult resolveRequest(const ImageRequest& request,
+                             RequestPurpose purpose) {
   if (request.uri.empty()) {
     return {.request = std::nullopt, .error = RequestError::EmptyUri};
   }
@@ -242,6 +243,13 @@ ResolveResult resolveRequest(const ImageRequest& request) {
     resolved.disk = {.read = false, .write = false};
     resolved.allowNetwork = true;
     resolved.httpCache = false;
+  }
+  // A prefetch only downloads. The seam's prefetch decodes only to write
+  // memory, so memory writes go off whenever a disk tier keeps the bytes.
+  // Without one (`memoryOnly`, `cacheOnly`, a local source) the policy's
+  // tiers stand: `memoryOnly` must decode or would store nothing.
+  if (purpose == RequestPurpose::Prefetch && resolved.disk.write) {
+    resolved.memory.write = false;
   }
 
   return {.request = std::move(resolved), .error = RequestError::None};

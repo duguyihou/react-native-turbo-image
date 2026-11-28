@@ -62,30 +62,6 @@ turboimage::ImageRequest coreRequest(const SourceFields &fields,
   };
 }
 
-// Prefetch only downloads (memory write off = don't decode), unless there is
-// no disk tier, or nothing would be stored.
-TIImageRequest *diskOnly(TIImageRequest *request) {
-  if (!request.diskCacheWrite) {
-    return request;
-  }
-  return [[TIImageRequest alloc] initWithURL:request.url
-                                    cacheKey:request.cacheKey
-                             memoryCacheRead:request.memoryCacheRead
-                            memoryCacheWrite:NO
-                               diskCacheRead:request.diskCacheRead
-                              diskCacheWrite:request.diskCacheWrite
-                                allowNetwork:request.allowNetwork
-                                processorKey:request.processorKey
-                                   processor:request.processor
-                                     headers:request.headers
-                                   httpCache:request.httpCache
-                                  decodeSize:request.decodeSize
-                                  decodeFill:request.decodeFill
-                            vectorDecodeSize:request.vectorDecodeSize
-                            vectorDecodeFill:request.vectorDecodeFill
-                                displayScale:request.displayScale];
-}
-
 }  // namespace
 
 @interface TurboImageModule () <NativeTurboImageModuleSpec, RCTInvalidating>
@@ -142,7 +118,9 @@ RCT_EXPORT_MODULE(TurboImageModule)
 
   for (id source in sources) {
     const auto fields = sourceFields(source);
-    const auto built = TIMakeImageRequest(coreRequest(fields, policy));
+    // The core picks the tiers: download only, unless memory is the only one.
+    const auto built = TIMakeImageRequest(coreRequest(fields, policy), CGSizeZero,
+                                          turboimage::RequestPurpose::Prefetch);
     if (built.request == nil) {
       finishOne(NO);
       continue;
@@ -150,7 +128,7 @@ RCT_EXPORT_MODULE(TurboImageModule)
     // Capture the set, not `self`, so teardown mid-prefetch is safe.
     NSMutableSet<id<TIImageLoadTask>> *prefetches = _prefetches;
     __block id<TIImageLoadTask> task = nil;
-    task = [loader prefetchRequest:diskOnly(built.request)
+    task = [loader prefetchRequest:built.request
                         completion:^(BOOL succeeded) {
                           [prefetches removeObject:task];
                           finishOne(succeeded);

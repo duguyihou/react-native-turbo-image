@@ -126,8 +126,8 @@ CGSize TIDecodeSize(const turboimage::DecodeSize &decode, CGSize viewPixelSize) 
 }  // namespace
 
 TIRequestResult TIMakeImageRequest(const turboimage::ImageRequest &imageRequest,
-                                   CGSize viewPixelSize) {
-  const auto result = turboimage::resolveRequest(imageRequest);
+                                   CGSize viewPixelSize, turboimage::RequestPurpose purpose) {
+  const auto result = turboimage::resolveRequest(imageRequest, purpose);
   if (!result.ok()) {
     return {.request = nil,
             .error = turboimage::LoadErrorCode::InvalidRequest,

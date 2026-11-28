@@ -249,6 +249,40 @@ INSTANTIATE_TEST_SUITE_P(
         PolicyCase{CachePolicy::UrlCache, {true, true}, {true, true}, true,
                    true}));
 
+// A prefetch writes memory only where no disk tier would keep the bytes.
+// {policy, uri, memory.write}; every other field matches a view's.
+struct PrefetchCase {
+  CachePolicy policy;
+  const char* uri;
+  bool memoryWrite;
+};
+
+class ResolvePrefetch : public ::testing::TestWithParam<PrefetchCase> {};
+
+TEST_P(ResolvePrefetch, DecodesOnlyWhenNoDiskTierWrites) {
+  const auto& c = GetParam();
+  const ImageRequest request{.uri = c.uri, .cachePolicy = c.policy};
+  const auto view = resolveRequest(request);
+  const auto prefetch = resolveRequest(request, RequestPurpose::Prefetch);
+  ASSERT_TRUE(view.ok());
+  ASSERT_TRUE(prefetch.ok());
+
+  EXPECT_EQ(prefetch.request->memory.write, c.memoryWrite);
+  auto expected = *view.request;
+  expected.memory.write = c.memoryWrite;
+  EXPECT_EQ(*prefetch.request, expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllPolicies, ResolvePrefetch,
+    ::testing::Values(
+        PrefetchCase{CachePolicy::Default, "https://cdn.example.com/a.png", false},
+        PrefetchCase{CachePolicy::UrlCache, "https://cdn.example.com/a.png", false},
+        PrefetchCase{CachePolicy::MemoryOnly, "https://cdn.example.com/a.png", true},
+        PrefetchCase{CachePolicy::NoCache, "https://cdn.example.com/a.png", false},
+        PrefetchCase{CachePolicy::CacheOnly, "https://cdn.example.com/a.png", false},
+        PrefetchCase{CachePolicy::Default, "file:///data/a.png", true}));
+
 TEST(ResolveRequestHttpCache, KeepsTheExplicitKeyForTheMemoryTier) {
   // The HTTP cache is keyed by URL; `cacheKey` still names the memory entry.
   const auto result = resolveRequest({.uri = "https://cdn.example.com/a.png?sig=1",

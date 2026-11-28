@@ -159,7 +159,7 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
                                                        jlong tint, jdouble pixelRatio,
                                                        jobjectArray headers,
                                                        jboolean allowDownscaling,
-                                                       jint resizeMode) {
+                                                       jint resizeMode, jint purpose) {
   return guarded(env, static_cast<jobject>(nullptr), [&]() -> jobject {
     const auto key = toStdString(env, cacheKey);
     const auto result = turboimage::resolveRequest({
@@ -174,7 +174,7 @@ Java_com_turboimage_core_TurboImageCore_nativeResolve(JNIEnv* env, jobject /* th
         .headers = toHeaders(env, headers),
         .allowDownscaling = allowDownscaling == JNI_TRUE,
         .resizeMode = static_cast<turboimage::ResizeMode>(resizeMode),
-    });
+    }, static_cast<turboimage::RequestPurpose>(purpose));
 
     if (!result.ok()) {
       jclass failureClass = env->FindClass("com/turboimage/core/ResolveFailure");
