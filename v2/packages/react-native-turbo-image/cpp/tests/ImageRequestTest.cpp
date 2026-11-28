@@ -102,6 +102,11 @@ TEST(ResolveRequestHeaders, RejectsInjectionAndNonTokenNames) {
       {"X-A", "ok\r\nX-Evil: 1"},       // CRLF injection
       {"X-A", "line\nbreak"},          // bare LF
       {"X-A", std::string("nul\0", 4)}, // NUL
+      // Outside tab and printable ASCII, which OkHttp throws on mid-fetch:
+      {"X-A", "caf\xc3\xa9"},          // UTF-8
+      {"X-A", "nul\xc0\x80"},          // NUL as JNI's modified UTF-8
+      {"X-A", "del\x7f"},              // DEL
+      {"X-A", "bell\x07"},             // other control
   };
   for (const auto& header : invalid) {
     const auto result = resolveRequest(
@@ -110,10 +115,10 @@ TEST(ResolveRequestHeaders, RejectsInjectionAndNonTokenNames) {
   }
 }
 
-TEST(ResolveRequestHeaders, AcceptsEveryTokenCharacterAndOpaqueValueBytes) {
+TEST(ResolveRequestHeaders, AcceptsEveryTokenCharacterAndPrintableAsciiValues) {
   const auto result = resolveRequest(
       {.uri = "https://cdn.example.com/a.png",
-       .headers = {{"!#$%&'*+-.^_`|~09azAZ", "tab\tand UTF-8 \xc3\xa9"}}});
+       .headers = {{"!#$%&'*+-.^_`|~09azAZ", "tab\tand printable ASCII ~!@#$%^&*()"}}});
   EXPECT_TRUE(result.ok());
 }
 
