@@ -79,6 +79,15 @@ TEST(ResolveProcessing, NonPositiveOrNanValuesAreAbsent) {
   }
 }
 
+TEST(ResolveProcessing, AFullyTransparentColourIsAbsent) {
+  // Alpha 0 changes no pixel, so it must not make a variant of its own
+  // (`tintColor="transparent"`).
+  for (const std::uint32_t color : {0x00000000u, 0x00ff0000u}) {
+    EXPECT_TRUE(resolveProcessing({.monochrome = color, .tint = color}, 1).empty()) << color;
+  }
+  EXPECT_TRUE(resolveProcessing({.tint = 0x01000000u}, 1).tint.has_value()) << "alpha 1 still tints";
+}
+
 TEST(ResolveProcessing, TinyPositiveResizeStillResizes) {
   EXPECT_EQ(resolveProcessing({.resize = 0.1}, 1).resizeWidth, 1);
 }
@@ -93,10 +102,9 @@ TEST(ResolveProcessing, BlurRoundsToWholePixelsAndClamps) {
 
 TEST(ResolveProcessing, ColorsPassThrough) {
   const auto spec =
-      resolveProcessing({.monochrome = 0xffff0000u, .tint = 0x00000000u}, 1);
+      resolveProcessing({.monochrome = 0xffff0000u, .tint = 0x80112233u}, 1);
   EXPECT_EQ(spec.monochrome, 0xffff0000u);
-  // A fully transparent tint is kept: a no-op on pixels, but asked for.
-  EXPECT_EQ(spec.tint, 0x00000000u);
+  EXPECT_EQ(spec.tint, 0x80112233u);
 }
 
 // --- processorKey / parseProcessorKey ---------------------------------------
