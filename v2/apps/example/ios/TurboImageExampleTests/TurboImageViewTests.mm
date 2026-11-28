@@ -81,8 +81,16 @@ using namespace facebook::react;
 
 @end
 
+/// The tests' sources all live here; see `-[TIFakeLoader loads]`.
+static NSString *const kTestHost = @"images.example.com";
+
 /// Loads finish when the test says so; never after a cancel.
 @interface TIFakeLoader : NSObject <TIImageLoading>
+/// Loads of the tests' own sources (`kTestHost`). The host app's views share
+/// the registry and see the tests' app-state notifications too: on a cold
+/// install without the fixture server, the Home screen's image has failed
+/// with `network` by the first test, and retries on each return to the
+/// foreground. Those loads are taken but never recorded or finished.
 @property(nonatomic, readonly) NSMutableArray<TIFakeLoad *> *loads;
 /// What the cache module asked to prefetch. Never completed.
 @property(nonatomic, readonly) NSMutableArray<TIImageRequest *> *prefetches;
@@ -102,7 +110,9 @@ using namespace facebook::react;
                                    progress:(TIImageLoadProgress)progress
                                  completion:(TIImageLoadCompletion)completion {
   TIFakeLoad *load = [[TIFakeLoad alloc] initWithRequest:request completion:completion];
-  [_loads addObject:load];
+  if ([request.url.host isEqualToString:kTestHost]) {
+    [_loads addObject:load];
+  }
   return load;
 }
 
