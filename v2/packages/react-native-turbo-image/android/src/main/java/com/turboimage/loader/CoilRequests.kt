@@ -236,8 +236,13 @@ private class LaidOutSizeResolver(private val view: View) : SizeResolver {
     }
   }
 
-  private fun currentSize(): Size =
-    if (view.width > 0 && view.height > 0) Size(view.width, view.height) else Size.ORIGINAL
+  // Inside the padding, which is the view's border and padding (React
+  // Native's `BackgroundStyleApplicator`): the image draws only there.
+  private fun currentSize(): Size {
+    val width = view.width - view.paddingLeft - view.paddingRight
+    val height = view.height - view.paddingTop - view.paddingBottom
+    return if (width > 0 && height > 0) Size(width, height) else Size.ORIGINAL
+  }
 }
 
 /** Where to draw a vector image, when that is not the request's own size. */

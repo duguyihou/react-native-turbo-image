@@ -55,6 +55,17 @@ class TurboImageViewTest {
   // MARK: Upgrades
 
   @Test
+  fun removingABorderUpgradesTheImageItOutgrew() = onMain {
+    // The size stays; the area inside the padding grows from 100×50 to 300×200.
+    view.setPadding(100, 75, 100, 75)
+    showLoadedImage(decodedWidth = 100, decodedHeight = 50)
+
+    view.setPadding(0, 0, 0, 0)
+
+    assertEquals("an upgrade starts", 2, loader.loads.size)
+  }
+
+  @Test
   fun aViewThatGrowsPastHalfAgainLoadsItsImageAgainSilently() = onMain {
     showLoadedImage()
     val shown = view.drawable

@@ -246,6 +246,8 @@ class TurboImageView internal constructor(
   override fun setPadding(left: Int, top: Int, right: Int, bottom: Int) {
     super.setPadding(left, top, right, bottom)
     updatePlacement()
+    // A thinner border or padding grows the area the image draws in.
+    upgradeIfOutgrown()
   }
 
 
@@ -401,7 +403,7 @@ class TurboImageView internal constructor(
   private fun startLoad(request: ResolvedRequest, token: Long) {
     emitStart()
     // The decode size if already laid out; otherwise the adapter waits for layout.
-    val sizeAtStart = width to height
+    val sizeAtStart = contentWidth() to contentHeight()
     // A load started in the background (the app runs briefly after a pause)
     // has not yet survived the trip it started in, so it counts as starting
     // before it: a failure after the return then retries at once.
@@ -452,6 +454,11 @@ class TurboImageView internal constructor(
     if (lifecycle.isInFlight(token)) handle = thisHandle
   }
 
+  // The area the image draws in, inside border and padding: what the
+  // adapter decodes for (`LaidOutSizeResolver`).
+  private fun contentWidth() = width - paddingLeft - paddingRight
+  private fun contentHeight() = height - paddingTop - paddingBottom
+
   /** Records a view-sized image, then checks whether the view already outgrew it. */
   private fun remember(
     request: ResolvedRequest, width: Int, height: Int, animated: Boolean, sizeAtStart: Pair<Int, Int>,
@@ -467,8 +474,8 @@ class TurboImageView internal constructor(
     upgradable =
       Upgradable(
         request, decode.fill, width, height,
-        loadedForWidth = if (laidOut) startWidth else this.width,
-        loadedForHeight = if (laidOut) startHeight else this.height,
+        loadedForWidth = if (laidOut) startWidth else contentWidth(),
+        loadedForHeight = if (laidOut) startHeight else contentHeight(),
       )
     // The view may have grown while the load ran.
     upgradeIfOutgrown()
@@ -480,8 +487,8 @@ class TurboImageView internal constructor(
    */
   private fun upgradeIfOutgrown() {
     val shown = upgradable ?: return
-    val nowWidth = width
-    val nowHeight = height
+    val nowWidth = contentWidth()
+    val nowHeight = contentHeight()
     val outgrown =
       ViewLifecycle.needsLargerDecode(
         shown.decodedWidth, shown.decodedHeight,

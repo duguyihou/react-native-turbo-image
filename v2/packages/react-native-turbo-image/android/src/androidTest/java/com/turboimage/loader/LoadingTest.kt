@@ -34,6 +34,19 @@ import org.junit.runner.RunWith
 internal class LoadingTest : AdapterTest() {
   // MARK: Decode size
 
+  /** A border or padding is the view's padding, and the image draws inside it. */
+  @Test
+  fun aPaddedViewIsDecodedForItsContentBox() {
+    val view = addView()
+    InstrumentationRegistry.getInstrumentation().runOnMainSync { view.setPadding(75, 50, 75, 50) }
+    InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+
+    // 600×400 into the 150×100 inside the padding: a quarter, exactly.
+    val outcome = loadInto(view, resolve(photo()))
+
+    assertEquals(150 to 100, outcome.width to outcome.height)
+  }
+
   @Test
   fun anImageLargerThanItsViewIsDecodedForTheView() {
     // 600×400 into 300×200: a half, exactly.

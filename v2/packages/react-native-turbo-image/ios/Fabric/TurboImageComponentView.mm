@@ -560,16 +560,17 @@ struct TIStepEffects {
 // Same factory as the cache module, so prefetched keys match.
 - (TIRequestResult)makeRequest:(const turboimage::ImageRequest &)request {
   const CGFloat pixelRatio = request.pixelRatio;
-  // Bounds are already this transaction's (layout precedes finalizeUpdates).
-  const CGSize viewPixelSize = CGSizeMake(self.bounds.size.width * pixelRatio,
-                                          self.bounds.size.height * pixelRatio);
-  return TIMakeImageRequest(request, viewPixelSize);
+  // The container is this transaction's content frame already (layout
+  // precedes finalizeUpdates): the image draws inside border and padding.
+  const CGSize box = _container.bounds.size;
+  return TIMakeImageRequest(request, CGSizeMake(box.width * pixelRatio, box.height * pixelRatio));
 }
 
-// The view's size in pixels.
+// The area the image draws in (inside border and padding), in pixels.
 - (turboimage::PixelSize)viewPixelSize {
   const CGFloat pixelRatio = RCTScreenScale();
-  return {self.bounds.size.width * pixelRatio, self.bounds.size.height * pixelRatio};
+  const CGSize box = _container.bounds.size;
+  return {box.width * pixelRatio, box.height * pixelRatio};
 }
 
 // The current props as the core's request.
@@ -615,12 +616,13 @@ struct TIStepEffects {
 
 #pragma mark - Upgrades
 
-// A view may outgrow its image when resized after the load.
+// A view may outgrow its image when resized after the load, or when its
+// border or padding shrinks: the image draws in the content frame.
 - (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics
            oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics {
   [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
-  const auto &size = layoutMetrics.frame.size;
-  const auto &oldSize = oldLayoutMetrics.frame.size;
+  const auto size = layoutMetrics.getContentFrame().size;
+  const auto oldSize = oldLayoutMetrics.getContentFrame().size;
   if (size.width > oldSize.width || size.height > oldSize.height) {
     [self upgradeIfOutgrown];
   }

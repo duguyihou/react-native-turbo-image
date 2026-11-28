@@ -304,6 +304,29 @@ static NSString *const kURL = @"https://images.example.com/photos/harbour.jpg";
   XCTAssertTrue(_loader.loads[1].cancelled);
 }
 
+#pragma mark Decode size
+
+- (void)testRemovingABorderUpgradesTheImageItOutgrew {
+  // The frame stays; the content box grows from 40 to 100 pt.
+  [self resize:CGSizeMake(100, 100) contentInset:30];
+  [self setSource:kURL];
+  [_loader.loads[0] succeedWithPixels:[self pixels:CGSizeMake(40, 40)]];
+
+  [self resize:CGSizeMake(100, 100) contentInset:0];
+
+  XCTAssertEqual(_loader.loads.count, 2u, @"an upgrade starts");
+  XCTAssertTrue(CGSizeEqualToSize(_loader.loads[1].request.decodeSize, [self pixels:CGSizeMake(100, 100)]));
+}
+
+- (void)testABorderedViewIsDecodedForItsContentBox {
+  // The image draws inside the border and padding, so it is decoded for that.
+  [self resize:CGSizeMake(100, 100) contentInset:10];
+  [self setSource:kURL];
+
+  XCTAssertTrue(CGSizeEqualToSize(_loader.loads[0].request.decodeSize, [self pixels:CGSizeMake(80, 80)]),
+                @"%@", NSStringFromCGSize(_loader.loads[0].request.decodeSize));
+}
+
 #pragma mark Image placeholders
 
 static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-thumb.jpg";
@@ -677,8 +700,14 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
 
 /// What Fabric does when layout gives the view a new frame.
 - (void)resize:(CGSize)size {
+  [self resize:size contentInset:0];
+}
+
+/// `inset` on every edge: what a border or padding makes of the frame.
+- (void)resize:(CGSize)size contentInset:(CGFloat)inset {
   LayoutMetrics next = _layout;
   next.frame.size = {size.width, size.height};
+  next.contentInsets = {inset, inset, inset, inset};
   next.displayType = DisplayType::Flex;
   [_view updateLayoutMetrics:next oldLayoutMetrics:_layout];
   _layout = next;
