@@ -28,6 +28,12 @@ TEST(SameOrigin, ComparesSchemeHostAndPort) {
   EXPECT_FALSE(sameOrigin("not a uri", "not a uri"));
 }
 
+TEST(SameOrigin, EndsTheHostWhereOkHttpDoes) {
+  // OkHttp ends the host at a backslash, so this connects to evil.test.
+  EXPECT_FALSE(sameOrigin("https://cdn.example.com/a.jpg", "https://evil.test\\@cdn.example.com/t.jpg"));
+  EXPECT_FALSE(sameOrigin("https://cdn.example.com/a.jpg", "https://evil.test\\cdn.example.com"));
+}
+
 TEST(CanonicalCacheKey, DropsFragment) {
   EXPECT_EQ(canonicalCacheKey("https://cdn.example.com/a.png#thumb"),
             "https://cdn.example.com/a.png");
