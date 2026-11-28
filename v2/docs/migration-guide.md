@@ -126,7 +126,7 @@ be removed in 3.0:
 |---|---|
 | `rounded` | `style={{ borderRadius: 9999 }}` (what `rounded` now does) |
 | `indicator` | Your own `<ActivityIndicator>` over the image, shown between `onStart` and `onCompletion`. `indicator` forces a container view around the image (see below) |
-| `placeholder={{ memoryCacheKey }}` | `placeholder={{ uri }}` with the other image's URI. It is also read from the memory cache, and from the disk when it is not there |
+| `placeholder={{ memoryCacheKey }}` | `placeholder={{ uri }}` with the other image's URI. It is also read from the memory cache, and from the disk when it is not there, though not from the full-size entry a `memoryOnly` prefetch leaves (see "Prefetching: to the disk only") |
 | `format`, `isProgressiveImageRenderingEnabled` | Nothing: both are ignored in 2.0 |
 | `cachePolicy="dataCache"` | `cachePolicy="default"` (above) |
 
@@ -150,7 +150,7 @@ TurboImage.prefetch(sources, 'urlCache');
 TurboImage.prefetch(sources, { cachePolicy: 'urlCache' });
 ```
 
-Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the image is loaded into memory at full size, as 1.x did. Only a view with `allowDownscaling={false}` uses that entry: a view that decodes for its own size (the default) keeps its own smaller copy and is never handed the full-size bitmap, so it loads the image again. Prefetch with a disk tier for those views.
+Under `cachePolicy="memoryOnly"`, and for a local file, there is no disk tier, so the image is loaded into memory at full size, as 1.x did. Only a view with `allowDownscaling={false}`, or a `placeholder={{ memoryCacheKey }}`, uses that entry: a view that decodes for its own size (the default) keeps its own smaller copy and is never handed the full-size bitmap, so it loads the image again. Prefetch with a disk tier for those views.
 
 ### An image's size before rendering
 

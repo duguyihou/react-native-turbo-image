@@ -21,11 +21,13 @@ export type NativePlaceholder = Readonly<{
   /**
    * An image already in the *memory* cache: the URI or cacheKey it was
    * loaded with.
-   * @deprecated Use `uri`, which also finds it in the caches. Removed in 3.0.
+   * @deprecated Use `uri`, which also finds it in the caches (but not the
+   * full-size entry a `memoryOnly` prefetch leaves). Removed in 3.0.
    */
   memoryCacheKey?: string;
-  // Any image, e.g. a thumbnail. Loaded with the source's headers,
-  // unprocessed, without events; never shown over the loaded image.
+  // Any image, e.g. a thumbnail. Loaded with the source's headers on its
+  // origin (none on another), unprocessed, without events; never shown
+  // over the loaded image.
   uri?: string;
 }>;
 
