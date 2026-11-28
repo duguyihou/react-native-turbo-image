@@ -196,7 +196,14 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
         let animation = response.container.animation.map {
           PlayableAnimation(source: $0, fitsView: nukeRequest.thumbnail != nil)
         }
-        completionBox.value(response.image, animation, response.cacheType == .memory, nil)
+        // Not `response.cacheType == .memory`: Nuke reports that for a
+        // variant it just processed from the plain image in memory, which
+        // must still fade in. A hit on this exact entry completed above,
+        // synchronously, so nothing that gets here was one. Coil keeps each
+        // variant in its own entry and builds a missing one from the disk
+        // (`CacheTest.eachProcessingIsItsOwnMemoryEntryOverOneOriginal`),
+        // so it fades the same variant in too.
+        completionBox.value(response.image, animation, false, nil)
       } catch {
         progressTask?.cancel()
         guard !Task.isCancelled else { return }

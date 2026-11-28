@@ -24,6 +24,21 @@ struct MemoryCacheTests {
     #expect(await adapter.load(request).fromMemoryCache)
   }
 
+  /// Nuke reports a variant it processed from the plain image in memory as a
+  /// memory hit; the view must still fade it in, as Coil (a disk read) does.
+  @Test func aVariantProcessedFromAPlainImageInMemoryIsNotAMemoryHit() async throws {
+    let file = try Fixture.png()
+    let key = UUID().uuidString
+    _ = await adapter.load(adapter.request(for: file, cacheKey: key, decodeSize: bound))
+
+    let processed = await adapter.load(
+      adapter.request(
+        for: file, cacheKey: key, decodeSize: bound, processorKey: "identity", processor: { $0 }))
+
+    #expect(processed.image != nil)
+    #expect(processed.fromMemoryCache == false)
+  }
+
   /// `noCache` and friends: the core clears `memoryCacheWrite`.
   @Test func aLoadThatMayNotWriteLeavesNothingBehind() async throws {
     let file = try Fixture.png()
