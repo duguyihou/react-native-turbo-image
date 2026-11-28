@@ -171,6 +171,13 @@ describe('contentPosition', () => {
     expect(position({ right: '10%', bottom: '0%' })).toEqual([0.9, 1]);
   });
 
+  it('accepts every percentage its type allows', () => {
+    // `${number}%` admits these, so they must not fall back to centre.
+    expect(position({ top: '.5%' })).toEqual([0.5, 0.005]);
+    expect(position({ left: '1e1%' })).toEqual([0.1, 0.5]);
+    expect(position({ left: '+25%' })).toEqual([0.25, 0.5]);
+  });
+
   it('warns in development about what it cannot place', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     expect(position('middle' as never)).toEqual([0.5, 0.5]);
