@@ -259,7 +259,10 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
 
   /**
    * Maps Coil failures to `turboimage::LoadErrorCode`, in step with iOS.
-   * A 504 means "not cached" only when the policy forbade the network.
+   * A 504 means "not cached" only when the policy forbade the network, and
+   * is otherwise `network`: a gateway timeout, or Coil's synthetic answer
+   * while offline, either of which may pass. Any other error status is the
+   * server's answer and would come again (`http`).
    * `ImageDecoder.DecodeException` is an `IOException`, so check it first.
    * Anything else non-transport is a decode failure.
    */
@@ -267,7 +270,8 @@ internal class CoilImageLoaderAdapter(context: Context, cacheSizes: CacheSizes =
     when {
       error is HttpException && error.response.code == 504 && !request.allowNetwork ->
         LoadErrorCode.NOT_CACHED.nativeValue
-      error is HttpException -> LoadErrorCode.NETWORK.nativeValue
+      error is HttpException && error.response.code == 504 -> LoadErrorCode.NETWORK.nativeValue
+      error is HttpException -> LoadErrorCode.HTTP.nativeValue
       Build.VERSION.SDK_INT >= 28 && error is ImageDecoder.DecodeException -> LoadErrorCode.DECODE.nativeValue
       error is IOException -> LoadErrorCode.NETWORK.nativeValue
       else -> LoadErrorCode.DECODE.nativeValue

@@ -105,14 +105,14 @@ export const DEMO_SOURCES: DemoSource[] = [
     id: 'headerRefused',
     label: 'Header 406',
     source: { uri: `${BASE}/accept/png`, headers: { Accept: 'application/json' } },
-    note: "The same URL with Accept: application/json gets 406: onFailure code 'network'. With a caching policy it would be served the PNG cached above, because headers do not key the cache.",
+    note: "The same URL with Accept: application/json gets 406: onFailure code 'http'. With a caching policy it would be served the PNG cached above, because headers do not key the cache.",
     cachePolicy: 'noCache',
   },
   {
     id: 'missing',
     label: '404',
     source: { uri: `${BASE}/missing/demo.jpg` },
-    note: "A 404: onFailure code 'network'.",
+    note: "A 404: onFailure code 'http'.",
   },
   {
     id: 'notAnImage',

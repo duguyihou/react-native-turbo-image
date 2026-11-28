@@ -411,7 +411,15 @@ public final class NukeImageLoader: NSObject, TIImageLoading, @unchecked Sendabl
     switch error {
     case .dataMissingInCache:
       code = .notCached
-    case .dataLoadingFailed, .dataIsEmpty, .dataDownloadExceededMaximumSize:
+    case .dataLoadingFailed(let underlying):
+      // An error status is the server's answer and would come again; a
+      // gateway timeout (504) may pass, as a dropped connection may.
+      if case .statusCodeUnacceptable(let status) = underlying as? DataLoader.Error, status != 504 {
+        code = .http
+      } else {
+        code = .network
+      }
+    case .dataIsEmpty, .dataDownloadExceededMaximumSize:
       code = .network
     case .decoderNotRegistered, .decodingFailed, .processingFailed:
       code = .decode

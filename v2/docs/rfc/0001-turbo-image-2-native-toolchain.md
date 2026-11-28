@@ -196,7 +196,8 @@ into them:
 |---|---|---|---|
 | `invalidRequest` | Rejected by the core before any loader ran | — (core) | — (core) |
 | `notCached` | The policy forbade the network and no cache tier had the image | `dataMissingInCache` | Synthetic HTTP 504 **and** `!allowNetwork` |
-| `network` | Transport or HTTP failure | `dataLoadingFailed`, `dataIsEmpty`, `dataDownloadExceededMaximumSize` | `HttpException`, `IOException` (including a 504 while offline) |
+| `network` | Transport failure, or a gateway timeout (HTTP 504) | `dataLoadingFailed` (except a refused status), `dataIsEmpty`, `dataDownloadExceededMaximumSize` | `IOException`, `HttpException` 504 (including Coil's synthetic one while offline) |
+| `http` | The server answered with an error status other than 504 | `dataLoadingFailed` wrapping `DataLoader.Error.statusCodeUnacceptable` | `HttpException` |
 | `decode` | Bytes arrived but no image came out | `decoderNotRegistered`, `decodingFailed`, `processingFailed` | Any other failure |
 | `unknown` | Everything else, including adapter bugs | `imageRequestMissing`, `pipelineInvalidated`, non-Nuke errors | — |
 

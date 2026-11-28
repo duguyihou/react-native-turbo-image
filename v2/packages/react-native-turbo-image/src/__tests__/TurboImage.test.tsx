@@ -613,9 +613,9 @@ describe('cache statics', () => {
   });
 
   it('getSize passes the rejection through', async () => {
-    module.getSize.mockRejectedValueOnce(Object.assign(new Error('404'), { code: 'network' }));
+    module.getSize.mockRejectedValueOnce(Object.assign(new Error('404'), { code: 'http' }));
     await expect(TurboImage.getSize(AVATAR, 'cacheOnly')).rejects.toMatchObject({
-      code: 'network',
+      code: 'http',
     });
     expect(module.getSize).toHaveBeenLastCalledWith(AVATAR, 'cacheOnly');
   });

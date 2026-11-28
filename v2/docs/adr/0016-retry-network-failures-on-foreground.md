@@ -27,7 +27,9 @@ Options considered:
 - **The core** (`ViewLifecycle`) records whether the failed load may be retried.
   `loadFailed` takes the error code, and only `Network` counts: `NotCached`,
   `Decode` and `InvalidRequest` would fail the same way again, and `Unknown`
-  might loop. `reload`, `recycle` and `drop` forget the failure.
+  might loop. An error status from the server (a 404) would fail again too,
+  so it has its own `Http` code rather than `Network`; a 504 (a gateway
+  timeout, or Coil's synthetic one while offline) stays `Network`. `reload`, `recycle` and `drop` forget the failure.
 - **`retry(props)`** starts the same request again as a new load, with
   `onStart` … `onCompletion`, so JS sees the view recover. It brings back the
   placeholder the failure removed. Each failure is retried at most once per
