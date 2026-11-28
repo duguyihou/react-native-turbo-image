@@ -372,10 +372,27 @@ describe('layout', () => {
     });
   });
 
-  it('indicator: uses a container too, but one that does not clip', () => {
-    const renderer = render({ style, indicator: { style: 'medium' } });
+  it('indicator: the container clips to a borderRadius, as the image view does', () => {
+    const renderer = render({
+      style: { ...style, borderRadius: 12 },
+      indicator: { style: 'medium' },
+    });
     expect(nativeProps(renderer).style).toBe(StyleSheet.absoluteFill);
-    expect(StyleSheet.flatten(renderer.root.findByType(View).props.style)).toEqual(style);
+    expect(StyleSheet.flatten(renderer.root.findByType(View).props.style)).toEqual({
+      ...style,
+      borderRadius: 12,
+      overflow: 'hidden',
+    });
+  });
+
+  it("indicator: the app's overflow still wins on the container", () => {
+    const renderer = render({
+      style: { ...style, overflow: 'visible' },
+      indicator: { style: 'medium' },
+    });
+    expect(StyleSheet.flatten(renderer.root.findByType(View).props.style)).toMatchObject({
+      overflow: 'visible',
+    });
   });
 });
 
@@ -496,11 +513,39 @@ describe('indicator', () => {
     expect(onCompletion).toHaveBeenCalledWith(completionEvent);
   });
 
+  it('keeps the same native view mounted when a placeholder comes or goes', () => {
+    // A row that gets its blurhash later must not restart its load.
+    const placeholder = { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' };
+    const renderer = render({ indicator });
+    act(() => {
+      renderer.update(
+        <TurboImage source={AVATAR} indicator={indicator} placeholder={placeholder} />
+      );
+    });
+    act(() => {
+      renderer.update(<TurboImage source={AVATAR} indicator={indicator} />);
+    });
+    expect(mockNativeView.mounts).toBe(1);
+  });
+
+  it('never spins over a placeholder, and leaves the handlers untouched', () => {
+    const onStart = jest.fn<OnStart>();
+    const onCompletion = jest.fn<OnCompletion>();
+    const renderer = render({
+      indicator,
+      placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' },
+      onStart,
+      onCompletion,
+    });
+    expect(nativeProps(renderer).onStart).toBe(onStart);
+    expect(nativeProps(renderer).onCompletion).toBe(onCompletion);
+
+    fire(renderer, 'onStart', startEvent);
+    advance(1000);
+    expect(spinners(renderer)).toHaveLength(0);
+  });
+
   it.each([
-    [
-      'a placeholder is given',
-      { indicator, placeholder: { blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' } },
-    ],
     ['the indicator is an empty object (1.x quirk)', { indicator: {} }],
     ['no indicator is given', {}],
   ])('is off when %s: no spinner, no container, handlers untouched', (_case, props) => {
