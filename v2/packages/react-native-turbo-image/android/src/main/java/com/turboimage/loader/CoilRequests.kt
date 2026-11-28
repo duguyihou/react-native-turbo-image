@@ -29,7 +29,9 @@ import coil3.transition.CrossfadeDrawable
 import com.turboimage.core.ResolvedRequest
 import com.turboimage.core.TurboImageCore
 import kotlin.coroutines.resume
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 
 // Translates a resolved request into a Coil request, plus the Coil extension
 // points it uses (target, transformation, size resolver, vector decoder).
@@ -204,7 +206,12 @@ private class CoreProcessingTransformation(private val processorKey: String) : T
  * view gets the original, as on iOS.
  */
 private class LaidOutSizeResolver(private val view: View) : SizeResolver {
-  override suspend fun size(): Size {
+  // On the main thread: the vector decoder asks from Coil's decode thread,
+  // and the view's size and layout listeners are main-thread state.
+  // `immediate` keeps a call already on main (the load's start) synchronous.
+  override suspend fun size(): Size = withContext(Dispatchers.Main.immediate) { sizeOnMain() }
+
+  private suspend fun sizeOnMain(): Size {
     if (view.isLaidOut) return currentSize()
     return suspendCancellableCoroutine { continuation ->
       lateinit var stopWaiting: () -> Unit
