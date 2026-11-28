@@ -121,10 +121,15 @@ const KEYWORD_FRACTIONS: Record<PositionKeyword, { x?: number; y?: number }> = {
   right: { x: 1 },
 };
 
-// '20%' -> 0.2; anything else -> undefined.
+// '20%' -> 0.2; anything else -> undefined. Accepts exactly what the type
+// `${number}%` does (TypeScript's rule: non-empty and `+s` finite), so
+// '.5%' and '1e1%' work too.
 function percentFraction(value: string | number | undefined): number | undefined {
-  if (typeof value === 'string' && /^-?\d+(\.\d+)?%$/.test(value)) {
-    return parseFloat(value) / 100;
+  if (typeof value === 'string' && value.endsWith('%')) {
+    const number = value.slice(0, -1);
+    if (number !== '' && Number.isFinite(+number)) {
+      return +number / 100;
+    }
   }
   if (__DEV__ && value !== undefined) {
     console.warn(
