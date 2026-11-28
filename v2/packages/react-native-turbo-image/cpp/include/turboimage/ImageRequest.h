@@ -176,7 +176,8 @@ enum class RequestError : std::int32_t {
   None = 0,
   EmptyUri = 1,
   UnsupportedScheme = 2,
-  // Header name not an RFC 9110 token, or value with CR, LF or NUL.
+  // Header name not an RFC 9110 token, or a value with anything but tab and
+  // printable ASCII (CR, LF and NUL included).
   // Rejected, not dropped: prevents injection without hiding auth bugs.
   InvalidHeader = 3,
 };

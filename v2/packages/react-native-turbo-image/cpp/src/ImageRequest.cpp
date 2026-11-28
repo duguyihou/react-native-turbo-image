@@ -47,9 +47,15 @@ bool isValidHeader(const Header& header) {
       !std::all_of(header.name.begin(), header.name.end(), isTokenChar)) {
     return false;
   }
-  // Reject CR, LF (header injection) and NUL (truncates C strings).
-  return header.value.find_first_of(std::string_view("\r\n\0", 3)) ==
-         std::string::npos;
+  // Tab and printable ASCII only. That rejects CR and LF (header
+  // injection) and NUL (truncates C strings), and matches what OkHttp
+  // accepts, so a value fails here on both platforms instead of throwing
+  // inside Android's fetch. It also catches a NUL that JNI hands over in
+  // modified UTF-8 (C0 80).
+  return std::all_of(header.value.begin(), header.value.end(), [](char c) {
+    const auto byte = static_cast<unsigned char>(c);
+    return byte == '\t' || (byte >= 0x20 && byte <= 0x7e);
+  });
 }
 
 // The decode target, first match wins:
