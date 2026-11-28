@@ -1,6 +1,8 @@
 package com.turboimage.loader
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.media.ExifInterface
@@ -105,6 +107,34 @@ internal class LoadingTest : AdapterTest() {
     val outcome = load(resolve(photo(), processing = Processing(resize = 150.0)))
 
     assertEquals(150 to 100, outcome.width to outcome.height)
+  }
+
+  // MARK: Cross-fade
+
+  /**
+   * A fade from an image of another shape still places the new image by its
+   * own size. Coil's `CrossfadeDrawable` reports the larger of the two images
+   * in each dimension, and the view places a drawable by that size.
+   */
+  @Test
+  fun aFadeFromAnImageOfAnotherShapePlacesTheNewImageByItsOwnSize() {
+    // Software bitmaps, so the view can be drawn into a bitmap below.
+    val still = NO_FADE.copy(allowHardware = false)
+    val faded = ImageLoaderAdapter.DisplayOptions(fadeMillis = 100, allowHardware = false)
+    val view = addView() // 300×200, fit-centre (contain)
+    // At full size (as `allowDownscaling={false}` or `resize` decode), 200×300.
+    val portrait = resolve(solidPng(200, 300, Color.RED), allowDownscaling = false)
+    assertTrue(loadInto(view, portrait, still).succeeded)
+
+    assertTrue(loadInto(view, resolve(solidPng(300, 200, Color.BLUE)), faded).succeeded)
+    settle(400) // past the fade
+
+    // A 300×200 image fills a 300×200 view, edge to edge.
+    val drawn = onMain {
+      Bitmap.createBitmap(VIEW_WIDTH, VIEW_HEIGHT, Bitmap.Config.ARGB_8888).also { view.draw(Canvas(it)) }
+    }
+    assertEquals("left edge", Color.BLUE, drawn.getPixel(2, VIEW_HEIGHT / 2))
+    assertEquals("right edge", Color.BLUE, drawn.getPixel(VIEW_WIDTH - 3, VIEW_HEIGHT / 2))
   }
 
   // MARK: Failures
@@ -305,5 +335,14 @@ internal class LoadingTest : AdapterTest() {
   @Test
   fun aBodyThatIsNotAnImageFailsAsADecodeError() {
     assertEquals(LoadErrorCode.DECODE, sizeOf(moduleRequest(fixture("not-an-image/size"))).second)
+  }
+
+  /** A [width]×[height] PNG of one [color], as a `file://` URI. */
+  private fun solidPng(width: Int, height: Int, color: Int): String {
+    val file =
+      File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "solid-${UUID.randomUUID()}.png")
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
+    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    return "file://${file.absolutePath}"
   }
 }
