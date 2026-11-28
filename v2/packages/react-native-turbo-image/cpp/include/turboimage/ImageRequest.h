@@ -213,6 +213,12 @@ enum class LoadErrorCode : std::int32_t {
 // userinfo), fragment dropped. Path and query are kept byte for byte.
 [[nodiscard]] std::string canonicalCacheKey(std::string_view uri);
 
+// Whether two URIs share an origin: scheme, host and port, ignoring case
+// and userinfo, with a missing port read as the scheme's default (80 for
+// http, 443 for https). A URI without "scheme://" shares none. Decides
+// whether `placeholder.uri` gets the source's headers.
+[[nodiscard]] bool sameOrigin(std::string_view a, std::string_view b);
+
 // Keys to try, in order, for `placeholder.memoryCacheKey`: as written
 // (an explicit `cacheKey`), then canonicalised (a URI). Deduplicated;
 // empty for an empty key.

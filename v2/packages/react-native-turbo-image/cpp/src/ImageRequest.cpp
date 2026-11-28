@@ -123,6 +123,48 @@ std::string canonicalCacheKey(std::string_view uri) {
   return key;
 }
 
+namespace {
+
+// "scheme://host:port", lower-case, with the default port made explicit;
+// empty when `uri` has no "scheme://".
+std::string originOf(std::string_view uri) {
+  const auto schemeEnd = uri.find("://");
+  if (schemeEnd == std::string_view::npos) {
+    return {};
+  }
+  const auto authorityStart = schemeEnd + 3;
+  auto authorityEnd = uri.find_first_of("/?#", authorityStart);
+  if (authorityEnd == std::string_view::npos) {
+    authorityEnd = uri.size();
+  }
+  auto hostPort = uri.substr(authorityStart, authorityEnd - authorityStart);
+  if (const auto at = hostPort.rfind('@'); at != std::string_view::npos) {
+    hostPort = hostPort.substr(at + 1);
+  }
+  const std::string scheme = lowerAscii(uri.substr(0, schemeEnd));
+  std::string origin = scheme + "://" + lowerAscii(hostPort);
+  // A ':' after the last ']' is a port; an IPv6 literal holds colons too.
+  const auto bracket = hostPort.rfind(']');
+  const auto colon = hostPort.rfind(':');
+  const bool hasPort = colon != std::string_view::npos &&
+                       (bracket == std::string_view::npos || colon > bracket);
+  if (!hasPort) {
+    if (scheme == "http") {
+      origin += ":80";
+    } else if (scheme == "https") {
+      origin += ":443";
+    }
+  }
+  return origin;
+}
+
+}  // namespace
+
+bool sameOrigin(std::string_view a, std::string_view b) {
+  const auto origin = originOf(a);
+  return !origin.empty() && origin == originOf(b);
+}
+
 std::vector<std::string> memoryCacheKeyCandidates(std::string_view key) {
   if (key.empty()) {
     return {};

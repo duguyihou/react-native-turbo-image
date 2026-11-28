@@ -21,6 +21,9 @@ object TurboImageCore {
   /** The JS spelling of a load error code, owned by the C++ core. */
   fun loadErrorCodeName(code: Int): String = nativeLoadErrorCodeName(code)
 
+  /** Whether [a] and [b] share scheme, host and port (`turboimage::sameOrigin`). */
+  fun sameOrigin(a: String, b: String): Boolean = nativeSameOrigin(a, b)
+
   /** Resolves a view's [request]; [pixelRatio] converts `resize` from dp. */
   fun resolve(request: ImageRequest, pixelRatio: Double): ResolveResult =
     resolve(
@@ -103,6 +106,8 @@ object TurboImageCore {
   private external fun nativeMemoryCacheKeyCandidates(key: String): Array<String>
 
   private external fun nativeLoadErrorCodeName(code: Int): String
+
+  private external fun nativeSameOrigin(a: String, b: String): Boolean
 
   private external fun nativeCoreVersion(): String
 

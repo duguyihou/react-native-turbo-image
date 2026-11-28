@@ -12,6 +12,22 @@ TEST(CanonicalCacheKey, LowercasesSchemeAndHostOnly) {
             "https://cdn.example.com/Avatars/Ada.PNG?v=A");
 }
 
+TEST(SameOrigin, ComparesSchemeHostAndPort) {
+  EXPECT_TRUE(sameOrigin("https://cdn.example.com/a.jpg", "https://cdn.example.com/thumbs/a.jpg?w=20"));
+  EXPECT_TRUE(sameOrigin("HTTPS://CDN.example.com/a.jpg", "https://cdn.EXAMPLE.com/b.jpg"));
+  EXPECT_TRUE(sameOrigin("https://cdn.example.com/a.jpg", "https://cdn.example.com:443/b.jpg"));
+  EXPECT_TRUE(sameOrigin("http://cdn.example.com/a.jpg", "http://cdn.example.com:80/b.jpg"));
+  EXPECT_TRUE(sameOrigin("https://user:pw@cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg"));
+  EXPECT_TRUE(sameOrigin("http://[::1]:8765/a.jpg", "http://[::1]:8765/b.jpg"));
+
+  EXPECT_FALSE(sameOrigin("https://api.example.com/a.jpg", "https://thumbs.cdn-vendor.com/a.jpg"));
+  EXPECT_FALSE(sameOrigin("https://cdn.example.com/a.jpg", "http://cdn.example.com/a.jpg"));
+  EXPECT_FALSE(sameOrigin("https://cdn.example.com/a.jpg", "https://cdn.example.com:8443/a.jpg"));
+  EXPECT_FALSE(sameOrigin("http://[::1]:8765/a.jpg", "http://[::1]/a.jpg"));
+  EXPECT_FALSE(sameOrigin("https://cdn.example.com.evil.test/a.jpg", "https://cdn.example.com/a.jpg"));
+  EXPECT_FALSE(sameOrigin("not a uri", "not a uri"));
+}
+
 TEST(CanonicalCacheKey, DropsFragment) {
   EXPECT_EQ(canonicalCacheKey("https://cdn.example.com/a.png#thumb"),
             "https://cdn.example.com/a.png");

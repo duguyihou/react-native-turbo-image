@@ -364,6 +364,14 @@ Java_com_turboimage_core_TurboImageCore_nativeParseCachePolicy(JNIEnv* env, jobj
   });
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeSameOrigin(JNIEnv* env, jobject /* this */, jstring a,
+                                                         jstring b) {
+  return guarded(env, static_cast<jboolean>(JNI_FALSE), [&]() -> jboolean {
+    return turboimage::sameOrigin(toStdString(env, a), toStdString(env, b)) ? JNI_TRUE : JNI_FALSE;
+  });
+}
+
 // Keys a `memoryCacheKey` placeholder may name, in lookup order.
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeMemoryCacheKeyCandidates(JNIEnv* env,
