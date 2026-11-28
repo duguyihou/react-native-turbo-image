@@ -29,6 +29,11 @@ LifecycleEffects ViewLifecycle::applyPlaceholder(const LifecycleProps& props) {
   // Always invalidate decodes started for earlier props.
   const std::int64_t generation = ++placeholderGeneration;
   if (!placeholderAllowed(props)) {
+    // Over a failure, only `showPlaceholderOnFailure` let a placeholder
+    // show; with it now off, drop the one it kept.
+    if (showingState() == Showing::Failed) {
+      return {{.kind = Kind::ClearImage}};
+    }
     return {};
   }
   switch (props.placeholder) {

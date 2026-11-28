@@ -151,8 +151,9 @@ struct ViewLifecycle {
   [[nodiscard]] bool upgradeSucceeded(std::int64_t token);
   void upgradeFailed(std::int64_t token);
 
-  // (Re)applies the placeholder after a reload or a placeholder prop change.
-  // No-op while an image holds the view; clears a dropped placeholder.
+  // (Re)applies the placeholder after a reload, or a change to a placeholder
+  // prop or `showPlaceholderOnFailure`. No-op while an image holds the view;
+  // clears a dropped placeholder, or one a failure may no longer show.
   [[nodiscard]] LifecycleEffects applyPlaceholder(const LifecycleProps& props);
 
   // A `DecodePlaceholder` finished. True if it is still the newest decode

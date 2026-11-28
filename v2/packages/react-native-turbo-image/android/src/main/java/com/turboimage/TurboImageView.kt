@@ -102,8 +102,12 @@ class TurboImageView internal constructor(
   // Cancels the image placeholder's load; null when there is none.
   private var placeholderHandle: LoadHandle? = null
 
-  /** False removes the placeholder when the load fails. */
+  /**
+   * False removes the placeholder when the load fails. A change re-applies
+   * the placeholder, since it decides whether one may show over a failure.
+   */
   var showPlaceholderOnFailure = false
+    set(value) { if (field != value) { field = value; needsPlaceholder = true } }
 
   /** Cross-fade duration in ms; 0 disables it. */
   var fadeDuration = 300

@@ -299,11 +299,13 @@ struct TIStepEffects {
   if (oldViewProps.recyclingKey != newViewProps.recyclingKey) {
     _recyclingKeyChanged = YES;
   }
-  // Placeholder changes alone start no reload.
+  // Placeholder changes alone start no reload. `showPlaceholderOnFailure`
+  // decides whether one may show over a failure, so it re-applies too.
   if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
       oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash ||
       oldViewProps.placeholder.memoryCacheKey != newViewProps.placeholder.memoryCacheKey ||
-      oldViewProps.placeholder.uri != newViewProps.placeholder.uri) {
+      oldViewProps.placeholder.uri != newViewProps.placeholder.uri ||
+      oldViewProps.showPlaceholderOnFailure != newViewProps.showPlaceholderOnFailure) {
     _needsPlaceholder = YES;
   }
   if (oldViewProps.enableLiveTextInteraction != newViewProps.enableLiveTextInteraction) {
