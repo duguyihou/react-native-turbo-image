@@ -14,11 +14,10 @@ import androidx.annotation.VisibleForTesting
  * losing it, so a view that failed offline in the foreground retries without
  * waiting for a trip to the background (as iOS's path monitor does).
  *
- * Needs `ACCESS_NETWORK_STATE`, which the library does not declare: an app
- * that has it (React Native's NetInfo declares it, for one) gets the retry;
- * one without it keeps retrying on the return to the foreground only.
- * TODO: recheck the permission if an app can gain it at runtime (it is a
- * normal, install-time permission today, so it cannot).
+ * Needs `ACCESS_NETWORK_STATE`, which the library's manifest declares. It is
+ * still checked before registering: an app may strip it
+ * (`tools:node="remove"`), and registering without it throws. Such an app
+ * retries on the return to the foreground only.
  */
 internal object NetworkReturns {
   // Main thread only.

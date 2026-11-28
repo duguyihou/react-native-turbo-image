@@ -48,9 +48,10 @@ Options considered:
   - when the network comes back after being lost, if the app is in the
     foreground (added 2026-11-28). iOS watches the path with one
     `nw_path_monitor` for the process. Android registers one default-network
-    callback, only if the app holds `ACCESS_NETWORK_STATE`: the library does
-    not declare it, so that every app is not given a permission for this.
-    Without it, Android retries on the return to the foreground only.
+    callback, which needs `ACCESS_NETWORK_STATE`. The library declares it,
+    as expo-image does for Glide's same retry: a normal permission, granted
+    at install and never prompted. An app that strips it retries on the
+    return to the foreground only.
 
   Each view counts its own trips to the background. The network watchers
   are the only process-wide state, one subscription each.
@@ -60,10 +61,9 @@ Options considered:
 - An app with an error UI driven by `onFailure` shows it briefly, then sees
   `onStart` and the retry's result.
 - A view that failed while the app was in the foreground (offline) retries
-  when the network comes back, except on Android without
-  `ACCESS_NETWORK_STATE`, where it waits for the next return to the
-  foreground. The platforms differ there on purpose (the permission is the
-  app's choice).
+  when the network comes back, on both platforms.
+- Every Android app using TurboImage gains `ACCESS_NETWORK_STATE`. Google
+  Play lists it among the permissions that need no prompt.
 - Only a return after a loss counts: the first path update, and a switch
   from one network to another, retry nothing.
 - `ViewLifecycle` has a sixth field, so the Android `LongArray` grows to 6.

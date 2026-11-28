@@ -247,6 +247,8 @@ Nothing here needs a code change to compile, but each can change what your app d
 - `source.headers` are sent with the request but are not part of the cache key. A header whose value holds anything but tab and printable ASCII (CR, LF, NUL, or non-ASCII text such as `café`), or whose name is not an HTTP token, fails the load with `invalidRequest` on both platforms. Percent-encode or Base64 non-ASCII values.
 - Local sources (`file://`, `content://`, `android.resource://`, `require()`) are never copied into the disk cache, and `cacheOnly` does not block them.
 - On Android, requests send a descriptive `User-Agent` (`<App>/<version> TurboImage/<version> (Android <release>)`) instead of OkHttp's default, which some CDNs refuse.
+- A load that failed with `network` is retried when the app returns to the foreground and, while it is in the foreground, when the network comes back. A local source and an `http` error are not retried.
+- On Android, the library declares `INTERNET` and `ACCESS_NETWORK_STATE` (1.x declared none); the second lets a view retry when the network returns, as expo-image's Glide does. Both are normal permissions, granted at install with no prompt. An app that removes `ACCESS_NETWORK_STATE` with `tools:node="remove"` still works and retries on the return to the foreground only.
 - Cookies are unchanged from 1.x: iOS sends the shared `HTTPCookieStorage`'s cookies (those `fetch` set) with image requests, Android sends none. To authorise an image on both platforms, use a signed URL or put the session in `source.headers` (a `Cookie` or `Authorization` header). A cached image outlives the session, so clear the caches on logout either way.
 
 ### Processors
