@@ -118,10 +118,11 @@ struct ViewLifecycle {
   // to keep the adapter's handle (not if the load already finished).
   [[nodiscard]] bool isInFlight(std::int64_t token) const { return token != 0 && inFlight == token; }
 
-  // Adapter callbacks. Empty for a stale token. A `Network` failure may be
-  // retried (`retry`); others would fail the same way again.
+  // Adapter callbacks. Empty for a stale token. A `Network` failure of a
+  // remote source (`isRemoteSource` of the failed load's URI) may be retried
+  // (`retry`); others would fail the same way again.
   [[nodiscard]] LifecycleEffects loadFailed(std::int64_t token, const LifecycleProps& props,
-                                            LoadErrorCode code);
+                                            LoadErrorCode code, bool remoteSource);
   [[nodiscard]] LifecycleEffects loadSucceeded(std::int64_t token);
 
   // Retry: the same request again after a network failure, as a new load

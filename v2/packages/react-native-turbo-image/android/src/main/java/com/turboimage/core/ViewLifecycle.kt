@@ -47,16 +47,20 @@ class ViewLifecycle {
 
   fun loadSucceeded(token: Long): List<Effect> = effects(TurboImageCore.nativeLifecycleLoadSucceeded(state, token))
 
-  /** [code] is a [LoadErrorCode] value; only `NETWORK` failures may be retried. */
+  /**
+   * [code] is a [LoadErrorCode] value; only `NETWORK` failures of a remote
+   * [sourceUri] (the failed load's) may be retried.
+   */
   fun loadFailed(
     token: Long,
     placeholder: PlaceholderKind,
     showPlaceholderOnFailure: Boolean,
     code: Int,
+    sourceUri: String,
   ): List<Effect> =
     effects(
       TurboImageCore.nativeLifecycleLoadFailed(
-        state, token, placeholder.nativeValue, showPlaceholderOnFailure, code))
+        state, token, placeholder.nativeValue, showPlaceholderOnFailure, code, sourceUri))
 
   /** Whether [retry] would start a load; a plain read, for the many views that won't. */
   fun mayRetry(): Boolean = state[5] != 0L

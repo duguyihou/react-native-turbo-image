@@ -219,6 +219,11 @@ enum class LoadErrorCode : std::int32_t {
 // whether `placeholder.uri` gets the source's headers.
 [[nodiscard]] bool sameOrigin(std::string_view a, std::string_view b);
 
+// Whether `uri` is fetched over the network (`http`, `https`, any case).
+// Local sources (`file`, `content`, `android.resource`) and anything
+// without "scheme://" are not.
+[[nodiscard]] bool isRemoteSource(std::string_view uri);
+
 // Keys to try, in order, for `placeholder.memoryCacheKey`: as written
 // (an explicit `cacheKey`), then canonicalised (a URI). Deduplicated;
 // empty for an empty key.

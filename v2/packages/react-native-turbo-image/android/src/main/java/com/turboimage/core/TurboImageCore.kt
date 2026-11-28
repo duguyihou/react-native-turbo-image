@@ -168,6 +168,7 @@ object TurboImageCore {
     placeholder: Int,
     showPlaceholderOnFailure: Boolean,
     code: Int,
+    sourceUri: String,
   ): LongArray
 
   @JvmName("nativeLifecycleRetry")

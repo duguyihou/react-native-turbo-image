@@ -12,6 +12,16 @@ TEST(CanonicalCacheKey, LowercasesSchemeAndHostOnly) {
             "https://cdn.example.com/Avatars/Ada.PNG?v=A");
 }
 
+TEST(IsRemoteSource, OnlyHttpAndHttpsAreFetched) {
+  EXPECT_TRUE(isRemoteSource("https://cdn.example.com/a.png"));
+  EXPECT_TRUE(isRemoteSource("HTTP://cdn.example.com/a.png"));
+  EXPECT_FALSE(isRemoteSource("file:///data/a.png"));
+  EXPECT_FALSE(isRemoteSource("content://media/external/images/1"));
+  EXPECT_FALSE(isRemoteSource("android.resource://com.example/drawable/a"));
+  EXPECT_FALSE(isRemoteSource("cdn.example.com/a.png"));
+  EXPECT_FALSE(isRemoteSource(""));
+}
+
 TEST(SameOrigin, ComparesSchemeHostAndPort) {
   EXPECT_TRUE(sameOrigin("https://cdn.example.com/a.jpg", "https://cdn.example.com/thumbs/a.jpg?w=20"));
   EXPECT_TRUE(sameOrigin("HTTPS://CDN.example.com/a.jpg", "https://cdn.EXAMPLE.com/b.jpg"));

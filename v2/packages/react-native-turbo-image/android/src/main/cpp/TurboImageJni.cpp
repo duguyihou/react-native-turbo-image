@@ -504,11 +504,12 @@ Java_com_turboimage_core_TurboImageCore_nativeLifecycleLoadSucceeded(JNIEnv* env
 extern "C" JNIEXPORT jlongArray JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeLifecycleLoadFailed(
     JNIEnv* env, jobject /* this */, jlongArray state, jlong token, jint placeholder,
-    jboolean showPlaceholderOnFailure, jint code) {
+    jboolean showPlaceholderOnFailure, jint code, jstring sourceUri) {
   return guarded(env, static_cast<jlongArray>(nullptr), [&]() -> jlongArray {
+    const bool remoteSource = turboimage::isRemoteSource(toStdString(env, sourceUri));
     return toEffects(env, withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
       return lifecycle.loadFailed(token, toLifecycleProps(placeholder, showPlaceholderOnFailure),
-                                  static_cast<turboimage::LoadErrorCode>(code));
+                                  static_cast<turboimage::LoadErrorCode>(code), remoteSource);
     }));
   });
 }

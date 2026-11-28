@@ -179,17 +179,29 @@ std::vector<std::string> memoryCacheKeyCandidates(std::string_view key) {
   return candidates;
 }
 
+namespace {
+
+// The lower-case scheme before "://", or empty without one.
+std::string schemeOf(std::string_view uri) {
+  const auto schemeEnd = uri.find("://");
+  return schemeEnd == std::string_view::npos
+             ? std::string{}
+             : lowerAscii(uri.substr(0, schemeEnd));
+}
+
+}  // namespace
+
+bool isRemoteSource(std::string_view uri) {
+  return contains(kRemoteSchemes, schemeOf(uri));
+}
+
 ResolveResult resolveRequest(const ImageRequest& request,
                              RequestPurpose purpose) {
   if (request.uri.empty()) {
     return {.request = std::nullopt, .error = RequestError::EmptyUri};
   }
 
-  const auto schemeEnd = request.uri.find("://");
-  const auto scheme = schemeEnd == std::string::npos
-                          ? std::string{}
-                          : lowerAscii(std::string_view(request.uri).substr(
-                                0, schemeEnd));
+  const auto scheme = schemeOf(request.uri);
   const bool isLocal = contains(kLocalSchemes, scheme);
   if (!isLocal && !contains(kRemoteSchemes, scheme)) {
     return {.request = std::nullopt, .error = RequestError::UnsupportedScheme};

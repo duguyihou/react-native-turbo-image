@@ -535,6 +535,20 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertEqual(_loader.loads.count, 1u);
 }
 
+- (void)testAMissingLocalFileIsNotRetried {
+  // The adapter reports a file it cannot read as `network`; no return to
+  // the app brings it back.
+  // `kTestHost` as the file URL's host, so the fake loader records it.
+  [self resize:CGSizeMake(100, 100)];
+  [self setSource:[NSString stringWithFormat:@"file://%@/missing/photo.jpg", kTestHost]];
+  [_loader.loads[0] fail];
+
+  [self enterBackground];
+  [self enterForeground];
+
+  XCTAssertEqual(_loader.loads.count, 1u);
+}
+
 - (void)testALoadCutOffByTheBackgroundRetriesAsSoonAsItFails {
   // iOS reports the dropped connection only after the app is back.
   [self resize:CGSizeMake(100, 100)];

@@ -29,7 +29,11 @@ Options considered:
   `Decode` and `InvalidRequest` would fail the same way again, and `Unknown`
   might loop. An error status from the server (a 404) would fail again too,
   so it has its own `Http` code rather than `Network`; a 504 (a gateway
-  timeout, or Coil's synthetic one while offline) stays `Network`. `reload`, `recycle` and `drop` forget the failure.
+  timeout, or Coil's synthetic one while offline) stays `Network`. A local
+  source (`file`, `content`, `android.resource`) is never retried: both
+  adapters report a missing or unreadable file as an I/O failure, which reads
+  as `Network`, so `loadFailed` also takes whether the source is remote
+  (`isRemoteSource`). `reload`, `recycle` and `drop` forget the failure.
 - **`retry(props)`** starts the same request again as a new load, with
   `onStart` … `onCompletion`, so JS sees the view recover. It brings back the
   placeholder the failure removed. Each failure is retried at most once per

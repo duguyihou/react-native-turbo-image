@@ -491,6 +491,9 @@ struct TIStepEffects {
   // as starting before it: a failure after the return then retries at once.
   const NSInteger tripsAtStart = _backgroundTrips - (_inBackground ? 1 : 0);
 
+  // A local source's I/O failure is not retried (`loadFailed`).
+  const bool remoteSource = turboimage::isRemoteSource(request.url.absoluteString.UTF8String);
+
   [self emitStart];
 
   // The lifecycle also guards by token, so a stale callback does nothing.
@@ -530,7 +533,7 @@ struct TIStepEffects {
             [strongSelf deliverFailure:error];
           };
           [strongSelf perform:strongSelf->_lifecycle.loadFailed(token, [strongSelf lifecycleProps],
-                                                                TICoreErrorCode(error))
+                                                                TICoreErrorCode(error), remoteSource)
                          step:step];
           // Cut off by a trip to the background and back: retry now. Still
           // in the background: `appWillEnterForeground` retries.

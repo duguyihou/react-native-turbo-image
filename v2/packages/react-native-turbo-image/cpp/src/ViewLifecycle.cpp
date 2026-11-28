@@ -116,15 +116,17 @@ LifecycleEffects ViewLifecycle::loadSucceeded(std::int64_t token) {
 }
 
 LifecycleEffects ViewLifecycle::loadFailed(std::int64_t token, const LifecycleProps& props,
-                                           LoadErrorCode code) {
+                                           LoadErrorCode code, bool remoteSource) {
   if (!isInFlight(token)) {
     return {};
   }
   inFlight = 0;
   // Only the network can recover by itself. `NotCached` (`cacheOnly`),
   // `Decode` and `Http` (the server's answer) would fail the same way;
-  // `Unknown` might loop.
-  retryable = code == LoadErrorCode::Network ? 1 : 0;
+  // `Unknown` might loop. A local source has no network: both adapters
+  // report a missing or unreadable file as an I/O failure, which reads as
+  // `Network` but comes back the same after any trip to the background.
+  retryable = code == LoadErrorCode::Network && remoteSource ? 1 : 0;
   LifecycleEffects effects{{.kind = Kind::DeliverFailure}};
   fail(props, effects);
   effects.push_back({.kind = Kind::EmitCompleted});

@@ -432,7 +432,7 @@ class TurboImageView internal constructor(
 
           override fun onError(code: Int, message: String) {
             perform(
-              lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure, code),
+              lifecycle.loadFailed(token, placeholderKind(), showPlaceholderOnFailure, code, request.url),
               object : StepEffects() {
                 override fun deliverFailure() = emitFailure(code, message)
               })

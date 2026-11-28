@@ -345,6 +345,19 @@ class TurboImageViewTest {
 
   // MARK: Retry after a network failure
 
+  /** Coil reports a file it cannot read as an `IOException` (`network`); no return brings it back. */
+  @Test
+  fun aMissingLocalFileIsNotRetried() = onMain {
+    resize(300, 200)
+    setSource("file:///nonexistent/photo.jpg")
+    loader.loads[0].fail()
+
+    host.onHostPause()
+    host.onHostResume(null)
+
+    assertEquals(1, loader.loads.size)
+  }
+
   @Test
   fun aNetworkFailureRetriesWhenTheAppReturnsWithFreshEvents() = onMain {
     resize(300, 200)
