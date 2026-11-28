@@ -353,6 +353,40 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(12, 12)));
 }
 
+// Only `showPlaceholderOnFailure` changes, after the failure: no reload runs.
+- (void)testTurningOffShowPlaceholderOnFailureClearsTheKeptPlaceholder {
+  [self resize:CGSizeMake(100, 100)];
+  [self setProps:^(TurboImageViewProps &props) {
+    props.source.uri = std::string(kURL.UTF8String);
+    props.placeholder.uri = std::string(kThumbURL.UTF8String);
+    props.showPlaceholderOnFailure = true;
+  }];
+  [[self loadOf:kThumbURL] succeedWithPixels:CGSizeMake(10, 10)];
+  [[self loadOf:kURL] failWithCode:TIImageLoadErrorDecode];
+  XCTAssertNotNil([self imageOnScreen], @"kept over the failure");
+
+  [self setProps:^(TurboImageViewProps &props) {
+    props.showPlaceholderOnFailure = false;
+  }];
+
+  XCTAssertNil([self imageOnScreen]);
+}
+
+- (void)testTurningOnShowPlaceholderOnFailureShowsThePlaceholderOverTheFailure {
+  [self setSourceWithThumbnail];
+  [[self loadOf:kURL] failWithCode:TIImageLoadErrorDecode];
+  XCTAssertNil([self imageOnScreen]);
+  const NSUInteger loadsBefore = _loader.loads.count;
+
+  [self setProps:^(TurboImageViewProps &props) {
+    props.showPlaceholderOnFailure = true;
+  }];
+
+  XCTAssertEqual(_loader.loads.count, loadsBefore + 1, @"only the placeholder loads again");
+  [_loader.loads.lastObject succeedWithPixels:CGSizeMake(10, 10)];
+  XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(10, 10)));
+}
+
 - (void)testAnImagePlaceholderUsesTheSourcesHeadersAndNoProcessing {
   [self resize:CGSizeMake(100, 100)];
   [self setProps:^(TurboImageViewProps &props) {

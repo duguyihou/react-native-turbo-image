@@ -19,6 +19,7 @@ import com.turboimage.loader.ImageLoaderAdapter
 import com.turboimage.loader.LoadHandle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -212,6 +213,36 @@ class TurboImageViewTest {
     thumb.deliver(SizedDrawable(30, 20))
 
     assertEquals(300, view.drawable.intrinsicWidth)
+  }
+
+  // Only `showPlaceholderOnFailure` changes, after the failure: no reload runs.
+  @Test
+  fun turningOffShowPlaceholderOnFailureClearsTheKeptPlaceholder() = onMain {
+    view.showPlaceholderOnFailure = true
+    setSourceWithThumbnail()
+    loader.placeholderLoads.single().deliver(SizedDrawable(30, 20))
+    loader.loads.single().fail(LoadErrorCode.DECODE)
+    assertEquals("kept over the failure", 30, view.drawable.intrinsicWidth)
+
+    view.showPlaceholderOnFailure = false
+    view.onTransactionEnd()
+
+    assertNull(view.drawable)
+  }
+
+  @Test
+  fun turningOnShowPlaceholderOnFailureShowsThePlaceholderOverTheFailure() = onMain {
+    setSourceWithThumbnail()
+    loader.loads.single().fail(LoadErrorCode.DECODE)
+    assertNull(view.drawable)
+
+    view.showPlaceholderOnFailure = true
+    view.onTransactionEnd()
+
+    assertEquals("the placeholder loads again", 2, loader.placeholderLoads.size)
+    loader.placeholderLoads.last().deliver(SizedDrawable(30, 20))
+    assertEquals(30, view.drawable.intrinsicWidth)
+    assertEquals("the image's own load is not restarted", 1, loader.loads.size)
   }
 
   @Test

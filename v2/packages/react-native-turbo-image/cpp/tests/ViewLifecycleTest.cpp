@@ -138,7 +138,8 @@ TEST(ViewLifecycle, FailureRemovesThePlaceholderByDefault) {
                      {.kind = Kind::EmitCompleted}}));
   // A decode that finishes after the failure must not appear either.
   EXPECT_FALSE(lifecycle.placeholderDecoded(decode[0].value, kHash));
-  EXPECT_TRUE(lifecycle.applyPlaceholder(kHash).empty());
+  // Re-applying brings no placeholder back (it only clears, idempotently).
+  EXPECT_EQ(lifecycle.applyPlaceholder(kHash), effects({{.kind = Kind::ClearImage}}));
 }
 
 TEST(ViewLifecycle, FailureKeepsThePlaceholderWhenAsked) {
@@ -148,6 +149,28 @@ TEST(ViewLifecycle, FailureKeepsThePlaceholderWhenAsked) {
   EXPECT_EQ(lifecycle.loadFailed(1, kHashKeptOnFailure, kDecode),
             effects({{.kind = Kind::DeliverFailure}, {.kind = Kind::EmitCompleted}}));
   EXPECT_TRUE(lifecycle.placeholderDecoded(decode[0].value, kHashKeptOnFailure));
+}
+
+TEST(ViewLifecycle, DroppingShowPlaceholderOnFailureClearsTheKeptPlaceholder) {
+  // The failure kept the placeholder; the app then turns the flag off.
+  ViewLifecycle lifecycle;
+  (void)lifecycle.reload(false, false, true, kHashKeptOnFailure);
+  const auto decode = lifecycle.applyPlaceholder(kHashKeptOnFailure);
+  (void)lifecycle.loadFailed(1, kHashKeptOnFailure, kDecode);
+
+  EXPECT_EQ(lifecycle.applyPlaceholder(kHash), effects({{.kind = Kind::ClearImage}}));
+  EXPECT_FALSE(lifecycle.placeholderDecoded(decode[0].value, kHash));
+}
+
+TEST(ViewLifecycle, SettingShowPlaceholderOnFailureShowsThePlaceholderOverAFailure) {
+  ViewLifecycle lifecycle;
+  (void)lifecycle.reload(false, false, true, kHash);
+  (void)lifecycle.applyPlaceholder(kHash);
+  (void)lifecycle.loadFailed(1, kHash, kDecode);
+
+  const auto decode = lifecycle.applyPlaceholder(kHashKeptOnFailure);
+  ASSERT_EQ(decode.size(), 1U);
+  EXPECT_EQ(decode[0].kind, Kind::DecodePlaceholder);
 }
 
 TEST(ViewLifecycle, FailureSwapsAKeptPreviousImageForThePlaceholder) {
