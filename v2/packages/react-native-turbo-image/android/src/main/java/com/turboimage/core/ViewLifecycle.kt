@@ -72,6 +72,12 @@ class ViewLifecycle {
   fun applyPlaceholder(placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
     effects(TurboImageCore.nativeLifecycleApplyPlaceholder(state, placeholder.nativeValue, showPlaceholderOnFailure))
 
+  /** `showPlaceholderOnFailure` alone changed: re-applies only over a failure. */
+  fun showPlaceholderOnFailureChanged(placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): List<Effect> =
+    effects(
+      TurboImageCore.nativeLifecycleShowPlaceholderOnFailureChanged(
+        state, placeholder.nativeValue, showPlaceholderOnFailure))
+
   fun placeholderDecoded(generation: Long, placeholder: PlaceholderKind, showPlaceholderOnFailure: Boolean): Boolean =
     TurboImageCore.nativeLifecyclePlaceholderDecoded(state, generation, placeholder.nativeValue, showPlaceholderOnFailure)
 

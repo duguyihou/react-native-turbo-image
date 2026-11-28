@@ -185,6 +185,13 @@ object TurboImageCore {
     showPlaceholderOnFailure: Boolean,
   ): LongArray
 
+  @JvmName("nativeLifecycleShowPlaceholderOnFailureChanged")
+  internal external fun nativeLifecycleShowPlaceholderOnFailureChanged(
+    state: LongArray,
+    placeholder: Int,
+    showPlaceholderOnFailure: Boolean,
+  ): LongArray
+
   @JvmName("nativeLifecyclePlaceholderDecoded")
   internal external fun nativeLifecyclePlaceholderDecoded(
     state: LongArray,

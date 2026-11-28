@@ -405,6 +405,22 @@ static NSString *const kThumbURL = @"https://images.example.com/photos/harbour-t
   XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(10, 10)));
 }
 
+- (void)testShowPlaceholderOnFailureMidLoadLeavesThePlaceholderLoadAlone {
+  // The flag only decides what a failure shows; nothing to redo yet.
+  [self setSourceWithThumbnail];
+  TIFakeLoad *thumb = [self loadOf:kThumbURL];
+  const NSUInteger loadsBefore = _loader.loads.count;
+
+  [self setProps:^(TurboImageViewProps &props) {
+    props.showPlaceholderOnFailure = true;
+  }];
+
+  XCTAssertEqual(_loader.loads.count, loadsBefore, @"no second placeholder load");
+  XCTAssertFalse(thumb.cancelled);
+  [thumb succeedWithPixels:CGSizeMake(10, 10)];
+  XCTAssertTrue(CGSizeEqualToSize([self imageOnScreen].size, CGSizeMake(10, 10)));
+}
+
 - (void)testAnImagePlaceholderOnAnotherOriginGetsNoHeaders {
   // The source's credentials must not reach another origin. A port makes
   // one here, since the fake loader records only `kTestHost`'s loads.

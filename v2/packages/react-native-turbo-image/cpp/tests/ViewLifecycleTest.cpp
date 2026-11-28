@@ -160,7 +160,8 @@ TEST(ViewLifecycle, DroppingShowPlaceholderOnFailureClearsTheKeptPlaceholder) {
   const auto decode = lifecycle.applyPlaceholder(kHashKeptOnFailure);
   (void)lifecycle.loadFailed(1, kHashKeptOnFailure, kDecode, kRemote);
 
-  EXPECT_EQ(lifecycle.applyPlaceholder(kHash), effects({{.kind = Kind::ClearImage}}));
+  EXPECT_EQ(lifecycle.showPlaceholderOnFailureChanged(kHash),
+            effects({{.kind = Kind::ClearImage}}));
   EXPECT_FALSE(lifecycle.placeholderDecoded(decode[0].value, kHash));
 }
 
@@ -170,9 +171,24 @@ TEST(ViewLifecycle, SettingShowPlaceholderOnFailureShowsThePlaceholderOverAFailu
   (void)lifecycle.applyPlaceholder(kHash);
   (void)lifecycle.loadFailed(1, kHash, kDecode, kRemote);
 
-  const auto decode = lifecycle.applyPlaceholder(kHashKeptOnFailure);
+  const auto decode = lifecycle.showPlaceholderOnFailureChanged(kHashKeptOnFailure);
   ASSERT_EQ(decode.size(), 1U);
   EXPECT_EQ(decode[0].kind, Kind::DecodePlaceholder);
+}
+
+TEST(ViewLifecycle, ShowPlaceholderOnFailureChangesNothingBeforeAFailure) {
+  // The flag only decides what a failure shows. Mid-load, re-applying would
+  // restart the placeholder's decode (or a `placeholder.uri` load) for the
+  // same pixels.
+  ViewLifecycle lifecycle;
+  (void)lifecycle.reload(false, false, true, kHash);
+  const auto decode = lifecycle.applyPlaceholder(kHash);
+  EXPECT_TRUE(lifecycle.showPlaceholderOnFailureChanged(kHashKeptOnFailure).empty());
+  EXPECT_TRUE(lifecycle.placeholderDecoded(decode[0].value, kHashKeptOnFailure))
+      << "the running decode still lands";
+
+  (void)lifecycle.loadSucceeded(1);
+  EXPECT_TRUE(lifecycle.showPlaceholderOnFailureChanged(kHash).empty());
 }
 
 TEST(ViewLifecycle, FailureSwapsAKeptPreviousImageForThePlaceholder) {

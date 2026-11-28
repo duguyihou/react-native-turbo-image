@@ -536,6 +536,18 @@ Java_com_turboimage_core_TurboImageCore_nativeLifecycleApplyPlaceholder(
   });
 }
 
+extern "C" JNIEXPORT jlongArray JNICALL
+Java_com_turboimage_core_TurboImageCore_nativeLifecycleShowPlaceholderOnFailureChanged(
+    JNIEnv* env, jobject /* this */, jlongArray state, jint placeholder,
+    jboolean showPlaceholderOnFailure) {
+  return guarded(env, static_cast<jlongArray>(nullptr), [&]() -> jlongArray {
+    return toEffects(env, withLifecycle(env, state, [&](turboimage::ViewLifecycle& lifecycle) {
+      return lifecycle.showPlaceholderOnFailureChanged(
+          toLifecycleProps(placeholder, showPlaceholderOnFailure));
+    }));
+  });
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_turboimage_core_TurboImageCore_nativeLifecyclePlaceholderDecoded(
     JNIEnv* env, jobject /* this */, jlongArray state, jlong generation, jint placeholder,

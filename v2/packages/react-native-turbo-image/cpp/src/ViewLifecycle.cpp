@@ -49,6 +49,13 @@ LifecycleEffects ViewLifecycle::applyPlaceholder(const LifecycleProps& props) {
   return {{.kind = Kind::ClearImage}};
 }
 
+LifecycleEffects ViewLifecycle::showPlaceholderOnFailureChanged(const LifecycleProps& props) {
+  if (showingState() != Showing::Failed) {
+    return {};
+  }
+  return applyPlaceholder(props);
+}
+
 bool ViewLifecycle::placeholderDecoded(std::int64_t generation, const LifecycleProps& props) const {
   return generation == placeholderGeneration && placeholderAllowed(props);
 }

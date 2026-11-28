@@ -152,10 +152,16 @@ struct ViewLifecycle {
   [[nodiscard]] bool upgradeSucceeded(std::int64_t token);
   void upgradeFailed(std::int64_t token);
 
-  // (Re)applies the placeholder after a reload, or a change to a placeholder
-  // prop or `showPlaceholderOnFailure`. No-op while an image holds the view;
-  // clears a dropped placeholder, or one a failure may no longer show.
+  // (Re)applies the placeholder after a reload or a change to a placeholder
+  // prop. No-op while an image holds the view; clears a dropped placeholder,
+  // or one a failure may no longer show.
   [[nodiscard]] LifecycleEffects applyPlaceholder(const LifecycleProps& props);
+
+  // `showPlaceholderOnFailure` changed with no reload or placeholder change.
+  // It only decides what a failure shows, so this is `applyPlaceholder` over
+  // a failure and nothing elsewhere: re-applying mid-load would restart the
+  // placeholder's decode or `placeholder.uri` load for the same pixels.
+  [[nodiscard]] LifecycleEffects showPlaceholderOnFailureChanged(const LifecycleProps& props);
 
   // A `DecodePlaceholder` finished. True if it is still the newest decode
   // and no image or failure has taken the view.

@@ -185,6 +185,9 @@ struct TIStepEffects {
   // The current load's request; empty before the first load and after recycle.
   std::optional<turboimage::ImageRequest> _loadedRequest;
   BOOL _needsPlaceholder;
+  // `showPlaceholderOnFailure` changed; ignored when `_needsPlaceholder`
+  // re-applies anyway.
+  BOOL _showPlaceholderOnFailureChanged;
   BOOL _needsLiveTextUpdate;
   // `recyclingKey` changed: the next load must not keep the previous image.
   BOOL _recyclingKeyChanged;
@@ -306,14 +309,16 @@ struct TIStepEffects {
   if (oldViewProps.recyclingKey != newViewProps.recyclingKey) {
     _recyclingKeyChanged = YES;
   }
-  // Placeholder changes alone start no reload. `showPlaceholderOnFailure`
-  // decides whether one may show over a failure, so it re-applies too.
+  // Placeholder changes alone start no reload.
   if (oldViewProps.placeholder.blurhash != newViewProps.placeholder.blurhash ||
       oldViewProps.placeholder.thumbhash != newViewProps.placeholder.thumbhash ||
       oldViewProps.placeholder.memoryCacheKey != newViewProps.placeholder.memoryCacheKey ||
-      oldViewProps.placeholder.uri != newViewProps.placeholder.uri ||
-      oldViewProps.showPlaceholderOnFailure != newViewProps.showPlaceholderOnFailure) {
+      oldViewProps.placeholder.uri != newViewProps.placeholder.uri) {
     _needsPlaceholder = YES;
+  }
+  // Decides only what a failure shows; the core redoes nothing elsewhere.
+  if (oldViewProps.showPlaceholderOnFailure != newViewProps.showPlaceholderOnFailure) {
+    _showPlaceholderOnFailureChanged = YES;
   }
   if (oldViewProps.enableLiveTextInteraction != newViewProps.enableLiveTextInteraction) {
     // Applied in finalizeUpdates, once `_props` holds the new value.
@@ -346,7 +351,11 @@ struct TIStepEffects {
   if (_needsPlaceholder) {
     _needsPlaceholder = NO;
     [self perform:_lifecycle.applyPlaceholder([self lifecycleProps]) step:TIStepEffects{}];
+  } else if (_showPlaceholderOnFailureChanged) {
+    [self perform:_lifecycle.showPlaceholderOnFailureChanged([self lifecycleProps])
+             step:TIStepEffects{}];
   }
+  _showPlaceholderOnFailureChanged = NO;
   if (_needsLiveTextUpdate) {
     _needsLiveTextUpdate = NO;
     [self updateLiveText];
@@ -865,6 +874,7 @@ struct TIStepEffects {
   _propsChanged = NO;
   _loadedRequest.reset();
   _needsPlaceholder = NO;
+  _showPlaceholderOnFailureChanged = NO;
   _needsLiveTextUpdate = NO;
   [_liveText detach];
   _liveText = nil;

@@ -75,6 +75,8 @@ class TurboImageView internal constructor(
   // The inputs the current load was started for; null before the first load.
   private var loadedFor: LoadInputs? = null
   private var needsPlaceholder = false
+  // Ignored when [needsPlaceholder] re-applies anyway.
+  private var showPlaceholderOnFailureChanged = false
   private var recyclingKeyChanged = false
   // The core decides what is shown and which events fire (shared with iOS);
   // this view reports what happened and runs the returned effects.
@@ -103,11 +105,12 @@ class TurboImageView internal constructor(
   private var placeholderHandle: LoadHandle? = null
 
   /**
-   * False removes the placeholder when the load fails. A change re-applies
-   * the placeholder, since it decides whether one may show over a failure.
+   * False removes the placeholder when the load fails. It decides only what
+   * a failure shows, so a change alone redoes nothing elsewhere (see
+   * [onTransactionEnd]).
    */
   var showPlaceholderOnFailure = false
-    set(value) { if (field != value) { field = value; needsPlaceholder = true } }
+    set(value) { if (field != value) { field = value; showPlaceholderOnFailureChanged = true } }
 
   /** Cross-fade duration in ms; 0 disables it. */
   var fadeDuration = 300
@@ -262,7 +265,10 @@ class TurboImageView internal constructor(
     if (needsPlaceholder) {
       needsPlaceholder = false
       perform(lifecycle.applyPlaceholder(placeholderKind(), showPlaceholderOnFailure))
+    } else if (showPlaceholderOnFailureChanged) {
+      perform(lifecycle.showPlaceholderOnFailureChanged(placeholderKind(), showPlaceholderOnFailure))
     }
+    showPlaceholderOnFailureChanged = false
   }
 
   /** The view is gone for good ([TurboImageViewManager.onDropViewInstance]). */

@@ -18,6 +18,7 @@ import com.turboimage.core.ResolvedRequest
 import com.turboimage.loader.ImageLoaderAdapter
 import com.turboimage.loader.LoadHandle
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -243,6 +244,21 @@ class TurboImageViewTest {
     loader.placeholderLoads.last().deliver(SizedDrawable(30, 20))
     assertEquals(30, view.drawable.intrinsicWidth)
     assertEquals("the image's own load is not restarted", 1, loader.loads.size)
+  }
+
+  /** The flag only decides what a failure shows; mid-load there is nothing to redo. */
+  @Test
+  fun showPlaceholderOnFailureMidLoadLeavesThePlaceholderLoadAlone() = onMain {
+    setSourceWithThumbnail()
+    val thumb = loader.placeholderLoads.single()
+
+    view.showPlaceholderOnFailure = true
+    view.onTransactionEnd()
+
+    assertEquals("no second placeholder load", 1, loader.placeholderLoads.size)
+    assertFalse(thumb.cancelled)
+    thumb.deliver(SizedDrawable(30, 20))
+    assertEquals(30, view.drawable.intrinsicWidth)
   }
 
   // The source's credentials must not reach a third-party host.
