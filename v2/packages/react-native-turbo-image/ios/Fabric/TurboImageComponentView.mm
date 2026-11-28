@@ -208,7 +208,9 @@ struct TIStepEffects {
   // `network` after one was likely cut off by it (iOS drops connections and
   // reports it on return), so it retries at once (`ViewLifecycle::retry`);
   // any other network failure waits for the next return to the foreground.
-  NSUInteger _backgroundTrips;
+  // Signed: a load started in the background records one trip fewer, which
+  // is -1 for a view made there.
+  NSInteger _backgroundTrips;
   BOOL _inBackground;
 }
 
@@ -487,7 +489,7 @@ struct TIStepEffects {
   // A load started in the background (the app runs briefly after leaving
   // the screen) has not yet survived the trip it started in, so it counts
   // as starting before it: a failure after the return then retries at once.
-  const NSUInteger tripsAtStart = _backgroundTrips - (_inBackground ? 1 : 0);
+  const NSInteger tripsAtStart = _backgroundTrips - (_inBackground ? 1 : 0);
 
   [self emitStart];
 
