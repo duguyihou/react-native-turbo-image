@@ -355,10 +355,11 @@ function TurboImageComponent({
   }
   // The container takes `style`, `ref` and rounding; `testID` and a11y props
   // stay on the image. It lives as long as `indicator` is set, not just while
-  // spinning, since remounting the image would restart the load.
+  // spinning, since remounting the image would restart the load. It clips as
+  // the image view would, since the image inside it has no radius of its own.
   // TODO: draw the spinner natively if toggling `indicator` matters.
   return (
-    <View ref={ref} style={[style, rounded && styles.rounded]}>
+    <View ref={ref} style={imageStyle}>
       {image}
       {showsIndicator && spinning && (
         <ActivityIndicator
