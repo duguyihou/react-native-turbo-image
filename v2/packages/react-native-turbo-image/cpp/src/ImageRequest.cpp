@@ -133,7 +133,10 @@ std::string originOf(std::string_view uri) {
     return {};
   }
   const auto authorityStart = schemeEnd + 3;
-  auto authorityEnd = uri.find_first_of("/?#", authorityStart);
+  // OkHttp (and WHATWG URL parsing) also ends the authority at a backslash,
+  // so "https://evil.test\@cdn.example.com" connects to evil.test: a host
+  // read past it would send credentials there.
+  auto authorityEnd = uri.find_first_of("/?#\\", authorityStart);
   if (authorityEnd == std::string_view::npos) {
     authorityEnd = uri.size();
   }
