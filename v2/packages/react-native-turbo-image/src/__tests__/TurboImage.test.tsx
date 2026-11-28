@@ -679,3 +679,20 @@ describe('cache statics', () => {
     expect(module.clearDiskCache).toHaveBeenCalledTimes(1);
   });
 });
+
+// Compile-time only: the payload types name the values native sends, so a
+// misspelt code is a type error. `bun run typecheck` checks these.
+const misspeltCode: NonNullable<TurboImageProps['onFailure']> = ({ nativeEvent }) => {
+  // @ts-expect-error: 'notcached' is not a load error code.
+  if (nativeEvent.code === 'notcached') return;
+};
+const misspeltState: NonNullable<TurboImageProps['onCompletion']> = ({ nativeEvent }) => {
+  // @ts-expect-error: 'canceled' is not a completion state.
+  if (nativeEvent.state === 'canceled') return;
+};
+
+describe('event payload types', () => {
+  it('narrows codes and states to their documented values', () => {
+    expect([misspeltCode, misspeltState]).toHaveLength(2);
+  });
+});
