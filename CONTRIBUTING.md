@@ -4,7 +4,11 @@ Contributions are always welcome, no matter how large or small!
 
 We want this community to be friendly and respectful to each other. Please follow it in all your interactions with the project. Before contributing, please read the [code of conduct](./CODE_OF_CONDUCT.md).
 
-## Development workflow
+## Working on 2.0 (`v2/`)
+
+TurboImage 2.0 lives under [`v2/`](./v2/README.md) and has its own toolchain: Bun, oxlint and oxfmt, a C++ core tested with GoogleTest, and its own CI workflow (`.github/workflows/v2-ci.yml`). The rest of this guide covers 1.x only. For 2.0, follow [`v2/README.md`](./v2/README.md) and the rules in [`v2/docs/architecture.md`](./v2/docs/architecture.md). The lint and type-check hooks below skip `v2/`, so run its checks yourself before committing.
+
+## Development workflow (1.x)
 
 This project is a monorepo managed using [Yarn workspaces](https://yarnpkg.com/features/workspaces). It contains the following packages:
 

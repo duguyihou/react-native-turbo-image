@@ -7,11 +7,13 @@ NS_ASSUME_NONNULL_BEGIN
 typedef UIImage *_Nullable (^TIImageProcessor)(UIImage *image);
 
 /// A request already resolved by the C++ core. Adapters map fields as-is and
-/// never re-derive keys or policies (RFC rule 2). Immutable.
+/// never re-derive keys or policies (RFC rule 2): a memory key may add
+/// `processorKey` and the vector size it resolved, but names what the core
+/// named. Immutable.
 @interface TIImageRequest : NSObject
 
 @property(nonatomic, readonly, copy) NSURL *url;
-/// Key to use for both memory and disk caches.
+/// The image both cache tiers key by; the memory tier adds the variant.
 @property(nonatomic, readonly, copy) NSString *cacheKey;
 @property(nonatomic, readonly) BOOL memoryCacheRead;
 @property(nonatomic, readonly) BOOL memoryCacheWrite;

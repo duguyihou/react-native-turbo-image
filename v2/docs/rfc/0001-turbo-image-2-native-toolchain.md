@@ -192,7 +192,7 @@ keeps its 1.x name but is diagnostic text only. The core defines the codes (`tur
 and `loadErrorCodeName()`), and each adapter classifies its loader's errors
 into them:
 
-| `code` | Meaning | Nuke 13 | Coil 3 |
+| `code` | Meaning | Nuke 14 | Coil 3 |
 |---|---|---|---|
 | `invalidRequest` | Rejected by the core before any loader ran | — (core) | — (core) |
 | `notCached` | The policy forbade the network and no cache tier had the image | `dataMissingInCache` | Synthetic HTTP 504 **and** `!allowNetwork` |
@@ -241,6 +241,8 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 | `isProgressiveImageRenderingEnabled`, `format` | Accepted and ignored | `format`: detection is by content (§4.5b). Progressive: 1.x never enabled progressive decoding in its pipeline, so the prop never did anything |
 | `enableLiveTextInteraction` | iOS 16+ native prop; no-op on Android (as in 1.x) | VisionKit's image analysis is Swift-only, so it lives in the `TurboImageLiveText` Swift target (`ios/LiveText`). The ObjC++ view reaches it through the plain-ObjC `TILiveTextInteraction` protocol and a class-name lookup, the same pattern as the Nuke adapter. Only the loaded image is analysed, never a placeholder. 1.x added a new interaction on every load and ignored turning the prop off |
 
+`rounded`, `indicator` and `placeholder.memoryCacheKey` keep working throughout 2.x but are deprecated: each logs a warning once in development, and the 1.x type names (`Format`, `Indicator`, `IndicatorStyle`) carry `@deprecated`. They are removed in 3.0. Their replacements are in the migration guide ("Deprecated props").
+
 ### 4.4c Cache TurboModule
 
 `TurboImage.prefetch / dispose / clearMemoryCache / clearDiskCache` are 1.x statics, now backed by a Codegen TurboModule (`TurboImageModule`, `codegenConfig.type: "all"`).
@@ -252,7 +254,7 @@ onStart {state:'running'} → onProgress {completed,total}* → onSuccess {width
 - **`configureCache` (new in 2.0, expo-image's names).** `{ maxDiskSize, maxMemoryCost }` in bytes, 0 for the default (150 MB of disk; a quarter of the app's memory on Android, Nuke's default on iOS). Coil builds its caches once and cannot resize them, so on both platforms the sizes only count before the loader exists: the registry (`TIImageLoaderRegistry`, `TurboImageLoaders`) keeps them and hands them to the adapter it creates, and refuses them afterwards (returns false). The registry stays loader-agnostic: it only stores numbers, which each adapter reads in its initializer.
   - *Synchronous.* A promise-based first version raced the first image: the call reached the main thread through a queue, as Fabric's first view did, with nothing ordering the two, and losing meant the default sizes with only a rejection to say so. As a synchronous TurboModule method it runs on the JS thread and has taken effect before the app's next line; both registries are thread-safe for it (Android's is `@Synchronized` now).
   - *Which store.* `maxDiskSize` sizes the store every policy but `urlCache` uses: Android's one Coil disk cache, which also holds the `urlCache` responses, and iOS's `DataCache`. iOS's `URLCache` keeps its 150 MB (and its largest stored response, 5% of that). Sizing both on iOS would let a configured size cost twice the disk, and a split would shrink `urlCache`'s largest response; an option of its own is a TODO. Tests: an iOS adapter test (the cost reaches `ImageCache`; refused once a loader exists), Android instrumented tests (Coil's memory cache size; refused once the adapter exists), smoke scenario `configureCache` (the app's startup call resolved, a later one was refused).
-- **`getSize` (new in 2.0, React Native's `Image.getSize`).** Resolves `{ width, height }`: the image's own size in pixels, its EXIF orientation applied. It loads through the same caches as a prefetch and then reads only the file's header, so a 12 MP photo costs a download and a disk write, not a 48 MB decode. iOS: the seam's optional `imageSizeForRequest:completion:`; the Nuke adapter takes the bytes with `ImagePipeline.data(for:)` and reads them with ImageIO. Android: the seam's `imageSize` (default: reject `unknown`); the Coil adapter runs an ordinary request with a per-request `HeaderSizeDecoder` that answers with `BitmapFactory` bounds and the platform `ExifInterface`, returns a pixel-less image, and never writes it to memory. A format neither header reader knows (SVG) is decoded in full by the adapter's own decoders, and reports its canvas at the screen's pixel ratio, the size it draws at by default. Rejections use `onFailure`'s codes. Tests: adapter tests on both platforms (pixel size, EXIF quarter turn, SVG on iOS, a body that is not an image); smoke scenario `getSize` (3000×2000, then a `cacheOnly` view to prove it was cached).
+- **`getSize` (new in 2.0, React Native's `Image.getSize`).** Resolves `{ width, height }`: the image's own size in pixels, its EXIF orientation applied. It loads through the same caches as a prefetch and then reads only the file's header, so a 12 MP photo costs a download and a disk write, not a 48 MB decode. iOS: the seam's `imageSizeForRequest:completion:` (required since ADR 0014); the Nuke adapter takes the bytes with `ImagePipeline.data(for:)` and reads them with ImageIO. Android: the seam's `imageSize`; the Coil adapter runs an ordinary request with a per-request `HeaderSizeDecoder` that answers with `BitmapFactory` bounds and the platform `ExifInterface`, returns a pixel-less image, and never writes it to memory. A format neither header reader knows (SVG) is decoded in full by the adapter's own decoders, and reports its canvas at the screen's pixel ratio, the size it draws at by default. Rejections use `onFailure`'s codes. Tests: adapter tests on both platforms (pixel size, EXIF quarter turn, SVG on iOS, a body that is not an image); smoke scenario `getSize` (3000×2000, then a `cacheOnly` view to prove it was cached).
 
 ### 4.4d Source changes and `recyclingKey`
 
@@ -284,7 +286,7 @@ decides what a view shows while a *new* load runs, after a request prop
 - **Untrusted input.** Lengths and alphabets are validated. The JS thumbhash reference reads past the end of a truncated hash; the port returns `nullopt` instead.
 - **Threading.** Decoding runs on a background queue (iOS: GCD; Android: one shared single-thread executor), and the result is applied on main only if the core's lifecycle allows it: it is still the newest decode (a generation counter) and no image has taken the view since. 1.x had no such guard and could show a stale placeholder after `source` changed.
 - **Lifetime.** The placeholder is shown until the image loads. On failure it is removed by default and kept only with `showPlaceholderOnFailure` (1.x's rule, §4.4b), on both platforms. Android needed a Coil target subclass so that the view decides this, because Coil's default `ImageViewTarget` sets a null image on start and on error.
-- **An image (`placeholder.uri`, or `require()`; new in 2.0, expo-image's feature).** It is loaded through the adapter like the source, sized for the view, with the source's headers when it is on the source's origin (none otherwise), no processing and no events. For the core's lifecycle it is the same kind of placeholder as a hash: one that arrives later, shown only if its generation is still the newest and no image has taken the view (`placeholderDecoded`). So the lifecycle and its model are unchanged; only how the pixels are obtained differs. The view cancels the placeholder's load when a newer placeholder, the image, a recycle (iOS) or a drop (Android) makes it moot. iOS uses the seam's ordinary load, because there the view shows what the adapter returns. Android needed a new seam method, `loadPlaceholder`: its adapters paint the view themselves, and a placeholder painted by the adapter could cover an image that already arrived. It returns a `Drawable` for the view to show or drop, and its default reports none, so an adapter written before it keeps compiling.
+- **An image (`placeholder.uri`, or `require()`; new in 2.0, expo-image's feature).** It is loaded through the adapter like the source, sized for the view, with the source's headers when it is on the source's origin (none otherwise), no processing and no events. For the core's lifecycle it is the same kind of placeholder as a hash: one that arrives later, shown only if its generation is still the newest and no image has taken the view (`placeholderDecoded`). So the lifecycle and its model are unchanged; only how the pixels are obtained differs. The view cancels the placeholder's load when a newer placeholder, the image, a recycle (iOS) or a drop (Android) makes it moot. iOS uses the seam's ordinary load, because there the view shows what the adapter returns. Android needed a new seam method, `loadPlaceholder`: its adapters paint the view themselves, and a placeholder painted by the adapter could cover an image that already arrived. It returns a `Drawable` for the view to show or drop. The placeholder's own request takes the default cache policy, whatever the source's: it is a different image, and a `cacheOnly` or `noCache` source says how to treat that image, not its stand-in.
 - **`memoryCacheKey`.** This is a synchronous memory-cache lookup through the seam (`memoryCachedImageForKey:` / `memoryCachedDrawable`), keyed by the core's `canonicalCacheKey`, so it matches what a view stored. Coil keys memory entries by key *plus* extras (e.g. the resolved size), so the Android adapter matches on the key string across the key set.
 
 ### 4.5a Processors (resize, blur, monochrome, tint)
@@ -347,7 +349,7 @@ sees. The core picks the target (`ResolvedRequest.decode`), in this order:
 - **Android needed its own size resolver.** Fabric leaves views with `WRAP_CONTENT` layout params, which Coil's `ViewSizeResolver` reads as "no bound", so every image was decoded in full. `LaidOutSizeResolver` waits for the first layout and uses the laid-out size.
 - **Caching.** The disk keeps the original bytes; each decode size is its own memory entry. The smoke scenario `fullSize` reads all 3000×2000 pixels with `cacheOnly` after `downscaled` loaded the same URL at the card's size.
 - **A view that grows gets a sharper copy (an upgrade).** The size is taken when the load starts. When the view's layout later needs the image drawn at more than 1.5× its decoded pixels, the view loads the same request again at its new size: the core decides (`needsLargerDecode`), and the lifecycle runs it as an upgrade (`ViewLifecycle::startUpgrade`). It is silent: no `onStart`, progress or `onSuccess`, because the props did not change. The image stays on screen until the sharper one replaces it, and a failed upgrade leaves it there. The 1.5× ratio bounds the reloads of a view that animates its size; an image already at the source's own size is never reloaded. Not upgraded: requests whose decode does not follow the view (`allowDownscaling={false}`, `resize`, `center`, `blur`), animated images (on iOS Nuke's player sizes its frames itself; on Android a reload would restart the animation), SVG on iOS (drawn sharp at any size). A zoom by `transform` does not change the layout, so a zoomable image still needs `allowDownscaling={false}`. Why silent, and the alternatives: ADR 0013.
-- **No view, no bound.** `prefetch` and a view laid out with no area decode the original.
+- **No view, no bound.** A view laid out with no area decodes the original. `prefetch` decodes nothing: the core resolves it with `RequestPurpose::Prefetch`, which turns memory writes off whenever a disk tier keeps the bytes. Only under `memoryOnly` does it decode, at the original size, because memory is then the only place to keep them.
 - **Source sets: removed before 2.0.0** (2026-11-25). `source` was briefly an array of `{ uri, width, height }` (expo-image's form), chosen per view by the core. It had no recorded demand and added a pre-layout start path on Android and candidate state to both views; apps can pick a URL in JS. See `docs/audit/V2_SIMPLIFICATION_PLAN.md` (S7).
 - **SVG has no pixels to keep**, so it gets a target of its own (`ResolvedRequest.vectorDecode`): the table above without its first row. Only the loader learns from the bytes that a source is an SVG, so the core always resolves both targets.
   - *Own size.* Where the table says "full size", an SVG is drawn at its own size read as points/dp (120×80 is 315×210 px on a 2.6× screen), so `center` draws it as large on every screen and `blur` is as strong. Android: `SvgDecoder.Factory(scaleToDensity = true)`. Before, a 120×80 SVG was 120×80 px on Android, a thumbnail under `center`.
@@ -392,7 +394,7 @@ Rules:
 ### 4.8 Android layout
 
 - `android/CMakeLists.txt` does `add_subdirectory(../cpp)` and links `turboimage_core` into `libturboimage.so` alongside a JNI bridge. There is no Android copy of the C++ (rule 4). The `.so` is linked with 16 KB page alignment.
-- Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` takes the same steps as the iOS view, decided by the same core lifecycle. `ImageLoaderAdapter` is the seam, and the `Coil*.kt` files in `loader/` are the only Coil-aware code. An app replaces the adapter with `TurboImageLoaders.set`.
+- Kotlin: `TurboImageViewManager` implements the Codegen `TurboImageViewManagerInterface`. `TurboImageView` takes the same steps as the iOS view, decided by the same core lifecycle. `ImageLoaderAdapter` is the seam, and the `Coil*.kt` files in `loader/` are the only Coil-aware code. Apps cannot replace the adapter (ADR 0014); tests pass a fake through the view's constructor.
 - **The seam is not the iOS seam's shape.** The Android adapter is handed the `ImageView` and displays the image itself (cross-fade, animated playback, waiting for layout before sizing the decode); the iOS adapter returns a `UIImage` and the view displays it. [ADR 0004](../adr/0004-android-adapter-displays-the-image.md) records why and what it costs.
 - **Coil and the view's attach state** (read from Coil's source; the smoke test is consistent with it). With `target(ImageView)`, Coil:
   - cancels a request that starts before the view is attached and restarts it on attach (Fabric applies props before mounting),
@@ -467,8 +469,9 @@ See `docs/spm-assessment.md`. In short, RN 0.88's `npx react-native spm` works
 with our hand-written `Package.swift` (verified: Debug simulator build, app
 runs). However, the manifest has to point at React Native through paths
 relative to the app's build directory, and the tooling is marked preview. So
-**CocoaPods stays the default** for 2.0.0, and SPM is a supported opt-in
-backed by a non-blocking CI job.
+**CocoaPods is the only way apps integrate** in 2.0.0 (ADR 0015, which
+supersedes an earlier SPM opt-in). `Package.swift` builds the native layers
+without an app, for the adapter tests and tvOS.
 
 ## 7. Dependency policy (rules 7 and 8)
 
@@ -502,8 +505,8 @@ both platforms load the same `http://localhost:8765` URLs.
 - **Trade-off: no TLS.** The suite no longer makes an HTTPS request. TLS is the platform's, not TurboImage's, but a regression in how the adapters configure their HTTP clients for HTTPS would now go unseen. TODO: one opt-in scenario against a real host.
 - **Cleartext.** The Android example allows cleartext HTTP to `localhost` and `10.0.2.2` only (`network_security_config.xml`); iOS already allows local networking.
 
-Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The 50 scenarios in
-`apps/example/App.tsx` cover:
+Each run must report `TURBOIMAGE_SMOKE {"pass":true,…}`. The scenarios in
+`apps/example/src/smoke/SmokeTest.tsx` (53 at this writing) cover:
 
 - a network load,
 - a `cacheOnly` hit through the canonical key (upper-case host, fragment),
@@ -550,7 +553,8 @@ verification results in
 
 ## 10. Open questions
 
-1. **SPM remote mode** (`RN_SPM_REMOTE_URL`). `Package.swift` supports only RN's local-path mode today.
+None open. SPM remote mode (`RN_SPM_REMOTE_URL`) was one until ADR 0015
+took SwiftPM out of app integration.
 
 Five earlier questions are answered, and the answers are now where the
 behaviour is described: Nuke 14 and its iOS 16 floor in §3 and ADR 0006, Coil's handling of a view's attach state and of the

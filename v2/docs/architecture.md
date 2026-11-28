@@ -79,7 +79,7 @@ there (`placeImage`, `needsLargerDecode`) stay.
 The source comments cite these by number ("RFC rule 3").
 
 1. **Loaders sit behind an internal seam.** Nuke and Coil are reached through `TIImageLoading` and `ImageLoaderAdapter`, and no loader type appears in the views or the JS API. The seam is structure, not an extension point: apps cannot replace the loader ([ADR 0014](adr/0014-the-loader-seam-is-internal.md)); tests can.
-2. **The C++ core is the single owner of request semantics**: validation, cache keys, the cache-policy matrix, decode size. Adapters translate a `ResolvedRequest` and decide nothing.
+2. **The C++ core is the single owner of request semantics**: validation, cache keys, the cache-policy matrix, decode size. Adapters translate a `ResolvedRequest` and decide nothing. Translating a key means spelling the core's decisions in the loader's own key format: an adapter appends the `processorKey` and, for a view-sized decode, the pixel size it resolved to the memory key, and namespaces the HTTP cache's disk entries. It never chooses what a key names.
 3. **Both platforms behave the same.** Where the loaders differ (cache tiers, progress cadence, placeholder lifetime, error codes), the difference is closed in the core or in the adapters, not left to JS.
 4. **One copy of shared logic.** The C++ in `cpp/` is compiled into both platforms from one source tree; nothing is ported or copied per platform.
 5. **No Swift/C++ interop.** Swift targets hold no C-family sources and never import C++; ObjC++ sits between them.
