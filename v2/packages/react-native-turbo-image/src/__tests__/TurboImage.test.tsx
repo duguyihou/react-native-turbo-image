@@ -184,6 +184,23 @@ describe('contentPosition', () => {
     expect(position({ top: 10 } as never)).toEqual([0.5, 0.5]);
     expect(warn).toHaveBeenCalledTimes(2);
   });
+
+  it('takes two keywords only on different axes', () => {
+    // As CSS `object-position`: one word per axis, `center` on either.
+    expect(position('center top')).toEqual([0.5, 0]);
+    expect(position('right center')).toEqual([1, 0.5]);
+    // @ts-expect-error: both words place the vertical axis.
+    position('top bottom');
+    // @ts-expect-error: both words place the horizontal axis.
+    position('left left');
+  });
+
+  it('warns in development when two keywords place one axis, and keeps the first', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(position('top bottom' as never)).toEqual([0.5, 0]);
+    expect(position('right left' as never)).toEqual([1, 0.5]);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('cachePolicy', () => {

@@ -112,14 +112,18 @@ export type CachePolicy = NonNullable<NativeProps['cachePolicy']>;
 // 1.x policy name, still accepted. TODO: remove in 3.0.
 export type LegacyCachePolicy = 'dataCache';
 
-// Like CSS `object-position`: one or two keywords ('bottom right'), or
-// percentages from an edge (`{ top: '20%' }`).
+// Like CSS `object-position`: one keyword, or two on different axes in
+// either order ('bottom right', 'center top'), or percentages from an edge
+// (`{ top: '20%' }`).
 // TODO: offsets in points (`{ top: 10 }`), as expo-image takes.
-type PositionKeyword = 'center' | 'top' | 'bottom' | 'left' | 'right';
+type HorizontalKeyword = 'left' | 'right' | 'center';
+type VerticalKeyword = 'top' | 'bottom' | 'center';
+type PositionKeyword = HorizontalKeyword | VerticalKeyword;
 type Percent = `${number}%`;
 export type ContentPosition =
   | PositionKeyword
-  | `${PositionKeyword} ${PositionKeyword}`
+  | `${HorizontalKeyword} ${VerticalKeyword}`
+  | `${VerticalKeyword} ${HorizontalKeyword}`
   | { top?: Percent; bottom?: Percent; left?: Percent; right?: Percent };
 
 const KEYWORD_FRACTIONS: Record<PositionKeyword, { x?: number; y?: number }> = {
@@ -159,14 +163,25 @@ function toContentPosition(position: ContentPosition | undefined): {
   let x = 0.5;
   let y = 0.5;
   if (typeof position === 'string') {
+    // The type allows one word per axis; untyped callers can still send
+    // 'top bottom'. The first word for an axis wins, as a CSS parser
+    // rejecting the second would leave it.
+    let xSet = false;
+    let ySet = false;
     for (const word of position.trim().split(/\s+/)) {
       const fraction = KEYWORD_FRACTIONS[word as PositionKeyword];
       if (fraction === undefined) {
         if (__DEV__) console.warn(`TurboImage: unknown contentPosition keyword '${word}'`);
         continue;
       }
-      x = fraction.x ?? x;
-      y = fraction.y ?? y;
+      if ((fraction.x !== undefined && xSet) || (fraction.y !== undefined && ySet)) {
+        if (__DEV__) {
+          console.warn(`TurboImage: contentPosition '${position}' places one axis twice`);
+        }
+        continue;
+      }
+      if (fraction.x !== undefined) [x, xSet] = [fraction.x, true];
+      if (fraction.y !== undefined) [y, ySet] = [fraction.y, true];
     }
   } else {
     const left = percentFraction(position.left);
