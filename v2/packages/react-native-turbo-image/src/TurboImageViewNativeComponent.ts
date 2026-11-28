@@ -54,7 +54,7 @@ export type SuccessEvent = Readonly<{
 
 export type FailureEvent = Readonly<{
   // Stable across platforms (`turboimage::LoadErrorCode`):
-  // 'invalidRequest' | 'notCached' | 'network' | 'decode' | 'unknown'.
+  // 'invalidRequest' | 'notCached' | 'network' | 'http' | 'decode' | 'unknown'.
   code: string;
   // Loader diagnostic text; not stable, branch on `code` instead.
   error: string;

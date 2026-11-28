@@ -218,6 +218,8 @@ std::string_view loadErrorCodeName(LoadErrorCode code) {
       return "network";
     case LoadErrorCode::Decode:
       return "decode";
+    case LoadErrorCode::Http:
+      return "http";
   }
   // Out-of-range values can arrive across the JNI/ObjC boundary.
   return "unknown";

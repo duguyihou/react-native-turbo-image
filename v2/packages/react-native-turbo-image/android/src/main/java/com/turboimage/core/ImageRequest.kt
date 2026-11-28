@@ -36,6 +36,7 @@ enum class LoadErrorCode(val nativeValue: Int) {
   NOT_CACHED(2),
   NETWORK(3),
   DECODE(4),
+  HTTP(5),
 }
 
 /** Image processors from props. `resize` is in dp; colours are ARGB, null when unset. */

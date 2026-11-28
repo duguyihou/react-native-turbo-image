@@ -179,6 +179,7 @@ TEST(LoadErrorCodeName, NamesAreTheJsContract) {
   EXPECT_EQ(loadErrorCodeName(LoadErrorCode::NotCached), "notCached");
   EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Network), "network");
   EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Decode), "decode");
+  EXPECT_EQ(loadErrorCodeName(LoadErrorCode::Http), "http");
 }
 
 TEST(LoadErrorCodeName, OutOfRangeIsUnknown) {

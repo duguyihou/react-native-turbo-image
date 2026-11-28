@@ -292,7 +292,7 @@ TEST(ViewLifecycleRetry, ANetworkFailureRetriesAsANewLoad) {
 }
 
 TEST(ViewLifecycleRetry, OtherFailuresAreNotRetried) {
-  for (const auto code : {LoadErrorCode::Decode, LoadErrorCode::NotCached,
+  for (const auto code : {LoadErrorCode::Decode, LoadErrorCode::NotCached, LoadErrorCode::Http,
                           LoadErrorCode::Unknown, LoadErrorCode::InvalidRequest}) {
     auto lifecycle = failedWith(code, kNoPlaceholder);
     EXPECT_TRUE(lifecycle.retry(kNoPlaceholder).empty()) << static_cast<int>(code);

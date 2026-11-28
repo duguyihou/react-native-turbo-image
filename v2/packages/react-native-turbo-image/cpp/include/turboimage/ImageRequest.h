@@ -196,10 +196,13 @@ enum class LoadErrorCode : std::int32_t {
   InvalidRequest = 1,
   // Network forbidden and no cache tier had the image.
   NotCached = 2,
-  // Transport or HTTP failure.
+  // Transport failure, or a gateway timeout (HTTP 504): may recover.
   Network = 3,
   // Bytes arrived but could not be decoded.
   Decode = 4,
+  // The server answered with an error status other than 504 (a 404, say):
+  // asking again gets the same answer.
+  Http = 5,
 };
 
 // The stable JS spelling of a `LoadErrorCode`.

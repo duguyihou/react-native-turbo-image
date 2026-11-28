@@ -116,8 +116,9 @@ LifecycleEffects ViewLifecycle::loadFailed(std::int64_t token, const LifecyclePr
     return {};
   }
   inFlight = 0;
-  // Only the network can recover by itself. `NotCached` (`cacheOnly`) and
-  // `Decode` would fail the same way; `Unknown` might loop.
+  // Only the network can recover by itself. `NotCached` (`cacheOnly`),
+  // `Decode` and `Http` (the server's answer) would fail the same way;
+  // `Unknown` might loop.
   retryable = code == LoadErrorCode::Network ? 1 : 0;
   LifecycleEffects effects{{.kind = Kind::DeliverFailure}};
   fail(props, effects);

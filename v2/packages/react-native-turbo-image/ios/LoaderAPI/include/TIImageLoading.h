@@ -23,6 +23,7 @@ typedef NS_ERROR_ENUM(TIImageLoadErrorDomain, TIImageLoadErrorCode){
     TIImageLoadErrorNotCached = 2,
     TIImageLoadErrorNetwork = 3,
     TIImageLoadErrorDecode = 4,
+    TIImageLoadErrorHttp = 5,
 };
 
 /// Called once on the main thread, or maybe never after cancel. Errors are in

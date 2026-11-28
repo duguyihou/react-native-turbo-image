@@ -34,6 +34,7 @@ TI_ASSERT_SAME_CODE(TIImageLoadErrorInvalidRequest, InvalidRequest);
 TI_ASSERT_SAME_CODE(TIImageLoadErrorNotCached, NotCached);
 TI_ASSERT_SAME_CODE(TIImageLoadErrorNetwork, Network);
 TI_ASSERT_SAME_CODE(TIImageLoadErrorDecode, Decode);
+TI_ASSERT_SAME_CODE(TIImageLoadErrorHttp, Http);
 #undef TI_ASSERT_SAME_CODE
 
 turboimage::CachePolicy toCorePolicy(TurboImageViewCachePolicy policy) {

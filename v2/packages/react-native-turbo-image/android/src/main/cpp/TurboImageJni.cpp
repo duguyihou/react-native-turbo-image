@@ -41,6 +41,7 @@ TI_ASSERT_ABI(turboimage::LoadErrorCode::InvalidRequest, 1);
 TI_ASSERT_ABI(turboimage::LoadErrorCode::NotCached, 2);
 TI_ASSERT_ABI(turboimage::LoadErrorCode::Network, 3);
 TI_ASSERT_ABI(turboimage::LoadErrorCode::Decode, 4);
+TI_ASSERT_ABI(turboimage::LoadErrorCode::Http, 5);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Original, 0);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::View, 1);
 TI_ASSERT_ABI(turboimage::DecodeSize::Kind::Width, 2);
